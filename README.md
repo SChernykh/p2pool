@@ -33,9 +33,29 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 
 ## Build instructions
 
-SOON
+### Ubuntu 20.04
 
-## Usage
+p2pool binary:
+```
+sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
+git clone https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+monerod binary compatible with p2pool:
+```
+sudo apt update && sudo apt install git build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev libpgm-dev qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev ccache doxygen graphviz
+git clone https://github.com/SChernykh/monero
+cd monero
+git checkout zmq-changes
+git submodule init && git submodule update
+make -j$(nproc)
+```
+
+## How to test
 
 SOON
 

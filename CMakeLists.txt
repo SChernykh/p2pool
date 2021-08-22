@@ -76,7 +76,7 @@ include_directories(external/src/randomx/src)
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)
 else()
-	set(LIBS ${LIBS} pthread)
+	set(LIBS ${LIBS} pthread gss dl)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
