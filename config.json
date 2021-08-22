@@ -1,0 +1,8 @@
+{
+	"name": "default",
+	"password": "",
+	"block_time": 10,
+	"min_diff": 10000,
+	"pplns_window": 2160,
+	"uncle_penalty": 20
+}
