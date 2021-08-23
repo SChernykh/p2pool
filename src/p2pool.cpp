@@ -65,7 +65,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_sideChain = new SideChain(this);
 	m_hasher = new RandomX_Hasher(this);
 	m_blockTemplate = new BlockTemplate(this);
-	m_mempool = new Mempool(this);
+	m_mempool = new Mempool();
 	m_consoleCommands = new ConsoleCommands(this);
 }
 

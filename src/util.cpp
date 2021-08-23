@@ -50,7 +50,7 @@ void make_thread_background()
 	SetThreadPriorityBoost(GetCurrentThread(), true);
 	SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE);
-#else
+#elif !defined(__APPLE__)
 	sched_param param;
 	param.sched_priority = 0;
 	if (sched_setscheduler(0, SCHED_IDLE, &param) != 0) {

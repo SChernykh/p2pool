@@ -26,14 +26,11 @@ class p2pool;
 class Mempool : public nocopy_nomove
 {
 public:
-	explicit Mempool(p2pool* pool);
+	Mempool();
 	~Mempool();
 
 	void add(const TxMempoolData& tx);
 	void swap(std::vector<TxMempoolData>& transactions);
-
-private:
-	p2pool* m_pool;
 
 public:
 	mutable uv_rwlock_t m_lock;

@@ -39,7 +39,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${WARNING_FLAGS} ${SECURITY_FLAGS} /Ob1 /Ot /Zi /MT")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	set(WARNING_FLAGS "-Wall -Wextra -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra")
 	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")

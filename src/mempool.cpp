@@ -23,8 +23,7 @@ static constexpr char log_category_prefix[] = "Mempool ";
 
 namespace p2pool {
 
-Mempool::Mempool(p2pool* pool)
-	: m_pool(pool)
+Mempool::Mempool()
 {
 	uv_rwlock_init_checked(&m_lock);
 }
