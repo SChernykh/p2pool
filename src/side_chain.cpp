@@ -340,6 +340,14 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 bool SideChain::block_seen(const PoolBlock& block)
 {
 	MutexLock lock(m_sidechainLock);
+
+	// Check if it's some old block
+	if (m_chainTip && m_chainTip->m_sidechainHeight > block.m_sidechainHeight + m_chainWindowSize * 2 &&
+		block.m_cumulativeDifficulty < m_chainTip->m_cumulativeDifficulty) {
+		return true;
+	}
+
+	// Check if it was received before
 	return !m_seenBlocks.insert(block.m_sidechainId).second;
 }
 
@@ -805,7 +813,9 @@ void SideChain::verify_loop(PoolBlock* block)
 			// If it came through a broadcast, send it to our peers
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
-				m_pool->p2p_server()->broadcast(*block);
+				if (block->m_depth < UNCLE_BLOCK_DEPTH) {
+					m_pool->p2p_server()->broadcast(*block);
+				}
 			}
 
 			// Try to verify blocks on top of this one
