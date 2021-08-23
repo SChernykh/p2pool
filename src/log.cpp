@@ -31,6 +31,7 @@ namespace log {
 int GLOBAL_LOG_LEVEL = 5;
 
 static volatile bool stopped = false;
+static volatile bool worker_started = false;
 
 #ifdef _WIN32
 static const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -61,6 +62,8 @@ public:
 		uv_mutex_init(&m_mutex);
 		uv_thread_create(&m_worker, run_wrapper, this);
 
+		do {} while (!worker_started);
+
 #ifdef _WIN32
 		DWORD dwConsoleMode;
 		if (GetConsoleMode(hStdOut, &dwConsoleMode)) {
@@ -82,6 +85,10 @@ public:
 
 	FORCEINLINE void stop()
 	{
+		if (stopped) {
+			return;
+		}
+
 		stopped = true;
 		LOGINFO(0, "stopped");
 		uv_thread_join(&m_worker);
@@ -121,6 +128,8 @@ private:
 
 	NOINLINE void run()
 	{
+		worker_started = true;
+
 		do {
 			uv_mutex_lock(&m_mutex);
 			uv_cond_wait(&m_cond, &m_mutex);
