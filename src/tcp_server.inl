@@ -78,7 +78,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 
 	for (size_t k1 = 0;; ++k1) {
 		const size_t next_k1 = address_list.find_first_of(',', k1);
-		address = address_list.substr(k1, next_k1);
+		address = address_list.substr(k1, next_k1 - k1);
 		k1 = next_k1;
 
 		const size_t k2 = address.find_last_of(':');
