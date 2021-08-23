@@ -57,7 +57,27 @@ make -j$(nproc)
 
 ## How to test
 
-SOON
+p2pool is currently running on Monero testnet. **PPLNS window = 2160 blocks, block time = 1 second** (this is to catch bugs faster). This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. To test it, you need to:
+
+- Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
+- Create a separate restricted user account for testing. p2pool is untested and can have serious bugs/vulnerabilities!
+- Build p2pool and monerod binaries (see above)
+- Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
+- Check that ports 28080 (Monero testnet p2p port) and 37890 (p2pool p2p port) are open in your firewall to ensure better connectivity
+- Create a new testnet wallet
+- You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
+- Open this wallet in CLI: run `./monero-wallet-cli --testnet`, enter the wallet file name there and then enter the command `set refresh-type full`. **This step is important!** If you don't do it, you won't see p2pool payouts!
+- Run `./monerod --testnet --zmq-pub tcp://127.0.0.1:28083` and wait until it's fully synchronized
+- Run `./p2pool --host 127.0.0.1 --rpc-port 28081 --zmq-port 28083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37890 --addpeers 148.251.81.38:37890`
+- Keep both monerod and p2pool running for the whole duration of your test
+- p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
+- I haven't tested it, but it should work properly with `logrotate`
+- Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes. Of course it depends on your connection speed!
+- p2pool has a stratum server listening on port 3333, you can connect xmrig to it now
+- Run `./xmrig -o 127.0.0.1:3333 -t 1`. Note that you don't need to specify wallet address for xmrig. Also running with just 1 mining thread is good enough for testing. We don't need hashrate in this test, just a number of different p2pool nodes and wallets!
+- xmrig should connect and start mining
+- From now on, watch your testnet wallet to see if it gets anything
+- Also check p2pool.log for any warnings and errors: `cat p2pool.log | grep -E 'WARNING|ERROR'`
 
 ## Donations
 
