@@ -75,7 +75,7 @@ include_directories(external/src/randomx/src)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)
-else()
+elseif (NOT APPLE)
 	set(LIBS ${LIBS} pthread gss dl)
 endif()
 
@@ -89,7 +89,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang
 	find_library(ZMQ_LIBRARY NAMES libzmq libzmq.a)
 	find_library(UV_LIBRARY_DEBUG NAMES libuv libuv.a)
 	find_library(UV_LIBRARY NAMES libuv libuv.a)
-	set(LIBS ${LIBS} sodium)
+	find_library(SODIUM_LIBRARY sodium)
 endif()
 
 find_library(PGM_LIBRARY pgm)
@@ -101,6 +101,10 @@ endif()
 
 if (NORM_LIBRARY)
 	set(LIBS ${LIBS} ${NORM_LIBRARY})
+endif()
+
+if (SODIUM_LIBRARY)
+	set(LIBS ${LIBS} ${SODIUM_LIBRARY})
 endif()
 
 add_definitions(/DZMQ_STATIC)
