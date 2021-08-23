@@ -447,7 +447,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 	const size_t bytes_written = callback(buf->m_data);
 
 	if (bytes_written > sizeof(buf->m_data)) {
-		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << log::Str<sizeof(buf->m_data)>() << " bytes");
+		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << sizeof(buf->m_data) << " bytes");
 		panic();
 	}
 

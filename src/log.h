@@ -166,6 +166,10 @@ INT_ENTRY(uint16_t)
 INT_ENTRY(uint32_t)
 INT_ENTRY(uint64_t)
 
+#ifdef __clang__
+INT_ENTRY(unsigned long)
+#endif
+
 #undef INT_ENTRY
 
 template<typename T, int base>
@@ -285,24 +289,6 @@ template<> struct log::Stream::Entry<hex_buf>
 template<> struct log::Stream::Entry<std::string>
 {
 	static FORCEINLINE void put(const std::string& value, Stream* wrapper) { wrapper->writeBuf(value.c_str(), value.length()); }
-};
-
-template<char... digits> struct to_str { static const char s[]; };
-template<char... digits> constexpr char to_str<digits...>::s[] = { ('0' + digits)..., 0 };
-
-template<uint64_t N, char... digits>
-struct Str : Str<N / 10, N % 10, digits...> {};
-
-template<char... digits>
-struct Str<0, digits...> : to_str<digits...> {};
-
-template<uint64_t N, char... digits>
-struct log::Stream::Entry<Str<N, digits...>>
-{
-	static FORCEINLINE void put(Str<N, digits...>&& value, Stream* wrapper)
-	{
-		wrapper->writeBuf(value.s, sizeof(value.s) - 1);
-	}
 };
 
 struct Hashrate
