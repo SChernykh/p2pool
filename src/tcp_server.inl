@@ -393,6 +393,11 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 		uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
 	}
 
+	uv_async_t asy;
+	uv_async_init(&m_loop, &asy, NULL);
+	uv_stop(&m_loop);
+	uv_async_send(&asy);
+
 	uv_thread_join(&m_loopThread);
 	uv_loop_close(&m_loop);
 
