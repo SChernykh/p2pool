@@ -1130,7 +1130,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	if ((server->m_block->m_prevId != server->m_pool->miner_data().prev_id) &&
 		(server->m_block->m_txinGenHeight < server->m_pool->miner_data().height)){
-		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block, ignoring it");
+		LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block, ignoring it");
 		return true;
 	}
 

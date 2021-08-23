@@ -558,7 +558,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 	MutexLock lock(server->m_clientsListLock);
 
 	if (status) {
-		LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
+		if (status == UV_ETIMEDOUT) {
+			LOGINFO(5, "connection to " << static_cast<char*>(client->m_addrString) << " timed out");
+		}
+		else {
+			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
+		}
 		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
 		server->m_preallocatedClients.push_back(client);
 		return;
