@@ -380,6 +380,10 @@ void P2PServer::broadcast(const PoolBlock& block)
 		m_broadcastQueue.push_back(data);
 	}
 
+	if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync))) {
+		return;
+	}
+
 	const int err = uv_async_send(&m_broadcastAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
