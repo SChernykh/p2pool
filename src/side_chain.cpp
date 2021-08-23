@@ -1118,6 +1118,11 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		return;
 	}
 
+	if (block->m_depth >= m_chainWindowSize) {
+		LOGINFO(5, "Trying to update chain tip to a block with depth " << block->m_depth << ". Ignoring it.");
+		return;
+	}
+
 	if (is_longer_chain(m_chainTip, block)) {
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {

@@ -100,6 +100,10 @@ void StratumServer::on_block(const BlockTemplate& block)
 		m_blobsQueue.push_back(blobs_data);
 	}
 
+	if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_blobsAsync))) {
+		return;
+	}
+
 	const int err = uv_async_send(&m_blobsAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
