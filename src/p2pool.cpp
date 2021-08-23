@@ -685,6 +685,14 @@ int p2pool::run()
 
 	m_stopped = true;
 
+	const int32_t k = num_running_jobs.load();
+	if (k != 0) {
+		LOGINFO(1, "waiting for " << k << " background jobs to finish");
+		while (num_running_jobs != 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+
 	delete m_stratumServer;
 	delete m_p2pServer;
 
