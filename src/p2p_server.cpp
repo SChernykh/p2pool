@@ -310,7 +310,18 @@ void P2PServer::load_saved_peer_list()
 				p.m_port = port;
 				p.m_numFailedConnections = 0;
 			}
-			m_peerList.push_back(p);
+
+			bool already_added = false;
+			for (const Peer& peer : m_peerList) {
+				if ((peer.m_isV6 == p.m_isV6) && (peer.m_addr == p.m_addr)) {
+					already_added = true;
+					break;
+				}
+			}
+
+			if (!already_added) {
+				m_peerList.push_back(p);
+			}
 		});
 	LOGINFO(5, "peer list loaded (" << m_peerList.size() << " peers)");
 }
