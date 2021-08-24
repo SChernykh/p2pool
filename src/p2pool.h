@@ -41,6 +41,7 @@ public:
 	int run();
 
 	bool stopped() const { return m_stopped; }
+	void stop();
 
 	const Params& params() const { return *m_params; }
 	BlockTemplate& block_template() { return *m_blockTemplate; }
