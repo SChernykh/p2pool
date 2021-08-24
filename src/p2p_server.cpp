@@ -1228,7 +1228,9 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 			}
 		}
 		else if (peer_height > our_height) {
-			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+			if (peer_height >= our_height + 2) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+			}
 			return true;
 		}
 		else {
