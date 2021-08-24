@@ -157,12 +157,19 @@ void P2PServer::update_peer_connections()
 		peer_list = m_peerList;
 	}
 
+	const time_t cur_time = time(nullptr);
+
 	std::vector<raw_ip> connected_clients;
 	{
 		MutexLock lock(m_clientsListLock);
 		connected_clients.reserve(m_numConnections);
 		for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			connected_clients.emplace_back(client->m_addr);
+			if (cur_time > client->m_lastAlive + 5 * 60) {
+				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
+				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
+				client->close();
+			}
 		}
 	}
 
@@ -632,6 +639,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeComplete(false)
 	, m_listenPort(-1)
 	, m_lastPeerListRequest(0)
+	, m_lastAlive(0)
 {
 	uv_rwlock_init_checked(&m_broadcastedHashesLock);
 }
@@ -652,6 +660,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeComplete = false;
 	m_listenPort = -1;
 	m_lastPeerListRequest = 0;
+	m_lastAlive = 0;
 
 	WriteLock lock(m_broadcastedHashesLock);
 	m_broadcastedHashes.clear();
@@ -659,6 +668,7 @@ void P2PServer::P2PClient::reset()
 
 bool P2PServer::P2PClient::on_connect()
 {
+	m_lastAlive = time(nullptr);
 	return send_handshake_challenge();
 }
 
@@ -801,7 +811,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			if (bytes_left >= 2) {
 				const uint8_t num_peers = buf[1];
 				if (num_peers > PEER_LIST_RESPONSE_MAX_PEERS) {
-					LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too long peer list (" << num_peers << ')');
+					LOGWARN(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too long peer list (" << num_peers << ')');
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
 					return false;
@@ -819,8 +829,11 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 		}
 
-		buf += bytes_read;
-		bytes_left -= bytes_read;
+		if (bytes_read) {
+			buf += bytes_read;
+			bytes_left -= bytes_read;
+			m_lastAlive = time(nullptr);
+		}
 	} while (bytes_read && bytes_left);
 
 	// Move the possible unfinished message to the beginning of m_readBuf to free up more space for reading
@@ -1037,7 +1050,7 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 	memcpy(&peer_id, buf + CHALLENGE_SIZE, sizeof(uint64_t));
 
 	if (peer_id == server->get_peerId()) {
-		LOGWARN(4, "tried to connect to self");
+		LOGWARN(5, "tried to connect to self");
 		return false;
 	}
 
@@ -1048,7 +1061,7 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 		MutexLock lock(server->m_clientsListLock);
 		for (const P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			if ((client != this) && (client->m_peerId == peer_id)) {
-				LOGWARN(4, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
+				LOGWARN(5, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
 				same_peer = true;
 				break;
 			}
@@ -1129,7 +1142,7 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 	memcpy(&port, buf, sizeof(port));
 
 	if ((port < 0) || (port >= 65536)) {
-		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an invalid listen port number");
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an invalid listen port number");
 		return false;
 	}
 
@@ -1219,11 +1232,11 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 		if (peer_height < our_height) {
 			if (our_height - peer_height < 5) {
-				LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (mainchain height " << peer_height << ", expected >= " << our_height << "), ignoring it");
+				LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (mainchain height " << peer_height << ", expected >= " << our_height << "), ignoring it");
 				return true;
 			}
 			else {
-				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted an unreasonably stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
+				LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted an unreasonably stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
 				return false;
 			}
 		}

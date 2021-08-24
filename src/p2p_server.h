@@ -105,6 +105,7 @@ public:
 		bool m_handshakeComplete;
 		int m_listenPort;
 		time_t m_lastPeerListRequest;
+		time_t m_lastAlive;
 
 		uv_rwlock_t m_broadcastedHashesLock;
 		std::set<hash> m_broadcastedHashes;
