@@ -620,6 +620,7 @@ static void on_signal(uv_signal_t* handle, int signum)
 	}
 
 	LOGINFO(1, "stopping");
+	bkg_jobs_tracker.wait();
 
 	uv_signal_stop(handle);
 	uv_stop(uv_default_loop());
