@@ -441,6 +441,9 @@ void SideChain::add_block(const PoolBlock& block)
 		", verified = " << (block.m_verified ? 1 : 0)
 	);
 
+	// Save it for faster syncing on the next p2pool start
+	m_pool->p2p_server()->store_in_cache(block);
+
 	PoolBlock* new_block = new PoolBlock(block);
 
 	MutexLock lock(m_sidechainLock);
@@ -815,6 +818,9 @@ void SideChain::verify_loop(PoolBlock* block)
 					m_pool->p2p_server()->broadcast(*block);
 				}
 			}
+
+			// Save it for faster syncing on the next p2pool start
+			m_pool->p2p_server()->store_in_cache(*block);
 
 			// Try to verify blocks on top of this one
 			for (size_t i = 1; i <= UNCLE_BLOCK_DEPTH; ++i) {

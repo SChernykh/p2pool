@@ -120,7 +120,7 @@ void P2PServer::add_cached_block(const PoolBlock& block)
 
 void P2PServer::store_in_cache(const PoolBlock& block)
 {
-	if (m_cache) {
+	if (m_cache && block.m_verified && !block.m_invalid) {
 		m_cache->store(block);
 	}
 }
@@ -1322,8 +1322,6 @@ bool P2PServer::P2PClient::handle_incoming_block_async(PoolBlock* block)
 		LOGINFO(5, "block " << block->m_sidechainId << " was received before, skipping it");
 		return true;
 	}
-
-	server->store_in_cache(*block);
 
 	struct Work
 	{
