@@ -659,6 +659,17 @@ static bool init_signals()
 	return true;
 }
 
+void p2pool::stop()
+{
+	uv_async_t asy;
+	uv_loop_t *loop = uv_default_loop();
+
+	/* use async handle to make sure event loops wake up and stop */
+	uv_async_init(loop, &asy, NULL);
+	uv_stop(loop);
+	uv_async_send(&asy);
+}
+
 int p2pool::run()
 {
 	if (!m_params->ok()) {
