@@ -198,6 +198,18 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		m_mempoolTxs = mempool.m_transactions;
 	}
 
+	// Safeguard for busy mempool moments
+	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
+	// Select 1000 transactions with the highest fee per byte
+	if (m_mempoolTxs.size() > 1000) {
+		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + 1000, m_mempoolTxs.end(),
+			[this](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
+			{
+				return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
+			});
+		m_mempoolTxs.resize(1000);
+	}
+
 	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
 
 	uint64_t total_tx_fees = 0;
