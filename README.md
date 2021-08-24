@@ -4,6 +4,16 @@ Decentralized pool for Monero mining.
 
 **NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version and a specially configured Monero wallet (for now). No binaries or usage instructions are provided yet. Testing on testnet will start soon! No ETA on the official release date, but hopefully before the end of September 2021.
 
+## Pool mining vs Solo mining vs P2Pool mining
+
+Here's the comparison table of the different ways of mining. While pool mining is the easiest to setup, it centralizes Monero network and pool admin gets full power over your hashrate and your unpaid funds. Solo mining is 100% independent and the best for the network. P2Pool mining has all the advantages of solo mining, but also makes regular payouts possible.
+
+|Pool type|Payouts|Fee|Min. payout|Centralized?|Stability|Control|Setup
+|-|-|-|-|-|-|-|-|
+|Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|Pool admin controls your mined funds, what you mine and can execute network attacks|Only miner software is required
+|Solo|Rare|0%|0.6 XMR or more|No|As stable as your Monero node|100% under your control|Monero node + optional miner
+|**P2Pool**|Regular|0%|less than 0.0005 XMR|No|As stable as your Monero node|100% under your control|Monero node + P2Pool node + miner
+
 ## Features
 
 * Decentralized: no central server that can be shutdown/blocked. P2Pool uses a separate blockchain to merge mine with Monero. Pool admin can't go rogue or be pressured to do an attack on the network because there is no pool admin!
