@@ -31,7 +31,60 @@ namespace p2pool {
 
 struct BlockCache::Impl
 {
-#ifdef _WIN32
+#if defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION)
+
+	Impl()
+	{
+		m_fd = open(cache_name, O_RDWR | O_CREAT);
+		if (m_fd == -1) {
+			LOGERR(1, "couldn't open/create " << cache_name);
+			return;
+		}
+
+		int result = lseek(m_fd, static_cast<off_t>(CACHE_SIZE) - 1, SEEK_SET);
+		if (result == -1) {
+			LOGERR(1, "lseek failed");
+			close(m_fd);
+			m_fd = -1;
+			return;
+		}
+
+		result = write(m_fd, "", 1);
+		if (result != 1) {
+			LOGERR(1, "write failed");
+			close(m_fd);
+			m_fd = -1;
+			return;
+		}
+
+		void* map = mmap(0, CACHE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, 0);
+		if (map == MAP_FAILED) {
+			LOGERR(1, "mmap failed");
+			close(m_fd);
+			m_fd = -1;
+			return;
+		}
+
+		m_data = reinterpret_cast<uint8_t*>(map);
+	}
+
+	~Impl()
+	{
+		if (m_data) munmap(m_data, CACHE_SIZE);
+		if (m_fd != -1) close(m_fd);
+	}
+
+	void flush()
+	{
+		if (m_data) {
+			msync(m_data, CACHE_SIZE, MS_SYNC);
+		}
+	}
+
+	int m_fd = -1;
+
+#elif defined(_WIN32)
+
 	Impl()
 	{
 		m_file = CreateFile(cache_name, GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL);
@@ -81,10 +134,9 @@ struct BlockCache::Impl
 
 	void flush()
 	{
-		if (m_data && (m_flushRunning.exchange(1) == 0)) {
+		if (m_data) {
 			FlushViewOfFile(m_data, 0);
 			FlushFileBuffers(m_file);
-			m_flushRunning.store(0);
 		}
 	}
 
@@ -92,16 +144,16 @@ struct BlockCache::Impl
 	HANDLE m_map = 0;
 
 #else
-	// TODO: Linux version is not implemented yet
+	// Not implemented on other platforms
 	void flush() {}
 #endif
 
 	uint8_t* m_data = nullptr;
-	std::atomic<uint32_t> m_flushRunning{ 0 };
 };
 
 BlockCache::BlockCache()
 	: m_impl(new Impl())
+	, m_flushRunning(0)
 {
 }
 
@@ -155,7 +207,10 @@ void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
 
 void BlockCache::flush()
 {
-	m_impl->flush();
+	if (m_flushRunning.exchange(1) == 0) {
+		m_impl->flush();
+		m_flushRunning.store(0);
+	}
 }
 
 } // namespace p2pool

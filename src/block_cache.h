@@ -36,6 +36,7 @@ public:
 private:
 	struct Impl;
 	Impl* m_impl;
+	std::atomic<uint32_t> m_flushRunning;
 };
 
 } // namespace p2pool

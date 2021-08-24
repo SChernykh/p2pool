@@ -60,11 +60,18 @@
 #endif
 
 #ifdef _WIN32
+
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <Windows.h>
+
+#elif defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION)
+
+#include <unistd.h>
+#include <sys/mman.h>
+
 #endif
 
 namespace p2pool {
