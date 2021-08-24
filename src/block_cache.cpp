@@ -197,9 +197,10 @@ void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
 			continue;
 		}
 
-		block.deserialize(data + sizeof(uint32_t), n, side_chain);
-		server.add_cached_block(block);
-		++blocks_loaded;
+		if (block.deserialize(data + sizeof(uint32_t), n, side_chain) == 0) {
+			server.add_cached_block(block);
+			++blocks_loaded;
+		}
 	}
 
 	LOGINFO(1, "loaded " << blocks_loaded << " cached blocks");
