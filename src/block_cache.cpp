@@ -29,7 +29,7 @@ static constexpr char cache_name[] = "p2pool.cache";
 
 namespace p2pool {
 
-struct BlockCache::Impl
+struct BlockCache::Impl : public nocopy_nomove
 {
 #if defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION)
 

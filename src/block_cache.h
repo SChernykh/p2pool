@@ -23,7 +23,7 @@ struct PoolBlock;
 class SideChain;
 class P2PServer;
 
-class BlockCache
+class BlockCache : public nocopy_nomove
 {
 public:
 	BlockCache();
