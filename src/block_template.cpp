@@ -103,9 +103,6 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 
 	WriteLock lock(m_lock);
 
-	// b.m_lock should already be locked here, but try to lock it for reading anyway
-	const int lock_result = uv_rwlock_tryrdlock(&b.m_lock);
-
 	m_pool = b.m_pool;
 	m_templateId = b.m_templateId;
 	m_blockTemplateBlob = b.m_blockTemplateBlob;
@@ -138,10 +135,6 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	m_knapsack.clear();
 #endif
-
-	if (lock_result == 0) {
-		uv_rwlock_rdunlock(&b.m_lock);
-	}
 
 	return *this;
 }
