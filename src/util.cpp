@@ -184,7 +184,7 @@ struct BackgroundJobTracker::Impl
 	}
 
 	uv_mutex_t m_lock;
-	std::map<const char*, int32_t> m_jobs;
+	std::map<std::string, int32_t> m_jobs;
 };
 
 BackgroundJobTracker::BackgroundJobTracker() : m_impl(new Impl())
