@@ -1368,6 +1368,9 @@ void SideChain::prune_old_blocks()
 	// Leave 2 minutes worth of spare blocks in addition to 2xPPLNS window for lagging nodes which need to sync
 	const uint64_t prune_distance = m_chainWindowSize * 2 + 120 / m_targetBlockTime;
 
+	// Remove old blocks from alternative unconnected chains after long enough time
+	const time_t prune_time = time(nullptr) - m_chainWindowSize * 4 * m_targetBlockTime;
+
 	if (m_chainTip->m_sidechainHeight < prune_distance) {
 		return;
 	}
@@ -1377,24 +1380,35 @@ void SideChain::prune_old_blocks()
 	uint64_t num_blocks_pruned = 0;
 
 	for (auto it = m_blocksByHeight.begin(); (it != m_blocksByHeight.end()) && (it->first <= h);) {
-		for (PoolBlock* block : it->second) {
-			if (block->m_depth < prune_distance) {
-				continue;
-			}
-			auto it2 = m_blocksById.find(block->m_sidechainId);
-			if (it2 != m_blocksById.end()) {
-				m_blocksById.erase(it2);
-				delete block;
-				++num_blocks_pruned;
-			}
-			else {
-				LOGERR(1, "m_blocksByHeight and m_blocksById are inconsistent at height " << it->first << ". Fix the code!");
-			}
-		}
+		const uint64_t height = it->first;
+		std::vector<PoolBlock*>& v = it->second;
 
-		auto old_it = it;
-		++it;
-		m_blocksByHeight.erase(old_it);
+		v.erase(std::remove_if(v.begin(), v.end(),
+			[this, prune_distance, prune_time, &num_blocks_pruned, height](PoolBlock* block)
+			{
+				if ((block->m_depth >= prune_distance) || (block->m_localTimestamp <= prune_time)) {
+					auto it2 = m_blocksById.find(block->m_sidechainId);
+					if (it2 != m_blocksById.end()) {
+						m_blocksById.erase(it2);
+						delete block;
+						++num_blocks_pruned;
+					}
+					else {
+						LOGERR(1, "m_blocksByHeight and m_blocksById are inconsistent at height " << height << ". Fix the code!");
+					}
+					return true;
+				}
+				return false;
+			}), v.end());
+
+		if (v.empty()) {
+			auto old_it = it;
+			++it;
+			m_blocksByHeight.erase(old_it);
+		}
+		else {
+			++it;
+		}
 	}
 
 	if (num_blocks_pruned) {

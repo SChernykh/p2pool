@@ -343,6 +343,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 	m_broadcasted = false;
 	m_wantBroadcast = false;
 
+	m_localTimestamp = time(nullptr);
+
 	return 0;
 }
 
