@@ -275,9 +275,9 @@ NOINLINE void Stream::writeCurrentTime()
 	tm t;
 
 #ifdef _WIN32
-	localtime_s(&t, &t0);
+	gmtime_s(&t, &t0);
 #else
-	localtime_r(&t0, &t);
+	gmtime_r(&t0, &t);
 #endif
 
 	m_numberWidth = 2;
