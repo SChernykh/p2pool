@@ -1212,10 +1212,29 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 		m_broadcastedHashes.insert(server->m_block->m_sidechainId);
 	}
 
-	if ((server->m_block->m_prevId != server->m_pool->miner_data().prev_id) &&
-		(server->m_block->m_txinGenHeight < server->m_pool->miner_data().height)){
-		LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (mainchain height " << server->m_block->m_txinGenHeight << ", expected >= " << server->m_pool->miner_data().height << "), ignoring it");
-		return true;
+	if (server->m_block->m_prevId != server->m_pool->miner_data().prev_id) {
+		// This peer is mining on top of a different Monero block, investigate it
+		const uint64_t peer_height = server->m_block->m_txinGenHeight;
+		const uint64_t our_height = server->m_pool->miner_data().height;
+
+		if (peer_height < our_height) {
+			if (our_height - peer_height < 5) {
+				LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (mainchain height " << peer_height << ", expected >= " << our_height << "), ignoring it");
+				return true;
+			}
+			else {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted an unreasonably stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
+				return false;
+			}
+		}
+		else if (peer_height > our_height) {
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+			return true;
+		}
+		else {
+			LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " is mining on an alternative mainchain tip (height " << peer_height << "), ignoring it");
+			return true;
+		}
 	}
 
 	server->m_block->m_wantBroadcast = true;
