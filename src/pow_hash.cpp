@@ -133,7 +133,7 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 	uv_queue_work(uv_default_loop(), &work->req,
 		[](uv_work_t* req)
 		{
-			num_running_jobs.fetch_add(1);
+			bkg_jobs_tracker.start("RandomX_Hasher::set_seed_async");
 			Work* work = reinterpret_cast<Work*>(req->data);
 			if (!work->pool->stopped()) {
 				work->hasher->set_seed(work->seed);
@@ -142,7 +142,7 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 		[](uv_work_t* req, int)
 		{
 			delete reinterpret_cast<Work*>(req->data);
-			num_running_jobs.fetch_sub(1);
+			bkg_jobs_tracker.stop("RandomX_Hasher::set_seed_async");
 		}
 	);
 }
@@ -166,7 +166,7 @@ void RandomX_Hasher::set_old_seed_async(const hash& seed)
 	uv_queue_work(uv_default_loop(), &work->req,
 		[](uv_work_t* req)
 		{
-			num_running_jobs.fetch_add(1);
+			bkg_jobs_tracker.start("RandomX_Hasher::set_old_seed_async");
 			Work* work = reinterpret_cast<Work*>(req->data);
 			if (!work->pool->stopped()) {
 				work->hasher->set_old_seed(work->seed);
@@ -175,7 +175,7 @@ void RandomX_Hasher::set_old_seed_async(const hash& seed)
 		[](uv_work_t* req, int)
 		{
 			delete reinterpret_cast<Work*>(req->data);
-			num_running_jobs.fetch_sub(1);
+			bkg_jobs_tracker.stop("RandomX_Hasher::set_old_seed_async");
 		}
 	);
 }

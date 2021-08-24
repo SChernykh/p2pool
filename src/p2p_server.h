@@ -19,11 +19,13 @@
 
 #include "tcp_server.h"
 #include <random>
+#include <unordered_map>
 
 namespace p2pool {
 
 class p2pool;
 struct PoolBlock;
+class BlockCache;
 
 static constexpr size_t P2P_BUF_SIZE = 128 * 1024;
 static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
@@ -44,6 +46,9 @@ public:
 
 	explicit P2PServer(p2pool *pool);
 	~P2PServer();
+
+	void add_cached_block(const PoolBlock& block);
+	void store_in_cache(const PoolBlock& block);
 
 	void connect_to_peers(const std::string& peer_list);
 	void on_connect_failed(bool is_v6, const raw_ip& ip, int port) override;
@@ -89,7 +94,7 @@ public:
 		bool on_peer_list_request(const uint8_t* buf);
 		bool on_peer_list_response(const uint8_t* buf) const;
 
-		bool handle_incoming_block_async();
+		bool handle_incoming_block_async(PoolBlock* block);
 		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks);
 		void post_handle_incoming_block(const uint32_t reset_counter, std::vector<hash>& missing_blocks);
 
@@ -113,11 +118,17 @@ public:
 
 private:
 	p2pool* m_pool;
+	BlockCache* m_cache;
+	bool m_cacheLoaded;
+
+	uv_rwlock_t m_cachedBlocksLock;
+	std::unordered_map<hash, PoolBlock*> m_cachedBlocks;
 
 private:
 	static void on_timer(uv_timer_t* timer) { reinterpret_cast<P2PServer*>(timer->data)->on_timer(); }
 	void on_timer();
 
+	void flush_cache();
 	void download_missing_blocks();
 	void update_peer_connections();
 	void update_peer_list();

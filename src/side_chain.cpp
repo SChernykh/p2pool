@@ -621,8 +621,6 @@ void SideChain::print_status()
 		"\nYour shares         = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
 		"\nNext payout         = " << log::XMRAmount(m_pool->block_template().next_payout())
 	);
-
-	LOGINFO(0, "background jobs running: " << num_running_jobs.load());
 }
 
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
@@ -1322,6 +1320,11 @@ void SideChain::update_depths(PoolBlock* block)
 	do {
 		block = blocks_to_update.back();
 		blocks_to_update.pop_back();
+
+		// Verify this block and possibly other blocks on top of it when we're sure it will get verified
+		if (!block->m_verified && ((block->m_depth >= m_chainWindowSize * 2) || (block->m_sidechainHeight == 0))) {
+			verify_loop(block);
+		}
 
 		auto it = m_blocksById.find(block->m_parent);
 		if (it != m_blocksById.end()) {

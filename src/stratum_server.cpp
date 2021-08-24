@@ -357,7 +357,7 @@ void StratumServer::on_blobs_ready()
 
 void StratumServer::on_share_found(uv_work_t* req)
 {
-	num_running_jobs.fetch_add(1);
+	bkg_jobs_tracker.start("StratumServer::on_share_found");
 
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
 	StratumClient* client = share->m_client;
@@ -427,7 +427,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	ON_SCOPE_LEAVE(
 		[share]()
 		{
-			num_running_jobs.fetch_sub(1);
+			bkg_jobs_tracker.stop("StratumServer::on_share_found");
 
 			MutexLock lock(share->m_server->m_submittedSharesPoolLock);
 			share->m_server->m_submittedSharesPool.push_back(share);

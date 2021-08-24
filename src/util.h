@@ -98,7 +98,22 @@ template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) 
 
 void make_thread_background();
 
-extern std::atomic<int32_t> num_running_jobs;
+class BackgroundJobTracker
+{
+public:
+	BackgroundJobTracker();
+	~BackgroundJobTracker();
+
+	void start(const char* name);
+	void stop(const char* name);
+	void wait();
+
+private:
+	struct Impl;
+	Impl* m_impl;
+};
+
+extern BackgroundJobTracker bkg_jobs_tracker;
 
 } // namespace p2pool
 

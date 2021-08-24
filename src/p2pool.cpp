@@ -320,7 +320,7 @@ void p2pool::update_block_template_async()
 	const int err = uv_queue_work(uv_default_loop(), req,
 		[](uv_work_t* req)
 		{
-			num_running_jobs.fetch_add(1);
+			bkg_jobs_tracker.start("p2pool::update_block_template_async");
 
 			p2pool* pool = reinterpret_cast<p2pool*>(req->data);
 			pool->m_blockTemplate->update(pool->m_minerData, *pool->m_mempool, &pool->m_params->m_wallet);
@@ -330,7 +330,7 @@ void p2pool::update_block_template_async()
 		{
 			delete req;
 
-			num_running_jobs.fetch_sub(1);
+			bkg_jobs_tracker.stop("p2pool::update_block_template_async");
 		});
 
 	if (err) {
@@ -685,13 +685,7 @@ int p2pool::run()
 
 	m_stopped = true;
 
-	const int32_t k = num_running_jobs.load();
-	if (k != 0) {
-		LOGINFO(1, "waiting for " << k << " background jobs to finish");
-		while (num_running_jobs != 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
+	bkg_jobs_tracker.wait();
 
 	delete m_stratumServer;
 	delete m_p2pServer;

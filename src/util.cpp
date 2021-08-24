@@ -18,6 +18,9 @@
 #include "common.h"
 #include "util.h"
 #include "uv_util.h"
+#include <map>
+#include <thread>
+#include <chrono>
 
 #ifndef _WIN32
 #include <sched.h>
@@ -26,8 +29,6 @@
 static constexpr char log_category_prefix[] = "Util ";
 
 namespace p2pool {
-
-std::atomic<int32_t> num_running_jobs{ 0 };
 
 MinerCallbackHandler::~MinerCallbackHandler() {}
 
@@ -130,5 +131,86 @@ void uv_rwlock_init_checked(uv_rwlock_t* lock)
 		panic();
 	}
 }
+
+struct BackgroundJobTracker::Impl
+{
+	Impl() { uv_mutex_init_checked(&m_lock); }
+	~Impl() { uv_mutex_destroy(&m_lock); }
+
+	void start(const char* name)
+	{
+		MutexLock lock(m_lock);
+
+		auto it = m_jobs.insert({ name, 1 });
+		if (!it.second) {
+			++it.first->second;
+		}
+	}
+
+	void stop(const char* name)
+	{
+		MutexLock lock(m_lock);
+
+		auto it = m_jobs.find(name);
+		if (it == m_jobs.end()) {
+			LOGWARN(1, "background job " << name << " is not running, but stop() was called");
+			return;
+		}
+
+		--it->second;
+		if (it->second <= 0) {
+			m_jobs.erase(it);
+		}
+	}
+
+	void wait()
+	{
+		do {
+			bool is_empty = true;
+			{
+				MutexLock lock(m_lock);
+				is_empty = m_jobs.empty();
+				for (const auto& job : m_jobs) {
+					LOGINFO(1, "waiting for " << job.second << " \"" << job.first << "\" jobs to finish");
+				}
+			}
+
+			if (is_empty) {
+				return;
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		} while (1);
+	}
+
+	uv_mutex_t m_lock;
+	std::map<const char*, int32_t> m_jobs;
+};
+
+BackgroundJobTracker::BackgroundJobTracker() : m_impl(new Impl())
+{
+}
+
+BackgroundJobTracker::~BackgroundJobTracker()
+{
+	delete m_impl;
+}
+
+void BackgroundJobTracker::start(const char* name)
+{
+	m_impl->start(name);
+}
+
+void BackgroundJobTracker::stop(const char* name)
+{
+	m_impl->stop(name);
+}
+
+void BackgroundJobTracker::wait()
+{
+	m_impl->wait();
+}
+
+BackgroundJobTracker bkg_jobs_tracker;
 
 } // namespace p2pool

@@ -13,6 +13,7 @@ include(cmake/flags.cmake)
 set(HEADERS
 	external/src/cryptonote/crypto-ops.h
 	external/src/llhttp/llhttp.h
+	src/block_cache.h
 	src/block_template.h
 	src/common.h
 	src/console_commands.h
@@ -44,6 +45,7 @@ set(SOURCES
 	external/src/llhttp/api.c
 	external/src/llhttp/http.c
 	external/src/llhttp/llhttp.c
+	src/block_cache.cpp
 	src/block_template.cpp
 	src/console_commands.cpp
 	src/crypto.cpp

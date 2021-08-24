@@ -44,7 +44,7 @@ public:
 	enum params : int
 	{
 		SLOT_SIZE = 1024,
-		BUF_SIZE = SLOT_SIZE * 1024,
+		BUF_SIZE = SLOT_SIZE * 16384,
 	};
 
 	FORCEINLINE Worker()
@@ -240,27 +240,9 @@ NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 	m_buf[0] = static_cast<char>(severity);
 	m_pos = 3;
 
-	using namespace std::chrono;
-
-	const system_clock::time_point now = system_clock::now();
-	const time_t t0 = system_clock::to_time_t(now);
-
-	tm t;
-
-#ifdef _WIN32
-	localtime_s(&t, &t0);
-#else
-	localtime_r(&t0, &t);
-#endif
-
-	m_numberWidth = 2;
-	*this << Cyan() << (t.tm_year + 1900) << '-' << (t.tm_mon + 1) << '-' << t.tm_mday << ' ' << t.tm_hour << ':' << t.tm_min << ':' << t.tm_sec << '.';
-
-	const int32_t mcs = time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000;
-
-	m_numberWidth = 4;
-	*this << (mcs / 100) << NoColor() << ' ';
-	m_numberWidth = 1;
+	*this << Cyan();
+	writeCurrentTime();
+	*this << NoColor() << ' ';
 }
 
 NOINLINE Writer::~Writer()
@@ -281,6 +263,31 @@ void reopen()
 void stop()
 {
 	worker.stop();
+}
+
+NOINLINE void Stream::writeCurrentTime()
+{
+	using namespace std::chrono;
+
+	const system_clock::time_point now = system_clock::now();
+	const time_t t0 = system_clock::to_time_t(now);
+
+	tm t;
+
+#ifdef _WIN32
+	localtime_s(&t, &t0);
+#else
+	localtime_r(&t0, &t);
+#endif
+
+	m_numberWidth = 2;
+	*this << (t.tm_year + 1900) << '-' << (t.tm_mon + 1) << '-' << t.tm_mday << ' ' << t.tm_hour << ':' << t.tm_min << ':' << t.tm_sec << '.';
+
+	const int32_t mcs = time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000;
+
+	m_numberWidth = 4;
+	*this << (mcs / 100);
+	m_numberWidth = 1;
 }
 
 } // namespace log
