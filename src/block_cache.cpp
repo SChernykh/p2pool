@@ -35,7 +35,7 @@ struct BlockCache::Impl
 
 	Impl()
 	{
-		m_fd = open(cache_name, O_RDWR | O_CREAT);
+		m_fd = open(cache_name, O_RDWR | O_CREAT, static_cast<mode_t>(0600));
 		if (m_fd == -1) {
 			LOGERR(1, "couldn't open/create " << cache_name);
 			return;
