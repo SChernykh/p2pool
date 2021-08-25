@@ -573,6 +573,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
 		}
 		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), nullptr);
 		server->m_preallocatedClients.push_back(client);
 		return;
 	}
