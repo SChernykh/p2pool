@@ -410,6 +410,13 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		return false;
 	}
 
+	// Check if it has the correct parent and difficulty to go right to monerod for checking
+	const MinerData& miner_data = m_pool->miner_data();
+	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(pow_hash)) {
+		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
+		m_pool->submit_block_async(block.m_mainChainData);
+	}
+
 	if (!block.m_difficulty.check_pow(pow_hash)) {
 		LOGWARN(3, "add_external_block: not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
 		return false;

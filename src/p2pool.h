@@ -61,6 +61,7 @@ public:
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
 
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	void submit_block_async(const std::vector<uint8_t>& blob);
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	void update_block_template_async();
@@ -113,11 +114,16 @@ private:
 
 	ConsoleCommands* m_consoleCommands;
 
-	struct {
+	struct SubmitBlockData
+	{
 		uint32_t template_id;
 		uint32_t nonce;
 		uint32_t extra_nonce;
-	} m_submitBlockData;
+		std::vector<uint8_t> blob;
+	};
+
+	mutable uv_mutex_t m_submitBlockDataLock;
+	SubmitBlockData m_submitBlockData;
 
 	uv_async_t m_submitBlockAsync;
 	uv_async_t m_blockTemplateAsync;

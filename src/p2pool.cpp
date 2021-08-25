@@ -82,6 +82,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_stopAsync.data = this;
 
 	uv_rwlock_init_checked(&m_mainchainLock);
+	uv_mutex_init_checked(&m_submitBlockDataLock);
 
 	MinerData d;
 
@@ -98,6 +99,7 @@ p2pool::~p2pool()
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_stopAsync), nullptr);
 	uv_rwlock_destroy(&m_mainchainLock);
+	uv_mutex_destroy(&m_submitBlockDataLock);
 
 	delete m_sideChain;
 	delete m_hasher;
@@ -256,7 +258,31 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
-	m_submitBlockData = { template_id, nonce, extra_nonce };
+	{
+		MutexLock lock(m_submitBlockDataLock);
+
+		m_submitBlockData.template_id = template_id;
+		m_submitBlockData.nonce = nonce;
+		m_submitBlockData.extra_nonce = extra_nonce;
+		m_submitBlockData.blob.clear();
+	}
+
+	const int err = uv_async_send(&m_submitBlockAsync);
+	if (err) {
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	}
+}
+
+void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
+{
+	{
+		MutexLock lock(m_submitBlockDataLock);
+
+		m_submitBlockData.template_id = 0;
+		m_submitBlockData.nonce = 0;
+		m_submitBlockData.extra_nonce = 0;
+		m_submitBlockData.blob = blob;
+	}
 
 	const int err = uv_async_send(&m_submitBlockAsync);
 	if (err) {
@@ -266,41 +292,48 @@ void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t e
 
 void p2pool::submit_block() const
 {
-	const uint32_t template_id = m_submitBlockData.template_id;
-	uint32_t nonce = m_submitBlockData.nonce;
-	uint32_t extra_nonce = m_submitBlockData.extra_nonce;
+	SubmitBlockData submit_data;
+	{
+		MutexLock lock(m_submitBlockDataLock);
+		submit_data = m_submitBlockData;
+	}
 
 	const uint64_t height = m_blockTemplate->height();
 	const difficulty_type diff = m_blockTemplate->difficulty();
-	LOGINFO(0, "submit_block: height = " << height << ", template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
 
-	size_t nonce_offset;
-	size_t extra_nonce_offset;
-	const std::vector<uint8_t> blockTemplateBlob = m_blockTemplate->get_block_template_blob(template_id, nonce_offset, extra_nonce_offset);
+	size_t nonce_offset = 0;
+	size_t extra_nonce_offset = 0;
+	if (submit_data.blob.empty()) {
+		LOGINFO(0, "submit_block: height = " << height << ", template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
 
-	if (blockTemplateBlob.empty()) {
-		LOGERR(0, "submit_block: couldn't find block template with id " << template_id);
-		return;
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, nonce_offset, extra_nonce_offset);
+		if (submit_data.blob.empty()) {
+			LOGERR(0, "submit_block: couldn't find block template with id " << submit_data.template_id);
+			return;
+		}
+	}
+	else {
+		LOGINFO(0, "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
 	}
 
 	std::string request;
-	request.reserve(blockTemplateBlob.size() * 2 + 128);
+	request.reserve(submit_data.blob.size() * 2 + 128);
 
 	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"";
 
-	for (size_t i = 0; i < blockTemplateBlob.size(); ++i) {
+	for (size_t i = 0; i < submit_data.blob.size(); ++i) {
 		char buf[16];
 
-		if (nonce_offset <= i && i < nonce_offset + sizeof(nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", nonce & 255);
-			nonce >>= 8;
+		if (nonce_offset && nonce_offset <= i && i < nonce_offset + sizeof(submit_data.nonce)) {
+			snprintf(buf, sizeof(buf), "%02x", submit_data.nonce & 255);
+			submit_data.nonce >>= 8;
 		}
-		else if (extra_nonce_offset <= i && i < extra_nonce_offset + sizeof(extra_nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", extra_nonce & 255);
-			extra_nonce >>= 8;
+		else if (extra_nonce_offset && extra_nonce_offset <= i && i < extra_nonce_offset + sizeof(submit_data.extra_nonce)) {
+			snprintf(buf, sizeof(buf), "%02x", submit_data.extra_nonce & 255);
+			submit_data.extra_nonce >>= 8;
 		}
 		else {
-			snprintf(buf, sizeof(buf), "%02x", blockTemplateBlob[i]);
+			snprintf(buf, sizeof(buf), "%02x", submit_data.blob[i]);
 		}
 
 		request.append(buf);
@@ -308,7 +341,7 @@ void p2pool::submit_block() const
 	request.append("\"]}");
 
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request.c_str(),
-		[height, diff, template_id, nonce, extra_nonce](const char* data, size_t size)
+		[height, diff, &submit_data](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
@@ -331,7 +364,7 @@ void p2pool::submit_block() const
 					error_msg = it->value.GetString();
 				}
 
-				LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+				LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
 				return;
 			}
 
@@ -351,7 +384,7 @@ void p2pool::submit_block() const
 
 void p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
-	LOGINFO(1, "submit_sidechain_block: template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+	LOGINFO(3, "submit_sidechain_block: template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
 	m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce);
 }
 
