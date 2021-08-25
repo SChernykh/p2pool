@@ -607,6 +607,8 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 
 static void on_signal(uv_signal_t* handle, int signum)
 {
+	p2pool* pool = reinterpret_cast<p2pool*>(handle->data);
+
 	switch (signum) {
 	case SIGHUP:
 		LOGINFO(1, "caught SIGHUP");
@@ -634,7 +636,7 @@ static void on_signal(uv_signal_t* handle, int signum)
 	LOGINFO(1, "stopping");
 
 	uv_signal_stop(handle);
-	uv_stop(uv_default_loop_checked());
+	pool->stop();
 }
 
 static bool init_uv_threadpool()
@@ -643,7 +645,7 @@ static bool init_uv_threadpool()
 	return (uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr) == 0);
 }
 
-static bool init_signals()
+static bool init_signals(p2pool* pool)
 {
 	constexpr int signal_names[] = {
 		SIGHUP,
@@ -661,6 +663,7 @@ static bool init_signals()
 
 	for (size_t i = 0; i < array_size(signal_names); ++i) {
 		uv_signal_init(uv_default_loop_checked(), &signals[i]);
+		signals[i].data = pool;
 		const int rc = uv_signal_start(&signals[i], on_signal, signal_names[i]);
 		if (rc != 0) {
 			LOGERR(1, "failed to initialize signal, error " << rc);
@@ -689,7 +692,7 @@ int p2pool::run()
 		return 1;
 	}
 
-	if (!init_signals()) {
+	if (!init_signals(this)) {
 		LOGERR(1, "failed to initialize signal handlers");
 		return 1;
 	}
