@@ -44,6 +44,7 @@ p2pool::p2pool(int argc, char* argv[])
 	: m_stopped(false)
 	, m_params(new Params(argc, argv))
 	, m_updateSeed(true)
+	, m_submitBlockData{}
 {
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
@@ -59,7 +60,14 @@ p2pool::p2pool(int argc, char* argv[])
 		LOGWARN(1, "Mining to a stagenet wallet address");
 	}
 
-	int err = uv_async_init(uv_default_loop_checked(), &m_blockTemplateAsync, on_update_block_template);
+	int err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_submitBlockAsync.data = this;
+
+	err = uv_async_init(uv_default_loop_checked(), &m_blockTemplateAsync, on_update_block_template);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
 		panic();
@@ -86,6 +94,7 @@ p2pool::p2pool(int argc, char* argv[])
 
 p2pool::~p2pool()
 {
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_submitBlockAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_stopAsync), nullptr);
 	uv_rwlock_destroy(&m_mainchainLock);
@@ -245,8 +254,22 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	}
 }
 
-void p2pool::submit_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const
+void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
+	m_submitBlockData = { template_id, nonce, extra_nonce };
+
+	const int err = uv_async_send(&m_submitBlockAsync);
+	if (err) {
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	}
+}
+
+void p2pool::submit_block() const
+{
+	const uint32_t template_id = m_submitBlockData.template_id;
+	uint32_t nonce = m_submitBlockData.nonce;
+	uint32_t extra_nonce = m_submitBlockData.extra_nonce;
+
 	const uint64_t height = m_blockTemplate->height();
 	const difficulty_type diff = m_blockTemplate->difficulty();
 	LOGINFO(0, "submit_block: height = " << height << ", template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);

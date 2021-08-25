@@ -60,7 +60,7 @@ public:
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
 
-	void submit_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const;
+	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	void update_block_template_async();
@@ -74,8 +74,11 @@ private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
 
+	static void on_submit_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_block(); }
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
 	static void on_stop(uv_async_t*) {}
+
+	void submit_block() const;
 
 	bool m_stopped;
 
@@ -110,6 +113,13 @@ private:
 
 	ConsoleCommands* m_consoleCommands;
 
+	struct {
+		uint32_t template_id;
+		uint32_t nonce;
+		uint32_t extra_nonce;
+	} m_submitBlockData;
+
+	uv_async_t m_submitBlockAsync;
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
 };

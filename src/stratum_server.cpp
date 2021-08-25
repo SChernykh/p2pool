@@ -410,7 +410,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 	// First check if we found a mainnet block
 	if (difficulty.check_pow(pow_hash)) {
-		pool->submit_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
+		pool->submit_block_async(share->m_templateId, share->m_nonce, share->m_extraNonce);
 		block.update_tx_keys();
 	}
 
