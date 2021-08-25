@@ -495,6 +495,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	LOGINFO(3, "final reward = " << log::Gray() << final_reward << log::NoColor() <<
 		", weight = " << log::Gray() << final_weight << log::NoColor() <<
+		", outputs = " << log::Gray() << m_poolBlockTemplate->m_outputs.size() << log::NoColor() <<
 		", " << log::Gray() << m_numTransactionHashes << log::NoColor() <<
 		" of " << log::Gray() << m_mempoolTxs.size() << log::NoColor() << " transactions included");
 

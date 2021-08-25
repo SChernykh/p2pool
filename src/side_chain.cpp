@@ -411,7 +411,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	if (!block.m_difficulty.check_pow(pow_hash)) {
-		LOGWARN(3, "add_external_block: not enougn PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
+		LOGWARN(3, "add_external_block: not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
 		return false;
 	}
 
