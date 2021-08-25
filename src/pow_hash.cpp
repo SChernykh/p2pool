@@ -147,39 +147,6 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 	);
 }
 
-void RandomX_Hasher::set_old_seed_async(const hash& seed)
-{
-	struct Work
-	{
-		p2pool* pool;
-		RandomX_Hasher* hasher;
-		hash seed;
-		uv_work_t req;
-	};
-
-	Work* work = new Work{};
-	work->pool = m_pool;
-	work->hasher = this;
-	work->seed = seed;
-	work->req.data = work;
-
-	uv_queue_work(uv_default_loop_checked(), &work->req,
-		[](uv_work_t* req)
-		{
-			bkg_jobs_tracker.start("RandomX_Hasher::set_old_seed_async");
-			Work* work = reinterpret_cast<Work*>(req->data);
-			if (!work->pool->stopped()) {
-				work->hasher->set_old_seed(work->seed);
-			}
-		},
-		[](uv_work_t* req, int)
-		{
-			delete reinterpret_cast<Work*>(req->data);
-			bkg_jobs_tracker.stop("RandomX_Hasher::set_old_seed_async");
-		}
-	);
-}
-
 void RandomX_Hasher::set_seed(const hash& seed)
 {
 	if (m_stopped.load()) {

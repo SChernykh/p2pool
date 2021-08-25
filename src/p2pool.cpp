@@ -393,7 +393,8 @@ void p2pool::download_block_headers(uint64_t current_height)
 				ChainMain block;
 				if (parse_block_header(data, size, block)) {
 					if (height == prev_seed_height) {
-						m_hasher->set_old_seed_async(block.id);
+						// Do it synchronously to make sure stratum and p2p don't start before it's finished
+						m_hasher->set_old_seed(block.id);
 					}
 				}
 				else {

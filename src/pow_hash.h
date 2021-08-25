@@ -34,13 +34,12 @@ public:
 	~RandomX_Hasher();
 
 	void set_seed_async(const hash& seed);
-	void set_old_seed_async(const hash& seed);
+	void set_old_seed(const hash& seed);
 
 	bool calculate(const void* data, size_t size, const hash& seed, hash& result);
 
 private:
 	void set_seed(const hash& seed);
-	void set_old_seed(const hash& seed);
 
 	struct ThreadSafeVM
 	{
