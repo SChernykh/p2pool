@@ -107,6 +107,7 @@ public:
 	void start(const char* name);
 	void stop(const char* name);
 	void wait();
+	void print_status();
 
 private:
 	struct Impl;

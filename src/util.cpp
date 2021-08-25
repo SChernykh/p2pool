@@ -183,6 +183,24 @@ struct BackgroundJobTracker::Impl
 		} while (1);
 	}
 
+	void print_status()
+	{
+		MutexLock lock(m_lock);
+
+		if (m_jobs.empty()) {
+			LOGINFO(0, "no background jobs running");
+			return;
+		}
+
+		char buf[log::Stream::BUF_SIZE + 1];
+		log::Stream s(buf);
+		for (const auto& job : m_jobs) {
+			s << '\n' << job.first << " (" << job.second << ')';
+		}
+
+		LOGINFO(0, "background jobs running:" << log::const_buf(buf, s.m_pos));
+	}
+
 	uv_mutex_t m_lock;
 	std::map<std::string, int32_t> m_jobs;
 };
@@ -209,6 +227,11 @@ void BackgroundJobTracker::stop(const char* name)
 void BackgroundJobTracker::wait()
 {
 	m_impl->wait();
+}
+
+void BackgroundJobTracker::print_status()
+{
+	m_impl->print_status();
 }
 
 BackgroundJobTracker bkg_jobs_tracker;

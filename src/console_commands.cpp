@@ -100,6 +100,7 @@ static int do_status(p2pool *m_pool, const char * /* args */)
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->print_status();
 	}
+	bkg_jobs_tracker.print_status();
 	return 0;
 }
 
