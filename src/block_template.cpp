@@ -52,7 +52,6 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	, m_timestamp(0)
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
-	, m_nextPayout(0)
 {
 	uv_rwlock_init_checked(&m_lock);
 
@@ -123,7 +122,6 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_txkeySec = b.m_txkeySec;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
 	m_finalReward = b.m_finalReward;
-	m_nextPayout = b.m_nextPayout;
 
 	m_minerTx.clear();
 	m_blockHeader.clear();
@@ -417,13 +415,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	}
 
 	m_finalReward = final_reward;
-	m_nextPayout = 0;
-	for (size_t i = 0, n = m_shares.size(); i < n; ++i) {
-		if (*m_shares[i].m_wallet == m_pool->params().m_wallet) {
-			m_nextPayout = m_rewards[i];
-			break;
-		}
-	}
 
 	if (!create_miner_tx(data, m_shares, max_reward_amounts_weight, false)) {
 		return;

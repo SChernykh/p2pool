@@ -616,7 +616,19 @@ void SideChain::print_status()
 	}
 
 	const uint64_t block_reward = m_pool->block_template().final_reward();
-	const uint64_t next_payout = m_pool->block_template().next_payout();
+
+	uint64_t next_payout = 0;
+	if (m_chainTip) {
+		Wallet w = m_pool->params().m_wallet;
+		hash eph_public_key;
+		for (size_t i = 0, n = m_chainTip->m_outputs.size(); i < n; ++i) {
+			w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key);
+			if (m_chainTip->m_outputs[i].m_ephPublicKey == eph_public_key) {
+				next_payout = m_chainTip->m_outputs[i].m_reward;
+				break;
+			}
+		}
+	}
 
 	uint64_t product[2];
 	product[0] = umul128(pool_hashrate, next_payout, &product[1]);

@@ -55,7 +55,6 @@ public:
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE uint64_t final_reward() const { return m_finalReward; }
-	FORCEINLINE uint64_t next_payout() const { return m_nextPayout; }
 
 private:
 	p2pool* m_pool;
@@ -97,7 +96,6 @@ private:
 	BlockTemplate* m_oldTemplates[4] = {};
 
 	uint64_t m_finalReward;
-	uint64_t m_nextPayout;
 
 	// Temp vectors, will be cleaned up after use and skipped in copy constructor/assignment operators
 	std::vector<uint8_t> m_minerTx;
