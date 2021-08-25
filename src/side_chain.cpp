@@ -615,14 +615,22 @@ void SideChain::print_status()
 		}
 	}
 
+	const uint64_t block_reward = m_pool->block_template().final_reward();
+	const uint64_t next_payout = m_pool->block_template().next_payout();
+
+	uint64_t product[2];
+	product[0] = umul128(pool_hashrate, next_payout, &product[1]);
+	const uint64_t hashrate_est = udiv128(product[1], product[0], block_reward, &rem);
+
 	LOGINFO(0, "status" <<
 		"\nMain chain height   = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain height   = " << tip_height + 1 <<
 		"\nSide chain hashrate = " << log::Hashrate(pool_hashrate) <<
+		"\nYour hashrate (est) = " << log::Hashrate(hashrate_est) <<
 		"\nPPLNS window        = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
 		"\nYour shares         = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
-		"\nNext payout         = " << log::XMRAmount(m_pool->block_template().next_payout())
+		"\nNext payout         = " << log::XMRAmount(next_payout)
 	);
 }
 

@@ -308,16 +308,23 @@ template<> struct log::Stream::Entry<Hashrate>
 
 		static constexpr const char* units[] = { "H/s", "KH/s", "MH/s", "GH/s", "TH/s", "PH/s", "EH/s" };
 
-		size_t k = 0;
-		double magnitude = 1.0;
+		int n;
+		char buf[32];
+		if (value.m_data < 1000) {
+			n = snprintf(buf, sizeof(buf), "%u %s", static_cast<uint32_t>(value.m_data), units[0]);
+		}
+		else {
+			size_t k = 0;
+			double magnitude = 1.0;
 
-		while ((x >= magnitude * 1e3) && (k < array_size(units) - 1)) {
-			magnitude *= 1e3;
-			++k;
+			while ((x >= magnitude * 1e3) && (k < array_size(units) - 1)) {
+				magnitude *= 1e3;
+				++k;
+			}
+
+			n = snprintf(buf, sizeof(buf), "%.3f %s", x / magnitude, units[k]);
 		}
 
-		char buf[32];
-		int n = snprintf(buf, sizeof(buf), "%.3f %s", x / magnitude, units[k]);
 		if (n > 0) {
 			if (n > static_cast<int>(sizeof(buf)) - 1) {
 				n = static_cast<int>(sizeof(buf)) - 1;
