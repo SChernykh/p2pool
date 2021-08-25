@@ -827,7 +827,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::close()
 	uv_tcp_t* s = &m_socket;
 	uv_handle_t* h = reinterpret_cast<uv_handle_t*>(s);
 	if (!uv_is_closing(h)) {
-		uv_tcp_close_reset(s, on_connection_close);
+		uv_close(h, on_connection_close);
 	}
 }
 
