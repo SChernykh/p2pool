@@ -143,6 +143,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				LOGERR(1, "failed to create tcp server handle, error " << uv_err_name(err));
 				panic();
 			}
+			socket->data = this;
 
 			err = uv_tcp_nodelay(socket, 1);
 			if (err) {
@@ -179,7 +180,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				}
 			}
 
-			socket->data = this;
 			err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
 			if (err) {
 				LOGERR(1, "failed to listen on tcp server socket, error " << uv_err_name(err));
@@ -325,6 +325,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 		m_preallocatedClients.push_back(client);
 		return false;
 	}
+	client->m_socket.data = client;
 
 	err = uv_tcp_nodelay(&client->m_socket, 1);
 	if (err) {
@@ -541,7 +542,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* 
 		}
 	}
 	else {
+		LOGERR(5, "internal error: can't find TCPServer instance for peer " << log::Gray() << static_cast<char*>(client->m_addrString) << ", deallocating it");
 		client->reset();
+		delete client;
 	}
 }
 
@@ -603,6 +606,8 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 		m_preallocatedClients.push_back(client);
 		return;
 	}
+	client->m_socket.data = client;
+	client->m_owner = this;
 
 	err = uv_tcp_nodelay(&client->m_socket, 1);
 	if (err) {
@@ -632,9 +637,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t*
 
 	++m_numConnections;
 	client->m_isIncoming = false;
-
-	client->m_owner = this;
-	client->m_socket.data = client;
 
 	sockaddr_storage peer_addr;
 	int peer_addr_len = static_cast<int>(sizeof(peer_addr));
