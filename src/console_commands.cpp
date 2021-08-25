@@ -106,7 +106,7 @@ static int do_status(p2pool *m_pool, const char * /* args */)
 static int do_loglevel(p2pool * /* m_pool */, const char *args)
 {
 	int level = atoi(args);
-	level = std::min(std::max(level, 0), 5);
+	level = std::min(std::max(level, 0), 6);
 	log::GLOBAL_LOG_LEVEL = level;
 	LOGINFO(0, "log level set to " << level);
 	return 0;

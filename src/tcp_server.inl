@@ -336,7 +336,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 	MutexLock lock(m_pendingConnectionsLock);
 
 	if (!m_pendingConnections.insert(client->m_addr).second) {
-		LOGINFO(5, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
+		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
 		m_preallocatedClients.push_back(client);
 		return false;
 	}

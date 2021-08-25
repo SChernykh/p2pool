@@ -333,7 +333,7 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 
 	shares.resize(k + 1);
 
-	LOGINFO(5, "get_shares: " << k + 1 << " unique wallets in PPLNS window");
+	LOGINFO(6, "get_shares: " << k + 1 << " unique wallets in PPLNS window");
 	return true;
 }
 

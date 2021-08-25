@@ -482,7 +482,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
 		else {
-			LOGINFO(1, "blob size = " << buf.size());
+			LOGINFO(6, "blob size = " << buf.size());
 		}
 	}
 #endif
