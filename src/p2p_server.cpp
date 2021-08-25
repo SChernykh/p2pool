@@ -165,7 +165,9 @@ void P2PServer::update_peer_connections()
 		connected_clients.reserve(m_numConnections);
 		for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			connected_clients.emplace_back(client->m_addr);
-			if (cur_time > client->m_lastAlive + 5 * 60) {
+
+			const int timeout = client->m_handshakeComplete ? 300 : 5;
+			if (cur_time >= client->m_lastAlive + timeout) {
 				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
 				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
 				client->close();
