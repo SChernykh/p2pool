@@ -67,7 +67,7 @@
 #endif
 #include <Windows.h>
 
-#elif defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION)
+#elif defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION) || defined(__MACH__)
 
 #include <unistd.h>
 #include <sys/mman.h>
