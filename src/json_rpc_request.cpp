@@ -33,7 +33,7 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 {
 	m_readBuf[0] = '\0';
 
-	uv_tcp_init(uv_default_loop(), &m_socket);
+	uv_tcp_init(uv_default_loop_checked(), &m_socket);
 	uv_tcp_nodelay(&m_socket, 1);
 
 	sockaddr_in dest;

@@ -115,6 +115,7 @@ private:
 };
 
 extern BackgroundJobTracker bkg_jobs_tracker;
+extern thread_local bool is_main_thread;
 
 } // namespace p2pool
 

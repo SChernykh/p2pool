@@ -132,6 +132,19 @@ void uv_rwlock_init_checked(uv_rwlock_t* lock)
 	}
 }
 
+uv_loop_t* uv_default_loop_checked()
+{
+	if (!is_main_thread) {
+		LOGERR(1, "uv_default_loop() can only be used by the main thread. Fix the code!");
+#ifdef _WIN32
+		if (IsDebuggerPresent()) {
+			__debugbreak();
+		}
+#endif
+	}
+	return uv_default_loop();
+}
+
 struct BackgroundJobTracker::Impl
 {
 	Impl() { uv_mutex_init_checked(&m_lock); }
@@ -235,5 +248,6 @@ void BackgroundJobTracker::print_status()
 }
 
 BackgroundJobTracker bkg_jobs_tracker;
+thread_local bool is_main_thread = false;
 
 } // namespace p2pool

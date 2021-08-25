@@ -62,7 +62,9 @@ public:
 
 	void submit_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const;
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+
 	void update_block_template_async();
+	void update_block_template();
 
 	void download_block_headers(uint64_t current_height);
 
@@ -72,6 +74,9 @@ private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
 
+	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
+	static void on_stop(uv_async_t*) {}
+
 	bool m_stopped;
 
 	Params* m_params;
@@ -80,6 +85,7 @@ private:
 	RandomX_Hasher* m_hasher;
 	BlockTemplate* m_blockTemplate;
 	MinerData m_minerData;
+	bool m_updateSeed;
 	Mempool* m_mempool;
 
 	mutable uv_rwlock_t m_mainchainLock;
@@ -103,6 +109,9 @@ private:
 	P2PServer* m_p2pServer = nullptr;
 
 	ConsoleCommands* m_consoleCommands;
+
+	uv_async_t m_blockTemplateAsync;
+	uv_async_t m_stopAsync;
 };
 
 } // namespace p2pool

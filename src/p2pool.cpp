@@ -43,6 +43,7 @@ namespace p2pool {
 p2pool::p2pool(int argc, char* argv[])
 	: m_stopped(false)
 	, m_params(new Params(argc, argv))
+	, m_updateSeed(true)
 {
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
@@ -58,6 +59,20 @@ p2pool::p2pool(int argc, char* argv[])
 		LOGWARN(1, "Mining to a stagenet wallet address");
 	}
 
+	int err = uv_async_init(uv_default_loop_checked(), &m_blockTemplateAsync, on_update_block_template);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_blockTemplateAsync.data = this;
+
+	err = uv_async_init(uv_default_loop_checked(), &m_stopAsync, on_stop);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_stopAsync.data = this;
+
 	uv_rwlock_init_checked(&m_mainchainLock);
 
 	MinerData d;
@@ -71,6 +86,8 @@ p2pool::p2pool(int argc, char* argv[])
 
 p2pool::~p2pool()
 {
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_blockTemplateAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_stopAsync), nullptr);
 	uv_rwlock_destroy(&m_mainchainLock);
 
 	delete m_sideChain;
@@ -152,6 +169,7 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	data.tx_backlog.clear();
 	m_minerData = data;
+	m_updateSeed = true;
 	update_median_timestamp();
 
 	LOGINFO(2,
@@ -167,10 +185,12 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\n---------------------------------------------------------------------------------------------------------------"
 	);
 
-	m_hasher->set_seed_async(m_minerData.seed_hash);
-
-	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
-	stratum_on_block();
+	if (!is_main_thread) {
+		update_block_template_async();
+	}
+	else {
+		update_block_template();
+	}
 }
 
 static constexpr char BLOCK_FOUND[] = "\n\
@@ -314,28 +334,20 @@ void p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32
 
 void p2pool::update_block_template_async()
 {
-	uv_work_t* req = new uv_work_t{};
-	req->data = this;
-
-	const int err = uv_queue_work(uv_default_loop(), req,
-		[](uv_work_t* req)
-		{
-			bkg_jobs_tracker.start("p2pool::update_block_template_async");
-
-			p2pool* pool = reinterpret_cast<p2pool*>(req->data);
-			pool->m_blockTemplate->update(pool->m_minerData, *pool->m_mempool, &pool->m_params->m_wallet);
-			pool->stratum_on_block();
-		},
-		[](uv_work_t* req, int /*status*/)
-		{
-			delete req;
-
-			bkg_jobs_tracker.stop("p2pool::update_block_template_async");
-		});
-
+	const int err = uv_async_send(&m_blockTemplateAsync);
 	if (err) {
-		LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
 	}
+}
+
+void p2pool::update_block_template()
+{
+	if (m_updateSeed) {
+		m_hasher->set_seed_async(m_minerData.seed_hash);
+		m_updateSeed = false;
+	}
+	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
+	stratum_on_block();
 }
 
 void p2pool::download_block_headers(uint64_t current_height)
@@ -622,13 +634,13 @@ static void on_signal(uv_signal_t* handle, int signum)
 	LOGINFO(1, "stopping");
 
 	uv_signal_stop(handle);
-	uv_stop(uv_default_loop());
+	uv_stop(uv_default_loop_checked());
 }
 
 static bool init_uv_threadpool()
 {
 	static uv_work_t dummy;
-	return (uv_queue_work(uv_default_loop(), &dummy, [](uv_work_t*) {}, nullptr) == 0);
+	return (uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr) == 0);
 }
 
 static bool init_signals()
@@ -648,7 +660,7 @@ static bool init_signals()
 	static uv_signal_t signals[array_size(signal_names)];
 
 	for (size_t i = 0; i < array_size(signal_names); ++i) {
-		uv_signal_init(uv_default_loop(), &signals[i]);
+		uv_signal_init(uv_default_loop_checked(), &signals[i]);
 		const int rc = uv_signal_start(&signals[i], on_signal, signal_names[i]);
 		if (rc != 0) {
 			LOGERR(1, "failed to initialize signal, error " << rc);
@@ -661,13 +673,8 @@ static bool init_signals()
 
 void p2pool::stop()
 {
-	uv_async_t asy;
-	uv_loop_t *loop = uv_default_loop();
-
-	/* use async handle to make sure event loops wake up and stop */
-	uv_async_init(loop, &asy, NULL);
-	uv_stop(loop);
-	uv_async_send(&asy);
+	uv_stop(uv_default_loop());
+	uv_async_send(&m_stopAsync);
 }
 
 int p2pool::run()
@@ -690,7 +697,7 @@ int p2pool::run()
 	{
 		ZMQReader z(m_params->m_host, m_params->m_rpcPort, m_params->m_zmqPort, this);
 		get_miner_data();
-		const int rc = uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
 	}
 

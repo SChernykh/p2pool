@@ -130,7 +130,7 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 	work->seed = seed;
 	work->req.data = work;
 
-	uv_queue_work(uv_default_loop(), &work->req,
+	uv_queue_work(uv_default_loop_checked(), &work->req,
 		[](uv_work_t* req)
 		{
 			bkg_jobs_tracker.start("RandomX_Hasher::set_seed_async");
@@ -163,7 +163,7 @@ void RandomX_Hasher::set_old_seed_async(const hash& seed)
 	work->seed = seed;
 	work->req.data = work;
 
-	uv_queue_work(uv_default_loop(), &work->req,
+	uv_queue_work(uv_default_loop_checked(), &work->req,
 		[](uv_work_t* req)
 		{
 			bkg_jobs_tracker.start("RandomX_Hasher::set_old_seed_async");
