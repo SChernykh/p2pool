@@ -790,9 +790,9 @@ void SideChain::verify_loop(PoolBlock* block)
 		verify(block);
 
 		if (!block->m_verified) {
-			LOGINFO(5, "not enough data to verify block at height = " << block->m_sidechainHeight <<
+			LOGINFO(6, "can't verify block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
-				", mainchain height = " << block->m_txinGenHeight);
+				", mainchain height = " << block->m_txinGenHeight << ": parent or uncle blocks are not available)");
 			continue;
 		}
 
