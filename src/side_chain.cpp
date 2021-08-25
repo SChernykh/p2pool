@@ -548,6 +548,11 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 void SideChain::print_status()
 {
+	std::vector<hash> blocks_in_window;
+	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
+
+	MutexLock lock(m_sidechainLock);
+
 	uint64_t rem;
 	uint64_t pool_hashrate = udiv128(m_curDifficulty.hi, m_curDifficulty.lo, m_targetBlockTime, &rem);
 
@@ -563,9 +568,6 @@ void SideChain::print_status()
 
 	uint32_t our_blocks_in_window = 0;
 	uint32_t our_uncles_in_window = 0;
-
-	std::vector<hash> blocks_in_window;
-	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
 
 	while (cur) {
 		blocks_in_window.emplace_back(cur->m_sidechainId);
