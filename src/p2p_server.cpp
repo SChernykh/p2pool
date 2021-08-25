@@ -571,7 +571,7 @@ void P2PServer::flush_cache()
 	work->req.data = work;
 	work->cache = m_cache;
 
-	const int err = uv_queue_work(uv_default_loop(), &work->req,
+	const int err = uv_queue_work(&m_loop, &work->req,
 		[](uv_work_t* req)
 		{
 			bkg_jobs_tracker.start("P2PServer::flush_cache");
