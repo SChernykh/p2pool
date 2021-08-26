@@ -53,12 +53,6 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	m_connectedClientsList = m_allocateNewClient();
 	m_connectedClientsList->m_next = m_connectedClientsList;
 	m_connectedClientsList->m_prev = m_connectedClientsList;
-
-	err = uv_thread_create(&m_loopThread, loop, this);
-	if (err) {
-		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		panic();
-	}
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -197,6 +191,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 
 			LOGINFO(1, "listening on " << log::Gray() << address);
 		});
+
+	const int err = uv_thread_create(&m_loopThread, loop, this);
+	if (err) {
+		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
+		panic();
+	}
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
