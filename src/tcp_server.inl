@@ -15,6 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <thread>
+
 static thread_local bool server_event_loop_thread = false;
 
 namespace p2pool {
@@ -61,6 +63,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::~TCPServer()
 		LOGERR(1, "TCP wasn't shutdown properly");
 		shutdown_tcp();
 	}
+	delete m_connectedClientsList;
 }
 
 
@@ -384,14 +387,27 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 		return;
 	}
 
-	drop_connections();
-
 	for (uv_tcp_t* s : m_listenSockets6) {
 		uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
 	}
 
 	for (uv_tcp_t* s : m_listenSockets) {
 		uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+	}
+
+	drop_connections();
+
+	// Give it 1 second to gracefully close connections
+	using namespace std::chrono;
+
+	const system_clock::time_point start_time = system_clock::now();
+	volatile uint32_t* n = &m_numConnections;
+
+	while (*n > 0) {
+		if (duration_cast<milliseconds>(system_clock::now() - start_time).count() >= 1000) {
+			break;
+		}
+		std::this_thread::sleep_for(milliseconds(1));
 	}
 
 	uv_async_t asy;
@@ -542,9 +558,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* 
 		}
 	}
 	else {
-		LOGERR(5, "internal error: can't find TCPServer instance for peer " << log::Gray() << static_cast<char*>(client->m_addrString) << ", deallocating it");
-		client->reset();
-		delete client;
+		LOGERR(5, "internal error: can't find TCPServer instance for peer " << log::Gray() << static_cast<char*>(client->m_addrString) << ", this will leak memory");
 	}
 }
 
@@ -730,6 +744,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::~Client()
 		}
 	}
 	uv_mutex_destroy(&m_writeBuffersLock);
+	uv_mutex_destroy(&m_sendLock);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
