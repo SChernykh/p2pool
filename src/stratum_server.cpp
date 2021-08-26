@@ -31,7 +31,7 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 namespace p2pool {
 
 StratumServer::StratumServer(p2pool* pool)
-	: TCPServer(StratumClient::allocate, pool->params().m_stratumAddresses)
+	: TCPServer(StratumClient::allocate)
 	, m_pool(pool)
 	, m_extraNonce(0)
 	, m_rd{}
@@ -53,6 +53,8 @@ StratumServer::StratumServer(p2pool* pool)
 	}
 	m_blobsAsync.data = this;
 	m_blobsQueue.reserve(2);
+
+	start_listening(pool->params().m_stratumAddresses);
 }
 
 StratumServer::~StratumServer()

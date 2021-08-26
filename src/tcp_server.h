@@ -30,7 +30,7 @@ public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	TCPServer(allocate_client_callback allocate_new_client, const std::string& listen_addresses);
+	TCPServer(allocate_client_callback allocate_new_client);
 	virtual ~TCPServer();
 
 	template<typename T>
@@ -38,7 +38,7 @@ public:
 
 	bool connect_to_peer(bool is_v6, const char* ip, int port);
 
-	void drop_connections();
+	void drop_connections() { uv_async_send(&m_dropConnectionsAsync); }
 	void shutdown_tcp();
 	virtual void print_status();
 
@@ -169,17 +169,20 @@ private:
 
 	allocate_client_callback m_allocateNewClient;
 
-	void start_listening(const std::string& listen_addresses);
+	void close_sockets(bool listen_sockets);
 
 	std::vector<uv_tcp_t*> m_listenSockets6;
 	std::vector<uv_tcp_t*> m_listenSockets;
 	uv_thread_t m_loopThread;
 
 protected:
+	void start_listening(const std::string& listen_addresses);
+
 	std::atomic<int> m_finished{ 0 };
 	int m_listenPort;
 
 	uv_loop_t m_loop;
+	volatile bool m_loopStopped;
 
 	uv_mutex_t m_clientsListLock;
 	std::vector<Client*> m_preallocatedClients;
@@ -192,6 +195,19 @@ protected:
 
 	uv_mutex_t m_pendingConnectionsLock;
 	std::set<raw_ip> m_pendingConnections;
+
+	uv_async_t m_dropConnectionsAsync;
+	static void on_drop_connections(uv_async_t* async) { reinterpret_cast<TCPServer*>(async->data)->close_sockets(false); }
+
+	uv_async_t m_shutdownAsync;
+	static void on_shutdown(uv_async_t* async)
+	{
+		TCPServer* server = reinterpret_cast<TCPServer*>(async->data);
+		server->close_sockets(true);
+
+		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_dropConnectionsAsync), nullptr);
+		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_shutdownAsync), nullptr);
+	}
 };
 
 } // namespace p2pool

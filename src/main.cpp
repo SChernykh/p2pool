@@ -43,6 +43,9 @@ static void usage()
 	);
 }
 
+void memory_tracking_start();
+void memory_tracking_stop();
+
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
@@ -57,6 +60,14 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	p2pool::p2pool pool(argc, argv);
-	return pool.run();
+	int result;
+
+	memory_tracking_start();
+	{
+		p2pool::p2pool pool(argc, argv);
+		result = pool.run();
+	}
+	memory_tracking_stop();
+
+	return result;
 }

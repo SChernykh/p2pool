@@ -53,6 +53,7 @@ set(SOURCES
 	src/keccak.cpp
 	src/log.cpp
 	src/main.cpp
+	src/memory_leak_debug.cpp
 	src/mempool.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp

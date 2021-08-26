@@ -22,9 +22,10 @@ static thread_local bool server_event_loop_thread = false;
 namespace p2pool {
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client, const std::string& listen_addresses)
+TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client)
 	: m_allocateNewClient(allocate_new_client)
 	, m_listenPort(-1)
+	, m_loopStopped(false)
 	, m_numConnections(0)
 	, m_numIncomingConnections(0)
 {
@@ -33,6 +34,12 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
 		panic();
 	}
+
+	uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
+	m_dropConnectionsAsync.data = this;
+
+	uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
+	m_shutdownAsync.data = this;
 
 	uv_mutex_init_checked(&m_clientsListLock);
 	uv_mutex_init_checked(&m_bansLock);
@@ -46,8 +53,6 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	m_connectedClientsList = m_allocateNewClient();
 	m_connectedClientsList->m_next = m_connectedClientsList;
 	m_connectedClientsList->m_prev = m_connectedClientsList;
-
-	start_listening(listen_addresses);
 
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
@@ -63,6 +68,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::~TCPServer()
 		LOGERR(1, "TCP wasn't shutdown properly");
 		shutdown_tcp();
 	}
+
 	delete m_connectedClientsList;
 }
 
@@ -361,8 +367,21 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::drop_connections()
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets)
 {
+	if (!server_event_loop_thread) {
+		LOGERR(1, "closing sockets from another thread, this is not thread safe");
+	}
+
+	if (listen_sockets) {
+		for (uv_tcp_t* s : m_listenSockets6) {
+			uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+		}
+		for (uv_tcp_t* s : m_listenSockets) {
+			uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+		}
+	}
+
 	MutexLock lock(m_clientsListLock);
 
 	size_t numClosed = 0;
@@ -387,36 +406,37 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 		return;
 	}
 
-	for (uv_tcp_t* s : m_listenSockets6) {
-		uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
-	}
+	uv_async_send(&m_shutdownAsync);
 
-	for (uv_tcp_t* s : m_listenSockets) {
-		uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
-	}
-
-	drop_connections();
-
-	// Give it 1 second to gracefully close connections
 	using namespace std::chrono;
 
 	const system_clock::time_point start_time = system_clock::now();
-	volatile uint32_t* n = &m_numConnections;
+	uint32_t counter = 0;
+	uv_async_t asy;
 
-	while (*n > 0) {
-		if (duration_cast<milliseconds>(system_clock::now() - start_time).count() >= 1000) {
-			break;
+	constexpr uint32_t timeout_seconds = 30;
+
+	while (!m_loopStopped) {
+		const int64_t elapsed_time = duration_cast<milliseconds>(system_clock::now() - start_time).count();
+
+		if (elapsed_time >= (counter + 1) * 1000) {
+			++counter;
+			if (counter < timeout_seconds) {
+				LOGINFO(5, "waiting for event loop to stop for " << (timeout_seconds - counter) << " more seconds...");
+			}
+			else {
+				LOGWARN(5, "timed out while waiting for event loop to stop");
+				uv_async_init(&m_loop, &asy, nullptr);
+				uv_stop(&m_loop);
+				uv_async_send(&asy);
+				break;
+			}
 		}
+
 		std::this_thread::sleep_for(milliseconds(1));
 	}
 
-	uv_async_t asy;
-	uv_async_init(&m_loop, &asy, NULL);
-	uv_stop(&m_loop);
-	uv_async_send(&asy);
-
 	uv_thread_join(&m_loopThread);
-	uv_loop_close(&m_loop);
 
 	for (Client* c : m_preallocatedClients) {
 		delete c;
@@ -425,6 +445,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 	uv_mutex_destroy(&m_clientsListLock);
 	uv_mutex_destroy(&m_bansLock);
 	uv_mutex_destroy(&m_pendingConnectionsLock);
+
 	LOGINFO(1, "stopped");
 }
 
@@ -447,7 +468,7 @@ template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, SendCallbackBase&& callback)
 {
 	if (!server_event_loop_thread) {
-		LOGERR(1, "sending data from another thread, this is not safe");
+		LOGERR(1, "sending data from another thread, this is not thread safe");
 	}
 
 	MutexLock lock0(client->m_sendLock);
@@ -507,7 +528,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 {
 	LOGINFO(1, "event loop started");
 	server_event_loop_thread = true;
-	uv_run(&static_cast<TCPServer*>(data)->m_loop, UV_RUN_DEFAULT);
+	TCPServer* server = static_cast<TCPServer*>(data);
+	uv_run(&server->m_loop, UV_RUN_DEFAULT);
+	uv_loop_close(&server->m_loop);
+	server->m_loopStopped = true;
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>

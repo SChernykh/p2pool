@@ -37,7 +37,7 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 namespace p2pool {
 
 P2PServer::P2PServer(p2pool* pool)
-	: TCPServer(P2PClient::allocate, pool->params().m_p2pAddresses)
+	: TCPServer(P2PClient::allocate)
 	, m_pool(pool)
 	, m_cache(new BlockCache())
 	, m_cacheLoaded(false)
@@ -81,6 +81,7 @@ P2PServer::P2PServer(p2pool* pool)
 		panic();
 	}
 
+	start_listening(pool->params().m_p2pAddresses);
 	connect_to_peers(pool->params().m_p2pPeerList);
 	load_saved_peer_list();
 }
