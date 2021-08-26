@@ -60,7 +60,7 @@ monerod binary compatible with p2pool:
 sudo apt update && sudo apt install git build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev libpgm-dev qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev ccache doxygen graphviz
 git clone https://github.com/SChernykh/monero
 cd monero
-git checkout zmq-changes
+git checkout p2pool-api
 git submodule init && git submodule update
 make -j$(nproc)
 ```

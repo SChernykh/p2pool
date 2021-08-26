@@ -90,7 +90,7 @@ void ZMQReader::run()
 		m_subscriber.connect(addr);
 
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-chain_main");
-		m_subscriber.set(zmq::sockopt::subscribe, "json-miner-data");
+		m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
 		m_subscriber.set(zmq::sockopt::subscribe, "json-minimal-txpool_add");
 
 		LOGINFO(1, "worker thread ready");
@@ -159,9 +159,9 @@ void ZMQReader::parse(char* data, size_t size)
 			}
 		}
 	}
-	else if (strcmp(data, "json-miner-data") == 0) {
+	else if (strcmp(data, "json-full-miner_data") == 0) {
 		if (!doc.IsObject()) {
-			LOGWARN(1, "json-miner-data is not an object, skipping it");
+			LOGWARN(1, "json-full-miner_data is not an object, skipping it");
 			return;
 		}
 
@@ -172,19 +172,19 @@ void ZMQReader::parse(char* data, size_t size)
 			!PARSE(doc, m_minerData, median_weight) ||
 			!PARSE(doc, m_minerData, already_generated_coins) ||
 			!PARSE(doc, m_minerData, difficulty)) {
-			LOGWARN(1, "json-miner-data failed to parse, skipping it");
+			LOGWARN(1, "json-full-miner_data failed to parse, skipping it");
 			return;
 		}
 
 		if (!doc.HasMember("tx_backlog")) {
-			LOGWARN(1, "json-miner-data doesn't have 'tx_backlog', skipping it");
+			LOGWARN(1, "json-full-miner_data doesn't have 'tx_backlog', skipping it");
 			return;
 		}
 
 		const auto& tx_backlog = doc["tx_backlog"];
 
 		if (!tx_backlog.IsArray()) {
-			LOGWARN(1, "'tx_backlog' in json-miner-data is not an array, skipping it");
+			LOGWARN(1, "'tx_backlog' in json-full-miner_data is not an array, skipping it");
 			return;
 		}
 
@@ -199,7 +199,7 @@ void ZMQReader::parse(char* data, size_t size)
 				m_minerData.tx_backlog.push_back(m_tx);
 			}
 			else {
-				LOGWARN(1, "transaction #" << (i + 1) << " in json-miner-data `tx_backlog` failed to parse, skipped it");
+				LOGWARN(1, "transaction #" << (i + 1) << " in json-full-miner_data `tx_backlog` failed to parse, skipped it");
 			}
 		}
 
