@@ -449,7 +449,9 @@ void SideChain::add_block(const PoolBlock& block)
 	);
 
 	// Save it for faster syncing on the next p2pool start
-	m_pool->p2p_server()->store_in_cache(block);
+	if (m_pool->p2p_server()) {
+		m_pool->p2p_server()->store_in_cache(block);
+	}
 
 	PoolBlock* new_block = new PoolBlock(block);
 
@@ -843,13 +845,15 @@ void SideChain::verify_loop(PoolBlock* block)
 			// If it came through a broadcast, send it to our peers
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
-				if (block->m_depth < UNCLE_BLOCK_DEPTH) {
+				if (m_pool->p2p_server() && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
 					m_pool->p2p_server()->broadcast(*block);
 				}
 			}
 
 			// Save it for faster syncing on the next p2pool start
-			m_pool->p2p_server()->store_in_cache(*block);
+			if (m_pool->p2p_server()) {
+				m_pool->p2p_server()->store_in_cache(*block);
+			}
 
 			// Try to verify blocks on top of this one
 			for (size_t i = 1; i <= UNCLE_BLOCK_DEPTH; ++i) {
@@ -1193,7 +1197,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		m_pool->update_block_template_async();
 	}
 
-	if (block->m_wantBroadcast && !block->m_broadcasted) {
+	if (m_pool->p2p_server() && block->m_wantBroadcast && !block->m_broadcasted) {
 		block->m_broadcasted = true;
 #ifdef DEBUG_BROADCAST_DELAY_MS
 		struct Work
