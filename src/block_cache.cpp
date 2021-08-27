@@ -23,7 +23,7 @@
 static constexpr char log_category_prefix[] = "BlockCache ";
 
 static constexpr uint32_t BLOCK_SIZE = 96 * 1024;
-static constexpr uint32_t NUM_BLOCKS = 5120;
+static constexpr uint32_t NUM_BLOCKS = 4608;
 static constexpr uint32_t CACHE_SIZE = BLOCK_SIZE * NUM_BLOCKS;
 static constexpr char cache_name[] = "p2pool.cache";
 
