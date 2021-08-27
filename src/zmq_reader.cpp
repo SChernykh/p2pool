@@ -93,15 +93,15 @@ void ZMQReader::run()
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
 		m_subscriber.set(zmq::sockopt::subscribe, "json-minimal-txpool_add");
 
+		zmq_msg_t message;
+		int rc = zmq_msg_init(&message);
+		if (rc != 0) {
+			throw zmq::error_t();
+		}
+
 		LOGINFO(1, "worker thread ready");
 
 		do {
-			zmq_msg_t message;
-			int rc = zmq_msg_init(&message);
-			if (rc != 0) {
-				throw zmq::error_t();
-			}
-
 			rc = zmq_msg_recv(&message, m_subscriber, 0);
 			if (rc < 0) {
 				throw zmq::error_t();
@@ -113,6 +113,8 @@ void ZMQReader::run()
 
 			parse(reinterpret_cast<char*>(zmq_msg_data(&message)), zmq_msg_size(&message));
 		} while (true);
+
+		zmq_msg_close(&message);
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "exception " << e.what() << ", aborting");
