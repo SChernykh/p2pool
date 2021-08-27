@@ -44,7 +44,7 @@
 
 static constexpr char log_category_prefix[] = "SideChain ";
 
-constexpr uint64_t MIN_DIFFICULTY = 1000;
+constexpr uint64_t MIN_DIFFICULTY = 100000;
 constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
@@ -56,7 +56,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type)
 	, m_networkType(type)
 	, m_chainTip(nullptr)
 	, m_poolName("default")
-	, m_targetBlockTime(1)
+	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
 	, m_chainWindowSize(2160)
 	, m_unclePenalty(20)

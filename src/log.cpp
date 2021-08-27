@@ -28,7 +28,7 @@ namespace p2pool {
 
 namespace log {
 
-int GLOBAL_LOG_LEVEL = 5;
+int GLOBAL_LOG_LEVEL = 4;
 
 static volatile bool stopped = false;
 static volatile bool worker_started = false;
