@@ -77,7 +77,8 @@ Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds*
 - Create a new mainnet wallet
 - You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
 - Open this wallet in CLI: run `./monero-wallet-cli`, enter the wallet file name there and then enter the command `set refresh-type full`. **This step is important!** If you don't do it, you won't see p2pool payouts!
-- Run `./monerod --zmq-pub tcp://127.0.0.1:18083` and wait until it's fully synchronized
+- Run `./monerod --zmq-pub tcp://127.0.0.1:18083`
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-29309f08e)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37890 --addpeers 148.251.81.38:37890`
 - Keep both monerod and p2pool running for the whole duration of your test
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
