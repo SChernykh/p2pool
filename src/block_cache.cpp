@@ -164,14 +164,14 @@ BlockCache::~BlockCache()
 
 void BlockCache::store(const PoolBlock& block)
 {
-	if (!m_impl->m_data) {
+	const size_t n1 = block.m_mainChainData.size();
+	const size_t n2 = block.m_sideChainData.size();
+
+	if (!m_impl->m_data || (sizeof(uint32_t) + n1 + n2 > BLOCK_SIZE)) {
 		return;
 	}
 
 	uint8_t* data = m_impl->m_data + (static_cast<size_t>(block.m_sidechainHeight % NUM_BLOCKS) * BLOCK_SIZE);
-
-	const size_t n1 = block.m_mainChainData.size();
-	const size_t n2 = block.m_sideChainData.size();
 
 	*reinterpret_cast<uint32_t*>(data) = static_cast<uint32_t>(n1 + n2);
 	memcpy(data + sizeof(uint32_t), block.m_mainChainData.data(), n1);
