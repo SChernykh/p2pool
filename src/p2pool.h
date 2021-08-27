@@ -77,7 +77,7 @@ private:
 
 	static void on_submit_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_block(); }
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
-	static void on_stop(uv_async_t*) {}
+	static void on_stop(uv_async_t*);
 
 	void submit_block() const;
 

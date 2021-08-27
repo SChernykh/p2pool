@@ -95,9 +95,6 @@ p2pool::p2pool(int argc, char* argv[])
 
 p2pool::~p2pool()
 {
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_submitBlockAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_blockTemplateAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_stopAsync), nullptr);
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_mutex_destroy(&m_submitBlockDataLock);
 
@@ -288,6 +285,15 @@ void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
 	}
+}
+
+void p2pool::on_stop(uv_async_t* async)
+{
+	p2pool* pool = reinterpret_cast<p2pool*>(async->data);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitBlockAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
+	uv_stop(uv_default_loop());
 }
 
 void p2pool::submit_block() const
@@ -733,7 +739,6 @@ static bool init_signals(p2pool* pool)
 
 void p2pool::stop()
 {
-	uv_stop(uv_default_loop());
 	uv_async_send(&m_stopAsync);
 }
 

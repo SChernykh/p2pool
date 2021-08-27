@@ -131,6 +131,7 @@ static int do_droppeers(p2pool *m_pool, const char * /* args */)
 
 static int do_exit(p2pool *m_pool, const char * /* args */)
 {
+	bkg_jobs_tracker.wait();
 	m_pool->stop();
 
 	return 1;
