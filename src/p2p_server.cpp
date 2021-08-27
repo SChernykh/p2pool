@@ -599,6 +599,8 @@ void P2PServer::download_missing_blocks()
 	m_pool->side_chain().get_missing_blocks(missing_blocks);
 
 	if (missing_blocks.empty()) {
+		MutexLock lock(m_missingBlockRequestsLock);
+		m_missingBlockRequests.clear();
 		return;
 	}
 
