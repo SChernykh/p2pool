@@ -45,7 +45,7 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 
 ### Ubuntu 20.04
 
-p2pool binary. Build might fail with clang compiler, it was only tested with GCC!
+p2pool binary:
 ```
 sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
 git clone https://github.com/SChernykh/p2pool
@@ -60,14 +60,35 @@ monerod binary compatible with p2pool:
 sudo apt update && sudo apt install git build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev libpgm-dev qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev ccache doxygen graphviz
 git clone https://github.com/SChernykh/monero
 cd monero
-git checkout p2pool-api
+git checkout p2pool-api-v0.17
 git submodule init && git submodule update
 make -j$(nproc)
 ```
 
 ## How to test
 
-First p2pool test on testnet was successful. Mainnet test will start soon!
+Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 second**. This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**. The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
+
+- Grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
+- Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
+- Create a separate restricted user account for testing. p2pool is untested and can have serious bugs/vulnerabilities!
+- Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
+- Check that ports 18080 (Monero p2p port) and 37890 (p2pool p2p port) are open in your firewall to ensure better connectivity
+- Create a new mainnet wallet
+- You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
+- Open this wallet in CLI: run `./monero-wallet-cli --testnet`, enter the wallet file name there and then enter the command `set refresh-type full`. **This step is important!** If you don't do it, you won't see p2pool payouts!
+- Run `./monerod --zmq-pub tcp://127.0.0.1:18083` and wait until it's fully synchronized
+- Run `./p2pool --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37890 --addpeers 148.251.81.38:37890`
+- Keep both monerod and p2pool running for the whole duration of your test
+- p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
+- I haven't tested it, but it should work properly with `logrotate`
+- Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes. Of course it depends on your connection speed!
+- p2pool has a stratum server listening on port 3333, you can connect xmrig to it now
+- Run `./xmrig -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig.
+- xmrig should connect and start mining
+- you can connect multiple miners to the same p2pool node. The more the better!
+- From now on, watch your wallet to see if it gets anything
+- Also check p2pool.log for any warnings and errors: `cat p2pool.log | grep -E 'WARNING|ERROR'`
 
 ## Donations
 
