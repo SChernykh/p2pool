@@ -313,17 +313,25 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect_failed(bool, const raw
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
+{
+	MutexLock lock(m_bansLock);
+
+	auto it = m_bans.find(ip);
+	if ((it != m_bans.end()) && (time(nullptr) < it->second)) {
+		return true;
+	}
+
+	return false;
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* client, bool is_v6, const sockaddr* addr)
 {
-	{
-		MutexLock lock(m_bansLock);
-
-		auto it = m_bans.find(client->m_addr);
-		if ((it != m_bans.end()) && (time(nullptr) < it->second)) {
-			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
-			m_preallocatedClients.push_back(client);
-			return false;
-		}
+	if (is_banned(client->m_addr)) {
+		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
+		m_preallocatedClients.push_back(client);
+		return false;
 	}
 
 	client->m_isV6 = is_v6;
@@ -719,15 +727,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t*
 		client->m_isIncoming = false;
 	}
 
-	{
-		MutexLock lock(m_bansLock);
-
-		auto it = m_bans.find(client->m_addr);
-		if ((it != m_bans.end()) && (time(nullptr) < it->second)) {
-			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
-			client->close();
-			return;
-		}
+	if (is_banned(client->m_addr)) {
+		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
+		client->close();
+		return;
 	}
 
 	if (client->m_owner->m_finished.load() || !client->on_connect()) {

@@ -364,7 +364,7 @@ void P2PServer::load_saved_peer_list()
 				}
 			}
 
-			if (!already_added) {
+			if (!already_added && !is_banned(p.m_addr)) {
 				m_peerList.push_back(p);
 			}
 		});
@@ -383,7 +383,9 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 		}
 	}
 
-	m_peerList.emplace_back(Peer{ is_v6, ip, port, 0 });
+	if (!is_banned(ip)) {
+		m_peerList.emplace_back(Peer{ is_v6, ip, port, 0 });
+	}
 }
 
 void P2PServer::remove_peer_from_list(P2PClient* client)
@@ -1343,7 +1345,7 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 			}
 		}
 
-		if (!already_added) {
+		if (!already_added && !server->is_banned(ip)) {
 			server->m_peerList.emplace_back(Peer{ is_v6, ip, port, 0 });
 		}
 	}

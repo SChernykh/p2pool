@@ -193,6 +193,8 @@ protected:
 	uv_mutex_t m_bansLock;
 	std::map<raw_ip, time_t> m_bans;
 
+	bool is_banned(const raw_ip& ip);
+
 	uv_mutex_t m_pendingConnectionsLock;
 	std::set<raw_ip> m_pendingConnections;
 
