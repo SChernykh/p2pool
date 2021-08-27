@@ -51,12 +51,12 @@ p2pool::p2pool(int argc, char* argv[])
 		panic();
 	}
 
-	const Wallet::Type type = m_params->m_wallet.type();
+	const NetworkType type = m_params->m_wallet.type();
 
-	if (type == Wallet::Type::Testnet) {
+	if (type == NetworkType::Testnet) {
 		LOGWARN(1, "Mining to a testnet wallet address");
 	}
-	else if (type == Wallet::Type::Stagenet) {
+	else if (type == NetworkType::Stagenet) {
 		LOGWARN(1, "Mining to a stagenet wallet address");
 	}
 
@@ -86,7 +86,7 @@ p2pool::p2pool(int argc, char* argv[])
 
 	MinerData d;
 
-	m_sideChain = new SideChain(this);
+	m_sideChain = new SideChain(this, type);
 	m_hasher = new RandomX_Hasher(this);
 	m_blockTemplate = new BlockTemplate(this);
 	m_mempool = new Mempool();
@@ -530,6 +530,63 @@ void p2pool::stratum_on_block()
 #endif
 }
 
+void p2pool::get_info()
+{
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}",
+		[this](const char* data, size_t size)
+		{
+			parse_get_info_rpc(data, size);
+		});
+}
+
+void p2pool::parse_get_info_rpc(const char* data, size_t size)
+{
+	rapidjson::Document doc;
+	doc.Parse(data, size);
+
+	if (!doc.IsObject() || !doc.HasMember("result")) {
+		LOGWARN(1, "get_info RPC response is invalid (\"result\" not found), trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_info();
+		return;
+	}
+
+	const auto& result = doc["result"];
+
+	struct {
+		bool busy_syncing, mainnet, testnet, stagenet;
+	} info;
+
+	if (!PARSE(result, info, busy_syncing) || !PARSE(result, info, mainnet) || !PARSE(result, info, testnet) || !PARSE(result, info, stagenet)) {
+		LOGWARN(1, "get_info RPC response is invalid, trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_info();
+		return;
+	}
+
+	if (info.busy_syncing) {
+		LOGINFO(1, "monerod is busy syncing, trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_info();
+		return;
+	}
+
+	NetworkType monero_network = NetworkType::Invalid;
+
+	if (info.mainnet)  monero_network = NetworkType::Mainnet;
+	if (info.testnet)  monero_network = NetworkType::Testnet;
+	if (info.stagenet) monero_network = NetworkType::Stagenet;
+
+	const NetworkType sidechain_network = m_sideChain->network_type();
+
+	if (monero_network != sidechain_network) {
+		LOGERR(1, "monerod is on " << monero_network << ", but you're mining to a " << sidechain_network << " sidechain");
+		panic();
+	}
+
+	get_miner_data();
+}
+
 void p2pool::get_miner_data()
 {
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}",
@@ -761,7 +818,7 @@ int p2pool::run()
 
 	{
 		ZMQReader z(m_params->m_host, m_params->m_rpcPort, m_params->m_zmqPort, this);
-		get_miner_data();
+		get_info();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
 	}

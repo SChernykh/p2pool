@@ -24,21 +24,14 @@ namespace p2pool {
 class Wallet
 {
 public:
-	enum class Type {
-		Invalid,
-		Mainnet,
-		Testnet,
-		Stagenet,
-	};
-
 	explicit Wallet(const char* address);
 	~Wallet();
 
 	Wallet(const Wallet& w);
 	Wallet& operator=(const Wallet& w);
 
-	FORCEINLINE bool valid() const { return m_type != Type::Invalid; }
-	FORCEINLINE Type type() const { return m_type; }
+	FORCEINLINE bool valid() const { return m_type != NetworkType::Invalid; }
+	FORCEINLINE NetworkType type() const { return m_type; }
 
 	bool decode(const char* address);
 	void assign(const hash& spend_pub_key, const hash& view_pub_key);
@@ -56,7 +49,7 @@ private:
 	hash m_spendPublicKey;
 	hash m_viewPublicKey;
 	uint32_t m_checksum;
-	Type m_type;
+	NetworkType m_type;
 
 	mutable uv_mutex_t m_lock;
 	hash m_txkeySec;

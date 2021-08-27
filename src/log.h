@@ -359,6 +359,19 @@ template<> struct log::Stream::Entry<XMRAmount>
 	}
 };
 
+template<> struct log::Stream::Entry<NetworkType>
+{
+	static NOINLINE void put(const NetworkType& value, Stream* wrapper)
+	{
+		switch (value) {
+		case NetworkType::Invalid:  *wrapper << "invalid";  break;
+		case NetworkType::Mainnet:  *wrapper << "mainnet";  break;
+		case NetworkType::Testnet:  *wrapper << "testnet";  break;
+		case NetworkType::Stagenet: *wrapper << "stagenet"; break;
+		}
+	}
+};
+
 namespace {
 	template<log::Severity severity> void apply_severity(log::Stream&);
 

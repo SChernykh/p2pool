@@ -41,7 +41,7 @@ struct MinerShare
 class SideChain
 {
 public:
-	explicit SideChain(p2pool* pool);
+	SideChain(p2pool* pool, NetworkType type);
 	~SideChain();
 
 	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares);
@@ -62,11 +62,13 @@ public:
 	// Consensus ID can therefore be used as a password to create private P2Pools
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
+	NetworkType network_type() const { return m_networkType; }
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
 private:
 	p2pool* m_pool;
+	NetworkType m_networkType;
 
 private:
 	bool get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) const;

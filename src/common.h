@@ -251,6 +251,13 @@ struct ChainMain
 	hash id;
 };
 
+enum class NetworkType {
+	Invalid,
+	Mainnet,
+	Testnet,
+	Stagenet,
+};
+
 } // namespace p2pool
 
 #include "util.h"

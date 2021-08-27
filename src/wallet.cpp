@@ -123,7 +123,7 @@ Wallet& Wallet::operator=(const Wallet& w)
 
 bool Wallet::decode(const char* address)
 {
-	m_type = Type::Invalid;
+	m_type = NetworkType::Invalid;
 
 	if (!address || (strlen(address) != ADDRESS_LENGTH)) {
 		return false;
@@ -167,11 +167,11 @@ bool Wallet::decode(const char* address)
 
 	m_prefix = data[0];
 
-	if (m_prefix == valid_prefixes[0]) m_type = Type::Mainnet;
-	if (m_prefix == valid_prefixes[1]) m_type = Type::Testnet;
-	if (m_prefix == valid_prefixes[2]) m_type = Type::Stagenet;
+	if (m_prefix == valid_prefixes[0]) m_type = NetworkType::Mainnet;
+	if (m_prefix == valid_prefixes[1]) m_type = NetworkType::Testnet;
+	if (m_prefix == valid_prefixes[2]) m_type = NetworkType::Stagenet;
 
-	if (m_type == Type::Invalid) {
+	if (m_type == NetworkType::Invalid) {
 		return false;
 	}
 
@@ -183,7 +183,7 @@ bool Wallet::decode(const char* address)
 	keccak(data, sizeof(data) - sizeof(m_checksum), md);
 
 	if (memcmp(&m_checksum, md, sizeof(m_checksum)) != 0) {
-		m_type = Type::Invalid;
+		m_type = NetworkType::Invalid;
 	}
 
 	return valid();
@@ -198,7 +198,7 @@ void Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key)
 	m_viewPublicKey = view_pub_key;
 	m_checksum = 0;
 
-	m_type = Type::Mainnet;
+	m_type = NetworkType::Mainnet;
 
 	m_txkeySec = {};
 	m_outputIndex = std::numeric_limits<size_t>::max();

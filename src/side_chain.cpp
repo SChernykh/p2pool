@@ -51,8 +51,9 @@ static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_
 
 namespace p2pool {
 
-SideChain::SideChain(p2pool* pool)
+SideChain::SideChain(p2pool* pool, NetworkType type)
 	: m_pool(pool)
+	, m_networkType(type)
 	, m_chainTip(nullptr)
 	, m_poolName("default")
 	, m_targetBlockTime(1)
@@ -61,6 +62,8 @@ SideChain::SideChain(p2pool* pool)
 	, m_unclePenalty(20)
 	, m_curDifficulty(m_minDifficulty)
 {
+	LOGINFO(1, log::LightCyan() << "network type  = " << m_networkType);
+
 	if (!load_config(m_pool->params().m_config)) {
 		panic();
 	}
@@ -90,12 +93,13 @@ SideChain::SideChain(p2pool* pool)
 		char consensus_str[log::Stream::BUF_SIZE + 1];
 		log::Stream s(consensus_str);
 
-		s	<< m_poolName			<< '\0'
-			<< m_poolPassword		<< '\0'
-			<< m_targetBlockTime	<< '\0'
-			<< m_minDifficulty		<< '\0'
-			<< m_chainWindowSize	<< '\0'
-			<< m_unclePenalty		<< '\0';
+		s << m_networkType     << '\0'
+		  << m_poolName        << '\0'
+		  << m_poolPassword    << '\0'
+		  << m_targetBlockTime << '\0'
+		  << m_minDifficulty   << '\0'
+		  << m_chainWindowSize << '\0'
+		  << m_unclePenalty    << '\0';
 
 		randomx_init_cache(cache, consensus_str, s.m_pos);
 	}

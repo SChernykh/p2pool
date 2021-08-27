@@ -54,6 +54,7 @@ JSON_VALUE_PARSER(String, const char*)
 JSON_VALUE_PARSER(String, std::string)
 JSON_VALUE_PARSER(Uint, uint8_t)
 JSON_VALUE_PARSER(Uint64, uint64_t)
+JSON_VALUE_PARSER(Bool, bool)
 
 #undef JSON_VALUE_PARSER
 
