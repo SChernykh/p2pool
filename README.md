@@ -67,7 +67,7 @@ make -j$(nproc)
 
 ## How to test
 
-Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 second**. This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**. The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
+Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds**. This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**. The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
 
 - Grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
