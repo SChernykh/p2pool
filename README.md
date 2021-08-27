@@ -2,7 +2,7 @@
 
 Decentralized pool for Monero mining.
 
-**NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version and a specially configured Monero wallet (for now). No binaries or usage instructions are provided yet. Testing on testnet will start soon! No ETA on the official release date, but hopefully before the end of September 2021.
+**NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version and a specially configured Monero wallet (for now). No binaries or usage instructions are provided yet. Testing on mainnet has started! No ETA on the official release date, but hopefully before the end of September 2021.
 
 ## Pool mining vs Solo mining vs P2Pool mining
 
@@ -76,7 +76,7 @@ Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds*
 - Check that ports 18080 (Monero p2p port) and 37890 (p2pool p2p port) are open in your firewall to ensure better connectivity
 - Create a new mainnet wallet
 - You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
-- Open this wallet in CLI: run `./monero-wallet-cli --testnet`, enter the wallet file name there and then enter the command `set refresh-type full`. **This step is important!** If you don't do it, you won't see p2pool payouts!
+- Open this wallet in CLI: run `./monero-wallet-cli`, enter the wallet file name there and then enter the command `set refresh-type full`. **This step is important!** If you don't do it, you won't see p2pool payouts!
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083` and wait until it's fully synchronized
 - Run `./p2pool --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37890 --addpeers 148.251.81.38:37890`
 - Keep both monerod and p2pool running for the whole duration of your test
