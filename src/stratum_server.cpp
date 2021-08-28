@@ -530,7 +530,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				return s.m_pos;
 			});
 
-		if (share->m_result == SubmittedShare::Result::LOW_DIFF) {
+		if ((share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW)) {
 			client->ban(DEFAULT_BAN_TIME);
 			client->close();
 		}
