@@ -73,8 +73,10 @@ NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 
 			uint64_t carry = 0;
 			for (int k = i, l = 0; k < 5; ++k, ++l) {
-				const uint64_t t = result[k] + product[l] + carry;
-				carry = static_cast<uint64_t>(t < result[k]);
+				uint64_t t = result[k] + product[l];
+				const uint64_t next_carry = static_cast<uint64_t>(t < result[k]);
+				t += carry;
+				carry = next_carry | static_cast<uint64_t>(t < result[k]);
 				result[k] = t;
 			}
 
@@ -92,8 +94,10 @@ NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 
 				uint64_t carry = 0;
 				for (int k = i + j, l = 0; k < 6; ++k, ++l) {
-					const uint64_t t = result[k] + product[l] + carry;
-					carry = static_cast<uint64_t>(t < result[k]);
+					uint64_t t = result[k] + product[l];
+					const uint64_t next_carry = static_cast<uint64_t>(t < result[k]);
+					t += carry;
+					carry = next_carry | static_cast<uint64_t>(t < result[k]);
 					result[k] = t;
 				}
 
