@@ -657,7 +657,7 @@ void SideChain::print_status()
 		"\nYour hashrate (est) = " << log::Hashrate(hashrate_est) <<
 		"\nPPLNS window        = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
 		"\nYour shares         = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
-		"\nNext payout         = " << log::XMRAmount(next_payout)
+		"\nNext payout (est)   = " << log::XMRAmount(next_payout)
 	);
 }
 

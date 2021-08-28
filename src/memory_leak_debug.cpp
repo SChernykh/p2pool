@@ -117,19 +117,26 @@ FORCEINLINE static void remove_allocation(void* p)
 			return;
 		}
 	}
-	if (!found) {
-		// Someone tried to deallocate a pointer that wasn't allocated before
-		__debugbreak();
+
+	// Someone tried to deallocate a pointer that wasn't allocated before
+	__debugbreak();
+}
+
+FORCEINLINE static void* allocate_noexcept(size_t n) noexcept
+{
+	void* p = malloc(n + sizeof(TrackedAllocation));
+	if (p) {
+		add_alocation(p, n);
 	}
+	return p;
 }
 
 FORCEINLINE static void* allocate(size_t n)
 {
-	void* p = malloc(n + sizeof(TrackedAllocation));
+	void* p = allocate_noexcept(n);
 	if (!p) {
 		throw std::bad_alloc();
 	}
-	add_alocation(p, n);
 	return p;
 }
 
@@ -202,8 +209,8 @@ void memory_tracking_stop()
 
 NOINLINE void* operator new(size_t n) { return p2pool::allocate(n); }
 NOINLINE void* operator new[](size_t n) { return p2pool::allocate(n); }
-NOINLINE void* operator new(size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate(n); }
-NOINLINE void* operator new[](size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate(n); }
+NOINLINE void* operator new(size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate_noexcept(n); }
+NOINLINE void* operator new[](size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate_noexcept(n); }
 NOINLINE void operator delete(void* p) noexcept { p2pool::deallocate(p); }
 NOINLINE void operator delete[](void* p) noexcept { p2pool::deallocate(p); }
 NOINLINE void operator delete(void* p, size_t) noexcept { p2pool::deallocate(p); }

@@ -30,7 +30,7 @@ public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	TCPServer(allocate_client_callback allocate_new_client);
+	explicit TCPServer(allocate_client_callback allocate_new_client);
 	virtual ~TCPServer();
 
 	template<typename T>
