@@ -196,12 +196,20 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 				client->m_rpcId = static_cast<uint32_t>(static_cast<StratumServer*>(client->m_owner)->get_random64());
 			} while (!client->m_rpcId);
 
+			log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
+
+			// Use short target format (4 bytes) for diff <= ~2 million
+			if ((target >> 32) >= 2147) {
+				target_hex.m_data += sizeof(uint32_t);
+				target_hex.m_size -= sizeof(uint32_t);
+			}
+
 			log::Stream s(reinterpret_cast<char*>(buf));
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"result\":{\"id\":\"";
 			s << log::Hex(client->m_rpcId) << "\",\"job\":{\"blob\":\"";
 			s << log::hex_buf(hashing_blob, blob_size) << "\",\"job_id\":\"";
 			s << log::Hex(job_id) << "\",\"target\":\"";
-			s << log::hex_buf(reinterpret_cast<const uint8_t*>(&target), sizeof(target)) << "\",\"algo\":\"rx/0\",\"height\":";
+			s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
 			s << height << ",\"seed_hash\":\"";
 			s << seed_hash << "\"},\"extensions\":[\"algo\"],\"status\":\"OK\"}}\n";
 			return s.m_pos;
@@ -382,11 +390,19 @@ void StratumServer::on_blobs_ready()
 			const bool result = send(client,
 				[data, target, client, hashing_blob, &job_id](void* buf)
 				{
+					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
+
+					// Use short target format (4 bytes) for diff <= ~2 million
+					if ((target >> 32) >= 2147) {
+						target_hex.m_data += sizeof(uint32_t);
+						target_hex.m_size -= sizeof(uint32_t);
+					}
+
 					log::Stream s(reinterpret_cast<char*>(buf));
 					s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
 					s << log::hex_buf(hashing_blob, data->m_blobSize) << "\",\"job_id\":\"";
 					s << log::Hex(job_id) << "\",\"target\":\"";
-					s << log::hex_buf(reinterpret_cast<const uint8_t*>(&target), sizeof(target)) << "\",\"algo\":\"rx/0\",\"height\":";
+					s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
 					s << data->m_height << ",\"seed_hash\":\"";
 					s << data->m_seedHash << "\"}}\n";
 					return s.m_pos;

@@ -277,7 +277,7 @@ struct hex_buf
 
 template<> struct log::Stream::Entry<hex_buf>
 {
-	static FORCEINLINE void put(hex_buf&& value, Stream* wrapper)
+	static FORCEINLINE void put(const hex_buf& value, Stream* wrapper)
 	{
 		for (size_t i = 0; i < value.m_size; ++i) {
 			char buf[2];
