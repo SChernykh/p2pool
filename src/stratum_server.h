@@ -63,13 +63,16 @@ public:
 		} m_jobs[4];
 
 		uint32_t m_perConnectionJobId;
+		difficulty_type m_customDiff;
 	};
 
-	bool on_login(StratumClient* client, uint32_t id);
-	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str);
+	bool on_login(StratumClient* client, uint32_t id, const char* login);
+	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
 	uint64_t get_random64();
 
 private:
+	static bool get_custom_diff(const char* s, difficulty_type& diff);
+
 	static void on_share_found(uv_work_t* req);
 	static void on_after_share_found(uv_work_t* req, int status);
 
@@ -110,11 +113,13 @@ private:
 		uint32_t m_templateId;
 		uint32_t m_nonce;
 		uint32_t m_extraNonce;
+		hash m_resultHash;
 
 		enum class Result {
 			STALE,
 			COULDNT_CHECK_POW,
 			LOW_DIFF,
+			INVALID_POW,
 			OK
 		} m_result;
 	};

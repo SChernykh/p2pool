@@ -195,6 +195,11 @@ struct difficulty_type
 			return 1;
 		}
 
+		// Safeguard against division by zero (CPU will trigger it even if lo = 1 because result doesn't fit in 64 bits)
+		if (lo <= 1) {
+			return std::numeric_limits<uint64_t>::max();
+		}
+
 		uint64_t rem;
 		uint64_t result = udiv128(1, 0, lo, &rem);
 		return rem ? (result + 1) : result;
