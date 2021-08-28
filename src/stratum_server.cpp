@@ -74,11 +74,11 @@ StratumServer::~StratumServer()
 
 void StratumServer::on_block(const BlockTemplate& block)
 {
-	LOGINFO(3, "new block template at height " << block.height());
+	LOGINFO(4, "new block template at height " << block.height());
 
 	const uint32_t num_connections = m_numConnections;
 	if (num_connections == 0) {
-		LOGINFO(3, "no clients connected");
+		LOGINFO(4, "no clients connected");
 		return;
 	}
 

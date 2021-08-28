@@ -1449,7 +1449,7 @@ void SideChain::prune_old_blocks()
 	}
 
 	if (num_blocks_pruned) {
-		LOGINFO(3, "pruned " << num_blocks_pruned << " old blocks at heights <= " << h);
+		LOGINFO(4, "pruned " << num_blocks_pruned << " old blocks at heights <= " << h);
 	}
 }
 
