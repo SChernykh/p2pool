@@ -1,8 +1,14 @@
+// p2pool side-chain settings
+//
+// If you change anything here, you'll most likely be mining alone on a different p2pool side-chain!!!
+//
+// Fixed difficulty for miners that connect to your node must be set in their config.json
+//
 {
 	"name": "default",
 	"password": "",
 	"block_time": 10,
-	"min_diff": 10000,
+	"min_diff": 100000,
 	"pplns_window": 2160,
 	"uncle_penalty": 20
 }
