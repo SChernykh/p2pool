@@ -61,7 +61,7 @@ sudo apt update && sudo apt install git build-essential cmake pkg-config libssl-
 git clone --recursive https://github.com/SChernykh/monero
 cd monero
 git checkout p2pool-api-v0.17
-git submodule init && git submodule update
+git submodule sync && git submodule update --init --force --recursive
 make release-static -j$(nproc)
 ```
 
