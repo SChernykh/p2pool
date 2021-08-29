@@ -221,7 +221,8 @@ void RandomX_Hasher::set_seed(const hash& seed)
 
 				threads.emplace_back([this, a, b]()
 					{
-						make_thread_background();
+						// Background doesn't work very well with xmrig mining on all cores
+						//make_thread_background();
 						randomx_init_dataset(m_dataset, m_cache[m_index], a, b - a);
 					});
 			}
