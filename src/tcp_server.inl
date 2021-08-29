@@ -430,10 +430,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 		if (elapsed_time >= (counter + 1) * 1000) {
 			++counter;
 			if (counter < timeout_seconds) {
-				LOGINFO(5, "waiting for event loop to stop for " << (timeout_seconds - counter) << " more seconds...");
+				LOGINFO(1, "waiting for event loop to stop for " << (timeout_seconds - counter) << " more seconds...");
 			}
 			else {
-				LOGWARN(5, "timed out while waiting for event loop to stop");
+				LOGWARN(1, "timed out while waiting for event loop to stop");
 				uv_async_init(&m_loop, &asy, nullptr);
 				uv_stop(&m_loop);
 				uv_async_send(&asy);
