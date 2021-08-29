@@ -89,7 +89,7 @@ Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds*
 - xmrig should connect and start mining
 - you can connect multiple miners to the same p2pool node. The more the better!
 - From now on, watch your wallet to see if it gets anything
-- Also check p2pool.log for any warnings and errors: `cat p2pool.log | grep -E 'WARNING|ERROR'`
+- Also check p2pool.log for any warnings and errors: `grep -E 'WARNING|ERROR' p2pool.log`
 
 ## Donations
 
