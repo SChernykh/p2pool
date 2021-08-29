@@ -143,7 +143,10 @@ void ZMQReader::parse(char* data, size_t size)
 	using namespace rapidjson;
 
 	Document doc;
-	doc.Parse(value, end - value);
+	if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(value, end - value).HasParseError()) {
+		LOGWARN(1, "ZeroMQ message failed to parse, skipping it");
+		return;
+	}
 
 	if (strcmp(data, "json-minimal-txpool_add") == 0) {
 		if (!doc.IsArray()) {
