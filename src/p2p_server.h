@@ -103,6 +103,7 @@ public:
 		uint64_t m_handshakeChallenge;
 		bool m_handshakeSolutionSent;
 		bool m_handshakeComplete;
+		bool m_handshakeInvalid;
 		int m_listenPort;
 		time_t m_lastPeerListRequest;
 		time_t m_lastAlive;

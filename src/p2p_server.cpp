@@ -663,6 +663,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeChallenge(0)
 	, m_handshakeSolutionSent(false)
 	, m_handshakeComplete(false)
+	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
 	, m_lastPeerListRequest(0)
 	, m_lastAlive(0)
@@ -684,6 +685,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeChallenge = 0;
 	m_handshakeSolutionSent = false;
 	m_handshakeComplete = false;
+	m_handshakeInvalid = false;
 	m_listenPort = -1;
 	m_lastPeerListRequest = 0;
 	m_lastAlive = 0;
@@ -1010,7 +1012,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					memcpy(p, work->solution_salt, CHALLENGE_SIZE);
 					p += CHALLENGE_SIZE;
 
-					if (work->client->m_handshakeComplete) {
+					if (work->client->m_handshakeComplete && !work->client->m_handshakeInvalid) {
 						work->client->on_after_handshake(p);
 					}
 
@@ -1019,6 +1021,12 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 
 			if (result) {
 				work->client->m_handshakeSolutionSent = true;
+
+				if (work->client->m_handshakeInvalid) {
+					work->client->ban(DEFAULT_BAN_TIME);
+					work->server->remove_peer_from_list(work->client);
+					work->client->close();
+				}
 			}
 			else {
 				work->client->close();
@@ -1119,19 +1127,26 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 
 		if (high) {
 			LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " handshake doesn't have enough PoW");
-			return false;
+			m_handshakeInvalid = true;
 		}
 	}
 
 	if (!check_handshake_solution(solution, solution_salt)) {
 		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " handshake failed");
-		return false;
+		m_handshakeInvalid = true;
 	}
 
 	m_handshakeComplete = true;
-	LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " handshake completed");
+
+	if (!m_handshakeInvalid) {
+		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " handshake completed");
+	}
 
 	if (m_handshakeSolutionSent) {
+		if (m_handshakeInvalid) {
+			return false;
+		}
+
 		return m_owner->send(this,
 			[this, &solution, &solution_salt](void* buf)
 			{
