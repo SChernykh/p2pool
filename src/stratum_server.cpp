@@ -198,8 +198,8 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 
 			log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 
-			// Use short target format (4 bytes) for diff <= ~2 million
-			if ((target >> 32) >= 2147) {
+			// Use short target format (4 bytes) for diff <= ~4 million
+			if ((target >> 32) >= 1073) {
 				target_hex.m_data += sizeof(uint32_t);
 				target_hex.m_size -= sizeof(uint32_t);
 			}
@@ -392,8 +392,8 @@ void StratumServer::on_blobs_ready()
 				{
 					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 
-					// Use short target format (4 bytes) for diff <= ~2 million
-					if ((target >> 32) >= 2147) {
+					// Use short target format (4 bytes) for diff <= ~4 million
+					if ((target >> 32) >= 1073) {
 						target_hex.m_data += sizeof(uint32_t);
 						target_hex.m_size -= sizeof(uint32_t);
 					}
