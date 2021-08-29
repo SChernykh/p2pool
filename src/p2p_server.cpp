@@ -1022,7 +1022,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 			if (result) {
 				work->client->m_handshakeSolutionSent = true;
 
-				if (work->client->m_handshakeInvalid) {
+				if (work->client->m_handshakeComplete && work->client->m_handshakeInvalid) {
 					work->client->ban(DEFAULT_BAN_TIME);
 					work->server->remove_peer_from_list(work->client);
 					work->client->close();
