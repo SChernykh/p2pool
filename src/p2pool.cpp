@@ -346,8 +346,12 @@ void p2pool::submit_block() const
 	}
 	request.append("\"]}");
 
+	const uint32_t template_id = submit_data.template_id;
+	const uint32_t nonce = submit_data.nonce;
+	const uint32_t extra_nonce = submit_data.extra_nonce;
+
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request.c_str(),
-		[height, diff, &submit_data](const char* data, size_t size)
+		[height, diff, template_id, nonce, extra_nonce](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
@@ -370,7 +374,7 @@ void p2pool::submit_block() const
 					error_msg = it->value.GetString();
 				}
 
-				LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
+				LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
 				return;
 			}
 
