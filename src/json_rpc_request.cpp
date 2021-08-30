@@ -64,7 +64,7 @@ void JSONRPCRequest::on_connect(uv_connect_t* req, int status)
 	JSONRPCRequest* pThis = static_cast<JSONRPCRequest*>(req->data);
 
 	if (status != 0) {
-		LOGERR(1, "failed to connect, status = " << status);
+		LOGERR(1, "failed to connect, error " << uv_err_name(status));
 		pThis->close();
 		return;
 	}
@@ -81,7 +81,7 @@ void JSONRPCRequest::on_write(uv_write_t* handle, int status)
 	JSONRPCRequest* pThis = static_cast<JSONRPCRequest*>(handle->data);
 
 	if (status != 0) {
-		LOGERR(1, "failed to send request, status = " << status);
+		LOGERR(1, "failed to send request, error " << uv_err_name(status));
 		pThis->close();
 		return;
 	}
@@ -112,7 +112,7 @@ void JSONRPCRequest::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t*
 	}
 	else if (nread < 0) {
 		if (nread != UV_EOF){
-			LOGERR(1, "failed to read response, err = " << uv_err_name(static_cast<int>(nread)));
+			LOGERR(1, "failed to read response, error " << uv_err_name(static_cast<int>(nread)));
 		}
 		pThis->close();
 	}
