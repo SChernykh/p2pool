@@ -142,6 +142,7 @@ private:
 
 	HashrateData m_hashrateData[131072];
 	uint64_t m_cumulativeHashes;
+	uint64_t m_cumulativeHashesAtLastShare;
 	uint64_t m_hashrateDataHead;
 	uint64_t m_hashrateDataTail_15m;
 	uint64_t m_hashrateDataTail_1h;

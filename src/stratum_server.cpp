@@ -19,6 +19,7 @@
 #include "stratum_server.h"
 #include "block_template.h"
 #include "p2pool.h"
+#include "side_chain.h"
 #include "params.h"
 
 static constexpr char log_category_prefix[] = "StratumServer ";
@@ -40,6 +41,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_rd{}
 	, m_rng(m_rd())
 	, m_cumulativeHashes(0)
+	, m_cumulativeHashesAtLastShare(0)
 	, m_hashrateDataHead(0)
 	, m_hashrateDataTail_15m(0)
 	, m_hashrateDataTail_1h(0)
@@ -349,10 +351,13 @@ void StratumServer::print_stratum_status() const
 	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
 	int64_t dt_15m, dt_1h, dt_24h;
 
+	uint64_t hashes_since_last_share;
+
 	{
 		ReadLock lock(m_hashrateDataLock);
 
 		total_hashes = m_cumulativeHashes;
+		hashes_since_last_share = m_cumulativeHashes - m_cumulativeHashesAtLastShare;
 
 		const HashrateData* data = m_hashrateData;
 		const HashrateData& head = data[m_hashrateDataHead];
@@ -379,6 +384,7 @@ void StratumServer::print_stratum_status() const
 		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
 		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
 		"\nTotal hashes       = " << total_hashes <<
+		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
 		"\nConnections        = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)"
 	);
 }
@@ -567,6 +573,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		}
 
 		LOGINFO(0, log::Green() << "SHARE FOUND at mainchain height " << height);
+		server->m_cumulativeHashesAtLastShare = server->m_cumulativeHashes;
 
 		if (mainchain_solution) {
 			pool->submit_block_async(share->m_templateId, share->m_nonce, share->m_extraNonce);
