@@ -338,6 +338,12 @@ uint64_t StratumServer::get_random64()
 	return m_rng();
 }
 
+void StratumServer::print_status()
+{
+	update_hashrate_data(0);
+	print_stratum_status();
+}
+
 void StratumServer::print_stratum_status() const
 {
 	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
@@ -478,14 +484,10 @@ void StratumServer::on_blobs_ready()
 
 void StratumServer::update_hashrate_data(uint64_t target)
 {
-	if (target <= 1) {
-		return;
-	}
-
 	const time_t timestamp = time(nullptr);
 
-	uint64_t hashes, rem;
-	hashes = udiv128(1, 0, target, &rem);
+	uint64_t rem;
+	const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
 
 	WriteLock lock(m_hashrateDataLock);
 

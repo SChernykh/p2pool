@@ -70,7 +70,7 @@ public:
 	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
 	uint64_t get_random64();
 
-	void print_status() override { print_stratum_status(); }
+	void print_status() override;
 
 private:
 	void print_stratum_status() const;
