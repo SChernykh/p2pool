@@ -148,6 +148,9 @@ private:
 	uint64_t m_hashrateDataTail_1h;
 	uint64_t m_hashrateDataTail_24h;
 
+	double m_cumulativeFoundSharesDiff;
+	uint32_t m_totalFoundShares;
+
 	void update_hashrate_data(uint64_t target);
 };
 

@@ -46,6 +46,8 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_hashrateDataTail_15m(0)
 	, m_hashrateDataTail_1h(0)
 	, m_hashrateDataTail_24h(0)
+	, m_cumulativeFoundSharesDiff(0.0)
+	, m_totalFoundShares(0)
 {
 	m_hashrateData[0] = { time(nullptr), 0 };
 
@@ -379,11 +381,18 @@ void StratumServer::print_stratum_status() const
 	const uint64_t hashrate_1h  = (dt_1h  > 0) ? (hashes_1h  / dt_1h ) : 0;
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
+	double average_effort = 0.0;
+	if (m_cumulativeHashesAtLastShare > 0) {
+		average_effort = m_cumulativeFoundSharesDiff * 100.0 / static_cast<double>(m_cumulativeHashesAtLastShare);
+	}
+
 	LOGINFO(0, "status" <<
 		"\nHashrate (15m est) = " << log::Hashrate(hashrate_15m) <<
 		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
 		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
 		"\nTotal hashes       = " << total_hashes <<
+		"\nShares found       = " << m_totalFoundShares <<
+		"\nAverage effort     = " << average_effort << '%' <<
 		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
 		"\nConnections        = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)"
 	);
@@ -572,8 +581,15 @@ void StratumServer::on_share_found(uv_work_t* req)
 			return;
 		}
 
-		LOGINFO(0, log::Green() << "SHARE FOUND at mainchain height " << height);
-		server->m_cumulativeHashesAtLastShare = server->m_cumulativeHashes;
+		const uint64_t n = server->m_cumulativeHashes;
+		const double diff = sidechain_difficulty.to_double();
+		const double effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
+		server->m_cumulativeHashesAtLastShare = n;
+
+		server->m_cumulativeFoundSharesDiff += diff;
+		++server->m_totalFoundShares;
+
+		LOGINFO(0, log::Green() << "SHARE FOUND at mainchain height " << height << " with effort " << effort << '%');
 
 		if (mainchain_solution) {
 			pool->submit_block_async(share->m_templateId, share->m_nonce, share->m_extraNonce);
