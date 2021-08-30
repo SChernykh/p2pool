@@ -70,7 +70,11 @@ public:
 	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
 	uint64_t get_random64();
 
+	void print_status() override { print_stratum_status(); }
+
 private:
+	void print_stratum_status() const;
+
 	static bool get_custom_diff(const char* s, difficulty_type& diff);
 
 	static void on_share_found(uv_work_t* req);
@@ -113,6 +117,7 @@ private:
 		uint32_t m_templateId;
 		uint32_t m_nonce;
 		uint32_t m_extraNonce;
+		uint64_t m_target;
 		hash m_resultHash;
 
 		enum class Result {
@@ -126,6 +131,23 @@ private:
 
 	uv_mutex_t m_submittedSharesPoolLock;
 	std::vector<SubmittedShare*> m_submittedSharesPool;
+
+	struct HashrateData
+	{
+		time_t m_timestamp;
+		uint64_t m_cumulativeHashes;
+	};
+
+	mutable uv_rwlock_t m_hashrateDataLock;
+
+	HashrateData m_hashrateData[131072];
+	uint64_t m_cumulativeHashes;
+	uint64_t m_hashrateDataHead;
+	uint64_t m_hashrateDataTail_15m;
+	uint64_t m_hashrateDataTail_1h;
+	uint64_t m_hashrateDataTail_24h;
+
+	void update_hashrate_data(uint64_t target);
 };
 
 } // namespace p2pool
