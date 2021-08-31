@@ -541,6 +541,11 @@ void StratumServer::on_share_found(uv_work_t* req)
 	p2pool* pool = server->m_pool;
 	BlockTemplate& block = pool->block_template();
 
+	uint64_t target = share->m_target;
+	if (target >= TARGET_4_BYTES_LIMIT) {
+		target = (target >> 32) << 32;
+	}
+
 	if (pool->stopped()) {
 		LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
 	}
@@ -581,7 +586,10 @@ void StratumServer::on_share_found(uv_work_t* req)
 			return;
 		}
 
-		const uint64_t n = server->m_cumulativeHashes;
+		uint64_t rem;
+		const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
+
+		const uint64_t n = server->m_cumulativeHashes + hashes;
 		const double diff = sidechain_difficulty.to_double();
 		const double effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
 		server->m_cumulativeHashesAtLastShare = n;
@@ -603,11 +611,6 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 	// Send the response to miner
 	const uint64_t value = *reinterpret_cast<uint64_t*>(share->m_resultHash.h + HASH_SIZE - sizeof(uint64_t));
-
-	uint64_t target = share->m_target;
-	if (target >= TARGET_4_BYTES_LIMIT) {
-		target = (target >> 32) << 32;
-	}
 
 	if (LIKELY(value < target)) {
 		server->update_hashrate_data(target);
