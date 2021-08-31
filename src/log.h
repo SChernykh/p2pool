@@ -22,6 +22,7 @@ namespace p2pool {
 namespace log {
 
 extern int GLOBAL_LOG_LEVEL;
+constexpr int MAX_GLOBAL_LOG_LEVEL = 6;
 
 enum class Severity {
 	Info,

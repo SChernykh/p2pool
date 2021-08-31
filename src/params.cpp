@@ -56,7 +56,7 @@ Params::Params(int argc, char* argv[])
 		}
 
 		if ((strcmp(argv[i], "--loglevel") == 0) && (i + 1 < argc)) {
-			const int level = std::min(std::max(atoi(argv[++i]), 0), 5);
+			const int level = std::min(std::max(atoi(argv[++i]), 0), log::MAX_GLOBAL_LOG_LEVEL);
 			log::GLOBAL_LOG_LEVEL = level;
 		}
 
