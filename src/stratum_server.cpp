@@ -774,6 +774,10 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 		LOGINFO(6, "incoming share from " << log::Gray() << static_cast<char*>(m_addrString));
 		return process_submit(doc, id.GetUint());
 	}
+	else if (strcmp(s, "keepalived") == 0) {
+		LOGINFO(6, "incoming keepalive from " << log::Gray() << static_cast<char*>(m_addrString));
+		return true;
+	}
 	else {
 		LOGWARN(4, "client: invalid JSON request (unknown method)");
 		return false;
