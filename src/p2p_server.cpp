@@ -82,9 +82,10 @@ P2PServer::P2PServer(p2pool* pool)
 		panic();
 	}
 
+	load_saved_peer_list();
+
 	start_listening(pool->params().m_p2pAddresses);
 	connect_to_peers(pool->params().m_p2pPeerList);
-	load_saved_peer_list();
 }
 
 P2PServer::~P2PServer()
@@ -307,22 +308,26 @@ void P2PServer::save_peer_list()
 
 void P2PServer::load_saved_peer_list()
 {
+	std::string saved_list = m_pool->params().m_p2pPeerList;
+
 	std::ifstream f(saved_peer_list_file_name);
-	if (!f.is_open()) {
-		return;
+	if (f.is_open()) {
+		std::string address;
+		while (!f.eof()) {
+			std::getline(f, address);
+			if (!address.empty()) {
+				if (!saved_list.empty()) {
+					saved_list += ',';
+				}
+				saved_list += address;
+			}
+		}
+		f.close();
 	}
 
-	std::string saved_list, address;
-	while (!f.eof()) {
-		std::getline(f, address);
-		if (!address.empty()) {
-			if (!saved_list.empty()) {
-				saved_list += ',';
-			}
-			saved_list += address;
-		}
+	if (saved_list.empty()) {
+		return;
 	}
-	f.close();
 
 	MutexLock lock(m_peerListLock);
 
@@ -370,6 +375,7 @@ void P2PServer::load_saved_peer_list()
 				m_peerList.push_back(p);
 			}
 		});
+
 	LOGINFO(5, "peer list loaded (" << m_peerList.size() << " peers)");
 }
 
