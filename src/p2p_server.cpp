@@ -409,6 +409,19 @@ void P2PServer::remove_peer_from_list(P2PClient* client)
 	}
 }
 
+void P2PServer::remove_peer_from_list(const raw_ip& ip)
+{
+	MutexLock lock(m_peerListLock);
+
+	for (auto it = m_peerList.begin(); it != m_peerList.end(); ++it) {
+		const Peer& p = *it;
+		if (p.m_addr == ip) {
+			m_peerList.erase(it);
+			return;
+		}
+	}
+}
+
 void P2PServer::broadcast(const PoolBlock& block)
 {
 	Broadcast* data = new Broadcast{};
@@ -1429,10 +1442,11 @@ bool P2PServer::P2PClient::handle_incoming_block_async(PoolBlock* block)
 		P2PClient* client;
 		P2PServer* server;
 		uint32_t client_reset_counter;
+		raw_ip client_ip;
 		std::vector<hash> missing_blocks;
 	};
 
-	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), {} };
+	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_addr, {} };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -1440,7 +1454,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(PoolBlock* block)
 		{
 			bkg_jobs_tracker.start("P2PServer::handle_incoming_block_async");
 			Work* work = reinterpret_cast<Work*>(req->data);
-			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->missing_blocks);
+			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_ip, work->missing_blocks);
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
@@ -1459,15 +1473,22 @@ bool P2PServer::P2PClient::handle_incoming_block_async(PoolBlock* block)
 	return true;
 }
 
-void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks)
+void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, const raw_ip& addr, std::vector<hash>& missing_blocks)
 {
 	if (!pool->side_chain().add_external_block(block, missing_blocks)) {
 		// Client sent bad data, disconnect and ban it
 		if (reset_counter == m_resetCounter.load()) {
-			ban(DEFAULT_BAN_TIME);
-			static_cast<P2PServer*>(m_owner)->remove_peer_from_list(this);
 			close();
+			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
 		}
+		else {
+			const log::hex_buf addr_hex(addr.data, sizeof(addr.data));
+			LOGWARN(3, "IP " << addr_hex << " banned for " << DEFAULT_BAN_TIME << " seconds");
+		}
+
+		P2PServer* server = pool->p2p_server();
+		server->ban(addr, DEFAULT_BAN_TIME);
+		server->remove_peer_from_list(addr);
 	}
 }
 

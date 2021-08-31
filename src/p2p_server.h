@@ -95,7 +95,7 @@ public:
 		bool on_peer_list_response(const uint8_t* buf) const;
 
 		bool handle_incoming_block_async(PoolBlock* block);
-		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks);
+		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, const raw_ip& addr, std::vector<hash>& missing_blocks);
 		void post_handle_incoming_block(const uint32_t reset_counter, std::vector<hash>& missing_blocks);
 
 		uint64_t m_peerId;
@@ -139,6 +139,7 @@ private:
 	void load_saved_peer_list();
 	void update_peer_in_list(bool is_v6, const raw_ip& ip, int port);
 	void remove_peer_from_list(P2PClient* client);
+	void remove_peer_from_list(const raw_ip& ip);
 
 	uv_mutex_t m_rngLock;
 	std::random_device m_rd;
