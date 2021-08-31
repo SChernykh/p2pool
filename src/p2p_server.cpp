@@ -696,6 +696,17 @@ void P2PServer::P2PClient::reset()
 
 bool P2PServer::P2PClient::on_connect()
 {
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	// Don't allow multiple connections to/from the same IP
+	// server->m_clientsListLock is already locked here
+	for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if ((client != this) && (client->m_addr == m_addr)) {
+			LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " is already connected as " << static_cast<char*>(client->m_addrString));
+			return false;
+		}
+	}
+
 	m_lastAlive = time(nullptr);
 	return send_handshake_challenge();
 }
