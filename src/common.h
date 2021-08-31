@@ -51,6 +51,7 @@
 #include <string>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 
 #include <signal.h>
 
@@ -247,6 +248,8 @@ struct MinerData
 	uint64_t already_generated_coins;
 	uint64_t median_timestamp;
 	std::vector<TxMempoolData> tx_backlog;
+
+	std::chrono::system_clock::time_point time_received;
 };
 
 struct ChainMain

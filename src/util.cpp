@@ -20,7 +20,6 @@
 #include "uv_util.h"
 #include <map>
 #include <thread>
-#include <chrono>
 
 #ifndef _WIN32
 #include <sched.h>
