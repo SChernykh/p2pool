@@ -424,7 +424,12 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 
 void P2PServer::broadcast(const PoolBlock& block)
 {
-	Broadcast* data = new Broadcast{};
+	if (block.m_txinGenHeight + 2 < m_pool->miner_data().height) {
+		LOGWARN(4, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+		return;
+	}
+
+	Broadcast* data = new Broadcast();
 
 	data->blob.reserve(block.m_mainChainData.size() + block.m_sideChainData.size());
 	data->blob = block.m_mainChainData;
