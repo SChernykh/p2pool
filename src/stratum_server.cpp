@@ -382,8 +382,8 @@ void StratumServer::print_stratum_status() const
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
 	double average_effort = 0.0;
-	if (m_cumulativeHashesAtLastShare > 0) {
-		average_effort = m_cumulativeFoundSharesDiff * 100.0 / static_cast<double>(m_cumulativeHashesAtLastShare);
+	if (m_cumulativeFoundSharesDiff > 0.0) {
+		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / m_cumulativeFoundSharesDiff;
 	}
 
 	LOGINFO(0, "status" <<
