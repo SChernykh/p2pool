@@ -1,0 +1,10 @@
+image: ubuntu:20.04
+
+script:
+ - apt update
+ - DEBIAN_FRONTEND=noninteractive apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
+
+ - mkdir build && cd build && cmake .. && make -j2
+ - cp build/p2pool /archive/p2pool_$ABSTRUSE_BRANCH
+ - git show | head -3 > /archive/p2pool_$ABSTRUSE_BRANCH.gitinfo
+ - sha512sum build/p2pool > /archive/p2pool_$ABSTRUSE_BRANCH.sha512sum
