@@ -190,6 +190,11 @@ bool Wallet::decode(const char* address)
 		m_type = NetworkType::Invalid;
 	}
 
+	ge_p3 point;
+	if ((ge_frombytes_vartime(&point, m_spendPublicKey.h) != 0) || (ge_frombytes_vartime(&point, m_viewPublicKey.h) != 0)) {
+		m_type = NetworkType::Invalid;
+	}
+
 	return valid();
 }
 

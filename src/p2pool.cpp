@@ -29,6 +29,7 @@
 #include "p2p_server.h"
 #include "params.h"
 #include "console_commands.h"
+#include "crypto.h"
 #include <thread>
 #include <iostream>
 
@@ -48,6 +49,14 @@ p2pool::p2pool(int argc, char* argv[])
 {
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
+		panic();
+	}
+
+	hash pub, sec, eph_public_key;
+	generate_keys(pub, sec);
+
+	if (!m_params->m_wallet.get_eph_public_key(sec, 0, eph_public_key)) {
+		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
 		panic();
 	}
 
