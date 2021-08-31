@@ -233,9 +233,16 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 		hash view_pub_key;
 		READ_BUF(spend_pub_key.h, HASH_SIZE);
 		READ_BUF(view_pub_key.h, HASH_SIZE);
-		m_minerWallet.assign(spend_pub_key, view_pub_key);
+		if (!m_minerWallet.assign(spend_pub_key, view_pub_key, sidechain.network_type())) {
+			return __LINE__;
+		}
 
 		READ_BUF(m_txkeySec.h, HASH_SIZE);
+
+		if (!check_keys(m_txkeyPub, m_txkeySec)) {
+			return __LINE__;
+		}
+
 		READ_BUF(m_parent.h, HASH_SIZE);
 
 		uint64_t num_uncles;

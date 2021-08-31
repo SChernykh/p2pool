@@ -550,7 +550,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		blob.emplace_back(TXOUT_TO_KEY);
 
-		shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key);
+		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
+			LOGWARN(6, "get_eph_public_key failed at index " << i);
+		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 
 		block->m_outputs.emplace_back(rewards[i], eph_public_key);
@@ -1146,7 +1148,14 @@ void SideChain::verify(PoolBlock* block)
 		}
 
 		hash eph_public_key;
-		shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key);
+		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
+			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+				", id = " << block->m_sidechainId <<
+				", mainchain height = " << block->m_txinGenHeight <<
+				" failed to eph_public_key at index " << i);
+			block->m_invalid = true;
+			return;
+		}
 
 		if (eph_public_key != block->m_outputs[i].m_ephPublicKey) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<

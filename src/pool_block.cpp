@@ -20,6 +20,7 @@
 #include "keccak.h"
 #include "side_chain.h"
 #include "pow_hash.h"
+#include "crypto.h"
 
 static constexpr char log_category_prefix[] = "PoolBlock ";
 

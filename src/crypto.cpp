@@ -84,16 +84,29 @@ void generate_keys(hash& pub, hash& sec)
 	static constexpr uint8_t limit[32] = { 0xe3, 0x6a, 0x67, 0x72, 0x8b, 0xce, 0x13, 0x29, 0x8f, 0x30, 0x82, 0x8c, 0x0b, 0xa4, 0x10, 0x39, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0 };
 
 	do {
-		randomBytes(sec.h);
-		if (!less32(sec.h, limit)) {
-			continue;
-		}
+		do { randomBytes(sec.h); } while (!less32(sec.h, limit));
 		sc_reduce32(sec.h);
 	} while (!sc_isnonzero(sec.h));
 
 	ge_p3 point;
 	ge_scalarmult_base(&point, sec.h);
 	ge_p3_tobytes(pub.h, &point);
+}
+
+bool check_keys(const hash& pub, const hash& sec)
+{
+	// From ge_scalarmult_base's comment: "preconditions a[31] <= 127"
+	if (sec.h[HASH_SIZE - 1] > 127) {
+		return false;
+	}
+
+	ge_p3 point;
+	ge_scalarmult_base(&point, sec.h);
+
+	hash pub_check;
+	ge_p3_tobytes(pub_check.h, &point);
+
+	return pub == pub_check;
 }
 
 bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation)

@@ -34,12 +34,12 @@ public:
 	FORCEINLINE NetworkType type() const { return m_type; }
 
 	bool decode(const char* address);
-	void assign(const hash& spend_pub_key, const hash& view_pub_key);
+	bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type);
 
 	FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
 	FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
 
-	void get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key);
+	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key);
 
 	FORCEINLINE bool operator<(const Wallet& w) const { return m_spendPublicKey < w.m_spendPublicKey; }
 	FORCEINLINE bool operator==(const Wallet& w) const { return m_spendPublicKey == w.m_spendPublicKey; }

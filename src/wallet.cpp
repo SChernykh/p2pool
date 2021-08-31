@@ -24,6 +24,10 @@
 #include "crypto.h"
 #include <array>
 
+extern "C" {
+#include "crypto-ops.h"
+}
+
 static constexpr char log_category_prefix[] = "Wallet ";
 
 namespace {
@@ -189,8 +193,13 @@ bool Wallet::decode(const char* address)
 	return valid();
 }
 
-void Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key)
+bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type)
 {
+	ge_p3 point;
+	if ((ge_frombytes_vartime(&point, spend_pub_key.h) != 0) || (ge_frombytes_vartime(&point, view_pub_key.h) != 0)) {
+		return false;
+	}
+
 	MutexLock lock(m_lock);
 
 	m_prefix = 0;
@@ -198,15 +207,17 @@ void Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key)
 	m_viewPublicKey = view_pub_key;
 	m_checksum = 0;
 
-	m_type = NetworkType::Mainnet;
+	m_type = type;
 
 	m_txkeySec = {};
 	m_outputIndex = std::numeric_limits<size_t>::max();
 	m_derivation = {};
 	m_ephPublicKey = {};
+
+	return true;
 }
 
-void Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key)
+bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key)
 {
 	MutexLock lock(m_lock);
 
@@ -217,7 +228,9 @@ void Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash
 		derivation = m_derivation;
 	}
 	else {
-		generate_key_derivation(m_viewPublicKey, txkey_sec, derivation);
+		if (!generate_key_derivation(m_viewPublicKey, txkey_sec, derivation)) {
+			return false;
+		}
 		m_derivation = derivation;
 		m_txkeySec = txkey_sec;
 		derivation_changed = true;
@@ -227,10 +240,14 @@ void Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash
 		eph_public_key = m_ephPublicKey;
 	}
 	else {
-		derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key);
+		if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
+			return false;
+		}
 		m_outputIndex = output_index;
 		m_ephPublicKey = eph_public_key;
 	}
+
+	return true;
 }
 
 } // namespace p2pool

@@ -628,7 +628,9 @@ bool BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Min
 		}
 		else {
 			hash eph_public_key;
-			shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key);
+			if (!shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key)) {
+				LOGERR(1, "get_eph_public_key failed at index " << i);
+			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key);
 		}
