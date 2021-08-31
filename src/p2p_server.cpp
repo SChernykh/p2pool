@@ -1296,15 +1296,17 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 		m_broadcastedHashes.insert(server->m_block->m_sidechainId);
 	}
 
-	if (server->m_block->m_prevId != server->m_pool->miner_data().prev_id) {
+	const MinerData& miner_data = server->m_pool->miner_data();
+
+	if (server->m_block->m_prevId != miner_data.prev_id) {
 		// This peer is mining on top of a different Monero block, investigate it
 		const uint64_t peer_height = server->m_block->m_txinGenHeight;
-		const uint64_t our_height = server->m_pool->miner_data().height;
+		const uint64_t our_height = miner_data.height;
 
 		if (peer_height < our_height) {
 			if (our_height - peer_height < 5) {
 				using namespace std::chrono;
-				const int64_t elapsed_ms = duration_cast<milliseconds>(system_clock::now() - server->m_pool->miner_data().time_received).count();
+				const int64_t elapsed_ms = duration_cast<milliseconds>(system_clock::now() - miner_data.time_received).count();
 				if ((our_height - peer_height > 1) || (elapsed_ms >= 1000)) {
 					LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (" << elapsed_ms << " ms late, mainchain height " << peer_height << ", expected >= " << our_height << "), ignoring it");
 					return true;
