@@ -219,42 +219,61 @@ void ZMQReader::parse(char* data, size_t size)
 		auto arr = doc.GetArray();
 		for (Value* i = arr.begin(); i != arr.end(); ++i) {
 			if (!PARSE(*i, m_chainmainData, timestamp)) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main timestamp failed to parse, skipping it");
 				continue;
 			}
 
 			auto it = i->FindMember("miner_tx");
 			if ((it == i->MemberEnd()) || !it->value.IsObject()) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main miner_tx not found, skipping it");
 				continue;
 			}
 
 			auto extra_it = it->value.FindMember("extra");
 			if ((extra_it == it->value.MemberEnd()) || !extra_it->value.IsString()) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main extra not found, skipping it");
 				continue;
 			}
 
 			auto inputs_it = it->value.FindMember("inputs");
 			if ((inputs_it == it->value.MemberEnd()) || !inputs_it->value.IsArray()) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main inputs not found, skipping it");
 				continue;
+			}
+
+			// Get block reward from miner_tx outputs
+			m_chainmainData.reward = 0;
+
+			auto outputs_it = it->value.FindMember("outputs");
+			if ((outputs_it != it->value.MemberEnd()) && outputs_it->value.IsArray()) {
+				auto outputs = outputs_it->value.GetArray();
+				for (SizeType j = 0, n = outputs.Size(); j < n; ++j) {
+					if (outputs[j].IsObject()) {
+						auto amount_it = outputs[j].FindMember("amount");
+						if (amount_it != outputs[j].MemberEnd() && amount_it->value.IsUint64()) {
+							m_chainmainData.reward += amount_it->value.GetUint64();
+						}
+					}
+				}
+			}
+			else {
+				LOGWARN(4, "json-full-chain_main outputs not found");
 			}
 
 			auto inputs = inputs_it->value.GetArray();
 			if ((inputs.Size() == 0) || !inputs[0].IsObject()) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main inputs is not an array, skipping it");
 				continue;
 			}
 
 			it = inputs[0].FindMember("gen");
 			if ((it == inputs[0].MemberEnd()) || !it->value.IsObject()) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main gen not found, skipping it");
 				continue;
 			}
 
 			if (!PARSE(it->value, m_chainmainData, height)) {
-				LOGWARN(1, "json-full-chain_main array element failed to parse, skipping it");
+				LOGWARN(1, "json-full-chain_main height not found, skipping it");
 				continue;
 			}
 

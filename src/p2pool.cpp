@@ -178,8 +178,9 @@ void p2pool::handle_miner_data(MinerData& data)
 		c.height = data.height - 1;
 		c.id = data.prev_id;
 
-		// timestamp is unknown here
+		// timestamp and reward is unknown here
 		c.timestamp = 0;
+		c.reward = 0;
 
 		m_mainchainByHash[c.id] = c;
 	}
@@ -230,6 +231,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		ChainMain& c = m_mainchainByHeight[data.height];
 		c.height = data.height;
 		c.timestamp = data.timestamp;
+		c.reward = data.reward;
 
 		// data.id not filled in here, but c.id should be available. Copy it to data.id for logging
 		data.id = c.id;
@@ -256,7 +258,8 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 	LOGINFO(2, "new main chain block: height = " << log::Gray() << data.height << log::NoColor() <<
 		", id = " << log::LightBlue() << data.id << log::NoColor() <<
-		", timestamp = " << log::Gray() << data.timestamp);
+		", timestamp = " << log::Gray() << data.timestamp << log::NoColor() << 
+		", reward = " << log::Gray() << log::XMRAmount(data.reward));
 
 	if (!sidechain_id.empty() && side_chain().has_block(sidechain_id)) {
 		LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);

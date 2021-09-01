@@ -254,10 +254,11 @@ struct MinerData
 
 struct ChainMain
 {
-	FORCEINLINE ChainMain() : height(0), timestamp(0), id() {}
+	FORCEINLINE ChainMain() : height(0), timestamp(0), reward(0), id() {}
 
 	uint64_t height;
 	uint64_t timestamp;
+	uint64_t reward;
 	hash id;
 };
 

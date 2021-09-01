@@ -221,9 +221,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	const uint64_t max_reward = base_reward + total_tx_fees;
 
-	LOGINFO(3, "base  reward = " << log::Gray() << base_reward << log::NoColor() <<
+	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
 		", mempool: " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
-		" transactions, fees = " << log::Gray() << total_tx_fees << log::NoColor() <<
+		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
 	m_blockHeader.clear();
@@ -384,11 +384,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		}
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
-		LOGINFO(3, "final_reward = " << final_reward << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
+		LOGINFO(3, "final_reward = " << log::XMRAmount(final_reward) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
 
 		uint64_t final_reward2;
 		fill_optimal_knapsack(data, base_reward, miner_tx_weight, final_reward2, final_fees, final_weight);
-		LOGINFO(3, "best_reward  = " << final_reward2 << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
+		LOGINFO(3, "best_reward  = " << log::XMRAmount(final_reward2) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
 		if (final_reward2 < final_reward) {
 			LOGERR(1, "fill_optimal_knapsack has a bug, found solution is not optimal. Fix it!");
 		}
@@ -487,7 +487,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	calc_merkle_tree_main_branch();
 
-	LOGINFO(3, "final reward = " << log::Gray() << final_reward << log::NoColor() <<
+	LOGINFO(3, "final reward = " << log::Gray() << log::XMRAmount(final_reward) << log::NoColor() <<
 		", weight = " << log::Gray() << final_weight << log::NoColor() <<
 		", outputs = " << log::Gray() << m_poolBlockTemplate->m_outputs.size() << log::NoColor() <<
 		", " << log::Gray() << m_numTransactionHashes << log::NoColor() <<
