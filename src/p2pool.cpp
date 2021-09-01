@@ -32,12 +32,15 @@
 #include "crypto.h"
 #include "p2pool_api.h"
 #include <thread>
+#include <fstream>
 
-static constexpr char log_category_prefix[] = "P2Pool ";
+constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
 
 constexpr uint64_t SEEDHASH_EPOCH_BLOCKS = 2048;
 constexpr uint64_t SEEDHASH_EPOCH_LAG = 64;
+
+constexpr char FOUND_BLOCKS_FILE[] = "p2pool.blocks";
 
 namespace p2pool {
 
@@ -91,6 +94,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_stopAsync.data = this;
 
 	uv_rwlock_init_checked(&m_mainchainLock);
+	uv_mutex_init_checked(&m_foundBlocksLock);
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath);
@@ -105,6 +109,7 @@ p2pool::p2pool(int argc, char* argv[])
 p2pool::~p2pool()
 {
 	uv_rwlock_destroy(&m_mainchainLock);
+	uv_mutex_destroy(&m_foundBlocksLock);
 	uv_mutex_destroy(&m_submitBlockDataLock);
 
 	delete m_api;
@@ -239,6 +244,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 		// data.id not filled in here, but c.id should be available. Copy it to data.id for logging
 		data.id = c.id;
+		data.difficulty = c.difficulty;
 
 		m_mainchainByHash[c.id] = c;
 	}
@@ -267,6 +273,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 	if (!sidechain_id.empty() && side_chain().has_block(sidechain_id)) {
 		LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
+		api_update_block_found(&data);
 	}
 
 	api_update_network_stats();
@@ -567,6 +574,23 @@ void p2pool::get_info()
 		{
 			parse_get_info_rpc(data, size);
 		});
+
+	if (m_api) {
+		std::ifstream f(FOUND_BLOCKS_FILE);
+		if (f.is_open()) {
+			while (!f.eof()) {
+				time_t timestamp;
+				f >> timestamp;
+				if (f.eof()) break;
+
+				uint64_t height;
+				f >> height;
+
+				m_foundBlocks.emplace_back(std::make_pair(timestamp, height));
+			}
+			api_update_block_found(nullptr);
+		}
+	}
 }
 
 void p2pool::parse_get_info_rpc(const char* data, size_t size)
@@ -791,13 +815,67 @@ void p2pool::api_update_pool_stats()
 	const uint64_t miners = m_sideChain->miner_count();
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
+	time_t last_block_found_time = 0;
+	uint64_t last_block_found_height = 0;
+
+	{
+		MutexLock lock(m_foundBlocksLock);
+		if (!m_foundBlocks.empty()) {
+			last_block_found_time = m_foundBlocks.back().first;
+			last_block_found_height = m_foundBlocks.back().second;
+		}
+	}
+
 	m_api->set(p2pool_api::Category::POOL, "stats",
-		[hashrate, miners, &total_hashes](log::Stream& s)
+		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height](log::Stream& s)
 		{
 			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
 				<< ",\"miners\":" << miners
 				<< ",\"totalHashes\":" << total_hashes
-				<< ",\"lastBlockFoundTime\":0,\"lastBlockFound\":0}}";
+				<< ",\"lastBlockFoundTime\":" << last_block_found_time
+				<< ",\"lastBlockFound\":" << last_block_found_height << "}}";
+		});
+}
+
+void p2pool::api_update_block_found(const ChainMain* data)
+{
+	if (!m_api) {
+		return;
+	}
+
+	const time_t cur_time = time(nullptr);
+
+	if (data) {
+		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
+		if (f.is_open()) {
+			f << cur_time << ' ' << data->height << '\n';
+		}
+	}
+
+
+	std::vector<std::pair<time_t, uint64_t>> found_blocks;
+	{
+		MutexLock lock(m_foundBlocksLock);
+		if (data) {
+			m_foundBlocks.emplace_back(std::make_pair(cur_time, data->height));
+		}
+		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 25), m_foundBlocks.end());
+	}
+
+	m_api->set(p2pool_api::Category::POOL, "blocks",
+		[&found_blocks](log::Stream& s)
+		{
+			s << '[';
+			bool first = true;
+			for (auto i = found_blocks.rbegin(); i != found_blocks.rend(); ++i) {
+				if (!first) {
+					s << ',';
+				}
+				s << "{\"height\":" << i->second << ',';
+				s << "\"ts\":" << i->first << '}';
+				first = false;
+			}
+			s << ']';
 		});
 }
 

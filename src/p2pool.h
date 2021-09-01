@@ -115,6 +115,10 @@ private:
 
 	void api_update_network_stats();
 	void api_update_pool_stats();
+	void api_update_block_found(const ChainMain* data);
+
+	uv_mutex_t m_foundBlocksLock;
+	std::vector<std::pair<time_t, uint64_t>> m_foundBlocks;
 
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;
