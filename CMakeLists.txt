@@ -25,6 +25,7 @@ set(HEADERS
 	src/mempool.h
 	src/p2p_server.h
 	src/p2pool.h
+	src/p2pool_api.h
 	src/params.h
 	src/pool_block.h
 	src/pool_block_parser.inl
@@ -57,6 +58,7 @@ set(SOURCES
 	src/mempool.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp
+	src/p2pool_api.cpp
 	src/params.cpp
 	src/pool_block.cpp
 	src/pow_hash.cpp

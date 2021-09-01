@@ -36,6 +36,7 @@ struct Params
 	std::string m_p2pAddresses{ "[::]:37890,0.0.0.0:37890" };
 	std::string m_p2pPeerList;
 	std::string m_config;
+	std::string m_apiPath;
 };
 
 } // namespace p2pool

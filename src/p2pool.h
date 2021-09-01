@@ -31,6 +31,7 @@ class SideChain;
 class StratumServer;
 class P2PServer;
 class ConsoleCommands;
+class p2pool_api;
 
 class p2pool : public MinerCallbackHandler
 {
@@ -85,6 +86,7 @@ private:
 
 	Params* m_params;
 
+	p2pool_api* m_api;
 	SideChain* m_sideChain;
 	RandomX_Hasher* m_hasher;
 	BlockTemplate* m_blockTemplate;
@@ -110,6 +112,8 @@ private:
 
 	bool parse_block_header(const char* data, size_t size, ChainMain& result);
 	uint32_t parse_block_headers_range(const char* data, size_t size);
+
+	void api_update_network_stats();
 
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;

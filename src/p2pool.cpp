@@ -30,8 +30,8 @@
 #include "params.h"
 #include "console_commands.h"
 #include "crypto.h"
+#include "p2pool_api.h"
 #include <thread>
-#include <iostream>
 
 static constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -93,7 +93,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
-	MinerData d;
+	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath);
 
 	m_sideChain = new SideChain(this, type);
 	m_hasher = new RandomX_Hasher(this);
@@ -107,6 +107,7 @@ p2pool::~p2pool()
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_mutex_destroy(&m_submitBlockDataLock);
 
+	delete m_api;
 	delete m_sideChain;
 	delete m_hasher;
 	delete m_blockTemplate;
@@ -174,6 +175,8 @@ void p2pool::handle_miner_data(MinerData& data)
 	{
 		WriteLock lock(m_mainchainLock);
 
+		m_mainchainByHeight[data.height].difficulty = data.difficulty.lo;
+
 		ChainMain& c = m_mainchainByHeight[data.height - 1];
 		c.height = data.height - 1;
 		c.id = data.prev_id;
@@ -229,6 +232,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		WriteLock lock(m_mainchainLock);
 
 		ChainMain& c = m_mainchainByHeight[data.height];
+		c.difficulty = data.difficulty ? data.difficulty : c.difficulty;
 		c.height = data.height;
 		c.timestamp = data.timestamp;
 		c.reward = data.reward;
@@ -264,6 +268,8 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	if (!sidechain_id.empty() && side_chain().has_block(sidechain_id)) {
 		LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
 	}
+
+	api_update_network_stats();
 }
 
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
@@ -303,6 +309,11 @@ void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
 void p2pool::on_stop(uv_async_t* async)
 {
 	p2pool* pool = reinterpret_cast<p2pool*>(async->data);
+
+	if (pool->m_api) {
+		pool->m_api->on_stop();
+	}
+
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitBlockAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
@@ -471,6 +482,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 				if (m_serversStarted.exchange(1) == 0) {
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
+					api_update_network_stats();
 				}
 			}
 			else {
@@ -661,7 +673,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	download_block_headers(minerData.height);
 }
 
-bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& result)
+bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 {
 	rapidjson::Document doc;
 	if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
@@ -681,18 +693,19 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& result
 		return false;
 	}
 
-	if (!PARSE(it2->value, result, height) || !PARSE(it2->value, result, timestamp) || !parseValue(it2->value, "hash", result.id)) {
+	const auto& v = it2->value;
+	if (!PARSE(v, c, difficulty) || !PARSE(v, c, height) || !PARSE(v, c, timestamp) || !PARSE(v, c, reward) || !parseValue(v, "hash", c.id)) {
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse 'block_header'");
 		return false;
 	}
 
 	{
 		WriteLock lock(m_mainchainLock);
-		m_mainchainByHeight[result.height] = result;
-		m_mainchainByHash[result.id] = result;
+		m_mainchainByHeight[c.height] = c;
+		m_mainchainByHash[c.id] = c;
 	}
 
-	LOGINFO(4, "parsed block header for height " << result.height);
+	LOGINFO(4, "parsed block header for height " << c.height);
 	return true;
 }
 
@@ -729,7 +742,7 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 		}
 
 		ChainMain c;
-		if (PARSE(*i, c, height) && PARSE(*i, c, timestamp) && parseValue(*i, "hash", c.id)) {
+		if (PARSE(*i, c, difficulty) && PARSE(*i, c, height) && PARSE(*i, c, timestamp) && PARSE(*i, c, reward) && parseValue(*i, "hash", c.id)) {
 			min_height = std::min(min_height, c.height);
 			max_height = std::max(max_height, c.height);
 			m_mainchainByHeight[c.height] = c;
@@ -740,6 +753,29 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 
 	LOGINFO(4, "parsed " << num_headers_parsed << " block headers for heights " << min_height << " - " << max_height);
 	return num_headers_parsed;
+}
+
+void p2pool::api_update_network_stats()
+{
+	if (!m_api) {
+		return;
+	}
+
+	ChainMain mainnet_tip;
+	{
+		ReadLock lock(m_mainchainLock);
+		mainnet_tip = m_mainchainByHash[m_minerData.prev_id];
+	}
+
+	m_api->set(p2pool_api::Category::NETWORK, "stats",
+		[this, mainnet_tip](log::Stream& s)
+		{
+			s << "{\"difficulty\":" << mainnet_tip.difficulty
+				<< ",\"hash\":\"" << mainnet_tip.id
+				<< "\",\"height\":" << mainnet_tip.height
+				<< ",\"reward\":" << mainnet_tip.reward
+				<< ",\"timestamp\":" << mainnet_tip.timestamp << "}";
+		});
 }
 
 static void on_signal(uv_signal_t* handle, int signum)

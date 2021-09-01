@@ -32,6 +32,7 @@ static void usage()
 		"--light-mode         Don't allocate RandomX dataset, saves 2GB of RAM\n"
 		"--loglevel           Verbosity of the log, integer number between 0 and 5\n"
 		"--config             Name of the p2pool config file\n"
+		"--data-api           Path to the p2pool JSON data (use it in tandem with an external web-server)\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum [::]:3333,0.0.0.0:3333 --p2p [::]:37890,0.0.0.0:37890\n\n",

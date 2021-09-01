@@ -63,6 +63,10 @@ Params::Params(int argc, char* argv[])
 		if ((strcmp(argv[i], "--config") == 0) && (i + 1 < argc)) {
 			m_config = argv[++i];
 		}
+
+		if ((strcmp(argv[i], "--data-api") == 0) && (i + 1 < argc)) {
+			m_apiPath = argv[++i];
+		}
 	}
 }
 
