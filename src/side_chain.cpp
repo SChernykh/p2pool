@@ -634,21 +634,21 @@ void SideChain::print_status()
 
 	const uint64_t block_reward = m_pool->block_template().final_reward();
 
-	uint64_t next_payout = 0;
+	uint64_t reward_share = 0;
 	if (m_chainTip) {
 		Wallet w = m_pool->params().m_wallet;
 		hash eph_public_key;
 		for (size_t i = 0, n = m_chainTip->m_outputs.size(); i < n; ++i) {
 			w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key);
 			if (m_chainTip->m_outputs[i].m_ephPublicKey == eph_public_key) {
-				next_payout = m_chainTip->m_outputs[i].m_reward;
+				reward_share = m_chainTip->m_outputs[i].m_reward;
 				break;
 			}
 		}
 	}
 
 	uint64_t product[2];
-	product[0] = umul128(pool_hashrate, next_payout, &product[1]);
+	product[0] = umul128(pool_hashrate, reward_share, &product[1]);
 	const uint64_t hashrate_est = udiv128(product[1], product[0], block_reward, &rem);
 
 	LOGINFO(0, "status" <<
@@ -659,7 +659,7 @@ void SideChain::print_status()
 		"\nYour hashrate (pool-side) = " << log::Hashrate(hashrate_est) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
 		"\nYour shares               = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
-		"\nNext payout (estimated)   = " << log::XMRAmount(next_payout)
+		"\nBlock reward share (est)  = " << log::XMRAmount(reward_share)
 	);
 }
 
