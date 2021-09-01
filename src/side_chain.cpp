@@ -484,6 +484,8 @@ void SideChain::add_block(const PoolBlock& block)
 	else {
 		verify_loop(new_block);
 	}
+
+	m_seenWallets[new_block->m_minerWallet.spend_public_key()] = new_block->m_localTimestamp;
 }
 
 bool SideChain::has_block(const hash& id)
@@ -668,9 +670,23 @@ difficulty_type SideChain::total_hashes() const
 	return m_chainTip ? m_chainTip->m_cumulativeDifficulty : difficulty_type();
 }
 
-uint64_t SideChain::miner_count() const
+uint64_t SideChain::miner_count()
 {
-	return m_chainTip ? m_chainTip->m_outputs.size() : 0;
+	const time_t cur_time = time(nullptr);
+
+	MutexLock lock(m_sidechainLock);
+
+	// Delete wallets that weren't seen for more than 24 hours and return how many remain
+	for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
+		if (it->second + 24 * 60 * 60 <= cur_time) {
+			it = m_seenWallets.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
+	return m_seenWallets.size();
 }
 
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)

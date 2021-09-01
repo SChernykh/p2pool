@@ -66,7 +66,7 @@ public:
 	const difficulty_type& difficulty() const { return m_curDifficulty; }
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
-	uint64_t miner_count() const;
+	uint64_t miner_count();
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
@@ -95,6 +95,7 @@ private:
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	std::unordered_map<hash, PoolBlock*> m_blocksById;
 	std::unordered_set<hash> m_seenBlocks;
+	std::unordered_map<hash, time_t> m_seenWallets;
 
 	std::vector<DifficultyData> m_difficultyData;
 
