@@ -64,6 +64,9 @@ public:
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
 	NetworkType network_type() const { return m_networkType; }
 	const difficulty_type& difficulty() const { return m_curDifficulty; }
+	difficulty_type total_hashes() const;
+	uint64_t block_time() const { return m_targetBlockTime; }
+	uint64_t miner_count() const;
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 

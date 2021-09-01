@@ -59,25 +59,32 @@ p2pool_api::p2pool_api(const std::string& api_path) : m_apiPath(api_path)
 	uv_mutex_init_checked(&m_dumpDataLock);
 
 	m_networkPath = m_apiPath + "network/";
+	m_poolPath = m_apiPath + "pool/";
 
-#ifdef _MSC_VER
-	result = _mkdir(m_networkPath.c_str());
-#else
-	result = mkdir(m_networkPath.c_str(), 0775);
-#endif
-
-	if (result < 0) {
-		result = errno;
-		if (result != EEXIST) {
-			LOGERR(1, "mkdir(" << m_networkPath << ") failed, error " << result);
-			panic();
-		}
-	}
+	create_dir(m_networkPath);
+	create_dir(m_poolPath);
 }
 
 p2pool_api::~p2pool_api()
 {
 	uv_mutex_destroy(&m_dumpDataLock);
+}
+
+void p2pool_api::create_dir(const std::string& path)
+{
+#ifdef _MSC_VER
+	int result = _mkdir(path.c_str());
+#else
+	int result = mkdir(path.c_str(), 0775);
+#endif
+
+	if (result < 0) {
+		result = errno;
+		if (result != EEXIST) {
+			LOGERR(1, "mkdir(" << path << ") failed, error " << result);
+			panic();
+		}
+	}
 }
 
 void p2pool_api::on_stop()
@@ -95,7 +102,8 @@ void p2pool_api::dump_to_file_async_internal(const Category& category, const cha
 	std::string path;
 
 	switch (category) {
-	case Category::NETWORK: path = m_networkPath + filename;
+	case Category::NETWORK: path = m_networkPath + filename; break;
+	case Category::POOL:    path = m_poolPath    + filename; break;
 	}
 
 	{

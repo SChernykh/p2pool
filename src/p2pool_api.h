@@ -30,6 +30,7 @@ public:
 
 	enum class Category {
 		NETWORK,
+		POOL,
 	};
 
 	void on_stop();
@@ -38,6 +39,8 @@ public:
 	void set(const Category& category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, DumpFileCallback<T>(std::move(callback))); }
 
 private:
+	void create_dir(const std::string& path);
+
 	static void on_dump_to_file(uv_async_t* async) { reinterpret_cast<p2pool_api*>(async->data)->dump_to_file(); }
 
 	struct DumpFileWork {
@@ -75,6 +78,7 @@ private:
 
 	std::string m_apiPath;
 	std::string m_networkPath;
+	std::string m_poolPath;
 
 	uv_mutex_t m_dumpDataLock;
 	std::unordered_map<std::string, std::vector<char>> m_dumpData;

@@ -438,6 +438,7 @@ void p2pool::update_block_template()
 	}
 	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
 	stratum_on_block();
+	api_update_pool_stats();
 }
 
 void p2pool::download_block_headers(uint64_t current_height)
@@ -775,6 +776,28 @@ void p2pool::api_update_network_stats()
 				<< "\",\"height\":" << mainnet_tip.height
 				<< ",\"reward\":" << mainnet_tip.reward
 				<< ",\"timestamp\":" << mainnet_tip.timestamp << "}";
+		});
+}
+
+void p2pool::api_update_pool_stats()
+{
+	if (!m_api) {
+		return;
+	}
+
+	uint64_t t;
+	const difficulty_type diff = m_sideChain->difficulty();
+	const uint64_t hashrate = udiv128(diff.hi, diff.lo, m_sideChain->block_time(), &t);
+	const uint64_t miners = m_sideChain->miner_count();
+	const difficulty_type total_hashes = m_sideChain->total_hashes();
+
+	m_api->set(p2pool_api::Category::POOL, "stats",
+		[hashrate, miners, &total_hashes](log::Stream& s)
+		{
+			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
+				<< ",\"miners\":" << miners
+				<< ",\"totalHashes\":" << total_hashes
+				<< ",\"lastBlockFoundTime\":0,\"lastBlockFound\":0}}";
 		});
 }
 

@@ -114,6 +114,7 @@ private:
 	uint32_t parse_block_headers_range(const char* data, size_t size);
 
 	void api_update_network_stats();
+	void api_update_pool_stats();
 
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;

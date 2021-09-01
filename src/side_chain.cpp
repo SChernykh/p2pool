@@ -663,6 +663,16 @@ void SideChain::print_status()
 	);
 }
 
+difficulty_type SideChain::total_hashes() const
+{
+	return m_chainTip ? m_chainTip->m_cumulativeDifficulty : difficulty_type();
+}
+
+uint64_t SideChain::miner_count() const
+{
+	return m_chainTip ? m_chainTip->m_outputs.size() : 0;
+}
+
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
 {
 	const size_t num_shares = shares.size();
@@ -1448,9 +1458,7 @@ void SideChain::prune_old_blocks()
 			}), v.end());
 
 		if (v.empty()) {
-			auto old_it = it;
-			++it;
-			m_blocksByHeight.erase(old_it);
+			it = m_blocksByHeight.erase(it);
 		}
 		else {
 			++it;

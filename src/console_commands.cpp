@@ -146,22 +146,32 @@ void ConsoleCommands::run()
 
 	do {
 		std::getline(std::cin, command);
-		if (stopped || std::cin.eof()) {
+
+		if (std::cin.eof()) {
+			LOGINFO(1, "EOF, stopping");
 			return;
 		}
 
-		int i;
-		for (i=0; cmds[i].name.len; i++) {
-			if (!strncmp(command.c_str(), cmds[i].name.str, cmds[i].name.len)) {
-				const char *args = command.c_str() + cmds[i].name.len + 1;
-				int rc = cmds[i].func(m_pool, args);
-				if ( rc )
+		if (stopped) {
+			LOGINFO(1, "stopping");
+			return;
+		}
+
+		cmd* c = cmds;
+		for (; c->name.len; ++c) {
+			if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
+				const char *args = command.c_str() + c->name.len + 1;
+				if (c->func(m_pool, args)) {
+					LOGINFO(1, "exit requested, stopping");
 					return;
+				}
 				break;
 			}
 		}
-		if (!cmds[i].name.len)
+
+		if (!c->name.len) {
 			LOGWARN(0, "Unknown command " << command);
+		}
 	} while (true);
 }
 
