@@ -24,7 +24,7 @@
 #include <atomic>
 #include <type_traits>
 
-#include "dbghelp.h"
+#include <DbgHelp.h>
 
 #pragma comment(lib, "Dbghelp.lib")
 
@@ -103,10 +103,8 @@ FORCEINLINE static void remove_allocation(void* p)
 
 	const size_t index = hasher(p) & (N - 1);
 
-	bool found = false;
 	for (uint32_t prev = 0, k = first[index]; k != 0; prev = k, k = next[k]) {
 		if (allocations[k].p == p) {
-			found = true;
 			allocations[k].allocated_size = 0;
 			if (prev) {
 				next[prev] = next[k];

@@ -95,6 +95,7 @@ BlockTemplate::BlockTemplate(const BlockTemplate& b)
 	*this = b;
 }
 
+// cppcheck-suppress operatorEqVarError
 BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 {
 	if (this == &b) {

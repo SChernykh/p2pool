@@ -120,6 +120,7 @@ void p2pool_api::dump_to_file()
 	{
 		MutexLock lock(m_dumpDataLock);
 		data = std::move(m_dumpData);
+		// cppcheck-suppress accessMoved
 		m_dumpData.clear();
 	}
 

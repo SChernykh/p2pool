@@ -103,6 +103,7 @@ Wallet::Wallet(const Wallet& w)
 	operator=(w);
 }
 
+// cppcheck-suppress operatorEqVarError
 Wallet& Wallet::operator=(const Wallet& w)
 {
 	if (this == &w) {

@@ -72,6 +72,7 @@ PoolBlock::PoolBlock(const PoolBlock& b)
 	operator=(b);
 }
 
+// cppcheck-suppress operatorEqVarError
 PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 {
 	if (this == &b) {

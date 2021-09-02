@@ -288,6 +288,7 @@ NOINLINE void Stream::writeCurrentTime()
 
 	m_numberWidth = 4;
 	*this << (mcs / 100);
+	// cppcheck-suppress redundantAssignment
 	m_numberWidth = 1;
 }
 

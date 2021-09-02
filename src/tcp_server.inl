@@ -748,7 +748,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t*
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
 {
-	reset();
+	Client::reset();
 
 	uv_mutex_init_checked(&m_writeBuffersLock);
 	uv_mutex_init_checked(&m_sendLock);

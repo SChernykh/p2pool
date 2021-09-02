@@ -98,7 +98,7 @@ template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) 
 
 void make_thread_background();
 
-class BackgroundJobTracker
+class BackgroundJobTracker : public nocopy_nomove
 {
 public:
 	BackgroundJobTracker();

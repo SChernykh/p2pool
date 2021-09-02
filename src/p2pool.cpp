@@ -810,7 +810,7 @@ void p2pool::api_update_pool_stats()
 	}
 
 	uint64_t t;
-	const difficulty_type diff = m_sideChain->difficulty();
+	const difficulty_type& diff = m_sideChain->difficulty();
 	const uint64_t hashrate = udiv128(diff.hi, diff.lo, m_sideChain->block_time(), &t);
 	const uint64_t miners = m_sideChain->miner_count();
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
