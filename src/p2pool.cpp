@@ -817,23 +817,27 @@ void p2pool::api_update_pool_stats()
 
 	time_t last_block_found_time = 0;
 	uint64_t last_block_found_height = 0;
+	uint64_t total_blocks_found = 0;
 
 	{
 		MutexLock lock(m_foundBlocksLock);
 		if (!m_foundBlocks.empty()) {
+			total_blocks_found = m_foundBlocks.size();
 			last_block_found_time = m_foundBlocks.back().first;
 			last_block_found_height = m_foundBlocks.back().second;
 		}
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "stats",
-		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height](log::Stream& s)
+		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found](log::Stream& s)
 		{
 			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
 				<< ",\"miners\":" << miners
 				<< ",\"totalHashes\":" << total_hashes
 				<< ",\"lastBlockFoundTime\":" << last_block_found_time
-				<< ",\"lastBlockFound\":" << last_block_found_height << "}}";
+				<< ",\"lastBlockFound\":" << last_block_found_height
+				<< ",\"totalBlocksFound\":" << total_blocks_found
+				<< "}}";
 		});
 }
 
