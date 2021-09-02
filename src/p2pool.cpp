@@ -237,14 +237,12 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		WriteLock lock(m_mainchainLock);
 
 		ChainMain& c = m_mainchainByHeight[data.height];
-		c.difficulty = data.difficulty ? data.difficulty : c.difficulty;
 		c.height = data.height;
 		c.timestamp = data.timestamp;
 		c.reward = data.reward;
 
 		// data.id not filled in here, but c.id should be available. Copy it to data.id for logging
 		data.id = c.id;
-		data.difficulty = c.difficulty;
 
 		m_mainchainByHash[c.id] = c;
 	}
