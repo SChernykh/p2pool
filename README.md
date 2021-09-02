@@ -2,7 +2,9 @@
 
 Decentralized pool for Monero mining.
 
-**NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version and a specially configured Monero wallet (for now). No binaries or usage instructions are provided yet. Testing on mainnet has started! No ETA on the official release date, but hopefully before the end of September 2021.
+**NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version and a specially configured Monero wallet (for now). No binaries are provided yet. Testing on mainnet has started! You can check the pool status at https://p2pool.io/
+
+No ETA on the official release date, but hopefully before the end of September 2021.
 
 ## Pool mining vs Solo mining vs P2Pool mining
 
