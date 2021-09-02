@@ -105,7 +105,7 @@ public:
 		bool m_handshakeComplete;
 		bool m_handshakeInvalid;
 		int m_listenPort;
-		time_t m_lastPeerListRequest;
+		time_t m_nextPeerListRequest;
 		time_t m_lastAlive;
 
 		uv_rwlock_t m_broadcastedHashesLock;

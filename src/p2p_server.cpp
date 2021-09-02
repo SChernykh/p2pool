@@ -214,8 +214,10 @@ void P2PServer::update_peer_list()
 				continue;
 			}
 
-			if (cur_time >= client->m_lastPeerListRequest + 60) {
-				client->m_lastPeerListRequest = cur_time;
+			if (cur_time >= client->m_nextPeerListRequest) {
+				// Send peer list requests at random intervals (60-120 seconds)
+				client->m_nextPeerListRequest = cur_time + 60 + (get_random64() % 61);
+
 				send(client,
 					[](void* buf)
 					{
@@ -272,37 +274,37 @@ void P2PServer::save_peer_list()
 		return;
 	}
 
-	size_t num_peers;
+	std::vector<Peer> peer_list;
 	{
 		MutexLock lock(m_peerListLock);
+		peer_list = m_peerList;
+	}
 
-		num_peers = m_peerList.size();
-		for (const Peer& p : m_peerList) {
-			const char* addr_str;
-			char addr_str_buf[64];
+	for (const Peer& p : peer_list) {
+		const char* addr_str;
+		char addr_str_buf[64];
 
-			if (p.m_isV6) {
-				in6_addr addr{};
-				memcpy(addr.s6_addr, p.m_addr.data, sizeof(addr.s6_addr));
-				addr_str = inet_ntop(AF_INET6, &addr, addr_str_buf, sizeof(addr_str_buf));
-				if (addr_str) {
-					f << '[' << addr_str << "]:" << p.m_port << '\n';
-				}
+		if (p.m_isV6) {
+			in6_addr addr{};
+			memcpy(addr.s6_addr, p.m_addr.data, sizeof(addr.s6_addr));
+			addr_str = inet_ntop(AF_INET6, &addr, addr_str_buf, sizeof(addr_str_buf));
+			if (addr_str) {
+				f << '[' << addr_str << "]:" << p.m_port << '\n';
 			}
-			else {
-				in_addr addr{};
-				memcpy(&addr.s_addr, p.m_addr.data + 12, sizeof(addr.s_addr));
-				addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, sizeof(addr_str_buf));
-				if (addr_str) {
-					f << addr_str << ':' << p.m_port << '\n';
-				}
+		}
+		else {
+			in_addr addr{};
+			memcpy(&addr.s_addr, p.m_addr.data + 12, sizeof(addr.s_addr));
+			addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, sizeof(addr_str_buf));
+			if (addr_str) {
+				f << addr_str << ':' << p.m_port << '\n';
 			}
 		}
 	}
 
 	f.close();
 
-	LOGINFO(5, "peer list saved (" << num_peers << " peers)");
+	LOGINFO(5, "peer list saved (" << peer_list.size() << " peers)");
 	m_peerListLastSaved = time(nullptr);
 }
 
@@ -579,9 +581,9 @@ void P2PServer::on_timer()
 {
 	flush_cache();
 	download_missing_blocks();
-	update_peer_connections();
 	update_peer_list();
 	save_peer_list_async();
+	update_peer_connections();
 }
 
 void P2PServer::flush_cache()
@@ -689,7 +691,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeComplete(false)
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
-	, m_lastPeerListRequest(0)
+	, m_nextPeerListRequest(0)
 	, m_lastAlive(0)
 {
 	uv_rwlock_init_checked(&m_broadcastedHashesLock);
@@ -711,7 +713,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeComplete = false;
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
-	m_lastPeerListRequest = 0;
+	m_nextPeerListRequest = 0;
 	m_lastAlive = 0;
 
 	WriteLock lock(m_broadcastedHashesLock);
