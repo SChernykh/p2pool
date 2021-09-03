@@ -117,8 +117,23 @@ private:
 	void api_update_pool_stats();
 	void api_update_block_found(const ChainMain* data);
 
+	struct FoundBlock
+	{
+		FORCEINLINE FoundBlock(time_t _t, uint64_t _h, const difficulty_type& _block_diff, const difficulty_type& _total_hashes)
+			: timestamp(_t)
+			, height(_h)
+			, block_diff(_block_diff)
+			, total_hashes(_total_hashes)
+		{}
+
+		time_t timestamp;
+		uint64_t height;
+		difficulty_type block_diff;
+		difficulty_type total_hashes;
+	};
+
 	uv_mutex_t m_foundBlocksLock;
-	std::vector<std::pair<time_t, uint64_t>> m_foundBlocks;
+	std::vector<FoundBlock> m_foundBlocks;
 
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;

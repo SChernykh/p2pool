@@ -667,6 +667,7 @@ void SideChain::print_status()
 
 difficulty_type SideChain::total_hashes() const
 {
+	MutexLock lock(m_sidechainLock);
 	return m_chainTip ? m_chainTip->m_cumulativeDifficulty : difficulty_type();
 }
 

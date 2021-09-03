@@ -18,6 +18,7 @@
 #include "common.h"
 #include "gtest/gtest.h"
 #include <random>
+#include <sstream>
 
 namespace p2pool {
 
@@ -101,6 +102,31 @@ TEST(difficulty_type, compare)
 			ASSERT_EQ(diff[i] != diff[j], i != j);
 		}
 	}
+}
+
+TEST(difficulty_type, input_output)
+{
+	auto test_value = [](uint64_t lo, uint64_t hi, const char* s) {
+		difficulty_type diff{ lo, hi };
+		std::stringstream ss;
+		ss << diff;
+		ASSERT_EQ(ss.str(), s);
+		difficulty_type diff2;
+		ss >> diff2;
+		ASSERT_EQ(diff2, diff);
+	};
+
+	test_value(0, 0, "0");
+	test_value(1, 0, "1");
+	test_value(340599339356ull, 0, "340599339356");
+	test_value(std::numeric_limits<uint64_t>::max(), 0, "18446744073709551615");
+	test_value(0, 1, "18446744073709551616");
+	test_value(1, 1, "18446744073709551617");
+	test_value(7766279631452241919ull, 5, "99999999999999999999");
+	test_value(7766279631452241920ull, 5, "100000000000000000000");
+	test_value(7766279631452241921ull, 5, "100000000000000000001");
+	test_value(14083847773837265618ull, 6692605942ull, "123456789012345678901234567890");
+	test_value(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), "340282366920938463463374607431768211455");
 }
 
 TEST(difficulty_type, check_pow)

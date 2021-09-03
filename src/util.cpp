@@ -117,6 +117,44 @@ difficulty_type operator+(const difficulty_type& a, const difficulty_type& b)
 	return result;
 }
 
+std::ostream& operator<<(std::ostream& s, const difficulty_type& d)
+{
+	char buf[log::Stream::BUF_SIZE + 1];
+	log::Stream s1(buf);
+	s1 << d << '\0';
+	s << buf;
+	return s;
+}
+
+std::istream& operator>>(std::istream& s, difficulty_type& diff)
+{
+	diff.lo = 0;
+	diff.hi = 0;
+
+	bool found_number = false;
+	char c;
+	while (s.good() && !s.eof()) {
+		s.read(&c, 1);
+		if (!s.good() || s.eof()) {
+			break;
+		}
+		if ('0' <= c && c <= '9') {
+			found_number = true;
+			const uint32_t digit = static_cast<uint32_t>(c - '0');
+			uint64_t hi;
+			diff.lo = umul128(diff.lo, 10, &hi) + digit;
+			if (diff.lo < digit) {
+				++hi;
+			}
+			diff.hi = diff.hi * 10 + hi;
+		}
+		else if (found_number) {
+			return s;
+		}
+	}
+	return s;
+}
+
 void uv_mutex_init_checked(uv_mutex_t* mutex)
 {
 	const int result = uv_mutex_init(mutex);

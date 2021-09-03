@@ -583,8 +583,16 @@ void p2pool::get_info()
 
 				uint64_t height;
 				f >> height;
+				if (f.eof()) break;
 
-				m_foundBlocks.emplace_back(std::make_pair(timestamp, height));
+				difficulty_type block_difficulty;
+				f >> block_difficulty;
+				if (f.eof()) break;
+
+				difficulty_type cumulative_difficulty;
+				f >> cumulative_difficulty;
+
+				m_foundBlocks.emplace_back(timestamp, height, block_difficulty, cumulative_difficulty);
 			}
 			api_update_block_found(nullptr);
 		}
@@ -821,8 +829,8 @@ void p2pool::api_update_pool_stats()
 		MutexLock lock(m_foundBlocksLock);
 		if (!m_foundBlocks.empty()) {
 			total_blocks_found = m_foundBlocks.size();
-			last_block_found_time = m_foundBlocks.back().first;
-			last_block_found_height = m_foundBlocks.back().second;
+			last_block_found_time = m_foundBlocks.back().timestamp;
+			last_block_found_height = m_foundBlocks.back().height;
 		}
 	}
 
@@ -846,22 +854,28 @@ void p2pool::api_update_block_found(const ChainMain* data)
 	}
 
 	const time_t cur_time = time(nullptr);
+	const difficulty_type total_hashes = m_sideChain->total_hashes();
+	difficulty_type diff;
 
 	if (data) {
+		{
+			ReadLock lock(m_mainchainLock);
+			diff.lo = m_mainchainByHeight[data->height].difficulty;
+		}
+
 		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
 		if (f.is_open()) {
-			f << cur_time << ' ' << data->height << '\n';
+			f << cur_time << ' ' << data->height << ' ' << diff << ' ' << total_hashes << '\n';
 		}
 	}
 
-
-	std::vector<std::pair<time_t, uint64_t>> found_blocks;
+	std::vector<FoundBlock> found_blocks;
 	{
 		MutexLock lock(m_foundBlocksLock);
 		if (data) {
-			m_foundBlocks.emplace_back(std::make_pair(cur_time, data->height));
+			m_foundBlocks.emplace_back(cur_time, data->height, diff, total_hashes);
 		}
-		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 25), m_foundBlocks.end());
+		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 100), m_foundBlocks.end());
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "blocks",
@@ -873,8 +887,10 @@ void p2pool::api_update_block_found(const ChainMain* data)
 				if (!first) {
 					s << ',';
 				}
-				s << "{\"height\":" << i->second << ',';
-				s << "\"ts\":" << i->first << '}';
+				s << "{\"height\":" << i->height << ','
+					<< "\"difficulty\":" << i->block_diff << ','
+					<< "\"totalHashes\":" << i->total_hashes << ','
+					<< "\"ts\":" << i->timestamp << '}';
 				first = false;
 			}
 			s << ']';

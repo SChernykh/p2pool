@@ -29,6 +29,8 @@ namespace log {
 
 int GLOBAL_LOG_LEVEL = 4;
 
+#ifndef P2POOL_LOG_DISABLE
+
 static volatile bool stopped = false;
 static volatile bool worker_started = false;
 
@@ -234,9 +236,9 @@ private:
 	std::ofstream m_logFile;
 };
 
-#ifndef P2POOL_LOG_DISABLE
 static Worker worker;
-#endif
+
+#endif // P2POOL_LOG_DISABLE
 
 NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 {

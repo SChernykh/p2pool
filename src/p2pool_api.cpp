@@ -94,8 +94,8 @@ void p2pool_api::on_stop()
 
 void p2pool_api::dump_to_file_async_internal(const Category& category, const char* filename, DumpFileCallbackBase&& callback)
 {
-	std::vector<char> buf(log::Stream::BUF_SIZE + 1);
-	log::Stream s(buf.data());
+	std::vector<char> buf(16384);
+	log::Stream s(buf.data(), buf.size());
 	callback(s);
 	buf.resize(s.m_pos);
 

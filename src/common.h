@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <iostream>
 
 #include <signal.h>
 
@@ -186,6 +187,9 @@ struct difficulty_type
 
 	FORCEINLINE bool operator==(const difficulty_type& other) const { return (lo == other.lo) && (hi == other.hi); }
 	FORCEINLINE bool operator!=(const difficulty_type& other) const { return (lo != other.lo) || (hi != other.hi); }
+
+	friend std::ostream& operator<<(std::ostream& s, const difficulty_type& d);
+	friend std::istream& operator>>(std::istream& s, difficulty_type& d);
 
 	FORCEINLINE double to_double() const { return static_cast<double>(hi) * 18446744073709551616.0 + static_cast<double>(lo); }
 

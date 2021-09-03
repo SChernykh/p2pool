@@ -34,7 +34,8 @@ struct Stream
 {
 	enum params : int { BUF_SIZE = 1024 - 1 };
 
-	explicit FORCEINLINE Stream(char* buf) : m_pos(0), m_numberWidth(1), m_buf(buf) {}
+	explicit FORCEINLINE Stream(char* buf) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(BUF_SIZE) {}
+	FORCEINLINE Stream(char* buf, size_t size) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(static_cast<int>(size)) {}
 
 	template<typename T>
 	struct Entry
@@ -88,8 +89,8 @@ struct Stream
 	FORCEINLINE void writeBuf(const char* buf, size_t n0)
 	{
 		const int n = static_cast<int>(n0);
-		int pos = m_pos;
-		if (pos > BUF_SIZE - n) {
+		const int pos = m_pos;
+		if (pos + n > m_bufSize) {
 			return;
 		}
 		memcpy(m_buf + pos, buf, n);
@@ -104,6 +105,7 @@ struct Stream
 	int m_pos;
 	int m_numberWidth;
 	char* m_buf;
+	int m_bufSize;
 };
 
 struct Writer : public Stream
