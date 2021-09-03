@@ -258,9 +258,9 @@ struct MinerData
 
 struct ChainMain
 {
-	FORCEINLINE ChainMain() : difficulty(0), height(0), timestamp(0), reward(0), id() {}
+	FORCEINLINE ChainMain() : difficulty(), height(0), timestamp(0), reward(0), id() {}
 
-	uint64_t difficulty;
+	difficulty_type difficulty;
 	uint64_t height;
 	uint64_t timestamp;
 	uint64_t reward;

@@ -22,6 +22,17 @@
 
 namespace p2pool {
 
+TEST(difficulty_type, constructors)
+{
+	difficulty_type diff;
+	ASSERT_EQ(diff.lo, 0);
+	ASSERT_EQ(diff.hi, 0);
+
+	difficulty_type diff2(123, 456);
+	ASSERT_EQ(diff2.lo, 123);
+	ASSERT_EQ(diff2.hi, 456);
+}
+
 TEST(difficulty_type, target)
 {
 	// diff = 0
@@ -39,6 +50,12 @@ TEST(difficulty_type, target)
 	// diff = 2^64
 	{
 		difficulty_type d(0, 1);
+		ASSERT_EQ(d.target(), 1);
+	}
+
+	// diff = max
+	{
+		difficulty_type d(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
 		ASSERT_EQ(d.target(), 1);
 	}
 

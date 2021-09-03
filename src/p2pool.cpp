@@ -180,7 +180,7 @@ void p2pool::handle_miner_data(MinerData& data)
 	{
 		WriteLock lock(m_mainchainLock);
 
-		m_mainchainByHeight[data.height].difficulty = data.difficulty.lo;
+		m_mainchainByHeight[data.height].difficulty = data.difficulty;
 
 		ChainMain& c = m_mainchainByHeight[data.height - 1];
 		c.height = data.height - 1;
@@ -725,7 +725,13 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 	}
 
 	const auto& v = it2->value;
-	if (!PARSE(v, c, difficulty) || !PARSE(v, c, height) || !PARSE(v, c, timestamp) || !PARSE(v, c, reward) || !parseValue(v, "hash", c.id)) {
+
+	if (!parseValue(v, "difficulty", c.difficulty.lo) || !parseValue(v, "difficulty_top64", c.difficulty.hi)) {
+		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse difficulty");
+		return false;
+	}
+
+	if (!PARSE(v, c, height) || !PARSE(v, c, timestamp) || !PARSE(v, c, reward) || !parseValue(v, "hash", c.id)) {
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse 'block_header'");
 		return false;
 	}
@@ -773,7 +779,12 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 		}
 
 		ChainMain c;
-		if (PARSE(*i, c, difficulty) && PARSE(*i, c, height) && PARSE(*i, c, timestamp) && PARSE(*i, c, reward) && parseValue(*i, "hash", c.id)) {
+
+		if (!parseValue(*i, "difficulty", c.difficulty.lo) || !parseValue(*i, "difficulty_top64", c.difficulty.hi)) {
+			continue;
+		}
+
+		if (PARSE(*i, c, height) && PARSE(*i, c, timestamp) && PARSE(*i, c, reward) && parseValue(*i, "hash", c.id)) {
 			min_height = std::min(min_height, c.height);
 			max_height = std::max(max_height, c.height);
 			m_mainchainByHeight[c.height] = c;
@@ -860,7 +871,7 @@ void p2pool::api_update_block_found(const ChainMain* data)
 	if (data) {
 		{
 			ReadLock lock(m_mainchainLock);
-			diff.lo = m_mainchainByHeight[data->height].difficulty;
+			diff = m_mainchainByHeight[data->height].difficulty;
 		}
 
 		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
