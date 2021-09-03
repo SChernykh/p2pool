@@ -234,7 +234,9 @@ private:
 	std::ofstream m_logFile;
 };
 
+#ifndef P2POOL_LOG_DISABLE
 static Worker worker;
+#endif
 
 NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 {
@@ -252,7 +254,9 @@ NOINLINE Writer::~Writer()
 	m_buf[1] = static_cast<uint8_t>(size & 255);
 	m_buf[2] = static_cast<uint8_t>(size >> 8);
 	m_buf[m_pos] = '\n';
+#ifndef P2POOL_LOG_DISABLE
 	worker.write(m_buf, size);
+#endif
 }
 
 void reopen()
@@ -263,7 +267,9 @@ void reopen()
 
 void stop()
 {
+#ifndef P2POOL_LOG_DISABLE
 	worker.stop();
+#endif
 }
 
 NOINLINE void Stream::writeCurrentTime()

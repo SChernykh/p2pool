@@ -384,6 +384,14 @@ namespace {
 #define CONCAT(a, b) CONCAT2(a, b)
 #define CONCAT2(a, b) a##b
 
+#ifdef P2POOL_LOG_DISABLE
+
+#define LOGINFO(level, ...)
+#define LOGWARN(level, ...)
+#define LOGERR(level, ...)
+
+#else
+
 #define LOG(level, severity, ...) \
 	do { \
 		if (level <= log::GLOBAL_LOG_LEVEL) { \
@@ -397,6 +405,8 @@ namespace {
 #define LOGINFO(level, ...) LOG(level, log::Severity::Info, __VA_ARGS__)
 #define LOGWARN(level, ...) LOG(level, log::Severity::Warning, __VA_ARGS__)
 #define LOGERR(level, ...)  LOG(level, log::Severity::Error, __VA_ARGS__)
+
+#endif
 
 void reopen();
 void stop();
