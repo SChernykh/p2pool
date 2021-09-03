@@ -53,8 +53,14 @@ set(HEADERS
 set(SOURCES
 	src/difficulty_type.cpp
 	src/tests.cpp
+	src/wallet_tests.cpp
+	../external/src/cryptonote/crypto-ops-data.c
+	../external/src/cryptonote/crypto-ops.c
+	../src/crypto.cpp
+	../src/keccak.cpp
 	../src/log.cpp
 	../src/util.cpp
+	../src/wallet.cpp
 )
 
 include_directories(../src)
