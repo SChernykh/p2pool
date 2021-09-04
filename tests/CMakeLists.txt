@@ -51,6 +51,7 @@ set(HEADERS
 )
 
 set(SOURCES
+	src/crypto_tests.cpp
 	src/difficulty_type_tests.cpp
 	src/keccak_tests.cpp
 	src/main.cpp
@@ -113,3 +114,4 @@ add_definitions(/DZMQ_STATIC /DP2POOL_LOG_DISABLE)
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/crypto_tests.txt" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
