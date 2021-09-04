@@ -1,0 +1,36 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: cmake p2pool
+      run: mkdir build && cd build && cmake ..
+
+    - name: make p2pool
+      run: cd build && make
+
+    - name: cmake tests
+      run: cd tests && mkdir build && cd build && cmake ..
+
+    - name: make tests
+      run: cd tests/build && make
+
+    - name: run tests
+      run: cd tests/build && ./p2pool_tests
