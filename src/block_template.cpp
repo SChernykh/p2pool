@@ -911,7 +911,21 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 
 	for (uint32_t i = 0; i < count; ++i) {
 		uint8_t blob[128];
-		blob_size = get_hashing_blob_nolock(extra_nonce_start + i, blob);
+		const uint32_t n = get_hashing_blob_nolock(extra_nonce_start + i, blob);
+
+		if (n > sizeof(blob)) {
+			LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << n << ", expected <= " << sizeof(blob));
+		}
+		else if (n < 76) {
+			LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << n << ", expected >= 76");
+		}
+
+		if (blob_size == 0) {
+			blob_size = n;
+		}
+		else if (n != blob_size) {
+			LOGERR(1, "internal error: get_hashing_blob_nolock returned different blob size " << n << ", expected " << blob_size);
+		}
 		blobs.insert(blobs.end(), blob, blob + blob_size);
 	}
 

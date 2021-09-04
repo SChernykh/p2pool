@@ -111,6 +111,37 @@ void StratumServer::on_block(const BlockTemplate& block)
 	m_extraNonce.exchange(blobs_data->m_numClientsExpected);
 
 	blobs_data->m_blobSize = block.get_hashing_blobs(0, blobs_data->m_numClientsExpected, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+
+	// Integrity checks
+	if (blobs_data->m_blobSize < 76) {
+		LOGERR(1, "internal error: get_hashing_blobs returned too small blobs (" << blobs_data->m_blobSize << " bytes)");
+	}
+	else if (blobs_data->m_blobs.size() != blobs_data->m_blobSize * num_connections) {
+		LOGERR(1, "internal error: get_hashing_blobs returned wrong amount of data");
+	}
+	else if (num_connections > 1) {
+		std::vector<uint64_t> blob_hashes;
+		blob_hashes.reserve(num_connections);
+
+		const uint8_t* data = blobs_data->m_blobs.data();
+		const size_t size = blobs_data->m_blobSize;
+
+		// Get first 8 bytes of the Merkle root hash from each blob
+		for (size_t i = 0; i < num_connections; ++i) {
+			blob_hashes.emplace_back(*reinterpret_cast<const uint64_t*>(data + i * size + 43));
+		}
+
+		// Find duplicates
+		std::sort(blob_hashes.begin(), blob_hashes.end());
+
+		for (uint32_t i = 1; i < num_connections; ++i) {
+			if (blob_hashes[i - 1] == blob_hashes[i]) {
+				LOGERR(1, "internal error: get_hashing_blobs returned two identical blobs");
+				break;
+			}
+		}
+	}
+
 	blobs_data->m_target = std::max(difficulty.target(), sidechain_difficulty.target());
 
 	{
