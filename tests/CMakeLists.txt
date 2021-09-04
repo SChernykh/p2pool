@@ -51,8 +51,9 @@ set(HEADERS
 )
 
 set(SOURCES
-	src/difficulty_type.cpp
-	src/tests.cpp
+	src/difficulty_type_tests.cpp
+	src/keccak_tests.cpp
+	src/main.cpp
 	src/wallet_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
