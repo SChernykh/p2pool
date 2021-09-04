@@ -167,19 +167,12 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	block.m_sidechainHeight = m_chainTip->m_sidechainHeight + 1;
 
 	// Collect uncles from 3 previous block heights
-	hash parent_blocks[UNCLE_BLOCK_DEPTH];
-
-	PoolBlock* tmp = get_parent(m_chainTip);
-	for (size_t i = 0; tmp && (i < UNCLE_BLOCK_DEPTH); ++i) {
-		parent_blocks[i] = tmp->m_sidechainId;
-		tmp = get_parent(tmp);
-	}
 
 	// First get a list of already mined blocks at these heights
 	std::vector<hash> mined_blocks;
 	mined_blocks.reserve(UNCLE_BLOCK_DEPTH * 2 + 1);
 
-	tmp = m_chainTip;
+	PoolBlock* tmp = m_chainTip;
 	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, m_chainTip->m_sidechainHeight + 1); tmp && (i < n); ++i) {
 		mined_blocks.push_back(tmp->m_sidechainId);
 		mined_blocks.insert(mined_blocks.end(), tmp->m_uncles.begin(), tmp->m_uncles.end());
