@@ -4,3 +4,6 @@
 [submodule "external/src/RandomX"]
 	path = external/src/RandomX
 	url = https://github.com/SChernykh/RandomX
+[submodule "external/src/rapidjson"]
+	path = external/src/rapidjson
+	url = https://github.com/SChernykh/rapidjson

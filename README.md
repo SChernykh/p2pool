@@ -56,7 +56,7 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 p2pool binary:
 ```
 sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
-git clone https://github.com/SChernykh/p2pool
+git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build
 cmake ..

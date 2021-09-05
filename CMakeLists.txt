@@ -77,6 +77,7 @@ include_directories(external/src/cppzmq)
 include_directories(external/src/libzmq/include)
 include_directories(external/src/llhttp)
 include_directories(external/src/RandomX/src)
+include_directories(external/src/rapidjson/include)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)
