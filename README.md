@@ -9,7 +9,8 @@ No ETA on the official release date, but hopefully before the end of September 2
 ### Build status
 
 ![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)  
-![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)
+![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)  
+![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)
 
 ## Pool mining vs Solo mining vs P2Pool mining
 
