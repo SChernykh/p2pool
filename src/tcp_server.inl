@@ -419,7 +419,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 	using namespace std::chrono;
 
 	const system_clock::time_point start_time = system_clock::now();
-	uint32_t counter = 0;
+	int64_t counter = 0;
 	uv_async_t asy;
 
 	constexpr uint32_t timeout_seconds = 30;
@@ -524,7 +524,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 			MutexLock lock(client->m_writeBuffersLock);
 			client->m_writeBuffers.push_back(buf);
 		}
-		LOGWARN(1, "failed to start writing data to client connection, error " << uv_err_name(err));
+		LOGWARN(1, "failed to start writing data to client connection " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
 		return false;
 	}
 
@@ -800,14 +800,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_alloc(uv_handle_t* han
 	Client* pThis = static_cast<Client*>(handle->data);
 
 	if (pThis->m_readBufInUse) {
-		LOGWARN(4, "client: read buffer is already in use");
+		LOGWARN(4, "client " << static_cast<const char*>(pThis->m_addrString) << " read buffer is already in use");
 		buf->len = 0;
 		buf->base = nullptr;
 		return;
 	}
 
 	if (pThis->m_numRead >= sizeof(pThis->m_readBuf)) {
-		LOGWARN(4, "client: read buffer is full");
+		LOGWARN(4, "client " << static_cast<const char*>(pThis->m_addrString) << " read buffer is full");
 		buf->len = 0;
 		buf->base = nullptr;
 		return;
@@ -833,7 +833,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stre
 	}
 	else if (nread < 0) {
 		if (nread != UV_EOF) {
-			LOGWARN(5, "client: failed to read response, err = " << uv_err_name(static_cast<int>(nread)));
+			LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " failed to read response, err = " << uv_err_name(static_cast<int>(nread)));
 		}
 		pThis->close();
 	}
@@ -851,7 +851,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_write(uv_write_t* req,
 	}
 
 	if (status != 0) {
-		LOGWARN(5, "client: failed to write data to client connection, error " << uv_err_name(status));
+		LOGWARN(5, "client " << static_cast<const char*>(client->m_addrString) << " failed to write data to client connection, error " << uv_err_name(status));
 		client->close();
 	}
 }

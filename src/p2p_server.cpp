@@ -1121,7 +1121,7 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 	memcpy(&peer_id, buf + CHALLENGE_SIZE, sizeof(uint64_t));
 
 	if (peer_id == server->get_peerId()) {
-		LOGWARN(5, "tried to connect to self");
+		LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
 		return false;
 	}
 
