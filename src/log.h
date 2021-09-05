@@ -35,7 +35,7 @@ struct Stream
 	enum params : int { BUF_SIZE = 1024 - 1 };
 
 	explicit FORCEINLINE Stream(char* buf) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(BUF_SIZE) {}
-	FORCEINLINE Stream(char* buf, size_t size) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(static_cast<int>(size)) {}
+	FORCEINLINE Stream(char* buf, size_t size) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(static_cast<int>(size) - 1) {}
 
 	template<typename T>
 	struct Entry

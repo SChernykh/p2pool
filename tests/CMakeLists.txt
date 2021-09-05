@@ -60,6 +60,7 @@ set(HEADERS
 set(SOURCES
 	src/crypto_tests.cpp
 	src/difficulty_type_tests.cpp
+	src/hash_tests.cpp
 	src/keccak_tests.cpp
 	src/main.cpp
 	src/wallet_tests.cpp

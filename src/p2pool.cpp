@@ -585,6 +585,10 @@ void p2pool::get_info()
 				f >> height;
 				if (f.eof()) break;
 
+				hash id;
+				f >> id;
+				if (f.eof()) break;
+
 				difficulty_type block_difficulty;
 				f >> block_difficulty;
 				if (f.eof()) break;
@@ -592,7 +596,7 @@ void p2pool::get_info()
 				difficulty_type cumulative_difficulty;
 				f >> cumulative_difficulty;
 
-				m_foundBlocks.emplace_back(timestamp, height, block_difficulty, cumulative_difficulty);
+				m_foundBlocks.emplace_back(timestamp, height, id, block_difficulty, cumulative_difficulty);
 			}
 			api_update_block_found(nullptr);
 		}
@@ -884,9 +888,9 @@ void p2pool::api_update_block_found(const ChainMain* data)
 	{
 		MutexLock lock(m_foundBlocksLock);
 		if (data) {
-			m_foundBlocks.emplace_back(cur_time, data->height, diff, total_hashes);
+			m_foundBlocks.emplace_back(cur_time, data->height, data->id, diff, total_hashes);
 		}
-		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 100), m_foundBlocks.end());
+		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 50), m_foundBlocks.end());
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "blocks",
@@ -899,6 +903,7 @@ void p2pool::api_update_block_found(const ChainMain* data)
 					s << ',';
 				}
 				s << "{\"height\":" << i->height << ','
+					<< "\"hash\":\"" << i->id << "\","
 					<< "\"difficulty\":" << i->block_diff << ','
 					<< "\"totalHashes\":" << i->total_hashes << ','
 					<< "\"ts\":" << i->timestamp << '}';

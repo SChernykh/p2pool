@@ -148,6 +148,9 @@ struct hash
 		const uint64_t* a = reinterpret_cast<const uint64_t*>(h);
 		return (a[0] == 0) && (a[1] == 0) && (a[2] == 0) && (a[3] == 0);
 	}
+
+	friend std::ostream& operator<<(std::ostream& s, const hash& d);
+	friend std::istream& operator>>(std::istream& s, hash& d);
 };
 
 static_assert(sizeof(hash) == HASH_SIZE, "struct hash has invalid size, check your compiler options");

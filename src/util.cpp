@@ -155,6 +155,40 @@ std::istream& operator>>(std::istream& s, difficulty_type& diff)
 	return s;
 }
 
+std::ostream& operator<<(std::ostream& s, const hash& h)
+{
+	char buf[log::Stream::BUF_SIZE + 1];
+	log::Stream s1(buf);
+	s1 << h << '\0';
+	s << buf;
+	return s;
+}
+
+std::istream& operator>>(std::istream& s, hash& h)
+{
+	memset(h.h, 0, HASH_SIZE);
+
+	bool found_number = false;
+	uint32_t index = 0;
+	char c;
+	while (s.good() && !s.eof()) {
+		s.read(&c, 1);
+		if (!s.good() || s.eof()) {
+			break;
+		}
+		uint8_t digit;
+		if (from_hex(c, digit)) {
+			found_number = true;
+			h.h[index >> 1] = (h.h[index >> 1] << 4) | digit;
+			++index;
+		}
+		else if (found_number) {
+			return s;
+		}
+	}
+	return s;
+}
+
 void uv_mutex_init_checked(uv_mutex_t* mutex)
 {
 	const int result = uv_mutex_init(mutex);
