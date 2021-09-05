@@ -651,7 +651,7 @@ void SideChain::print_status()
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain height         = " << tip_height + 1 <<
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
-		"\nYour hashrate (pool-side) = " << log::Hashrate(hashrate_est) <<
+		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
 		"\nYour shares               = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
 		"\nBlock reward share (est)  = " << log::XMRAmount(reward_share)

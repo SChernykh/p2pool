@@ -299,15 +299,21 @@ template<> struct log::Stream::Entry<std::string>
 
 struct Hashrate
 {
-	explicit FORCEINLINE Hashrate(uint64_t data) : m_data(data) {}
+	FORCEINLINE Hashrate() : m_data(0), m_valid(false) {}
+	explicit FORCEINLINE Hashrate(uint64_t data) : m_data(data), m_valid(true) {}
 
 	uint64_t m_data;
+	bool m_valid;
 };
 
 template<> struct log::Stream::Entry<Hashrate>
 {
 	static NOINLINE void put(Hashrate&& value, Stream* wrapper)
 	{
+		if (!value.m_valid) {
+			return;
+		}
+
 		const double x = static_cast<double>(value.m_data);
 
 		static constexpr const char* units[] = { "H/s", "KH/s", "MH/s", "GH/s", "TH/s", "PH/s", "EH/s" };
