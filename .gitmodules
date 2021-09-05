@@ -16,3 +16,6 @@
 [submodule "external/src/libuv"]
 	path = external/src/libuv
 	url = https://github.com/SChernykh/libuv
+[submodule "external/src/libzmq"]
+	path = external/src/libzmq
+	url = https://github.com/SChernykh/libzmq
