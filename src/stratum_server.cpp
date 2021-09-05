@@ -628,7 +628,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		server->m_cumulativeFoundSharesDiff += diff;
 		++server->m_totalFoundShares;
 
-		LOGINFO(0, log::Green() << "SHARE FOUND at mainchain height " << height << " with effort " << effort << '%');
+		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", effort " << effort << '%');
 
 		if (mainchain_solution) {
 			pool->submit_block_async(share->m_templateId, share->m_nonce, share->m_extraNonce);
