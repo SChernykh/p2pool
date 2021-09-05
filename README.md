@@ -59,6 +59,7 @@ sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build
+git submodule init && git submodule update
 cmake ..
 make -j$(nproc)
 ```
