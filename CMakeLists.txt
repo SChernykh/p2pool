@@ -5,7 +5,7 @@ option(STATIC_LINUX_BINARY "Build static Linux binary" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-add_subdirectory(external/src/randomx)
+add_subdirectory(external/src/RandomX)
 set(LIBS randomx)
 
 include(cmake/flags.cmake)
@@ -76,7 +76,7 @@ include_directories(external/src/libuv/include)
 include_directories(external/src/cppzmq)
 include_directories(external/src/libzmq/include)
 include_directories(external/src/llhttp)
-include_directories(external/src/randomx/src)
+include_directories(external/src/RandomX/src)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)
