@@ -5,4 +5,4 @@
 ../external/src/cppzmq/
 ../external/src/libzmq/
 ../external/src/llhttp/
-../external/src/randomx/src/
+../external/src/RandomX/src/
