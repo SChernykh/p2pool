@@ -110,3 +110,36 @@ jobs:
       run: |
         cd tests/build/Release
         ./p2pool_tests.exe
+
+  build-macos:
+
+    runs-on: macOS-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake libuv zmq libpgm
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        make
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake ..
+        make
+
+    - name: Run tests
+      run: |
+        cd tests/build
+        ./p2pool_tests

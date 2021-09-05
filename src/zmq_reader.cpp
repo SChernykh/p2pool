@@ -24,9 +24,8 @@ static constexpr char log_category_prefix[] = "ZMQReader ";
 
 namespace p2pool {
 
-ZMQReader::ZMQReader(const char* address, uint32_t rpc_port, uint32_t zmq_port, MinerCallbackHandler* handler)
+ZMQReader::ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandler* handler)
 	: m_address(address)
-	, m_rpcPort(rpc_port)
 	, m_zmqPort(zmq_port)
 	, m_handler(handler)
 	, m_tx()

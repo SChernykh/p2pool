@@ -667,7 +667,7 @@ void P2PServer::download_missing_blocks()
 		}
 
 		send(client,
-			[this, &id](void* buf)
+			[&id](void* buf)
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
@@ -1093,7 +1093,7 @@ bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const 
 
 	hash check{};
 	keccak_custom(
-		[this, &challenge, &solution_salt, &consensus_id, consensus_id_size](int offset) -> uint8_t
+		[&challenge, &solution_salt, &consensus_id, consensus_id_size](int offset) -> uint8_t
 		{
 			if (offset < CHALLENGE_SIZE) {
 				return challenge[offset];
@@ -1185,7 +1185,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 		}
 
 		return m_owner->send(this,
-			[this, &solution, &solution_salt](void* buf)
+			[this](void* buf)
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
@@ -1243,7 +1243,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	}
 
 	return server->send(this,
-		[this, &blob](void* buf)
+		[&blob](void* buf)
 		{
 			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 			uint8_t* p = p0;
@@ -1526,7 +1526,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		}
 
 		const bool result = m_owner->send(this,
-			[this, &id](void* buf)
+			[&id](void* buf)
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;

@@ -204,7 +204,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	// Select 1000 transactions with the highest fee per byte
 	if (m_mempoolTxs.size() > 1000) {
 		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + 1000, m_mempoolTxs.end(),
-			[this](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
+			[](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
 			{
 				return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
 			});
@@ -749,7 +749,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
-	keccak_custom([this, data, extra_nonce_offset, &extra_nonce_buf](int offset)
+	keccak_custom([data, extra_nonce_offset, &extra_nonce_buf](int offset)
 		{
 			const uint32_t k = static_cast<uint32_t>(offset - extra_nonce_offset);
 			if (k < EXTRA_NONCE_SIZE) {

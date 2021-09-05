@@ -810,7 +810,7 @@ void p2pool::api_update_network_stats()
 	}
 
 	m_api->set(p2pool_api::Category::NETWORK, "stats",
-		[this, mainnet_tip](log::Stream& s)
+		[mainnet_tip](log::Stream& s)
 		{
 			s << "{\"difficulty\":" << mainnet_tip.difficulty
 				<< ",\"hash\":\"" << mainnet_tip.id
@@ -1000,7 +1000,7 @@ int p2pool::run()
 	}
 
 	{
-		ZMQReader z(m_params->m_host, m_params->m_rpcPort, m_params->m_zmqPort, this);
+		ZMQReader z(m_params->m_host, m_params->m_zmqPort, this);
 		get_info();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);

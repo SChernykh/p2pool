@@ -24,7 +24,7 @@ namespace p2pool {
 
 class ZMQReader {
 public:
-	ZMQReader(const char* address, uint32_t rpc_port, uint32_t zmq_port, MinerCallbackHandler* handler);
+	ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandler* handler);
 	~ZMQReader();
 
 private:
@@ -34,7 +34,6 @@ private:
 	void parse(char* data, size_t size);
 
 	const char* m_address;
-	uint32_t m_rpcPort;
 	uint32_t m_zmqPort;
 	MinerCallbackHandler* m_handler;
 

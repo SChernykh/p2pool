@@ -172,6 +172,7 @@ INT_ENTRY(uint32_t)
 INT_ENTRY(uint64_t)
 
 #ifdef __clang__
+INT_ENTRY(long)
 INT_ENTRY(unsigned long)
 #endif
 

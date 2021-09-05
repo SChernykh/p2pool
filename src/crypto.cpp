@@ -25,8 +25,6 @@ extern "C" {
 #include "crypto-ops.h"
 }
 
-static constexpr char log_category_prefix[] = "Crypto ";
-
 namespace p2pool {
 
 namespace {

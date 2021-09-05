@@ -493,7 +493,7 @@ void StratumServer::on_blobs_ready()
 			}
 
 			const bool result = send(client,
-				[data, target, client, hashing_blob, &job_id](void* buf)
+				[data, target, hashing_blob, &job_id](void* buf)
 				{
 					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 

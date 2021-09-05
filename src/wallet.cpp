@@ -28,8 +28,6 @@ extern "C" {
 #include "crypto-ops.h"
 }
 
-static constexpr char log_category_prefix[] = "Wallet ";
-
 namespace {
 
 // public keys: 64 bytes -> 88 characters in base58
