@@ -6,6 +6,11 @@ Decentralized pool for Monero mining.
 
 No ETA on the official release date, but hopefully before the end of September 2021.
 
+### Build status
+
+![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)  
+![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)
+
 ## Pool mining vs Solo mining vs P2Pool mining
 
 Here's the comparison table of the different ways of mining. While pool mining is the easiest to setup, it centralizes Monero network and pool admin gets full power over your hashrate and your unpaid funds. Solo mining is 100% independent and the best for the network. P2Pool mining has all the advantages of solo mining, but also makes regular payouts possible.
