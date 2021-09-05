@@ -6,3 +6,4 @@
 ../external/src/libzmq/
 ../external/src/llhttp/
 ../external/src/RandomX/src/
+../external/src/rapidjson/include
