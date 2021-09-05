@@ -75,7 +75,11 @@ void p2pool_api::create_dir(const std::string& path)
 #ifdef _MSC_VER
 	int result = _mkdir(path.c_str());
 #else
-	int result = mkdir(path.c_str(), 0775);
+	int result = mkdir(path.c_str()
+#ifndef _WIN32
+		, 0775
+#endif
+	);
 #endif
 
 	if (result < 0) {

@@ -28,14 +28,14 @@
 // 
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4146 4242 4244 4668 4710 4711 5045)
+#endif
+
 #include <assert.h>
 #include <stdint.h>
 
 #include "crypto-ops.h"
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4146 4242 4244 4711 5045)
-#endif
 
 /* Predeclarations */
 

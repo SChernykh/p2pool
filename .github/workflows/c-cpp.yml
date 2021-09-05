@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build-ubuntu:
 
     runs-on: ubuntu-latest
 
@@ -34,3 +34,79 @@ jobs:
 
     - name: run tests
       run: cd tests/build && ./p2pool_tests
+
+  build-windows-msys2:
+
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup MSYS2
+      uses: eine/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-libuv
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Unix Makefiles"
+        make
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake .. -G "Unix Makefiles"
+        make
+
+    - name: Run tests
+      run: |
+        cd tests/build
+        ./p2pool_tests.exe
+
+  build-windows-msbuild:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup cmake
+      uses: lukka/get-cmake@latest
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.3
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 16 2019"
+        msbuild /m /p:Configuration=Release p2pool.vcxproj
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 16 2019"
+        msbuild /m /p:Configuration=Release p2pool_tests.vcxproj
+
+    - name: Run tests
+      run: |
+        cd tests/build/Release
+        ./p2pool_tests.exe

@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #ifdef _MSC_VER
-#pragma warning(disable : 4100 4710 4711 4820)
+#pragma warning(disable : 4100 4668 4710 4711 4820)
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "llhttp.h"
 

@@ -38,7 +38,7 @@ TEST(keccak, hashing)
 		memset(buf, 0, sizeof(buf));
 		s.m_pos = 0;
 
-		keccak_custom([data](int offset) { return data[offset]; }, size, output.h, HASH_SIZE);
+		keccak_custom([data](int offset) { return data[offset]; }, len, output.h, HASH_SIZE);
 		s << output;
 		ASSERT_EQ(memcmp(buf, expected_output, HASH_SIZE * 2), 0);
 	};

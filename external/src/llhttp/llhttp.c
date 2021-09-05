@@ -1,5 +1,5 @@
 #ifdef _MSC_VER
-#pragma warning(disable : 4061 4065 4100 4152 4242 4244 4668 4702 4820 5045)
+#pragma warning(disable : 4061 4065 4100 4152 4242 4244 4668 4702 4710 4711 4820 5045)
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
