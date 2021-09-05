@@ -271,7 +271,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	for (size_t i = 0; job_id_str[i]; ++i) {
 		uint32_t d;
 		if (!from_hex(job_id_str[i], d)) {
-			LOGWARN(4, "client: invalid params ('job_id' is not a hex integer)");
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('job_id' is not a hex integer)");
 			return false;
 		}
 		job_id = (job_id << 4) + d;
@@ -282,7 +282,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	for (int i = static_cast<int>(sizeof(uint32_t)) - 1; i >= 0; --i) {
 		uint32_t d[2];
 		if (!from_hex(nonce_str[i * 2], d[0]) || !from_hex(nonce_str[i * 2 + 1], d[1])) {
-			LOGWARN(4, "Client: invalid params ('nonce' is not a hex integer)");
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('nonce' is not a hex integer)");
 			return false;
 		}
 		nonce = (nonce << 8) | (d[0] << 4) | d[1];
@@ -293,7 +293,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	for (size_t i = 0; i < HASH_SIZE; ++i) {
 		uint32_t d[2];
 		if (!from_hex(result_str[i * 2], d[0]) || !from_hex(result_str[i * 2 + 1], d[1])) {
-			LOGWARN(4, "Client: invalid params ('result' is not a hex value)");
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('result' is not a hex value)");
 			return false;
 		}
 		resultHash.h[i] = static_cast<uint8_t>((d[0] << 4) | d[1]);
@@ -354,7 +354,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		return true;
 	}
 
-	LOGWARN(4, "client: got a share with invalid job id");
+	LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a share with invalid job id");
 
 	const bool result = send(client,
 		[id](void* buf)
@@ -590,7 +590,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 	const uint32_t blob_size = block.get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
 	if (!blob_size) {
-		LOGWARN(4, "client: got a stale share");
+		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
 		share->m_result = SubmittedShare::Result::STALE;
 		return;
 	}
@@ -606,13 +606,13 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		hash pow_hash;
 		if (!pool->calculate_hash(blob, blob_size, seed_hash, pow_hash)) {
-			LOGWARN(4, "client: couldn't check share PoW");
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " couldn't check share PoW");
 			share->m_result = SubmittedShare::Result::COULDNT_CHECK_POW;
 			return;
 		}
 
 		if (pow_hash != share->m_resultHash) {
-			LOGWARN(4, "client: submitted a share with invalid PoW");
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " submitted a share with invalid PoW");
 			share->m_result = SubmittedShare::Result::INVALID_POW;
 			return;
 		}
@@ -648,7 +648,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		share->m_result = SubmittedShare::Result::OK;
 	}
 	else {
-		LOGWARN(4, "got a low diff share from " << static_cast<char*>(client->m_addrString));
+		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a low diff share");
 		share->m_result = SubmittedShare::Result::LOW_DIFF;
 	}
 }
@@ -765,34 +765,34 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 {
 	rapidjson::Document doc;
 	if (doc.ParseInsitu(data).HasParseError()) {
-		LOGWARN(4, "client: invalid JSON request (parse error)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (parse error)");
 		return false;
 	}
 
 	if (!doc.IsObject()) {
-		LOGWARN(4, "client: invalid JSON request (not an object)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (not an object)");
 		return false;
 	}
 
 	if (!doc.HasMember("id")) {
-		LOGWARN(4, "client: invalid JSON request ('id' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('id' field not found)");
 		return false;
 	}
 
 	auto& id = doc["id"];
 	if (!id.IsUint()) {
-		LOGWARN(4, "client: invalid JSON request ('id' field is not an integer)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('id' field is not an integer)");
 		return false;
 	}
 
 	if (!doc.HasMember("method")) {
-		LOGWARN(4, "client: invalid JSON request ('method' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('method' field not found)");
 		return false;
 	}
 
 	auto& method = doc["method"];
 	if (!method.IsString()) {
-		LOGWARN(4, "client: invalid JSON request ('method' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('method' field is not a string)");
 		return false;
 	}
 
@@ -810,7 +810,7 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 		return true;
 	}
 	else {
-		LOGWARN(4, "client: invalid JSON request (unknown method)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (unknown method)");
 		return false;
 	}
 
@@ -820,24 +820,24 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint32_t id)
 {
 	if (!doc.HasMember("params")) {
-		LOGWARN(4, "client: invalid JSON login request ('params' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('params' field not found)");
 		return false;
 	}
 
 	auto& params = doc["params"];
 	if (!params.IsObject()) {
-		LOGWARN(4, "client: invalid JSON login request ('params' field is not an object)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('params' field is not an object)");
 		return false;
 	}
 
 	if (!params.HasMember("login")) {
-		LOGWARN(4, "client: invalid login params ('login' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid login params ('login' field not found)");
 		return false;
 	}
 
 	auto& login = params["login"];
 	if (!login.IsString()) {
-		LOGWARN(4, "client: invalid login params ('login' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid login params ('login' field is not a string)");
 		return false;
 	}
 
@@ -847,67 +847,67 @@ bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint3
 bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint32_t id)
 {
 	if (!doc.HasMember("params")) {
-		LOGWARN(4, "client: invalid JSON submit request ('params' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON submit request ('params' field not found)");
 		return false;
 	}
 
 	auto& params = doc["params"];
 	if (!params.IsObject()) {
-		LOGWARN(4, "client: invalid JSON submit request ('params' field is not an object)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON submit request ('params' field is not an object)");
 		return false;
 	}
 
 	if (!params.HasMember("id")) {
-		LOGWARN(4, "client: invalid submit params ('id' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('id' field not found)");
 		return false;
 	}
 
 	auto& rpcId = params["id"];
 	if (!rpcId.IsString()) {
-		LOGWARN(4, "client: invalid submit params ('id' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('id' field is not a string)");
 		return false;
 	}
 
 	if (!params.HasMember("job_id")) {
-		LOGWARN(4, "client: invalid submit params ('job_id' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('job_id' field not found)");
 		return false;
 	}
 
 	auto& job_id = params["job_id"];
 	if (!job_id.IsString()) {
-		LOGWARN(4, "client: invalid submit params ('job_id' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('job_id' field is not a string)");
 		return false;
 	}
 
 	if (!params.HasMember("nonce")) {
-		LOGWARN(4, "client: invalid submit params ('nonce' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('nonce' field not found)");
 		return false;
 	}
 
 	auto& nonce = params["nonce"];
 	if (!nonce.IsString()) {
-		LOGWARN(4, "client: invalid submit params ('nonce' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('nonce' field is not a string)");
 		return false;
 	}
 
 	if (nonce.GetStringLength() != sizeof(uint32_t) * 2) {
-		LOGWARN(4, "client: invalid submit params ('nonce' field has invalid length)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('nonce' field has invalid length)");
 		return false;
 	}
 
 	if (!params.HasMember("result")) {
-		LOGWARN(4, "client: invalid submit params ('result' field not found)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field not found)");
 		return false;
 	}
 
 	auto& result = params["result"];
 	if (!result.IsString()) {
-		LOGWARN(4, "client: invalid submit params ('result' field is not a string)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field is not a string)");
 		return false;
 	}
 
 	if (result.GetStringLength() != HASH_SIZE * 2) {
-		LOGWARN(4, "client: invalid submit params ('result' field has invalid length)");
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field has invalid length)");
 		return false;
 	}
 
