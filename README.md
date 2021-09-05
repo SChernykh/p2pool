@@ -73,6 +73,10 @@ git submodule sync && git submodule update --init --force --recursive
 make release-static -j$(nproc)
 ```
 
+### Arch Linux [AUR](https://wiki.archlinux.org/title/Arch_User_Repository)
+
+Make the package: [p2pool-git](https://aur.archlinux.org/packages/p2pool-git/)
+
 ### macOS
 
 p2pool binary:
