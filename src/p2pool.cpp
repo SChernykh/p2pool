@@ -880,7 +880,7 @@ void p2pool::api_update_block_found(const ChainMain* data)
 
 		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
 		if (f.is_open()) {
-			f << cur_time << ' ' << data->height << ' ' << diff << ' ' << total_hashes << '\n';
+			f << cur_time << ' ' << data->height << ' ' << data->id << ' ' << diff << ' ' << total_hashes << '\n';
 		}
 	}
 
