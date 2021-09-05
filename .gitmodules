@@ -7,3 +7,6 @@
 [submodule "external/src/rapidjson"]
 	path = external/src/rapidjson
 	url = https://github.com/SChernykh/rapidjson
+[submodule "external/src/cppzmq"]
+	path = external/src/cppzmq
+	url = https://github.com/SChernykh/cppzmq
