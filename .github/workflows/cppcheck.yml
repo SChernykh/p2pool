@@ -24,3 +24,30 @@ jobs:
       run: |
         cd cppcheck
         ./run.sh
+
+  cppcheck-windows:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Install cppcheck
+      run: choco install cppcheck
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Setup cmake
+      uses: lukka/get-cmake@latest
+
+    - name: cmake p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 16 2019"
+
+    - name: Run cppcheck
+      run: |
+        cd cppcheck
+        ./run.cmd
