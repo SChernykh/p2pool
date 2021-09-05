@@ -24,13 +24,13 @@ jobs:
       run: mkdir build && cd build && cmake ..
 
     - name: make p2pool
-      run: cd build && make
+      run: cd build && make -j2
 
     - name: cmake tests
       run: cd tests && mkdir build && cd build && cmake ..
 
     - name: make tests
-      run: cd tests/build && make
+      run: cd tests/build && make -j2
 
     - name: run tests
       run: cd tests/build && ./p2pool_tests
@@ -60,7 +60,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Unix Makefiles"
-        make
+        make -j2
 
     - name: Build tests
       run: |
@@ -68,7 +68,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Unix Makefiles"
-        make
+        make -j2
 
     - name: Run tests
       run: |
@@ -129,7 +129,7 @@ jobs:
         mkdir build
         cd build
         cmake ..
-        make
+        make -j3
 
     - name: Build tests
       run: |
@@ -137,7 +137,7 @@ jobs:
         mkdir build
         cd build
         cmake ..
-        make
+        make -j3
 
     - name: Run tests
       run: |
