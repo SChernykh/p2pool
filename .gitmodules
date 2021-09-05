@@ -13,3 +13,6 @@
 [submodule "external/src/libsodium"]
 	path = external/src/libsodium
 	url = https://github.com/SChernykh/libsodium
+[submodule "external/src/libuv"]
+	path = external/src/libuv
+	url = https://github.com/SChernykh/libuv
