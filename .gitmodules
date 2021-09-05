@@ -1,3 +1,6 @@
 [submodule "tests/googletest"]
 	path = tests/googletest
 	url = https://github.com/google/googletest
+[submodule "external/src/RandomX"]
+	path = external/src/RandomX
+	url = https://github.com/SChernykh/RandomX
