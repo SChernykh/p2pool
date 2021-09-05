@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.6.0") 
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool_tests)
+endif()
+
 add_subdirectory(googletest)
 set(LIBS gtest)
 

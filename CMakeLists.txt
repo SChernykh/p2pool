@@ -5,6 +5,10 @@ option(STATIC_LINUX_BINARY "Build static Linux binary" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.6.0") 
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+endif()
+
 add_subdirectory(external/src/RandomX)
 set(LIBS randomx)
 
