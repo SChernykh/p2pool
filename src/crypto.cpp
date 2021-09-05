@@ -75,6 +75,7 @@ static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 	return false;
 }
 
+// cppcheck-suppress constParameter
 void generate_keys(hash& pub, hash& sec)
 {
 	// l = 2^252 + 27742317777372353535851937790883648493.
@@ -152,6 +153,7 @@ static FORCEINLINE void derivation_to_scalar(const hash& derivation, size_t outp
 	hash_to_scalar(begin, end - begin, res);
 }
 
+// cppcheck-suppress constParameter
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
 {
 	uint8_t scalar[HASH_SIZE];
