@@ -73,6 +73,49 @@ git submodule sync && git submodule update --init --force --recursive
 make release-static -j$(nproc)
 ```
 
+### macOS
+
+p2pool binary:
+```
+brew update && brew install git cmake libuv zmq libpgm
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make -j$(sysctl -n hw.logicalcpu)
+```
+
+monerod binary compatible with p2pool:
+```
+git clone --recursive https://github.com/SChernykh/monero
+cd monero
+git checkout p2pool-api-v0.17
+git submodule sync && git submodule update --init --force --recursive
+brew update && brew bundle --file=contrib/brew/Brewfile
+make -j$(sysctl -n hw.logicalcpu)
+```
+
+### Windows
+
+p2pool binary (Visual Studio Community 2019 build):
+```
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build
+cd build
+cmake .. -G "Visual Studio 16 2019"
+```
+then open generated build\p2pool.sln in Visual Studio and build it there
+
+monerod binary compatible with p2pool:
+```
+git clone --recursive https://github.com/SChernykh/monero
+cd monero
+git checkout p2pool-api-v0.17
+git submodule sync && git submodule update --init --force --recursive
+```
+then follow the instructions from https://github.com/monero-project/monero/#on-windows
+
 ## How to test
 
 Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds**. This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**. The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
