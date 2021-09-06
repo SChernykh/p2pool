@@ -220,7 +220,7 @@ void p2pool::handle_miner_data(MinerData& data)
 	}
 }
 
-static constexpr char BLOCK_FOUND[] = "\n\
+const char* BLOCK_FOUND = "\n\
 -----------------------------------------------------------------------------------------------\n\
 | ######   #        #######   #####   #    #      #######  #######  #     #  #     #  ######  |\n\
 | #     #  #        #     #  #     #  #   #       #        #     #  #     #  ##    #  #     # |\n\
@@ -269,9 +269,14 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		", timestamp = " << log::Gray() << data.timestamp << log::NoColor() << 
 		", reward = " << log::Gray() << log::XMRAmount(data.reward));
 
-	if (!sidechain_id.empty() && side_chain().has_block(sidechain_id)) {
-		LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
-		api_update_block_found(&data);
+	if (!sidechain_id.empty()) {
+		if (side_chain().has_block(sidechain_id)) {
+			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
+			api_update_block_found(&data);
+		}
+		else {
+			side_chain().watch_mainchain_block(data, sidechain_id);
+		}
 	}
 
 	api_update_network_stats();

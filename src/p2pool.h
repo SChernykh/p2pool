@@ -72,6 +72,8 @@ public:
 
 	bool chainmain_get_by_hash(const hash& id, ChainMain& data) const;
 
+	void api_update_block_found(const ChainMain* data);
+
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
@@ -115,7 +117,6 @@ private:
 
 	void api_update_network_stats();
 	void api_update_pool_stats();
-	void api_update_block_found(const ChainMain* data);
 
 	struct FoundBlock
 	{

@@ -348,6 +348,8 @@ bool SideChain::block_seen(const PoolBlock& block)
 	return !m_seenBlocks.insert(block.m_sidechainId).second;
 }
 
+extern const char* BLOCK_FOUND;
+
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
 {
 	if (block.m_difficulty < m_minDifficulty) {
@@ -419,6 +421,8 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		return false;
 	}
 
+	bool block_found = false;
+
 	missing_blocks.clear();
 	{
 		MutexLock lock(m_sidechainLock);
@@ -431,6 +435,17 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 				missing_blocks.push_back(h);
 			}
 		}
+
+		if (block.m_sidechainId == m_watchBlockSidechainId) {
+			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << m_watchBlock.height << " was mined by this p2pool" << BLOCK_FOUND);
+			m_watchBlockSidechainId = {};
+			data = m_watchBlock;
+			block_found = true;
+		}
+	}
+
+	if (block_found) {
+		m_pool->api_update_block_found(&data);
 	}
 
 	add_block(block);
@@ -485,6 +500,13 @@ bool SideChain::has_block(const hash& id)
 {
 	MutexLock lock(m_sidechainLock);
 	return m_blocksById.find(id) != m_blocksById.end();
+}
+
+void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_id)
+{
+	MutexLock lock(m_sidechainLock);
+	m_watchBlock = data;
+	m_watchBlockSidechainId = possible_id;
 }
 
 bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
@@ -659,7 +681,6 @@ void SideChain::print_status()
 
 difficulty_type SideChain::total_hashes() const
 {
-	MutexLock lock(m_sidechainLock);
 	return m_chainTip ? m_chainTip->m_cumulativeDifficulty : difficulty_type();
 }
 

@@ -52,6 +52,8 @@ public:
 	void get_missing_blocks(std::vector<hash>& missing_blocks);
 
 	bool has_block(const hash& id);
+	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
+
 	bool get_block_blob(const hash& id, std::vector<uint8_t>& blob);
 	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob);
 
@@ -109,6 +111,9 @@ private:
 	std::vector<uint8_t> m_consensusId;
 
 	difficulty_type m_curDifficulty;
+
+	ChainMain m_watchBlock;
+	hash m_watchBlockSidechainId;
 };
 
 } // namespace p2pool

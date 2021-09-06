@@ -27,6 +27,10 @@ TEST(hash, constructor)
 	hash h;
 	uint8_t buf[HASH_SIZE]{};
 	ASSERT_EQ(memcmp(h.h, buf, HASH_SIZE), 0);
+
+	memset(h.h, -1, HASH_SIZE);
+	h = {};
+	ASSERT_EQ(memcmp(h.h, buf, HASH_SIZE), 0);
 }
 
 TEST(hash, compare)
