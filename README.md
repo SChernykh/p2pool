@@ -10,7 +10,11 @@ No ETA on the official release date, but hopefully before the end of September 2
 
 ![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)  
 ![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)  
-![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)
+![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)  
+<a href="https://scan.coverity.com/projects/schernykh-p2pool">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/23659/badge.svg"/>
+</a>
 
 ## Pool mining vs Solo mining vs P2Pool mining
 
