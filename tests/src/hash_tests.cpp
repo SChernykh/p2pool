@@ -29,6 +29,23 @@ TEST(hash, constructor)
 	ASSERT_EQ(memcmp(h.h, buf, HASH_SIZE), 0);
 }
 
+TEST(hash, compare)
+{
+	hash hashes[HASH_SIZE + 1];
+
+	for (size_t i = 1; i <= HASH_SIZE; ++i) {
+		hashes[i].h[i - 1] = 1;
+	}
+
+	for (size_t i = 0; i <= HASH_SIZE; ++i) {
+		for (size_t j = 0; j <= HASH_SIZE; ++j) {
+			ASSERT_EQ(hashes[i] <  hashes[j], i <  j);
+			ASSERT_EQ(hashes[i] == hashes[j], i == j);
+			ASSERT_EQ(hashes[i] != hashes[j], i != j);
+		}
+	}
+}
+
 TEST(hash, empty)
 {
 	hash h;

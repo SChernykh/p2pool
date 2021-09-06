@@ -38,7 +38,7 @@ static void parse_hash(const std::string& s, hash& h)
 TEST(crypto, derivation)
 {
 	std::ifstream f("crypto_tests.txt");
-	ASSERT_EQ(f.good(), true);
+	ASSERT_EQ(f.good() && f.is_open(), true);
 	do {
 		std::string name;
 		f >> name;

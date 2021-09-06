@@ -41,7 +41,7 @@ struct MinerShare
 class SideChain
 {
 public:
-	SideChain(p2pool* pool, NetworkType type);
+	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
 	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares);

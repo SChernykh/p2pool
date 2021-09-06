@@ -38,7 +38,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 {
 	uint64_t memory_allocated = 0;
 
-	if (!m_pool->params().m_lightMode) {
+	if (m_pool && !m_pool->params().m_lightMode) {
 		m_dataset = randomx_alloc_dataset(RANDOMX_FLAG_LARGE_PAGES);
 		if (!m_dataset) {
 			LOGWARN(1, "couldn't allocate RandomX dataset using large pages");

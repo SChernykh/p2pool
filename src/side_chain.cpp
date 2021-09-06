@@ -51,11 +51,11 @@ static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_
 
 namespace p2pool {
 
-SideChain::SideChain(p2pool* pool, NetworkType type)
+SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
 	, m_networkType(type)
 	, m_chainTip(nullptr)
-	, m_poolName("mainnet test 2")
+	, m_poolName(pool_name ? pool_name : "mainnet test 2")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
 	, m_chainWindowSize(2160)
@@ -64,7 +64,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type)
 {
 	LOGINFO(1, log::LightCyan() << "network type  = " << m_networkType);
 
-	if (!load_config(m_pool->params().m_config)) {
+	if (m_pool && !load_config(m_pool->params().m_config)) {
 		panic();
 	}
 

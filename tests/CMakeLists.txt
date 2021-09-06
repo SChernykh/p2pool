@@ -15,6 +15,9 @@ endif()
 add_subdirectory(googletest)
 set(LIBS gtest)
 
+add_subdirectory(../external/src/RandomX RandomX)
+set(LIBS ${LIBS} randomx)
+
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(WARNING_FLAGS "")
 	set(OPTIMIZATION_FLAGS "-Ofast -s")
@@ -67,14 +70,32 @@ set(SOURCES
 	src/hash_tests.cpp
 	src/keccak_tests.cpp
 	src/main.cpp
+	src/pool_block_tests.cpp
 	src/wallet_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
+	../external/src/llhttp/api.c
+	../external/src/llhttp/http.c
+	../external/src/llhttp/llhttp.c
+	../src/block_cache.cpp
+	../src/block_template.cpp
+	../src/console_commands.cpp
 	../src/crypto.cpp
+	../src/json_rpc_request.cpp
 	../src/keccak.cpp
 	../src/log.cpp
+	../src/mempool.cpp
+	../src/p2p_server.cpp
+	../src/p2pool.cpp
+	../src/p2pool_api.cpp
+	../src/params.cpp
+	../src/pool_block.cpp
+	../src/pow_hash.cpp
+	../src/side_chain.cpp
+	../src/stratum_server.cpp
 	../src/util.cpp
 	../src/wallet.cpp
+	../src/zmq_reader.cpp
 )
 
 include_directories(../src)
@@ -84,7 +105,8 @@ include_directories(../external/src/libuv/include)
 include_directories(../external/src/cppzmq)
 include_directories(../external/src/libzmq/include)
 include_directories(../external/src/llhttp)
-include_directories(../external/src/randomx/src)
+include_directories(../external/src/RandomX/src)
+include_directories(../external/src/rapidjson/include)
 include_directories(src)
 include_directories(googletest/googletest/include)
 
@@ -127,3 +149,4 @@ add_definitions(/DZMQ_STATIC /DP2POOL_LOG_DISABLE)
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/crypto_tests.txt" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/mainnet_test2_block.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)

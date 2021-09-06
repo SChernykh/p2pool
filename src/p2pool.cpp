@@ -1011,7 +1011,8 @@ int p2pool::run()
 		LOGINFO(1, "uv_run exited, result = " << rc);
 	}
 	catch (const std::exception& e) {
-		LOGERR(1, "exception " << e.what());
+		const char* s = e.what();
+		LOGERR(1, "exception " << s);
 		panic();
 	}
 
