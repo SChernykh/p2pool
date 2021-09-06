@@ -911,10 +911,11 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 
 	for (uint32_t i = 0; i < count; ++i) {
 		uint8_t blob[128];
-		const uint32_t n = get_hashing_blob_nolock(extra_nonce_start + i, blob);
+		uint32_t n = get_hashing_blob_nolock(extra_nonce_start + i, blob);
 
 		if (n > sizeof(blob)) {
 			LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << n << ", expected <= " << sizeof(blob));
+			n = sizeof(blob);
 		}
 		else if (n < 76) {
 			LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << n << ", expected >= 76");

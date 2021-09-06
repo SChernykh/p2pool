@@ -634,8 +634,7 @@ void SideChain::print_status()
 		Wallet w = m_pool->params().m_wallet;
 		hash eph_public_key;
 		for (size_t i = 0, n = m_chainTip->m_outputs.size(); i < n; ++i) {
-			w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key);
-			if (m_chainTip->m_outputs[i].m_ephPublicKey == eph_public_key) {
+			if (w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key) && (m_chainTip->m_outputs[i].m_ephPublicKey == eph_public_key)) {
 				reward_share = m_chainTip->m_outputs[i].m_reward;
 				break;
 			}

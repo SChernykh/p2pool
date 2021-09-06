@@ -26,7 +26,10 @@ static constexpr char log_category_prefix[] = "JSONRPCRequest ";
 namespace p2pool {
 
 JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb)
-	: m_callback(cb)
+	: m_socket{}
+	, m_connect{}
+	, m_write{}
+	, m_callback(cb)
 	, m_contentLength(0)
 	, m_contentLengthHeader(false)
 	, m_readBufInUse(false)

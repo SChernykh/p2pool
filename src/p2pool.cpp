@@ -1004,11 +1004,15 @@ int p2pool::run()
 		return 1;
 	}
 
-	{
+	try {
 		ZMQReader z(m_params->m_host, m_params->m_zmqPort, this);
 		get_info();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
+	}
+	catch (const std::exception& e) {
+		LOGERR(1, "exception " << e.what());
+		panic();
 	}
 
 	m_stopped = true;

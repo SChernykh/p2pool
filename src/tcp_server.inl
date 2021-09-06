@@ -24,6 +24,8 @@ namespace p2pool {
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client)
 	: m_allocateNewClient(allocate_new_client)
+	, m_loopThread{}
+	, m_finished(0)
 	, m_listenPort(-1)
 	, m_loopStopped(false)
 	, m_numConnections(0)

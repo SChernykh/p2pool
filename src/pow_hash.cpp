@@ -130,7 +130,7 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 	work->seed = seed;
 	work->req.data = work;
 
-	uv_queue_work(uv_default_loop_checked(), &work->req,
+	const int err = uv_queue_work(uv_default_loop_checked(), &work->req,
 		[](uv_work_t* req)
 		{
 			bkg_jobs_tracker.start("RandomX_Hasher::set_seed_async");
@@ -145,6 +145,14 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 			bkg_jobs_tracker.stop("RandomX_Hasher::set_seed_async");
 		}
 	);
+
+	if (err) {
+		LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
+		if (!work->pool->stopped()) {
+			work->hasher->set_seed(work->seed);
+		}
+		delete work;
+	}
 }
 
 void RandomX_Hasher::set_seed(const hash& seed)

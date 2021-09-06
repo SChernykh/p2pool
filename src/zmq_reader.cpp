@@ -50,7 +50,6 @@ ZMQReader::ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandle
 	if (!m_publisherPort) {
 		LOGERR(1, "failed to to bind ZMQ publisher port, aborting");
 		panic();
-
 	}
 
 	const int err = uv_thread_create(&m_worker, run_wrapper, this);

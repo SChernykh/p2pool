@@ -178,7 +178,7 @@ private:
 protected:
 	void start_listening(const std::string& listen_addresses);
 
-	std::atomic<int> m_finished{ 0 };
+	std::atomic<int> m_finished;
 	int m_listenPort;
 
 	uv_loop_t m_loop;
