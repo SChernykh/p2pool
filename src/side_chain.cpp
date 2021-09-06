@@ -688,6 +688,11 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 
 	const uint64_t total_weight = std::accumulate(shares.begin(), shares.end(), 0ULL, [](uint64_t a, const MinerShare& b) { return a + b.m_weight; });
 
+	if (total_weight == 0) {
+		LOGERR(1, "total_weight is 0. Check the code!");
+		return false;
+	}
+
 	rewards.clear();
 	rewards.reserve(num_shares);
 
