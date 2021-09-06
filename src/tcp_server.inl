@@ -835,7 +835,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stre
 	}
 	else if (nread < 0) {
 		if (nread != UV_EOF) {
-			LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " failed to read response, err = " << uv_err_name(static_cast<int>(nread)));
+			const int err = static_cast<int>(nread);
+			LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " failed to read response, err = " << uv_err_name(err));
+			pThis->on_read_failed(err);
 		}
 		pThis->close();
 	}

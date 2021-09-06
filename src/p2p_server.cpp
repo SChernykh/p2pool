@@ -912,6 +912,19 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 	return true;
 }
 
+void P2PServer::P2PClient::on_read_failed(int /*err*/)
+{
+	if (!m_handshakeComplete) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " disconnected before finishing handshake");
+
+		ban(DEFAULT_BAN_TIME);
+		P2PServer* server = static_cast<P2PServer*>(m_owner);
+		if (server) {
+			server->remove_peer_from_list(this);
+		}
+	}
+}
+
 bool P2PServer::P2PClient::send_handshake_challenge()
 {
 	P2PServer* owner = static_cast<P2PServer*>(m_owner);
