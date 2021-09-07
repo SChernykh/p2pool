@@ -64,6 +64,7 @@ public:
 		bool on_connect() override;
 		bool on_read(char* data, uint32_t size) override;
 		void on_read_failed(int err) override;
+		void on_disconnected() override;
 
 		// Both peers send handshake challenge immediately after a connection is established
 		// Both peers must have the same consensus ID for handshake to succeed

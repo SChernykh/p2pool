@@ -914,6 +914,11 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 void P2PServer::P2PClient::on_read_failed(int /*err*/)
 {
+	on_disconnected();
+}
+
+void P2PServer::P2PClient::on_disconnected()
+{
 	if (!m_handshakeComplete) {
 		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " disconnected before finishing handshake");
 

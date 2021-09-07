@@ -634,6 +634,9 @@ void SideChain::print_status()
 	uint64_t total_orphans = 0;
 	uint64_t our_orphans = 0;
 
+	uint64_t your_reward = 0;
+	uint64_t total_reward = 0;
+
 	if (m_chainTip) {
 		std::sort(blocks_in_window.begin(), blocks_in_window.end());
 		for (uint64_t i = 0; (i < m_chainWindowSize) && (i <= tip_height); ++i) {
@@ -647,25 +650,23 @@ void SideChain::print_status()
 				}
 			}
 		}
-	}
 
-	const uint64_t block_reward = m_pool->block_template().final_reward();
-
-	uint64_t reward_share = 0;
-	if (m_chainTip) {
 		Wallet w = m_pool->params().m_wallet;
+		const std::vector<PoolBlock::TxOutput>& outs = m_chainTip->m_outputs;
+
 		hash eph_public_key;
-		for (size_t i = 0, n = m_chainTip->m_outputs.size(); i < n; ++i) {
-			if (w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key) && (m_chainTip->m_outputs[i].m_ephPublicKey == eph_public_key)) {
-				reward_share = m_chainTip->m_outputs[i].m_reward;
-				break;
+		for (size_t i = 0, n = outs.size(); i < n; ++i) {
+			if (w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key) && (outs[i].m_ephPublicKey == eph_public_key)) {
+				your_reward = outs[i].m_reward;
 			}
+			total_reward += outs[i].m_reward;
 		}
 	}
 
 	uint64_t product[2];
-	product[0] = umul128(pool_hashrate, reward_share, &product[1]);
-	const uint64_t hashrate_est = udiv128(product[1], product[0], block_reward, &rem);
+	product[0] = umul128(pool_hashrate, your_reward, &product[1]);
+	const uint64_t hashrate_est = total_reward ? udiv128(product[1], product[0], total_reward, &rem) : 0;
+	const double block_share = total_reward ? ((static_cast<double>(your_reward) * 100.0) / static_cast<double>(total_reward)) : 0.0;
 
 	LOGINFO(0, "status" <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
@@ -675,7 +676,7 @@ void SideChain::print_status()
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
 		"\nYour shares               = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
-		"\nBlock reward share (est)  = " << log::XMRAmount(reward_share)
+		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
 	);
 }
 

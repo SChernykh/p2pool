@@ -90,6 +90,7 @@ public:
 		virtual bool on_connect() = 0;
 		virtual bool on_read(char* data, uint32_t size) = 0;
 		virtual void on_read_failed(int /*err*/) {}
+		virtual void on_disconnected() {}
 
 		static void on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 		static void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);

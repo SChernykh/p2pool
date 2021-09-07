@@ -839,6 +839,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stre
 			LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " failed to read response, err = " << uv_err_name(err));
 			pThis->on_read_failed(err);
 		}
+		else {
+			pThis->on_disconnected();
+		}
 		pThis->close();
 	}
 }
