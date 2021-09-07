@@ -28,9 +28,13 @@
 
 static constexpr char log_category_prefix[] = "P2PServer ";
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
+static const char* seed_nodes[] = {
+	"seeds.p2pool.io"
+};
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
+static constexpr int DEFAULT_LISTEN_PORT = 37889;
 
 #include "tcp_server.inl"
 
@@ -83,7 +87,7 @@ P2PServer::P2PServer(p2pool* pool)
 		panic();
 	}
 
-	load_saved_peer_list();
+	load_peer_list();
 	start_listening(pool->params().m_p2pAddresses);
 }
 
@@ -307,10 +311,61 @@ void P2PServer::save_peer_list()
 	m_peerListLastSaved = time(nullptr);
 }
 
-void P2PServer::load_saved_peer_list()
+void P2PServer::load_peer_list()
 {
+	// First take peers from the command line
 	std::string saved_list = m_pool->params().m_p2pPeerList;
 
+	// Then load peers from seed nodes if we're on the default sidechain
+	if (m_pool->side_chain().is_default()) {
+		for (size_t i = 0; i < array_size(seed_nodes); ++i) {
+			LOGINFO(4, "loading peers from " << seed_nodes[i]);
+
+			addrinfo hints{};
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+
+			addrinfo* result;
+			const int err = getaddrinfo(seed_nodes[i], nullptr, &hints, &result);
+			if (err == 0) {
+				for (addrinfo* r = result; r != NULL; r = r->ai_next) {
+					const char* addr_str;
+					char addr_str_buf[64];
+
+					char buf[log::Stream::BUF_SIZE + 1];
+					log::Stream s(buf);
+
+					if (r->ai_family == AF_INET6) {
+						addr_str = inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(r->ai_addr)->sin6_addr, addr_str_buf, sizeof(addr_str_buf));
+						if (addr_str) {
+							s << '[' << addr_str << "]:" << DEFAULT_LISTEN_PORT << '\0';
+						}
+					}
+					else {
+						addr_str = inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(r->ai_addr)->sin_addr, addr_str_buf, sizeof(addr_str_buf));
+						if (addr_str) {
+							s << addr_str << ':' << DEFAULT_LISTEN_PORT << '\0';
+						}
+					}
+
+					if (s.m_pos) {
+						LOGINFO(4, "added " << static_cast<char*>(buf) << " from " << seed_nodes[i]);
+						if (!saved_list.empty()) {
+							saved_list += ',';
+						}
+						saved_list += buf;
+					}
+				}
+				freeaddrinfo(result);
+			}
+			else {
+				LOGWARN(4, "getaddrinfo failed for " << seed_nodes[i] << ": " << gai_strerror(err));
+			}
+		}
+	}
+
+	// Finally load peers from p2pool_peers.txt
 	std::ifstream f(saved_peer_list_file_name);
 	if (f.is_open()) {
 		std::string address;
@@ -377,7 +432,7 @@ void P2PServer::load_saved_peer_list()
 			}
 		});
 
-	LOGINFO(5, "peer list loaded (" << m_peerList.size() << " peers)");
+	LOGINFO(4, "peer list loaded (" << m_peerList.size() << " peers)");
 }
 
 void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)

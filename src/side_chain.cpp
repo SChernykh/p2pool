@@ -704,6 +704,15 @@ uint64_t SideChain::miner_count()
 	return m_seenWallets.size();
 }
 
+bool SideChain::is_default() const
+{
+	constexpr uint8_t default_consensus_id[HASH_SIZE] = {
+		34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24
+	};
+
+	return (memcmp(m_consensusId.data(), default_consensus_id, HASH_SIZE) == 0);
+}
+
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
 {
 	const size_t num_shares = shares.size();

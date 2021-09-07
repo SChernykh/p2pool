@@ -69,6 +69,7 @@ public:
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
 	uint64_t miner_count();
+	bool is_default() const;
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 

@@ -33,7 +33,7 @@ struct Params
 	bool m_lightMode = false;
 	Wallet m_wallet{ nullptr };
 	std::string m_stratumAddresses{ "[::]:3333,0.0.0.0:3333" };
-	std::string m_p2pAddresses{ "[::]:37890,0.0.0.0:37890" };
+	std::string m_p2pAddresses{ "[::]:37889,0.0.0.0:37889" };
 	std::string m_p2pPeerList;
 	std::string m_config;
 	std::string m_apiPath;
