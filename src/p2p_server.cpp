@@ -616,6 +616,7 @@ void P2PServer::flush_cache()
 
 	if (err) {
 		LOGERR(1, "flush_cache: uv_queue_work failed, error " << uv_err_name(err));
+		delete work;
 	}
 }
 
