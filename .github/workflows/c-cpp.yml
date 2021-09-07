@@ -9,7 +9,11 @@ on:
 jobs:
   build-ubuntu:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-18.04]
 
     steps:
     - name: Install dependencies
@@ -116,40 +120,11 @@ jobs:
 
   build-macos:
 
-    runs-on: macOS-latest
+    runs-on: ${{ matrix.os }}
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Install dependencies
-      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake libuv zmq libpgm
-
-    - name: Build p2pool
-      run: |
-        mkdir build
-        cd build
-        cmake ..
-        make -j3
-
-    - name: Build tests
-      run: |
-        cd tests
-        mkdir build
-        cd build
-        cmake ..
-        make -j3
-
-    - name: Run tests
-      run: |
-        cd tests/build
-        ./p2pool_tests
-
-  build-macos-11:
-
-    runs-on: macos-11
+    strategy:
+      matrix:
+        os: [macos-latest, macos-11]
 
     steps:
     - name: Checkout repository
