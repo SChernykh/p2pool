@@ -41,6 +41,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_pool(pool)
 	, m_cache(new BlockCache())
 	, m_cacheLoaded(false)
+	, m_initialPeerList(pool->params().m_p2pPeerList)
 	, m_rd{}
 	, m_rng(m_rd())
 	, m_block(new PoolBlock())
@@ -76,16 +77,14 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 
 	m_timer.data = this;
-	err = uv_timer_start(&m_timer, on_timer, 10000, 2000);
+	err = uv_timer_start(&m_timer, on_timer, 1000, 2000);
 	if (err) {
 		LOGERR(1, "failed to start timer, error " << uv_err_name(err));
 		panic();
 	}
 
 	load_saved_peer_list();
-
 	start_listening(pool->params().m_p2pAddresses);
-	connect_to_peers(pool->params().m_p2pPeerList);
 }
 
 P2PServer::~P2PServer()
@@ -579,6 +578,11 @@ void P2PServer::print_status()
 
 void P2PServer::on_timer()
 {
+	if (!m_initialPeerList.empty()) {
+		connect_to_peers(m_initialPeerList);
+		m_initialPeerList.clear();
+	}
+
 	flush_cache();
 	download_missing_blocks();
 	update_peer_list();

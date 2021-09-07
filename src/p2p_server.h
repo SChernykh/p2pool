@@ -124,6 +124,7 @@ private:
 	p2pool* m_pool;
 	BlockCache* m_cache;
 	bool m_cacheLoaded;
+	std::string m_initialPeerList;
 
 	uv_rwlock_t m_cachedBlocksLock;
 	std::unordered_map<hash, PoolBlock*> m_cachedBlocks;
