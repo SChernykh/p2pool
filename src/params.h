@@ -27,7 +27,7 @@ struct Params
 
 	bool ok() const;
 
-	const char* m_host = "127.0.0.1";
+	std::string m_host = "127.0.0.1";
 	uint32_t m_rpcPort = 18081;
 	uint32_t m_zmqPort = 18083;
 	bool m_lightMode = false;

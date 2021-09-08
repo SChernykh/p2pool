@@ -72,7 +72,7 @@ Params::Params(int argc, char* argv[])
 
 bool Params::ok() const
 {
-	return m_host && m_rpcPort && m_zmqPort && m_wallet.valid();
+	return !m_host.empty() && m_rpcPort && m_zmqPort && m_wallet.valid();
 }
 
 } // namespace p2pool

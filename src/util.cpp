@@ -325,4 +325,42 @@ void BackgroundJobTracker::print_status()
 BackgroundJobTracker bkg_jobs_tracker;
 thread_local bool is_main_thread = false;
 
+bool resolve_host(std::string& host, bool& is_v6)
+{
+	addrinfo hints{};
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+
+	addrinfo* r = nullptr;
+	const int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	if ((err == 0) && r) {
+		const char* addr_str = nullptr;
+		char addr_str_buf[64];
+
+		void* addr;
+		if (r->ai_family == AF_INET6) {
+			addr = &reinterpret_cast<sockaddr_in6*>(r->ai_addr)->sin6_addr;
+			is_v6 = true;
+		}
+		else {
+			addr = &reinterpret_cast<sockaddr_in*>(r->ai_addr)->sin_addr;
+			is_v6 = false;
+		}
+
+		addr_str = inet_ntop(r->ai_family, addr, addr_str_buf, sizeof(addr_str_buf));
+		if (addr_str) {
+			LOGINFO(5, log::LightCyan() << host << log::NoColor() << " resolved to " << log::Gray() << addr_str);
+			host = addr_str;
+		}
+		freeaddrinfo(r);
+	}
+	else {
+		LOGWARN(4, "getaddrinfo failed for " << host << ": " << gai_strerror(err));
+		return false;
+	}
+
+	return true;
+}
+
 } // namespace p2pool

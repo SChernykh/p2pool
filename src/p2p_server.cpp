@@ -135,9 +135,11 @@ void P2PServer::store_in_cache(const PoolBlock& block)
 void P2PServer::connect_to_peers(const std::string& peer_list)
 {
 	parse_address_list(peer_list,
-		[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
+		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
-			connect_to_peer(is_v6, ip.c_str(), port);
+			if (resolve_host(ip, is_v6)) {
+				connect_to_peer(is_v6, ip.c_str(), port);
+			}
 		});
 }
 
@@ -313,10 +315,9 @@ void P2PServer::save_peer_list()
 
 void P2PServer::load_peer_list()
 {
-	// First take peers from the command line
-	std::string saved_list = m_pool->params().m_p2pPeerList;
+	std::string saved_list;
 
-	// Then load peers from seed nodes if we're on the default sidechain
+	// Load peers from seed nodes if we're on the default sidechain
 	if (m_pool->side_chain().is_default()) {
 		for (size_t i = 0; i < array_size(seed_nodes); ++i) {
 			LOGINFO(4, "loading peers from " << seed_nodes[i]);

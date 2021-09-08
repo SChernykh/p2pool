@@ -117,6 +117,8 @@ private:
 extern BackgroundJobTracker bkg_jobs_tracker;
 extern thread_local bool is_main_thread;
 
+bool resolve_host(std::string& host, bool& is_v6);
+
 } // namespace p2pool
 
 template<>

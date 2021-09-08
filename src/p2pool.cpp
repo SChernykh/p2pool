@@ -55,6 +55,12 @@ p2pool::p2pool(int argc, char* argv[])
 		panic();
 	}
 
+	bool is_v6;
+	if (!resolve_host(m_params->m_host, is_v6)) {
+		LOGERR(1, "resolve_host failed for " << m_params->m_host);
+		panic();
+	}
+
 	hash pub, sec, eph_public_key;
 	generate_keys(pub, sec);
 
@@ -384,7 +390,7 @@ void p2pool::submit_block() const
 	const uint32_t nonce = submit_data.nonce;
 	const uint32_t extra_nonce = submit_data.extra_nonce;
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request.c_str(),
+	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, request.c_str(),
 		[height, diff, template_id, nonce, extra_nonce](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
@@ -465,7 +471,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << height << "}}\0";
 
-		JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf,
+		JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
 			[this, prev_seed_height, height](const char* data, size_t size)
 			{
 				ChainMain block;
@@ -485,7 +491,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << current_height - BLOCK_HEADERS_REQUIRED << ",\"end_height\":" << current_height - 1 << "}}\0";
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf,
+	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
 		[this, current_height](const char* data, size_t size)
 		{
 			if (parse_block_headers_range(data, size) == BLOCK_HEADERS_REQUIRED) {
@@ -572,7 +578,7 @@ void p2pool::stratum_on_block()
 
 void p2pool::get_info()
 {
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}",
+	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}",
 		[this](const char* data, size_t size)
 		{
 			parse_get_info_rpc(data, size);
@@ -658,7 +664,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 void p2pool::get_miner_data()
 {
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}",
+	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}",
 		[this](const char* data, size_t size)
 		{
 			parse_get_miner_data_rpc(data, size);
@@ -1076,7 +1082,7 @@ int p2pool::run()
 	}
 
 	try {
-		ZMQReader z(m_params->m_host, m_params->m_zmqPort, this);
+		ZMQReader z(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 		get_info();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);

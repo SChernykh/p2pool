@@ -39,8 +39,13 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 	uv_tcp_init(uv_default_loop_checked(), &m_socket);
 	uv_tcp_nodelay(&m_socket, 1);
 
-	sockaddr_in dest;
-	uv_ip4_addr(address, port, &dest);
+	sockaddr_storage addr;
+	if (uv_ip4_addr(address, port, reinterpret_cast<sockaddr_in*>(&addr)) != 0) {
+		const int err = uv_ip6_addr(address, port, reinterpret_cast<sockaddr_in6*>(&addr));
+		if (err) {
+			LOGERR(1, "invalid IP address " << address << " or port " << port);
+		}
+	}
 
 	m_socket.data = this;
 	m_connect.data = this;
@@ -59,7 +64,10 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 
 	m_response.reserve(sizeof(m_readBuf));
 
-	uv_tcp_connect(&m_connect, &m_socket, reinterpret_cast<const sockaddr*>(&dest), on_connect);
+	const int err = uv_tcp_connect(&m_connect, &m_socket, reinterpret_cast<const sockaddr*>(&addr), on_connect);
+	if (err) {
+		LOGERR(1, "failed to initiate tcp connection to " << address << ", error " << uv_err_name(err));
+	}
 }
 
 void JSONRPCRequest::on_connect(uv_connect_t* req, int status)
