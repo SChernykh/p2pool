@@ -149,7 +149,7 @@ The purpose of this test is to bring as much hashrate as possible and check if s
 - I haven't tested it, but it should work properly with `logrotate`
 - Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes. Of course it depends on your connection speed!
 - p2pool has a stratum server listening on port 3333, you can connect xmrig to it now
-- Run `./xmrig -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig.
+- Run `./xmrig -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig. **Wallet address set in xmrig config will be ignored!**
 - To set custom fixed difficulty for your miner (for example, 10000), run `./xmrig -u x+10000 -o 127.0.0.1:3333`
 - xmrig should connect and start mining
 - you can connect multiple miners to the same p2pool node. The more the better!
