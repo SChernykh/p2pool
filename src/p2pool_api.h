@@ -29,6 +29,7 @@ public:
 	~p2pool_api();
 
 	enum class Category {
+		GLOBAL,
 		NETWORK,
 		POOL,
 	};

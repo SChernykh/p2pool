@@ -827,6 +827,8 @@ void p2pool::api_update_network_stats()
 				<< ",\"reward\":" << mainnet_tip.reward
 				<< ",\"timestamp\":" << mainnet_tip.timestamp << "}";
 		});
+
+	api_update_stats_mod();
 }
 
 void p2pool::api_update_pool_stats()
@@ -864,6 +866,68 @@ void p2pool::api_update_pool_stats()
 				<< ",\"lastBlockFound\":" << last_block_found_height
 				<< ",\"totalBlocksFound\":" << total_blocks_found
 				<< "}}";
+		});
+
+	api_update_stats_mod();
+}
+
+void p2pool::api_update_stats_mod()
+{
+	if (!m_api) {
+		return;
+	}
+
+	ChainMain mainnet_tip;
+	{
+		ReadLock lock(m_mainchainLock);
+		mainnet_tip = m_mainchainByHash[m_minerData.prev_id];
+	}
+
+	time_t last_block_found_time = 0;
+	uint64_t last_block_found_height = 0;
+	hash last_block_found_hash;
+	difficulty_type last_block_total_hashes;
+
+	{
+		MutexLock lock(m_foundBlocksLock);
+		if (!m_foundBlocks.empty()) {
+			last_block_found_time = m_foundBlocks.back().timestamp;
+			last_block_found_height = m_foundBlocks.back().height;
+			last_block_found_hash = m_foundBlocks.back().id;
+			last_block_total_hashes = m_foundBlocks.back().total_hashes;
+		}
+	}
+
+	char last_block_found_buf[log::Stream::BUF_SIZE + 1];
+	log::Stream s(last_block_found_buf);
+	s << last_block_found_hash << '\0';
+	memcpy(last_block_found_buf + 4, "...", 4);
+
+	const uint64_t miners = m_sideChain->miner_count();
+
+	uint64_t t;
+	const difficulty_type& diff = m_sideChain->difficulty();
+	const uint64_t hashrate = udiv128(diff.hi, diff.lo, m_sideChain->block_time(), &t);
+
+	const difficulty_type total_hashes = m_sideChain->total_hashes();
+	if (total_hashes < last_block_total_hashes) {
+		return;
+	}
+
+	const uint64_t round_hashes = total_hashes.lo - last_block_total_hashes.lo;
+
+	m_api->set(p2pool_api::Category::GLOBAL, "stats_mod",
+		[&mainnet_tip, last_block_found_time, &last_block_found_buf, last_block_found_height, miners, hashrate, round_hashes](log::Stream& s)
+		{
+			s << "{\"config\":{\"ports\":[{\"port\":3333,\"tls\":false}],\"fee\":0,\"minPaymentThreshold\":400000000},\"network\":{\"height\":"
+				<< mainnet_tip.height << "},\"pool\":{\"stats\":{\"lastBlockFound\":\""
+				<< last_block_found_time << "000\"},\"blocks\":[\""
+				<< static_cast<char*>(last_block_found_buf) << static_cast<char*>(last_block_found_buf) + HASH_SIZE * 2 - 4 << ':'
+				<< last_block_found_time << "\",\""
+				<< last_block_found_height << "\"],\"miners\":"
+				<< miners << ",\"hashrate\":"
+				<< hashrate << ",\"roundHashes\":"
+				<< round_hashes << "}}";
 		});
 }
 
@@ -916,6 +980,8 @@ void p2pool::api_update_block_found(const ChainMain* data)
 			}
 			s << ']';
 		});
+
+	api_update_stats_mod();
 }
 
 static void on_signal(uv_signal_t* handle, int signum)

@@ -117,6 +117,7 @@ private:
 
 	void api_update_network_stats();
 	void api_update_pool_stats();
+	void api_update_stats_mod();
 
 	struct FoundBlock
 	{
