@@ -1409,12 +1409,11 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 		else if (peer_height > our_height) {
 			if (peer_height >= our_height + 2) {
 				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+				return true;
 			}
-			return true;
 		}
 		else {
-			LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " is mining on an alternative mainchain tip (height " << peer_height << "), ignoring it");
-			return true;
+			LOGINFO(4, "peer " << static_cast<char*>(m_addrString) << " is mining on an alternative mainchain tip (height " << peer_height << ")");
 		}
 	}
 
