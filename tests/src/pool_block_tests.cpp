@@ -92,11 +92,12 @@ TEST(pool_block, deserialize)
 
 	hash pow_hash;
 	ASSERT_EQ(b.get_pow_hash(&hasher, seed, pow_hash), true);
-	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
 
 	std::stringstream s;
 	s << pow_hash;
 	ASSERT_EQ(s.str(), "f76d731c61c9c9b6c3f46be2e60c9478930b49b4455feecd41ecb9420d000000");
+
+	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
 }
 
 }
