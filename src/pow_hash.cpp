@@ -247,8 +247,9 @@ void RandomX_Hasher::set_seed(const hash& seed)
 		MutexLock lock3(m_vm[FULL_DATASET_VM].mutex);
 
 		if (!m_vm[FULL_DATASET_VM].vm) {
-			const randomx_flags flags = randomx_get_flags();
-			m_vm[FULL_DATASET_VM].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES | RANDOMX_FLAG_FULL_MEM, nullptr, m_dataset);
+			const randomx_flags flags = randomx_get_flags() | RANDOMX_FLAG_FULL_MEM;
+
+			m_vm[FULL_DATASET_VM].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, nullptr, m_dataset);
 			if (!m_vm[FULL_DATASET_VM].vm) {
 				LOGWARN(1, "couldn't allocate RandomX VM using large pages");
 				m_vm[FULL_DATASET_VM].vm = randomx_create_vm(flags, nullptr, m_dataset);
