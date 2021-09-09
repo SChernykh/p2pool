@@ -121,8 +121,10 @@ bool resolve_host(std::string& host, bool& is_v6);
 
 } // namespace p2pool
 
+namespace std {
+
 template<>
-struct std::hash<p2pool::hash>
+struct hash<p2pool::hash>
 {
 	FORCEINLINE size_t operator()(const p2pool::hash& value) const
 	{
@@ -133,3 +135,5 @@ struct std::hash<p2pool::hash>
 		return static_cast<size_t>(result);
 	}
 };
+
+} // namespace std
