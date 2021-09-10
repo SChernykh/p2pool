@@ -34,6 +34,7 @@
 #include <fstream>
 #include <iterator>
 #include <numeric>
+#include <array>
 
 // Only uncomment it to debug issues with uncle/orphan blocks
 //#define DEBUG_BROADCAST_DELAY_MS 100
@@ -598,15 +599,18 @@ void SideChain::print_status()
 	uint32_t total_blocks_in_window = 0;
 	uint32_t total_uncles_in_window = 0;
 
-	uint32_t our_blocks_in_window = 0;
-	uint32_t our_uncles_in_window = 0;
+	// each dot corresponds to m_chainWindowSize / 30 shares, with current values, 2160 / 30 = 72
+	std::array<uint32_t, 30> our_blocks_in_window{};
+	std::array<uint32_t, 30> our_uncles_in_window{};
 
 	while (cur) {
 		blocks_in_window.emplace_back(cur->m_sidechainId);
 		++total_blocks_in_window;
 
 		if (cur->m_minerWallet == m_pool->params().m_wallet) {
-			++our_blocks_in_window;
+			// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
+			const size_t window_index = (total_blocks_in_window - 1) / ((m_chainWindowSize + our_blocks_in_window.size() - 1) / our_blocks_in_window.size());
+			our_blocks_in_window[std::min(window_index, our_blocks_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than m_chainWindowSize
 		}
 
 		++block_depth;
@@ -622,7 +626,9 @@ void SideChain::print_status()
 				if (tip_height - uncle->m_sidechainHeight < m_chainWindowSize) {
 					++total_uncles_in_window;
 					if (uncle->m_minerWallet == m_pool->params().m_wallet) {
-						++our_uncles_in_window;
+						// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
+						const size_t window_index = (total_blocks_in_window - 1) / ((m_chainWindowSize + our_uncles_in_window.size() - 1) / our_uncles_in_window.size());
+						our_uncles_in_window[std::min(window_index, our_uncles_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than m_chainWindowSize
 					}
 				}
 			}
@@ -668,14 +674,31 @@ void SideChain::print_status()
 	const uint64_t hashrate_est = total_reward ? udiv128(product[1], product[0], total_reward, &rem) : 0;
 	const double block_share = total_reward ? ((static_cast<double>(your_reward) * 100.0) / static_cast<double>(total_reward)) : 0.0;
 
+	uint32_t our_blocks_in_window_total = std::accumulate(our_blocks_in_window.begin(), our_blocks_in_window.end(), decltype(our_blocks_in_window)::value_type(0));
+	uint32_t our_uncles_in_window_total = std::accumulate(our_uncles_in_window.begin(), our_uncles_in_window.end(), decltype(our_uncles_in_window)::value_type(0));
+
+	std::string our_blocks_in_window_chart;
+	our_blocks_in_window_chart.reserve(our_blocks_in_window.size());
+	for(const auto& p : our_blocks_in_window){
+		our_blocks_in_window_chart += (p > 0 ? (p > 9 ? "+" : std::to_string(p)) : ".");
+	}
+
+	std::string our_uncles_in_window_chart;
+	our_uncles_in_window_chart.reserve(our_uncles_in_window.size());
+	for(const auto& p : our_uncles_in_window){
+		our_uncles_in_window_chart += (p > 0 ? (p > 9 ? "+" : std::to_string(p)) : ".");
+	}
+
 	LOGINFO(0, "status" <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain height         = " << tip_height + 1 <<
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
-		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)"
-		"\nYour shares               = " << our_blocks_in_window << " blocks (+" << our_uncles_in_window << " uncles, " << our_orphans << " orphans)"
+		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)" <<
+		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)" <<
+		(our_blocks_in_window_total > 0 ? "\nYour shares position      = " : "") << (our_blocks_in_window_total > 0 ? "[" + our_blocks_in_window_chart + "]" : "") <<
+		(our_uncles_in_window_total > 0 ? "\nYour uncles position      = " : "") << (our_uncles_in_window_total > 0 ? "[" + our_uncles_in_window_chart + "]" : "") <<
 		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
 	);
 }
