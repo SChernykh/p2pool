@@ -965,7 +965,7 @@ void p2pool::api_update_block_found(const ChainMain* data)
 		if (data) {
 			m_foundBlocks.emplace_back(cur_time, data->height, data->id, diff, total_hashes);
 		}
-		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 50), m_foundBlocks.end());
+		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 51), m_foundBlocks.end());
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "blocks",
