@@ -26,7 +26,22 @@ public:
 	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb)
 	{
 		// It will be deleted in one of the tcp callbacks eventually
-		new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)));
+		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), nullptr);
+		if (!r->m_valid) {
+			delete r;
+		}
+	}
+
+	template<typename T, typename U>
+	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb, U&& close_cb)
+	{
+		// It will be deleted in one of the tcp callbacks eventually
+		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)));
+		if (!r->m_valid) {
+			constexpr char err[] = "internal error";
+			close_cb(err, sizeof(err) - 1);
+			delete r;
+		}
 	}
 
 private:
@@ -47,7 +62,7 @@ private:
 		T m_cb;
 	};
 
-	JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb);
+	JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb);
 	~JSONRPCRequest();
 
 	static void on_connect(uv_connect_t* req, int status);
@@ -63,6 +78,7 @@ private:
 	uv_write_t m_write;
 
 	CallbackBase* m_callback;
+	CallbackBase* m_closeCallback;
 	uint32_t m_contentLength;
 	bool m_contentLengthHeader;
 
@@ -70,6 +86,8 @@ private:
 	std::string m_response;
 	char m_readBuf[65536];
 	bool m_readBufInUse;
+	bool m_valid;
+	std::string m_error;
 };
 
 } // namespace p2pool

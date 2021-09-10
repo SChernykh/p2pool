@@ -25,14 +25,16 @@ static constexpr char log_category_prefix[] = "JSONRPCRequest ";
 
 namespace p2pool {
 
-JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb)
+JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb)
 	: m_socket{}
 	, m_connect{}
 	, m_write{}
 	, m_callback(cb)
+	, m_closeCallback(close_cb)
 	, m_contentLength(0)
 	, m_contentLengthHeader(false)
 	, m_readBufInUse(false)
+	, m_valid(true)
 {
 	m_readBuf[0] = '\0';
 
@@ -44,6 +46,8 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 		const int err = uv_ip6_addr(address, port, reinterpret_cast<sockaddr_in6*>(&addr));
 		if (err) {
 			LOGERR(1, "invalid IP address " << address << " or port " << port);
+			m_valid = false;
+			return;
 		}
 	}
 
@@ -67,6 +71,7 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 	const int err = uv_tcp_connect(&m_connect, &m_socket, reinterpret_cast<const sockaddr*>(&addr), on_connect);
 	if (err) {
 		LOGERR(1, "failed to initiate tcp connection to " << address << ", error " << uv_err_name(err));
+		m_valid = false;
 	}
 }
 
@@ -75,7 +80,8 @@ void JSONRPCRequest::on_connect(uv_connect_t* req, int status)
 	JSONRPCRequest* pThis = static_cast<JSONRPCRequest*>(req->data);
 
 	if (status != 0) {
-		LOGERR(1, "failed to connect, error " << uv_err_name(status));
+		pThis->m_error = uv_err_name(status);
+		LOGERR(1, "failed to connect, error " << pThis->m_error);
 		pThis->close();
 		return;
 	}
@@ -92,7 +98,8 @@ void JSONRPCRequest::on_write(uv_write_t* handle, int status)
 	JSONRPCRequest* pThis = static_cast<JSONRPCRequest*>(handle->data);
 
 	if (status != 0) {
-		LOGERR(1, "failed to send request, error " << uv_err_name(status));
+		pThis->m_error = uv_err_name(status);
+		LOGERR(1, "failed to send request, error " << pThis->m_error);
 		pThis->close();
 		return;
 	}
@@ -123,7 +130,8 @@ void JSONRPCRequest::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t*
 	}
 	else if (nread < 0) {
 		if (nread != UV_EOF){
-			LOGERR(1, "failed to read response, error " << uv_err_name(static_cast<int>(nread)));
+			pThis->m_error = uv_err_name(static_cast<int>(nread));
+			LOGERR(1, "failed to read response, error " << pThis->m_error);
 		}
 		pThis->close();
 	}
@@ -195,8 +203,10 @@ void JSONRPCRequest::on_read(const char* data, size_t size)
 
 	const llhttp_errno result = llhttp_execute(&parser, m_response.c_str(), m_response.length());
 	if (result != HPE_OK) {
-		LOGERR(1, "failed to parse response, result = " << static_cast<int>(result));
+		m_error = "failed to parse response";
+		LOGERR(1, m_error << ", result = " << static_cast<int>(result));
 		close();
+		return;
 	}
 
 	if (!m_callback) {
@@ -212,12 +222,17 @@ void JSONRPCRequest::close()
 
 void JSONRPCRequest::on_close(uv_handle_t* handle)
 {
-	delete static_cast<JSONRPCRequest*>(handle->data);
+	JSONRPCRequest* req = static_cast<JSONRPCRequest*>(handle->data);
+	if (req->m_closeCallback) {
+		(*req->m_closeCallback)(req->m_error.c_str(), req->m_error.length());
+	}
+	delete req;
 }
 
 JSONRPCRequest::~JSONRPCRequest()
 {
 	delete m_callback;
+	delete m_closeCallback;
 }
 
 } // namespace p2pool

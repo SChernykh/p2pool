@@ -349,6 +349,8 @@ void p2pool::submit_block() const
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
+	bool is_external = false;
+
 	if (submit_data.blob.empty()) {
 		LOGINFO(0, "submit_block: height = " << height << ", template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
 
@@ -360,6 +362,7 @@ void p2pool::submit_block() const
 	}
 	else {
 		LOGINFO(0, "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
+		is_external = true;
 	}
 
 	std::string request;
@@ -391,7 +394,7 @@ void p2pool::submit_block() const
 	const uint32_t extra_nonce = submit_data.extra_nonce;
 
 	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, request.c_str(),
-		[height, diff, template_id, nonce, extra_nonce](const char* data, size_t size)
+		[height, diff, template_id, nonce, extra_nonce, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
@@ -414,7 +417,12 @@ void p2pool::submit_block() const
 					error_msg = it->value.GetString();
 				}
 
-				LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+				if (is_external) {
+					LOGWARN(4, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
+				}
+				else {
+					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+				}
 				return;
 			}
 
@@ -429,6 +437,17 @@ void p2pool::submit_block() const
 			}
 
 			LOGWARN(0, "submit_block: daemon sent unrecognizable reply: " << log::const_buf(data, size));
+		},
+		[is_external](const char* data, size_t size)
+		{
+			if (size > 0) {
+				if (is_external) {
+					LOGWARN(4, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
+				}
+				else {
+					LOGERR(0, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
+				}
+			}
 		});
 }
 
@@ -485,6 +504,13 @@ void p2pool::download_block_headers(uint64_t current_height)
 					LOGERR(1, "fatal error: couldn't download block header for height " << height);
 					panic();
 				}
+			},
+			[height](const char* data, size_t size)
+			{
+				if (size > 0) {
+					LOGERR(1, "fatal error: couldn't download block header for height " << height << ", error " << log::const_buf(data, size));
+					panic();
+				}
 			});
 	}
 
@@ -504,6 +530,13 @@ void p2pool::download_block_headers(uint64_t current_height)
 			}
 			else {
 				LOGERR(1, "fatal error: couldn't download block headers for heights " << current_height - BLOCK_HEADERS_REQUIRED << " - " << current_height - 1);
+				panic();
+			}
+		},
+		[current_height](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGERR(1, "fatal error: couldn't download block headers for heights " << current_height - BLOCK_HEADERS_REQUIRED << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
 				panic();
 			}
 		});
@@ -582,36 +615,52 @@ void p2pool::get_info()
 		[this](const char* data, size_t size)
 		{
 			parse_get_info_rpc(data, size);
-		});
-
-	if (m_api) {
-		std::ifstream f(FOUND_BLOCKS_FILE);
-		if (f.is_open()) {
-			while (!f.eof()) {
-				time_t timestamp;
-				f >> timestamp;
-				if (f.eof()) break;
-
-				uint64_t height;
-				f >> height;
-				if (f.eof()) break;
-
-				hash id;
-				f >> id;
-				if (f.eof()) break;
-
-				difficulty_type block_difficulty;
-				f >> block_difficulty;
-				if (f.eof()) break;
-
-				difficulty_type cumulative_difficulty;
-				f >> cumulative_difficulty;
-
-				m_foundBlocks.emplace_back(timestamp, height, id, block_difficulty, cumulative_difficulty);
+		},
+		[this](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGWARN(1, "get_info RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				get_info();
 			}
-			api_update_block_found(nullptr);
-		}
+		});
+}
+
+void p2pool::load_found_blocks()
+{
+	if (!m_api) {
+		return;
 	}
+
+	std::ifstream f(FOUND_BLOCKS_FILE);
+	if (!f.is_open()) {
+		return;
+	}
+
+	while (!f.eof()) {
+		time_t timestamp;
+		f >> timestamp;
+		if (f.eof()) break;
+
+		uint64_t height;
+		f >> height;
+		if (f.eof()) break;
+
+		hash id;
+		f >> id;
+		if (f.eof()) break;
+
+		difficulty_type block_difficulty;
+		f >> block_difficulty;
+		if (f.eof()) break;
+
+		difficulty_type cumulative_difficulty;
+		f >> cumulative_difficulty;
+
+		m_foundBlocks.emplace_back(timestamp, height, id, block_difficulty, cumulative_difficulty);
+	}
+
+	api_update_block_found(nullptr);
 }
 
 void p2pool::parse_get_info_rpc(const char* data, size_t size)
@@ -668,6 +717,14 @@ void p2pool::get_miner_data()
 		[this](const char* data, size_t size)
 		{
 			parse_get_miner_data_rpc(data, size);
+		},
+		[this](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGWARN(1, "get_miner_data RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				get_miner_data();
+			}
 		});
 }
 
@@ -1084,6 +1141,7 @@ int p2pool::run()
 	try {
 		ZMQReader z(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 		get_info();
+		load_found_blocks();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
 	}

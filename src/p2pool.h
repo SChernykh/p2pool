@@ -107,6 +107,7 @@ private:
 	void stratum_on_block();
 
 	void get_info();
+	void load_found_blocks();
 	void parse_get_info_rpc(const char* data, size_t size);
 
 	void get_miner_data();
