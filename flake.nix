@@ -3,27 +3,37 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
+    utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }: {
-    packages.x86_64-linux.p2pool =  with import nixpkgs { system = "x86_64-linux";}; stdenv.mkDerivation {
-      pname = "p2pool";
-      version = "0.0.1";
-      src = self;
+  outputs = { self, nixpkgs, utils }:
+    utils.lib.eachDefaultSystem (system:
+    let
+    pkgs = import nixpkgs { inherit system; };
+    in
+    rec {
+      packages = utils.lib.flattenTree {
+        p2pool =  pkgs.stdenv.mkDerivation {
+          pname = "p2pool";
+          version = "0.0.1";
+          src = self;
 
-      nativeBuildInputs = [ cmake pkg-config ];
+          nativeBuildInputs = builtins.attrValues {
+            inherit (pkgs) cmake pkg-config;
+          };
 
-      buildInputs = [
-        libuv zeromq
-        libsodium gss
-      ];
+          buildInputs = builtins.attrValues {
+            inherit (pkgs) libuv zeromq libsodium gss;
+          };
 
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -r ./p2pool $out/bin/
-      '';
-    };
+          installPhase = ''
+            mkdir -p $out/bin
+            cp -r ./p2pool $out/bin/
+          '';
+        };
+      };
 
-    defaultPackage.x86_64-linux = self.packages.x86_64-linux.p2pool;
-  };
+      defaultPackage = packages.p2pool;
+    }
+  );
 }
