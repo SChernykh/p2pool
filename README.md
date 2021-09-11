@@ -93,12 +93,12 @@ nix shell github:nixos/nix/master
 
 Run the binary:
 ```
-nix run github:SChernykh/p2pool
+nix run git+https://github.com/SChernykh/p2pool?ref=master
 ```
 
 Run the binary with arguments:
 ```
-nix run github:SChernykh/p2pool -- --help
+nix run git+https://github.com/SChernykh/p2pool?ref=master -- --help
 ```
 
 ### macOS
