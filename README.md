@@ -84,7 +84,7 @@ Make the package: [p2pool-git](https://aur.archlinux.org/packages/p2pool-git/)
 ### [Nix/NixOS](https://nixos.org)
 
 This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install p2pool. 
-The commands below use the new flake specific reference-format, so be sure to also set `ca-refernces` in `--experimental-features`.
+The commands below use the new flake specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
 
 Because this project has submodules which are not fixed in _nixUnstable_ yet you have to use the `nix/master` branch:
 ```
