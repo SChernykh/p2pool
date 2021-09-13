@@ -166,7 +166,17 @@ The purpose of this test is to bring as much hashrate as possible and check if s
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - Keep both monerod and p2pool running for the whole duration of your test
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
-- I haven't tested it, but it should work properly with `logrotate`
+- You can use `logrotate` with a config like this to control logfile growth:
+    ```
+    <path-to-logfile>
+    {
+	    rotate 7
+	    daily
+	    missingok
+	    delaycompress
+	    nocreate
+    }
+    ```
 - Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes. Of course it depends on your connection speed!
 - p2pool has a stratum server listening on port 3333, you can connect xmrig to it now
 - Run `./xmrig -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig. **Wallet address set in xmrig config will be ignored!**
