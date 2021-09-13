@@ -112,6 +112,9 @@ private:
 	void load_found_blocks();
 	void parse_get_info_rpc(const char* data, size_t size);
 
+	void get_version();
+	void parse_get_version_rpc(const char* data, size_t size);
+
 	void get_miner_data();
 	void parse_get_miner_data_rpc(const char* data, size_t size);
 

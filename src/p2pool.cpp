@@ -708,6 +708,64 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 		panic();
 	}
 
+	get_version();
+}
+
+void p2pool::get_version()
+{
+	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}",
+		[this](const char* data, size_t size)
+		{
+			parse_get_version_rpc(data, size);
+		},
+		[this](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGWARN(1, "get_version RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				get_version();
+			}
+		});
+}
+
+void p2pool::parse_get_version_rpc(const char* data, size_t size)
+{
+	rapidjson::Document doc;
+	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
+
+	if (!doc.IsObject() || !doc.HasMember("result")) {
+		LOGWARN(1, "get_version RPC response is invalid (\"result\" not found), trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_version();
+		return;
+	}
+
+	const auto& result = doc["result"];
+
+	std::string status;
+	uint64_t version;
+
+	if (!parseValue(result, "status", status) || !parseValue(result, "version", version)) {
+		LOGWARN(1, "get_version RPC response is invalid, trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_version();
+		return;
+	}
+
+	if (status != "OK") {
+		LOGWARN(1, "get_version RPC failed, trying again in 1 second");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		get_version();
+		return;
+	}
+
+	if (version < 0x30008) {
+		const uint64_t version_hi = version >> 16;
+		const uint64_t version_lo = version & 65535;
+		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v3.8");
+		panic();
+	}
+
 	get_miner_data();
 }
 
