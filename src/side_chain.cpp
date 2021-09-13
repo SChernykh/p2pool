@@ -416,6 +416,16 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
 		m_pool->submit_block_async(block.m_mainChainData);
 	}
+	else {
+		difficulty_type diff;
+		if (!m_pool->get_difficulty_at_height(block.m_txinGenHeight, diff)) {
+			LOGWARN(3, "add_external_block: couldn't get mainchain difficulty for height = " << block.m_txinGenHeight);
+		}
+		else if (diff.check_pow(pow_hash)) {
+			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
+			m_pool->submit_block_async(block.m_mainChainData);
+		}
+	}
 
 	if (!block.m_difficulty.check_pow(pow_hash)) {
 		LOGWARN(3, "add_external_block: not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);

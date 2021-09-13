@@ -1004,12 +1004,7 @@ void p2pool::api_update_block_found(const ChainMain* data)
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 	difficulty_type diff;
 
-	if (data) {
-		{
-			ReadLock lock(m_mainchainLock);
-			diff = m_mainchainByHeight[data->height].difficulty;
-		}
-
+	if (data && get_difficulty_at_height(data->height, diff)) {
 		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
 		if (f.is_open()) {
 			f << cur_time << ' ' << data->height << ' ' << data->id << ' ' << diff << ' ' << total_hashes << '\n';
@@ -1045,6 +1040,19 @@ void p2pool::api_update_block_found(const ChainMain* data)
 		});
 
 	api_update_stats_mod();
+}
+
+bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
+{
+	ReadLock lock(m_mainchainLock);
+
+	auto it = m_mainchainByHeight.find(height);
+	if (it == m_mainchainByHeight.end()) {
+		return false;
+	}
+
+	diff = it->second.difficulty;
+	return true;
 }
 
 static void on_signal(uv_signal_t* handle, int signum)

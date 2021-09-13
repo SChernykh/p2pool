@@ -74,6 +74,8 @@ public:
 
 	void api_update_block_found(const ChainMain* data);
 
+	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
+
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
