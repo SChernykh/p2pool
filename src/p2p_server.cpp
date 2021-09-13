@@ -501,6 +501,11 @@ void P2PServer::broadcast(const PoolBlock& block)
 		return;
 	}
 
+	if (block.m_txinGenHeight > m_pool->miner_data().height + 2) {
+		LOGWARN(4, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+		return;
+	}
+
 	Broadcast* data = new Broadcast();
 
 	data->blob.reserve(block.m_mainChainData.size() + block.m_sideChainData.size());
