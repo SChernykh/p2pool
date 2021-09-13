@@ -162,7 +162,7 @@ The purpose of this test is to bring as much hashrate as possible and check if s
 - Create a new mainnet wallet
 - You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083` **don't forget --zmq-pub parameter in the command line**
-- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-9c82593b5)** on startup. Wait until it's synchronized.
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-04bfd948a)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - Keep both monerod and p2pool running for the whole duration of your test
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
