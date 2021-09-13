@@ -737,6 +737,11 @@ uint64_t SideChain::miner_count()
 	return m_seenWallets.size();
 }
 
+time_t SideChain::last_updated() const
+{
+	return m_chainTip ? m_chainTip->m_localTimestamp : 0;
+}
+
 bool SideChain::is_default() const
 {
 	constexpr uint8_t default_consensus_id[HASH_SIZE] = {

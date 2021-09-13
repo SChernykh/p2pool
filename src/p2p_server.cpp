@@ -167,6 +167,7 @@ void P2PServer::update_peer_connections()
 	}
 
 	const time_t cur_time = time(nullptr);
+	const time_t last_updated = m_pool->side_chain().last_updated();
 
 	std::vector<raw_ip> connected_clients;
 	{
@@ -180,6 +181,20 @@ void P2PServer::update_peer_connections()
 				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
 				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
 				client->close();
+			}
+
+			if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
+				// - Side chain is at least 5 minutes newer (last_updated >= client->m_lastBroadcastTimestamp + 300)
+				// - It's been at least 10 seconds since side chain updated (cur_time >= last_updated + 10)
+				// - It's been at least 10 seconds since the last block request (peer is not syncing)
+				// - Peer should have sent a broadcast by now
+				if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 300)) {
+					const time_t dt = last_updated - client->m_lastBroadcastTimestamp;
+					LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " is not broadcasting blocks (last update " << dt << " seconds ago)");
+					client->ban(DEFAULT_BAN_TIME);
+					remove_peer_from_list(client);
+					client->close();
+				}
 			}
 		}
 	}
@@ -754,6 +769,8 @@ P2PServer::P2PClient::P2PClient()
 	, m_listenPort(-1)
 	, m_nextPeerListRequest(0)
 	, m_lastAlive(0)
+	, m_lastBroadcastTimestamp(0)
+	, m_lastBlockrequestTimestamp(0)
 {
 	uv_rwlock_init_checked(&m_broadcastedHashesLock);
 }
@@ -776,6 +793,8 @@ void P2PServer::P2PClient::reset()
 	m_listenPort = -1;
 	m_nextPeerListRequest = 0;
 	m_lastAlive = 0;
+	m_lastBroadcastTimestamp = 0;
+	m_lastBlockrequestTimestamp = 0;
 
 	WriteLock lock(m_broadcastedHashesLock);
 	m_broadcastedHashes.clear();
@@ -1291,6 +1310,8 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	hash empty;
 	memcpy(p, empty.h, HASH_SIZE);
 	p += HASH_SIZE;
+
+	m_lastBroadcastTimestamp = time(nullptr);
 }
 
 bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
@@ -1311,6 +1332,8 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 
 bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 {
+	m_lastBlockrequestTimestamp = time(nullptr);
+
 	hash id;
 	memcpy(id.h, buf, HASH_SIZE);
 
@@ -1417,6 +1440,8 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 	}
 
 	server->m_block->m_wantBroadcast = true;
+
+	m_lastBroadcastTimestamp = time(nullptr);
 
 	return handle_incoming_block_async(server->m_block);
 }

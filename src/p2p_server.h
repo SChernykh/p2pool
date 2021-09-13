@@ -109,6 +109,8 @@ public:
 		int m_listenPort;
 		time_t m_nextPeerListRequest;
 		time_t m_lastAlive;
+		time_t m_lastBroadcastTimestamp;
+		time_t m_lastBlockrequestTimestamp;
 
 		uv_rwlock_t m_broadcastedHashesLock;
 		std::set<hash> m_broadcastedHashes;
