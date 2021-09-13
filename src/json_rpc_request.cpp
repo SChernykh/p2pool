@@ -216,8 +216,10 @@ void JSONRPCRequest::on_read(const char* data, size_t size)
 
 void JSONRPCRequest::close()
 {
-	uv_tcp_t* s = &m_socket;
-	uv_close(reinterpret_cast<uv_handle_t*>(s), on_close);
+	uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&m_socket);
+	if (!uv_is_closing(h)) {
+		uv_close(h, on_close);
+	}
 }
 
 void JSONRPCRequest::on_close(uv_handle_t* handle)

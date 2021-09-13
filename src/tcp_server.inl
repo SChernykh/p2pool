@@ -385,10 +385,16 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets
 
 	if (listen_sockets) {
 		for (uv_tcp_t* s : m_listenSockets6) {
-			uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+			uv_handle_t* h = reinterpret_cast<uv_handle_t*>(s);
+			if (!uv_is_closing(h)) {
+				uv_close(h, [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+			}
 		}
 		for (uv_tcp_t* s : m_listenSockets) {
-			uv_close(reinterpret_cast<uv_handle_t*>(s), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+			uv_handle_t* h = reinterpret_cast<uv_handle_t*>(s);
+			if (!uv_is_closing(h)) {
+				uv_close(h, [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+			}
 		}
 	}
 
@@ -621,7 +627,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
 		}
 		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
-		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), nullptr);
+		uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&client->m_socket);
+		if (!uv_is_closing(h)) {
+			uv_close(h, nullptr);
+		}
 		server->m_preallocatedClients.push_back(client);
 		return;
 	}
