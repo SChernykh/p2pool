@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include <unordered_map>
 
 namespace p2pool {
 
@@ -34,7 +35,7 @@ public:
 
 public:
 	mutable uv_rwlock_t m_lock;
-	std::vector<TxMempoolData> m_transactions;
+	std::unordered_map<hash, TxMempoolData> m_transactions;
 };
 
 } // namespace p2pool

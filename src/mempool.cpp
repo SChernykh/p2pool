@@ -37,20 +37,33 @@ void Mempool::add(const TxMempoolData& tx)
 {
 	WriteLock lock(m_lock);
 
-	for (const TxMempoolData& old_tx : m_transactions) {
-		if (old_tx.id == tx.id) {
-			LOGWARN(1, "duplicate transaction with id = " << tx.id << ", skipped");
-			return;
-		}
+	if (!m_transactions.emplace(tx.id, tx).second) {
+		LOGWARN(1, "duplicate transaction with id = " << tx.id << ", skipped");
 	}
-
-	m_transactions.push_back(tx);
 }
 
 void Mempool::swap(std::vector<TxMempoolData>& transactions)
 {
+	const time_t cur_time = time(nullptr);
+
 	WriteLock lock(m_lock);
-	m_transactions.swap(transactions);
+
+	// Initialize time_received for all transactions
+	for (TxMempoolData& data : transactions) {
+		auto it = m_transactions.find(data.id);
+		if (it != m_transactions.end()) {
+			data.time_received = it->second.time_received;
+		}
+		else {
+			data.time_received = cur_time;
+		}
+	}
+
+	m_transactions.clear();
+
+	for (TxMempoolData& data : transactions) {
+		m_transactions.emplace(data.id, data);
+	}
 }
 
 } // namespace p2pool

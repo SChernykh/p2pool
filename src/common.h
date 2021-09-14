@@ -226,12 +226,13 @@ difficulty_type operator+(const difficulty_type& a, const difficulty_type& b);
 
 struct TxMempoolData
 {
-	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0) {}
+	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0), time_received(0) {}
 
 	hash id;
 	uint64_t blob_size;
 	uint64_t weight;
 	uint64_t fee;
+	time_t time_received;
 };
 
 struct MinerData

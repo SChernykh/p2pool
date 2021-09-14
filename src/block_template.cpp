@@ -194,9 +194,22 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_difficulty = data.difficulty;
 	m_seedHash = data.seed_hash;
 
+	const time_t cur_time = time(nullptr);
+
+	// Only choose transactions that were received 10 or more seconds ago
+	size_t total_mempool_transactions;
 	{
+		m_mempoolTxs.clear();
+
 		ReadLock mempool_lock(mempool.m_lock);
-		m_mempoolTxs = mempool.m_transactions;
+
+		total_mempool_transactions = mempool.m_transactions.size();
+
+		for (auto& it : mempool.m_transactions) {
+			if (cur_time >= it.second.time_received + 10) {
+				m_mempoolTxs.emplace_back(it.second);
+			}
+		}
 	}
 
 	// Safeguard for busy mempool moments
@@ -211,6 +224,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		m_mempoolTxs.resize(1000);
 	}
 
+	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
+
 	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
 
 	uint64_t total_tx_fees = 0;
@@ -223,7 +238,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	const uint64_t max_reward = base_reward + total_tx_fees;
 
 	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
-		", mempool: " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
+		", " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
 		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
@@ -237,7 +252,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_poolBlockTemplate->m_minorVersion = HARDFORK_SUPPORTED_VERSION;
 
 	// Timestamp
-	m_timestamp = time(nullptr);
+	m_timestamp = cur_time;
 	if (m_timestamp <= data.median_timestamp) {
 		LOGWARN(2, "timestamp adjusted from " << m_timestamp << " to " << data.median_timestamp + 1 << ". Fix your system time!");
 		m_timestamp = data.median_timestamp + 1;

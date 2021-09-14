@@ -152,6 +152,8 @@ void ZMQReader::parse(char* data, size_t size)
 			return;
 		}
 
+		m_tx.time_received = time(nullptr);
+
 		for (SizeType i = 0, n = doc.Size(); i < n; ++i) {
 			const auto& v = doc[i];
 			if (PARSE(v, m_tx, id) && PARSE(v, m_tx, blob_size) && PARSE(v, m_tx, weight) && PARSE(v, m_tx, fee)) {
