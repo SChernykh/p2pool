@@ -23,59 +23,44 @@
 
 namespace p2pool {
 
-static void parse_hash(const std::string& s, hash& h)
-{
-	for (size_t i = 0; i < HASH_SIZE; ++i) {
-		uint8_t d[2];
-		if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
-			h = {};
-			break;
-		}
-		h.h[i] = (d[0] << 4) | d[1];
-	}
-}
-
 TEST(crypto, derivation)
 {
-	std::ifstream f("crypto_tests.txt");
-	ASSERT_EQ(f.good() && f.is_open(), true);
-	do {
-		std::string name;
-		f >> name;
-		if (name == "generate_key_derivation") {
-			std::string key1_str, key2_str, result_str, expected_derivation_str;
-			f >> key1_str >> key2_str >> result_str;
-			const bool result = (result_str == "true");
-			if (result) {
-				f >> expected_derivation_str;
+	// Run the tests twice to check how crypto cache works
+	for (int i = 0; i < 2; ++i) {
+		std::ifstream f("crypto_tests.txt");
+		ASSERT_EQ(f.good() && f.is_open(), true);
+		do {
+			std::string name;
+			f >> name;
+			if (name == "generate_key_derivation") {
+				hash key1, key2, derivation, expected_derivation;
+				std::string result_str;
+				f >> key1 >> key2 >> result_str;
+				const bool result = (result_str == "true");
+				if (result) {
+					f >> expected_derivation;
+				}
+				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, derivation), result);
+				if (result) {
+					ASSERT_EQ(derivation, expected_derivation);
+				}
 			}
-			hash key1, key2, derivation, expected_derivation;
-			parse_hash(key1_str, key1);
-			parse_hash(key2_str, key2);
-			ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, derivation), result);
-			if (result) {
-				parse_hash(expected_derivation_str, expected_derivation);
-				ASSERT_EQ(derivation, expected_derivation);
+			else if (name == "derive_public_key") {
+				hash derivation, base, derived_key, expected_derived_key;
+				std::string result_str;
+				size_t output_index;
+				f >> derivation >> output_index >> base >> result_str;
+				const bool result = (result_str == "true");
+				if (result) {
+					f >> expected_derived_key;
+				}
+				ASSERT_EQ(derive_public_key(derivation, output_index, base, derived_key), result);
+				if (result) {
+					ASSERT_EQ(derived_key, expected_derived_key);
+				}
 			}
-		}
-		else if (name == "derive_public_key") {
-			std::string derivation_str, base_str, result_str, expected_derived_key_str;
-			size_t output_index;
-			f >> derivation_str >> output_index >> base_str >> result_str;
-			const bool result = (result_str == "true");
-			if (result) {
-				f >> expected_derived_key_str;
-			}
-			hash derivation, base, derived_key, expected_derived_key;
-			parse_hash(derivation_str, derivation);
-			parse_hash(base_str, base);
-			ASSERT_EQ(derive_public_key(derivation, output_index, base, derived_key), result);
-			if (result) {
-				parse_hash(expected_derived_key_str, expected_derived_key);
-				ASSERT_EQ(derived_key, expected_derived_key);
-			}
-		}
-	} while (!f.eof());
+		} while (!f.eof());
+	}
 }
 
 }
