@@ -20,6 +20,7 @@
 #include "keccak.h"
 #include "uv_util.h"
 #include <random>
+#include <unordered_map>
 
 extern "C" {
 #include "crypto-ops.h"
@@ -108,24 +109,6 @@ bool check_keys(const hash& pub, const hash& sec)
 	return pub == pub_check;
 }
 
-bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation)
-{
-	ge_p3 point;
-	ge_p2 point2;
-	ge_p1p1 point3;
-
-	if (ge_frombytes_vartime(&point, key1.h) != 0) {
-		return false;
-	}
-
-	ge_scalarmult(&point2, key2.h, &point);
-	ge_mul8(&point3, &point2);
-	ge_p1p1_to_p2(&point2, &point3);
-	ge_tobytes(reinterpret_cast<uint8_t*>(&derivation), &point2);
-
-	return true;
-}
-
 static FORCEINLINE void hash_to_scalar(const uint8_t* data, size_t length, uint8_t(&res)[HASH_SIZE])
 {
 	keccak(data, static_cast<int>(length), res, HASH_SIZE);
@@ -153,28 +136,113 @@ static FORCEINLINE void derivation_to_scalar(const hash& derivation, size_t outp
 	hash_to_scalar(begin, end - begin, res);
 }
 
-// cppcheck-suppress constParameter
-bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
+class Cache
 {
-	uint8_t scalar[HASH_SIZE];
-	ge_p3 point1;
-	ge_p3 point2;
-	ge_cached point3;
-	ge_p1p1 point4;
-	ge_p2 point5;
-
-	if (ge_frombytes_vartime(&point1, base.h) != 0) {
-		return false;
+public:
+	Cache()
+	{
+		uv_mutex_init_checked(&m);
 	}
 
-	derivation_to_scalar(derivation, output_index, scalar);
-	ge_scalarmult_base(&point2, reinterpret_cast<uint8_t*>(&scalar));
-	ge_p3_to_cached(&point3, &point2);
-	ge_add(&point4, &point1, &point3);
-	ge_p1p1_to_p2(&point5, &point4);
-	ge_tobytes(derived_key.h, &point5);
+	~Cache()
+	{
+		uv_mutex_destroy(&m);
+	}
 
-	return true;
+	bool get_derivation(const hash& key1, const hash& key2, hash& derivation)
+	{
+		std::array<uint8_t, HASH_SIZE * 2> index;
+		memcpy(index.data(), key1.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE, key2.h, HASH_SIZE);
+
+		{
+			MutexLock lock(m);
+			auto it = derivations.find(index);
+			if (it != derivations.end()) {
+				derivation = it->second;
+				return true;
+			}
+		}
+
+		ge_p3 point;
+		ge_p2 point2;
+		ge_p1p1 point3;
+
+		if (ge_frombytes_vartime(&point, key1.h) != 0) {
+			return false;
+		}
+
+		ge_scalarmult(&point2, key2.h, &point);
+		ge_mul8(&point3, &point2);
+		ge_p1p1_to_p2(&point2, &point3);
+		ge_tobytes(reinterpret_cast<uint8_t*>(&derivation), &point2);
+
+		{
+			MutexLock lock(m);
+			derivations.emplace(index, derivation);
+		}
+
+		return true;
+	}
+
+	bool get_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
+	{
+		std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)> index;
+		memcpy(index.data(), derivation.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE, base.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE * 2, &output_index, sizeof(size_t));
+
+		{
+			MutexLock lock(m);
+			auto it = public_keys.find(index);
+			if (it != public_keys.end()) {
+				derived_key = it->second;
+				return true;
+			}
+		}
+
+		uint8_t scalar[HASH_SIZE];
+		ge_p3 point1;
+		ge_p3 point2;
+		ge_cached point3;
+		ge_p1p1 point4;
+		ge_p2 point5;
+
+		if (ge_frombytes_vartime(&point1, base.h) != 0) {
+			return false;
+		}
+
+		derivation_to_scalar(derivation, output_index, scalar);
+		ge_scalarmult_base(&point2, reinterpret_cast<uint8_t*>(&scalar));
+		ge_p3_to_cached(&point3, &point2);
+		ge_add(&point4, &point1, &point3);
+		ge_p1p1_to_p2(&point5, &point4);
+		ge_tobytes(derived_key.h, &point5);
+
+		{
+			MutexLock lock(m);
+			public_keys.emplace(index, derived_key);
+		}
+
+		return true;
+	}
+
+private:
+	uv_mutex_t m;
+	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2>, hash> derivations;
+	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
+};
+
+static Cache cache;
+
+bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation)
+{
+	return cache.get_derivation(key1, key2, derivation);
+}
+
+bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
+{
+	return cache.get_public_key(derivation, output_index, base, derived_key);
 }
 
 } // namespace p2pool

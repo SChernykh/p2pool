@@ -39,7 +39,7 @@ public:
 	FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
 	FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
 
-	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key);
+	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key) const;
 
 	FORCEINLINE bool operator<(const Wallet& w) const { return m_spendPublicKey < w.m_spendPublicKey; }
 	FORCEINLINE bool operator==(const Wallet& w) const { return m_spendPublicKey == w.m_spendPublicKey; }
@@ -50,12 +50,6 @@ private:
 	hash m_viewPublicKey;
 	uint32_t m_checksum;
 	NetworkType m_type;
-
-	mutable uv_mutex_t m_lock;
-	hash m_txkeySec;
-	size_t m_outputIndex;
-	hash m_derivation;
-	hash m_ephPublicKey;
 };
 
 } // namespace p2pool

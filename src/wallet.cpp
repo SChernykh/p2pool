@@ -22,7 +22,6 @@
 #include "wallet.h"
 #include "keccak.h"
 #include "crypto.h"
-#include <array>
 
 extern "C" {
 #include "crypto-ops.h"
@@ -81,23 +80,16 @@ static_assert(rev_alphabet.num_symbols == 58, "Check alphabet");
 namespace p2pool {
 
 Wallet::Wallet(const char* address)
-	: m_txkeySec{}
-	, m_outputIndex(std::numeric_limits<size_t>::max())
-	, m_derivation{}
-	, m_ephPublicKey{}
 {
-	uv_mutex_init_checked(&m_lock);
 	decode(address);
 }
 
 Wallet::~Wallet()
 {
-	uv_mutex_destroy(&m_lock);
 }
 
 Wallet::Wallet(const Wallet& w)
 {
-	uv_mutex_init_checked(&m_lock);
 	operator=(w);
 }
 
@@ -108,18 +100,11 @@ Wallet& Wallet::operator=(const Wallet& w)
 		return *this;
 	}
 
-	MutexLock lock(m_lock);
-	MutexLock lock2(w.m_lock);
-
 	m_prefix = w.m_prefix;
 	m_spendPublicKey = w.m_spendPublicKey;
 	m_viewPublicKey = w.m_viewPublicKey;
 	m_checksum = w.m_checksum;
 	m_type = w.m_type;
-	m_txkeySec = w.m_txkeySec;
-	m_outputIndex = w.m_outputIndex;
-	m_derivation = w.m_derivation;
-	m_ephPublicKey = w.m_ephPublicKey;
 
 	return *this;
 }
@@ -204,8 +189,6 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 		return false;
 	}
 
-	MutexLock lock(m_lock);
-
 	m_prefix = 0;
 	m_spendPublicKey = spend_pub_key;
 	m_viewPublicKey = view_pub_key;
@@ -213,42 +196,18 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 
 	m_type = type;
 
-	m_txkeySec = {};
-	m_outputIndex = std::numeric_limits<size_t>::max();
-	m_derivation = {};
-	m_ephPublicKey = {};
-
 	return true;
 }
 
-bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key)
+bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key) const
 {
-	MutexLock lock(m_lock);
-
 	hash derivation;
-	bool derivation_changed = false;
-
-	if (txkey_sec == m_txkeySec) {
-		derivation = m_derivation;
-	}
-	else {
-		if (!generate_key_derivation(m_viewPublicKey, txkey_sec, derivation)) {
-			return false;
-		}
-		m_derivation = derivation;
-		m_txkeySec = txkey_sec;
-		derivation_changed = true;
+	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, derivation)) {
+		return false;
 	}
 
-	if (!derivation_changed && (output_index == m_outputIndex)) {
-		eph_public_key = m_ephPublicKey;
-	}
-	else {
-		if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
-			return false;
-		}
-		m_outputIndex = output_index;
-		m_ephPublicKey = eph_public_key;
+	if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
+		return false;
 	}
 
 	return true;

@@ -136,4 +136,17 @@ struct hash<p2pool::hash>
 	}
 };
 
+template<size_t N>
+struct hash<std::array<uint8_t, N>>
+{
+	FORCEINLINE size_t operator()(const std::array<uint8_t, N>& value) const
+	{
+		uint64_t result = 0xcbf29ce484222325ull;
+		for (size_t i = 0; i < N; ++i) {
+			result = (result ^ value[i]) * 0x100000001b3ull;
+		}
+		return static_cast<size_t>(result);
+	}
+};
+
 } // namespace std

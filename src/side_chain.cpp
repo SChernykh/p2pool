@@ -34,7 +34,6 @@
 #include <fstream>
 #include <iterator>
 #include <numeric>
-#include <array>
 
 // Only uncomment it to debug issues with uncle/orphan blocks
 //#define DEBUG_BROADCAST_DELAY_MS 100

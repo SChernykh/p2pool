@@ -47,6 +47,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <array>
 #include <vector>
 #include <string>
 #include <algorithm>
