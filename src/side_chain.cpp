@@ -55,7 +55,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
 	, m_networkType(type)
 	, m_chainTip(nullptr)
-	, m_poolName(pool_name ? pool_name : "mainnet test 2")
+	, m_poolName(pool_name ? pool_name : "default")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
 	, m_chainWindowSize(2160)
@@ -78,63 +78,66 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(1, "generating consensus ID");
 
-	const randomx_flags flags = randomx_get_flags();
-	randomx_cache* cache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
-	if (!cache) {
-		LOGWARN(1, "couldn't allocate RandomX cache using large pages");
-		cache = randomx_alloc_cache(flags);
-		if (!cache) {
-			LOGERR(1, "couldn't allocate RandomX cache, aborting");
-			panic();
-		}
-	}
-
-	{
-		char consensus_str[log::Stream::BUF_SIZE + 1];
-		log::Stream s(consensus_str);
-
-		s << m_networkType     << '\0'
-		  << m_poolName        << '\0'
-		  << m_poolPassword    << '\0'
-		  << m_targetBlockTime << '\0'
-		  << m_minDifficulty   << '\0'
-		  << m_chainWindowSize << '\0'
-		  << m_unclePenalty    << '\0';
-
-		randomx_init_cache(cache, consensus_str, s.m_pos);
-	}
-
-	// Intentionally not a power of 2
-	constexpr size_t scratchpad_size = 1009;
-
-	rx_vec_i128* scratchpad = reinterpret_cast<rx_vec_i128*>(cache->memory);
-	rx_vec_i128* scratchpad_end = scratchpad + scratchpad_size;
-	rx_vec_i128* scratchpad_ptr = scratchpad;
-	rx_vec_i128* cache_ptr = scratchpad_end;
-
-	for (uint64_t i = scratchpad_size, n = RANDOMX_ARGON_MEMORY * 1024 / sizeof(rx_vec_i128); i < n; ++i) {
-		*scratchpad_ptr = rx_xor_vec_i128(*scratchpad_ptr, *cache_ptr);
-		++cache_ptr;
-		++scratchpad_ptr;
-		if (scratchpad_ptr == scratchpad_end) {
-			scratchpad_ptr = scratchpad;
-		}
-	}
-
-	hash id;
-	keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h, HASH_SIZE);
-
-	randomx_release_cache(cache);
-
-	m_consensusId.assign(id.h, id.h + HASH_SIZE);
-
-	char buf[HASH_SIZE * 2 + 1];
+	char buf[log::Stream::BUF_SIZE + 1];
 	log::Stream s(buf);
-	s << id << '\0';
+
+	s << m_networkType     << '\0'
+	  << m_poolName        << '\0'
+	  << m_poolPassword    << '\0'
+	  << m_targetBlockTime << '\0'
+	  << m_minDifficulty   << '\0'
+	  << m_chainWindowSize << '\0'
+	  << m_unclePenalty    << '\0';
+
+	constexpr char default_config[] = "mainnet\0" "default\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
+
+	if (memcmp(buf, default_config, sizeof(default_config) - 1) == 0) {
+		// Hardcoded default consensus ID
+		m_consensusId.assign({ 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 });
+	}
+	else {
+		const randomx_flags flags = randomx_get_flags();
+		randomx_cache* cache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
+		if (!cache) {
+			LOGWARN(1, "couldn't allocate RandomX cache using large pages");
+			cache = randomx_alloc_cache(flags);
+			if (!cache) {
+				LOGERR(1, "couldn't allocate RandomX cache, aborting");
+				panic();
+			}
+		}
+
+		randomx_init_cache(cache, buf, s.m_pos);
+
+		// Intentionally not a power of 2
+		constexpr size_t scratchpad_size = 1009;
+
+		rx_vec_i128* scratchpad = reinterpret_cast<rx_vec_i128*>(cache->memory);
+		rx_vec_i128* scratchpad_end = scratchpad + scratchpad_size;
+		rx_vec_i128* scratchpad_ptr = scratchpad;
+		rx_vec_i128* cache_ptr = scratchpad_end;
+
+		for (uint64_t i = scratchpad_size, n = RANDOMX_ARGON_MEMORY * 1024 / sizeof(rx_vec_i128); i < n; ++i) {
+			*scratchpad_ptr = rx_xor_vec_i128(*scratchpad_ptr, *cache_ptr);
+			++cache_ptr;
+			++scratchpad_ptr;
+			if (scratchpad_ptr == scratchpad_end) {
+				scratchpad_ptr = scratchpad;
+			}
+		}
+
+		hash id;
+		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h, HASH_SIZE);
+		randomx_release_cache(cache);
+		m_consensusId.assign(id.h, id.h + HASH_SIZE);
+	}
+
+	s.m_pos = 0;
+	s << log::hex_buf(m_consensusId.data(), m_consensusId.size()) << '\0';
 
 	// Hide most consensus ID bytes, we only want it on screen to show that we're on the right sidechain
 	memset(buf + 8, '*', HASH_SIZE * 2 - 16);
-	LOGINFO(1, "consensus ID = " << log::LightCyan() << buf);
+	LOGINFO(1, "consensus ID = " << log::LightCyan() << static_cast<char*>(buf));
 }
 
 SideChain::~SideChain()
