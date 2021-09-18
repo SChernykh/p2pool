@@ -42,6 +42,12 @@ jobs:
     - name: Run tests
       run: cd tests/build && ./p2pool_tests
 
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-${{ matrix.os }}
+        path: build/p2pool
+
   build-windows-msys2:
 
     runs-on: windows-latest
@@ -82,6 +88,12 @@ jobs:
         cd tests/build
         ./p2pool_tests.exe
 
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-msys2.exe
+        path: build/p2pool.exe
+
   build-windows-msbuild:
 
     runs-on: windows-latest
@@ -117,6 +129,12 @@ jobs:
       run: |
         cd tests/build/Release
         ./p2pool_tests.exe
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-msbuild.exe
+        path: build/Release/p2pool.exe
 
   build-macos:
 
@@ -154,3 +172,9 @@ jobs:
       run: |
         cd tests/build
         ./p2pool_tests
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-${{ matrix.os }}
+        path: build/p2pool
