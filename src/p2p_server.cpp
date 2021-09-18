@@ -34,7 +34,6 @@ static const char* seed_nodes[] = {
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
-static constexpr int DEFAULT_LISTEN_PORT = 37889;
 
 #include "tcp_server.inl"
 
@@ -334,6 +333,8 @@ void P2PServer::load_peer_list()
 
 	// Load peers from seed nodes if we're on the default sidechain
 	if (m_pool->side_chain().is_default()) {
+		const int p2p_port = DEFAULT_P2P_PORT;
+
 		for (size_t i = 0; i < array_size(seed_nodes); ++i) {
 			LOGINFO(4, "loading peers from " << seed_nodes[i]);
 
@@ -355,13 +356,13 @@ void P2PServer::load_peer_list()
 					if (r->ai_family == AF_INET6) {
 						addr_str = inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(r->ai_addr)->sin6_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << '[' << addr_str << "]:" << DEFAULT_LISTEN_PORT << '\0';
+							s << '[' << addr_str << "]:" << p2p_port << '\0';
 						}
 					}
 					else {
 						addr_str = inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(r->ai_addr)->sin_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << addr_str << ':' << DEFAULT_LISTEN_PORT << '\0';
+							s << addr_str << ':' << p2p_port << '\0';
 						}
 					}
 
@@ -376,7 +377,7 @@ void P2PServer::load_peer_list()
 				freeaddrinfo(result);
 			}
 			else {
-				LOGWARN(4, "getaddrinfo failed for " << seed_nodes[i] << ": " << gai_strerror(err));
+				LOGWARN(3, "getaddrinfo failed for " << seed_nodes[i] << ": " << gai_strerror(err));
 			}
 		}
 	}
@@ -497,12 +498,12 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 void P2PServer::broadcast(const PoolBlock& block)
 {
 	if (block.m_txinGenHeight + 2 < m_pool->miner_data().height) {
-		LOGWARN(4, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
 		return;
 	}
 
 	if (block.m_txinGenHeight > m_pool->miner_data().height + 2) {
-		LOGWARN(4, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+		LOGWARN(3, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
 		return;
 	}
 
@@ -1436,7 +1437,8 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 		}
 		else if (peer_height > our_height) {
 			if (peer_height >= our_height + 2) {
-				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+				const int level = (peer_height >= our_height + 3) ? 3 : 4;
+				LOGWARN(level , "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
 			}
 		}
 		else {

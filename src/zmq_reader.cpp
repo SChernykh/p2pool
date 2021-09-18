@@ -257,7 +257,7 @@ void ZMQReader::parse(char* data, size_t size)
 				}
 			}
 			else {
-				LOGWARN(4, "json-full-chain_main outputs not found");
+				LOGWARN(1, "json-full-chain_main outputs not found");
 			}
 
 			auto inputs = inputs_it->value.GetArray();

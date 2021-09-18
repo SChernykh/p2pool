@@ -27,6 +27,7 @@ class p2pool;
 class BlockTemplate;
 
 static constexpr size_t STRATUM_BUF_SIZE = log::Stream::BUF_SIZE + 1;
+static constexpr int DEFAULT_STRATUM_PORT = 3333;
 
 class StratumServer : public TCPServer<STRATUM_BUF_SIZE, STRATUM_BUF_SIZE>
 {

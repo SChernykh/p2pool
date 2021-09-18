@@ -27,7 +27,7 @@ namespace p2pool {
 
 namespace log {
 
-int GLOBAL_LOG_LEVEL = 4;
+int GLOBAL_LOG_LEVEL = 3;
 
 #ifndef P2POOL_LOG_DISABLE
 

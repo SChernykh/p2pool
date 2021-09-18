@@ -356,7 +356,7 @@ bool resolve_host(std::string& host, bool& is_v6)
 		freeaddrinfo(r);
 	}
 	else {
-		LOGWARN(4, "getaddrinfo failed for " << host << ": " << gai_strerror(err));
+		LOGWARN(3, "getaddrinfo failed for " << host << ": " << gai_strerror(err));
 		return false;
 	}
 

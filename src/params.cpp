@@ -17,6 +17,8 @@
 
 #include "common.h"
 #include "params.h"
+#include "stratum_server.h"
+#include "p2p_server.h"
 
 namespace p2pool {
 
@@ -67,6 +69,26 @@ Params::Params(int argc, char* argv[])
 		if ((strcmp(argv[i], "--data-api") == 0) && (i + 1 < argc)) {
 			m_apiPath = argv[++i];
 		}
+	}
+
+	if (m_stratumAddresses.empty()) {
+		const int stratum_port = DEFAULT_STRATUM_PORT;
+
+		char buf[log::Stream::BUF_SIZE + 1];
+		log::Stream s(buf);
+		s << "[::]:" << stratum_port << ",0.0.0.0:" << stratum_port << '\0';
+
+		m_stratumAddresses = buf;
+	}
+
+	if (m_p2pAddresses.empty()) {
+		const int p2p_port = DEFAULT_P2P_PORT;
+
+		char buf[log::Stream::BUF_SIZE + 1];
+		log::Stream s(buf);
+		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port << '\0';
+
+		m_p2pAddresses = buf;
 	}
 }
 

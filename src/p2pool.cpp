@@ -418,7 +418,7 @@ void p2pool::submit_block() const
 				}
 
 				if (is_external) {
-					LOGWARN(4, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
+					LOGWARN(3, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
 				}
 				else {
 					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
@@ -442,7 +442,7 @@ void p2pool::submit_block() const
 		{
 			if (size > 0) {
 				if (is_external) {
-					LOGWARN(4, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
+					LOGWARN(3, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
 				}
 				else {
 					LOGERR(0, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
@@ -1036,11 +1036,12 @@ void p2pool::api_update_stats_mod()
 	}
 
 	const uint64_t round_hashes = total_hashes.lo - last_block_total_hashes.lo;
+	const int stratum_port = DEFAULT_STRATUM_PORT;
 
 	m_api->set(p2pool_api::Category::GLOBAL, "stats_mod",
-		[&mainnet_tip, last_block_found_time, &last_block_found_buf, last_block_found_height, miners, hashrate, round_hashes](log::Stream& s)
+		[&mainnet_tip, last_block_found_time, &last_block_found_buf, last_block_found_height, miners, hashrate, round_hashes, stratum_port](log::Stream& s)
 		{
-			s << "{\"config\":{\"ports\":[{\"port\":3333,\"tls\":false}],\"fee\":0,\"minPaymentThreshold\":400000000},\"network\":{\"height\":"
+			s << "{\"config\":{\"ports\":[{\"port\":" << stratum_port << ",\"tls\":false}],\"fee\":0,\"minPaymentThreshold\":400000000},\"network\":{\"height\":"
 				<< mainnet_tip.height << "},\"pool\":{\"stats\":{\"lastBlockFound\":\""
 				<< last_block_found_time << "000\"},\"blocks\":[\""
 				<< static_cast<char*>(last_block_found_buf) << static_cast<char*>(last_block_found_buf) + HASH_SIZE * 2 - 4 << ':'

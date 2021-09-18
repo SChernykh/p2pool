@@ -51,6 +51,10 @@ static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_
 
 namespace p2pool {
 
+static constexpr uint8_t default_consensus_id[HASH_SIZE] = {
+	34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24
+};
+
 SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
 	, m_networkType(type)
@@ -91,9 +95,9 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	constexpr char default_config[] = "mainnet\0" "default\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
 
+	// Hardcoded default consensus ID
 	if (memcmp(buf, default_config, sizeof(default_config) - 1) == 0) {
-		// Hardcoded default consensus ID
-		m_consensusId.assign({ 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 });
+		m_consensusId.assign(default_consensus_id, default_consensus_id + HASH_SIZE);
 	}
 	else {
 		const randomx_flags flags = randomx_get_flags();
@@ -270,8 +274,8 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 		for (const hash& uncle_id : cur->m_uncles) {
 			auto it = m_blocksById.find(uncle_id);
 			if (it == m_blocksById.end()) {
-				LOGWARN(4, "get_shares: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
-				LOGWARN(4, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+				LOGWARN(3, "get_shares: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
+				LOGWARN(3, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 				return false;
 			}
 
@@ -307,8 +311,8 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 
 		auto it = m_blocksById.find(cur->m_parent);
 		if (it == m_blocksById.end()) {
-			LOGWARN(4, "get_shares: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
-			LOGWARN(4, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+			LOGWARN(3, "get_shares: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
+			LOGWARN(3, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return false;
 		}
 
@@ -746,10 +750,6 @@ time_t SideChain::last_updated() const
 
 bool SideChain::is_default() const
 {
-	constexpr uint8_t default_consensus_id[HASH_SIZE] = {
-		34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24
-	};
-
 	return (memcmp(m_consensusId.data(), default_consensus_id, HASH_SIZE) == 0);
 }
 
@@ -806,8 +806,8 @@ bool SideChain::get_difficulty(PoolBlock* tip, std::vector<DifficultyData>& diff
 		for (const hash& uncle_id : cur->m_uncles) {
 			auto it = m_blocksById.find(uncle_id);
 			if (it == m_blocksById.end()) {
-				LOGWARN(4, "get_difficulty: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
-				LOGWARN(4, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+				LOGWARN(3, "get_difficulty: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
+				LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 				return false;
 			}
 
@@ -830,8 +830,8 @@ bool SideChain::get_difficulty(PoolBlock* tip, std::vector<DifficultyData>& diff
 
 		auto it = m_blocksById.find(cur->m_parent);
 		if (it == m_blocksById.end()) {
-			LOGWARN(4, "get_difficulty: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
-			LOGWARN(4, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+			LOGWARN(3, "get_difficulty: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
+			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return false;
 		}
 
