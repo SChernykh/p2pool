@@ -144,18 +144,19 @@ git submodule sync && git submodule update --init --force --recursive
 ```
 then follow the instructions from https://github.com/monero-project/monero/#on-windows
 
-## How to test
+## How to mine on P2Pool
 
-Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds**. This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**.
+This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**.
 
 **Wallet software compatible with p2pool payouts**
 - Official Monero CLI and GUI v0.17.2.3 and newer
 - Monerujo v2.1.0 "Vertant" and newer
 - Cake Wallet v4.2.7 and newer
 
-The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
+Step-by-step guide:
 
-- Grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
+- Download binaries from https://github.com/SChernykh/p2pool/releases/latest
+- Alternatively, grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
 - Create a separate restricted user account for testing. p2pool is untested and can have serious bugs/vulnerabilities!
 - Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
@@ -163,7 +164,7 @@ The purpose of this test is to bring as much hashrate as possible and check if s
 - Create a new mainnet wallet
 - You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083` **don't forget --zmq-pub parameter in the command line**
-- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-04bfd948a)** on startup. Wait until it's synchronized.
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - Keep both monerod and p2pool running for the whole duration of your test
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
