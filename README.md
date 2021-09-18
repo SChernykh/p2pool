@@ -151,6 +151,7 @@ Mainnet test has started! **PPLNS window = 2160 blocks, block time = 10 seconds*
 **Wallet software compatible with p2pool payouts**
 - Official Monero CLI and GUI v0.17.2.3 and newer
 - Monerujo v2.1.0 "Vertant" and newer
+- Cake Wallet v4.2.7 and newer
 
 The purpose of this test is to bring as much hashrate as possible and check if stratum server works fine!
 
