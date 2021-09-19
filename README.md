@@ -2,9 +2,7 @@
 
 Decentralized pool for Monero mining.
 
-**NOTE** This is a highly experimental and untested software. I did some extensive testing locally, but there's zero guarantee it will work for you! It requires a custom monerod version (for now). No binaries are provided yet. Testing on mainnet has started! You can check the pool status at https://p2pool.io/
-
-No ETA on the official release date, but hopefully before the end of September 2021.
+Mining on the mainnet has started! You can check the pool status at https://p2pool.io/
 
 ### Build status
 
@@ -126,6 +124,7 @@ make -j$(sysctl -n hw.logicalcpu)
 ### Windows
 
 p2pool binary (Visual Studio Community 2019 build):
+*NOTE: You need to have the "Desktop Development with C++" module installed.*
 ```
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
@@ -134,6 +133,8 @@ cd build
 cmake .. -G "Visual Studio 16 2019"
 ```
 then open generated build\p2pool.sln in Visual Studio and build it there
+
+Alternatively, you can select "Clone a repository" within the GUI, then select "Build from the menu. 
 
 monerod binary compatible with p2pool:
 ```
@@ -146,7 +147,7 @@ then follow the instructions from https://github.com/monero-project/monero/#on-w
 
 ## How to mine on P2Pool
 
-This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for testing because **wallet addresses are public on p2pool**.
+This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for mining because **wallet addresses are public on p2pool**.
 
 **Wallet software compatible with p2pool payouts**
 - Official Monero CLI and GUI v0.17.2.3 and newer
@@ -158,7 +159,7 @@ Step-by-step guide:
 - Download binaries from https://github.com/SChernykh/p2pool/releases/latest
 - Alternatively, grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
-- Create a separate restricted user account for testing. p2pool is untested and can have serious bugs/vulnerabilities!
+- Create a separate restricted user account for mining. p2pool is relatively new and may still have serious bugs/vulnerabilities!
 - Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
 - Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity
 - Create a new mainnet wallet
