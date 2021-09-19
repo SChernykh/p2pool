@@ -134,7 +134,7 @@ cmake .. -G "Visual Studio 16 2019"
 ```
 then open generated build\p2pool.sln in Visual Studio and build it there
 
-Alternatively, you can select "Clone a repository" within the GUI, then select "Build from the menu. 
+Alternatively, you can select "Clone a repository" within the GUI, then select "Build" from the menu. 
 
 monerod binary compatible with p2pool:
 ```
@@ -153,6 +153,7 @@ This guide assumes that you run everything on the same machine. If it's not the 
 - Official Monero CLI and GUI v0.17.2.3 and newer
 - Monerujo v2.1.0 "Vertant" and newer
 - Cake Wallet v4.2.7 and newer
+- MyMonero
 
 Step-by-step guide:
 
@@ -167,7 +168,6 @@ Step-by-step guide:
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083` **don't forget --zmq-pub parameter in the command line**
 - Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
-- Keep both monerod and p2pool running for the whole duration of your test
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
 - You can use `logrotate` with a config like this to control logfile growth:
     ```
