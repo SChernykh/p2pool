@@ -215,7 +215,7 @@ Step-by-step guide:
 ```
 start cmd /k .\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 
 start cmd /k .\p2pool.exe --wallet YOUR_WALLET_ADDRESS
-start cmd /k .\xmrig.exe -u x+3000 -o 127.0.0.1
+start cmd /k .\xmrig.exe -u x+30000 -o 127.0.0.1
 ```
 
 ## Donations
