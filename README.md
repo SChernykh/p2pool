@@ -155,16 +155,22 @@ This guide assumes that you run everything on the same machine. If it's not the 
 - Cake Wallet v4.2.7 and newer
 - MyMonero
 
+**General Considerations**
+
+- Create a separate restricted user account for mining. p2pool is relatively new and may still have serious bugs/vulnerabilities!
+- You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
+- Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
+- You can connect multiple miners to the same p2pool node. The more the better!
+
 Step-by-step guide:
+
+### GNU/Linux
 
 - Download binaries from https://github.com/SChernykh/p2pool/releases/latest
 - Alternatively, grab the latest source code for both p2pool and monerod and build them (see above, also notice that the branch name for monerod changed, you'll need to checkout p2pool-api-v0.17)
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
-- Create a separate restricted user account for mining. p2pool is relatively new and may still have serious bugs/vulnerabilities!
 - Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
 - Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity
-- Create a new mainnet wallet
-- You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083` **don't forget --zmq-pub parameter in the command line**
 - Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
@@ -180,14 +186,37 @@ Step-by-step guide:
 	    nocreate
     }
     ```
-- Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes. Of course it depends on your connection speed!
-- p2pool has a stratum server listening on port 3333, you can connect xmrig to it now
+- Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes, once completed xmrig should be able to connect to the stratum server on port 3333.
 - Run `./xmrig -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig. **Wallet address set in xmrig config will be ignored!**
 - To set custom fixed difficulty for your miner (for example, 10000), run `./xmrig -u x+10000 -o 127.0.0.1:3333`
 - xmrig should connect and start mining
-- you can connect multiple miners to the same p2pool node. The more the better!
-- From now on, watch your wallet to see if it gets anything
 - Also check p2pool.log for any warnings and errors: `grep -E 'WARNING|ERROR' p2pool.log`
+
+### Windows 
+
+*NOTE: Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then click "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
+
+- Download p2pool binaries from https://github.com/SChernykh/p2pool/releases/latest
+- Download xmrig binary from https://github.com/xmrig/xmrig/releases/latest *(xmrig-6.15.0-gcc-win64.zip is the current version)*
+- Expand the p2pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
+- Expand xmrig binary into appropriate location (same folder as p2pool is fine)
+- Prepare huge pages (each of monerod/p2pool/xmrig needs them): 
+  - On Windows 10 or above, run xmrig at least once as Administrator (right-click Run As Administrator)
+  - On earlier versions of Windows, you'll need to run it as admin at least once per login.
+- Open a command prompt and navigate to the folder where you extracted p2pool.
+- *When running these commands, Windows Firewall may prompt to allow connections, click "Allow"*
+- Run `.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083` *NOTE: don't forget --zmq-pub parameter in the command line*
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
+- Run `.\p2pool.exe --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
+- Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes, once completed xmrig should be able to connect to the stratum server on port 3333.
+- Run `.\xmrig.exe -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig. **Wallet address set in xmrig config will be ignored!**
+- To set custom fixed difficulty for your miner (for example, 10000), run `xmrig.exe -u x+10000 -o 127.0.0.1:3333`
+- Windows Quickstart: Create a batch (.bat) file with the following contents and place it in your p2pool directory along with xmrig.exe.
+```
+start cmd /k .\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 
+start cmd /k .\p2pool.exe --wallet YOUR_WALLET_ADDRESS
+start cmd /k .\xmrig.exe -u x+30000 -o 127.0.0.1
+```
 
 ## Donations
 
