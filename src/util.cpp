@@ -40,7 +40,7 @@ void panic()
 			__debugbreak();
 		}
 #endif
-		exit(1);
+		abort();
 	} while (true);
 }
 
