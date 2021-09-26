@@ -370,6 +370,10 @@ void p2pool::submit_block() const
 
 	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"";
 
+	const uint32_t template_id = submit_data.template_id;
+	const uint32_t nonce = submit_data.nonce;
+	const uint32_t extra_nonce = submit_data.extra_nonce;
+
 	for (size_t i = 0; i < submit_data.blob.size(); ++i) {
 		char buf[16];
 
@@ -388,10 +392,6 @@ void p2pool::submit_block() const
 		request.append(buf);
 	}
 	request.append("\"]}");
-
-	const uint32_t template_id = submit_data.template_id;
-	const uint32_t nonce = submit_data.nonce;
-	const uint32_t extra_nonce = submit_data.extra_nonce;
 
 	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, request.c_str(),
 		[height, diff, template_id, nonce, extra_nonce, is_external](const char* data, size_t size)
