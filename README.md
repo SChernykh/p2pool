@@ -213,9 +213,14 @@ Step-by-step guide:
 - To set custom fixed difficulty for your miner (for example, 10000), run `xmrig.exe -u x+10000 -o 127.0.0.1:3333`
 - Windows Quickstart: Create a batch (.bat) file with the following contents and place it in your p2pool directory along with xmrig.exe.
 ```
-start cmd /k .\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 
-start cmd /k .\p2pool.exe --wallet YOUR_WALLET_ADDRESS
-start cmd /k .\xmrig.exe -u x+30000 -o 127.0.0.1
+@ECHO OFF
+start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 
+ECHO Wait until the Monero daemon shows fully synced before continuing. This can take some time. Type 'status' in other window to check progress.
+PAUSE
+start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS
+ECHO Wait until the daemon shows fully synced before continuing. This can take some time.
+PAUSE
+%~dp0\xmrig.exe -u x+30000 -o 127.0.0.1
 ```
 
 ## Donations
