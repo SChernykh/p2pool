@@ -2,6 +2,7 @@
 #pragma warning(disable : 4061 4065 4100 4152 4242 4244 4668 4702 4710 4711 4820 5045)
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
 
 #if LLHTTP_STRICT_MODE
