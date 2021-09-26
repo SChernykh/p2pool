@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-	set(WARNING_FLAGS "-Wall -Wextra -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra")
 	set(OPTIMIZATION_FLAGS "-Ofast -s")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
@@ -39,7 +39,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${WARNING_FLAGS} ${SECURITY_FLAGS} /Ob1 /Ot /Zi /MT")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
 	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
