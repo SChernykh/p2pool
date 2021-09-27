@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "util.h"
 #pragma once
 
 namespace p2pool {
@@ -170,6 +171,7 @@ INT_ENTRY(uint8_t)
 INT_ENTRY(uint16_t)
 INT_ENTRY(uint32_t)
 INT_ENTRY(uint64_t)
+INT_ENTRY(long int)
 
 #ifdef __APPLE__
 INT_ENTRY(long)

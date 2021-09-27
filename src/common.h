@@ -77,7 +77,11 @@
 
 #endif
 
+#include <boost/multiprecision/cpp_int.hpp>
+
 namespace p2pool {
+
+using uint128_t = boost::multiprecision::uint128_t;
 
 constexpr size_t HASH_SIZE = 32;
 constexpr uint8_t HARDFORK_SUPPORTED_VERSION = 14;
@@ -97,14 +101,18 @@ constexpr uint8_t TX_EXTRA_MERGE_MINING_TAG = 3;
 #else
 FORCEINLINE uint64_t umul128(uint64_t a, uint64_t b, uint64_t* hi)
 {
-	const unsigned __int128 r = static_cast<unsigned __int128>(a) * static_cast<unsigned __int128>(b);
-	*hi = r >> 64;
+	const uint128_t r = static_cast<uint128_t>(a) * static_cast<uint128_t>(b);
+      uint128_t higher = static_cast<uint128_t>(*hi);
+	higher = r >> 64;
+      *hi = static_cast<uint64_t>(higher);
 	return static_cast<uint64_t>(r);
 }
 
 FORCEINLINE uint64_t udiv128(uint64_t hi, uint64_t lo, uint64_t divisor, uint64_t* remainder)
 {
-	const unsigned __int128 n = (static_cast<unsigned __int128>(hi) << 64) + lo;
+      const uint128_t dividend = static_cast<uint128_t>(hi);
+      const uint128_t shifted = (dividend << 64) + static_cast<uint128_t>(lo);
+      const uint64_t n = static_cast<uint64_t>(shifted);
 
 	const uint64_t result = n / divisor;
 	*remainder = n % divisor;
@@ -170,7 +178,7 @@ struct difficulty_type
 #ifdef _MSC_VER
 		_addcarry_u64(_addcarry_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
 #elif __GNUC__
-		*reinterpret_cast<unsigned __int128*>(this) += *reinterpret_cast<const unsigned __int128*>(&b);
+              *reinterpret_cast<uint128_t*>(this) += *reinterpret_cast<const uint128_t*>(&b);
 #else
 		const uint64_t t = lo;
 		lo += b.lo;
