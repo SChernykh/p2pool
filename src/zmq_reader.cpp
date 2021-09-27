@@ -82,10 +82,14 @@ void ZMQReader::run()
 		char addr[32];
 
 		snprintf(addr, sizeof(addr), "tcp://%s:%u", m_address, m_zmqPort);
-		m_subscriber.connect(addr);
+		if (!connect(addr, m_zmqPort)) {
+			throw zmq::error_t();
+		}
 
 		snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", m_publisherPort);
-		m_subscriber.connect(addr);
+		if (!connect(addr, m_publisherPort)) {
+			throw zmq::error_t();
+		}
 
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-chain_main");
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
@@ -119,6 +123,38 @@ void ZMQReader::run()
 		panic();
 	}
 	LOGINFO(1, "worker thread stopped");
+}
+
+bool ZMQReader::connect(const char* address, uint32_t id)
+{
+	struct ConnectMonitor : public zmq::monitor_t
+	{
+		void on_event_connected(const zmq_event_t&, const char* address) ZMQ_OVERRIDE
+		{
+			LOGINFO(1, "connected to " << address);
+			connected = true;
+		}
+
+		bool connected = false;
+	} monitor;
+
+	char buf[32];
+	snprintf(buf, sizeof(buf), "inproc://connect-mon-%u", id);
+	monitor.init(m_subscriber, buf);
+	m_subscriber.connect(address);
+
+	using namespace std::chrono;
+	const system_clock::time_point start_time = system_clock::now();
+
+	while (!monitor.connected && monitor.check_event(-1)) {
+		const int64_t elapsed_time = duration_cast<milliseconds>(system_clock::now() - start_time).count();
+		if (elapsed_time >= 3000) {
+			LOGERR(1, "failed to connect to " << address);
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void ZMQReader::parse(char* data, size_t size)

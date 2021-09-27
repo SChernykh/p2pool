@@ -30,6 +30,7 @@ public:
 private:
 	static void run_wrapper(void* arg) { reinterpret_cast<ZMQReader*>(arg)->run(); }
 	void run();
+	bool connect(const char* address, uint32_t id);
 
 	void parse(char* data, size_t size);
 
