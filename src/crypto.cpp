@@ -227,6 +227,14 @@ public:
 		return true;
 	}
 
+	void clear()
+	{
+		MutexLock lock(m);
+
+		derivations.clear();
+		public_keys.clear();
+	}
+
 private:
 	uv_mutex_t m;
 	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2>, hash> derivations;
@@ -243,6 +251,11 @@ bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivatio
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
 {
 	return cache.get_public_key(derivation, output_index, base, derived_key);
+}
+
+void clear_crypto_cache()
+{
+	cache.clear();
 }
 
 } // namespace p2pool

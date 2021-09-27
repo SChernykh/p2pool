@@ -126,7 +126,7 @@ namespace std {
 template<>
 struct hash<p2pool::hash>
 {
-	FORCEINLINE size_t operator()(const p2pool::hash& value) const
+	FORCEINLINE size_t operator()(const p2pool::hash& value) const noexcept
 	{
 		uint64_t result = 0xcbf29ce484222325ull;
 		for (size_t i = 0; i < p2pool::HASH_SIZE; ++i) {
@@ -139,7 +139,7 @@ struct hash<p2pool::hash>
 template<size_t N>
 struct hash<std::array<uint8_t, N>>
 {
-	FORCEINLINE size_t operator()(const std::array<uint8_t, N>& value) const
+	FORCEINLINE size_t operator()(const std::array<uint8_t, N>& value) const noexcept
 	{
 		uint64_t result = 0xcbf29ce484222325ull;
 		for (size_t i = 0; i < N; ++i) {

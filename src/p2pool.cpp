@@ -1055,6 +1055,8 @@ void p2pool::api_update_stats_mod()
 
 void p2pool::api_update_block_found(const ChainMain* data)
 {
+	clear_crypto_cache();
+
 	if (!m_api) {
 		return;
 	}
