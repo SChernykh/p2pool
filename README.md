@@ -171,7 +171,7 @@ Step-by-step guide:
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
 - Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
 - Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity
-- Run `./monerod --zmq-pub tcp://127.0.0.1:18083` **don't forget --zmq-pub parameter in the command line**
+- Run `./monerod --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist` **don't forget --zmq-pub parameter in the command line**
 - Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
@@ -205,7 +205,7 @@ Step-by-step guide:
   - On earlier versions of Windows, you'll need to run it as admin at least once per login.
 - Open a command prompt and navigate to the folder where you extracted p2pool.
 - *When running these commands, Windows Firewall may prompt to allow connections, click "Allow"*
-- Run `.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083` *NOTE: don't forget --zmq-pub parameter in the command line*
+- Run `.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist` *NOTE: don't forget --zmq-pub parameter in the command line*
 - Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
 - Run `.\p2pool.exe --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes, once completed xmrig should be able to connect to the stratum server on port 3333.
@@ -214,7 +214,7 @@ Step-by-step guide:
 - Windows Quickstart: Create a batch (.bat) file with the following contents and place it in your p2pool directory along with xmrig.exe.
 ```
 @ECHO OFF
-start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 
+start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist
 ECHO Wait until the Monero daemon shows fully synced before continuing. This can take some time. Type 'status' in other window to check progress.
 PAUSE
 start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS
