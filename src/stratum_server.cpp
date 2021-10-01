@@ -21,6 +21,7 @@
 #include "p2pool.h"
 #include "side_chain.h"
 #include "params.h"
+#include "p2pool_api.h"
 
 static constexpr char log_category_prefix[] = "StratumServer ";
 
@@ -48,6 +49,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_hashrateDataTail_24h(0)
 	, m_cumulativeFoundSharesDiff(0.0)
 	, m_totalFoundShares(0)
+	, m_apiLastUpdateTime(-1)
 {
 	m_hashrateData[0] = { time(nullptr), 0 };
 
@@ -645,6 +647,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 	if (LIKELY(value < target)) {
 		server->update_hashrate_data(target);
+		server->api_update_local_stats();
 		share->m_result = SubmittedShare::Result::OK;
 	}
 	else {
@@ -912,6 +915,86 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 	}
 
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
+}
+
+void StratumServer::api_update_local_stats()
+{
+	if (!m_pool->m_api) {
+		return;
+	}
+
+	if (!m_pool->params().m_localStats) {
+		return;
+	}
+
+	const time_t api_time_now = time(nullptr);
+
+	// Rate limit to no more than once in 60 seconds.
+	if (m_apiLastUpdateTime == -1) {
+		m_apiLastUpdateTime = api_time_now;
+	} else if (difftime(api_time_now, m_apiLastUpdateTime) < 60) {
+		return;
+	} else {
+		m_apiLastUpdateTime = api_time_now;
+	}
+
+	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
+	int64_t dt_15m, dt_1h, dt_24h;
+
+	uint64_t hashes_since_last_share;
+
+	{
+		ReadLock lock(m_hashrateDataLock);
+
+		total_hashes = m_cumulativeHashes;
+		hashes_since_last_share = m_cumulativeHashes - m_cumulativeHashesAtLastShare;
+
+		const HashrateData* data = m_hashrateData;
+		const HashrateData& head = data[m_hashrateDataHead];
+		const HashrateData& tail_15m = data[m_hashrateDataTail_15m];
+		const HashrateData& tail_1h = data[m_hashrateDataTail_1h];
+		const HashrateData& tail_24h = data[m_hashrateDataTail_24h];
+
+		hashes_15m = head.m_cumulativeHashes - tail_15m.m_cumulativeHashes;
+		dt_15m = static_cast<int64_t>(head.m_timestamp - tail_15m.m_timestamp);
+
+		hashes_1h = head.m_cumulativeHashes - tail_1h.m_cumulativeHashes;
+		dt_1h = static_cast<int64_t>(head.m_timestamp - tail_1h.m_timestamp);
+
+		hashes_24h = head.m_cumulativeHashes - tail_24h.m_cumulativeHashes;
+		dt_24h = static_cast<int64_t>(head.m_timestamp - tail_24h.m_timestamp);
+	}
+
+	const uint64_t hashrate_15m = (dt_15m > 0) ? (hashes_15m / dt_15m) : 0;
+	const uint64_t hashrate_1h  = (dt_1h  > 0) ? (hashes_1h  / dt_1h ) : 0;
+	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
+
+	double average_effort = 0.0;
+	if (m_cumulativeFoundSharesDiff > 0.0) {
+		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / m_cumulativeFoundSharesDiff;
+	}
+
+	int shares_found = m_totalFoundShares;
+
+	double current_effort = static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double();
+
+	int connections = m_numConnections;
+	int incoming_connections = m_numIncomingConnections;
+
+	m_pool->m_api->set(p2pool_api::Category::LOCAL, "stats",
+		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, average_effort, current_effort, connections, incoming_connections](log::Stream& s)
+		{
+			s << "{\"hashrate_15m\":" << hashrate_15m
+				<< ",\"hashrate_1h\":" << hashrate_1h
+				<< ",\"hashrate_24h\":" << hashrate_24h
+				<< ",\"total_hashes\":" << total_hashes
+				<< ",\"shares_found\":" << shares_found
+				<< ",\"average_effort\":" << average_effort
+				<< ",\"current_effort\":" << current_effort
+				<< ",\"connections\":" << connections
+				<< ",\"incoming_connections\":" << incoming_connections
+				<< "}";
+		});
 }
 
 } // namespace p2pool

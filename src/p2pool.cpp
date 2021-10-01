@@ -103,7 +103,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_mutex_init_checked(&m_foundBlocksLock);
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
-	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath);
+	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
 
 	m_sideChain = new SideChain(this, type);
 	m_hasher = new RandomX_Hasher(this);

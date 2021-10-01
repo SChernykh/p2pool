@@ -25,13 +25,14 @@ namespace p2pool {
 class p2pool_api
 {
 public:
-	explicit p2pool_api(const std::string& api_path);
+	p2pool_api(const std::string& api_path, const bool local_stats);
 	~p2pool_api();
 
 	enum class Category {
 		GLOBAL,
 		NETWORK,
 		POOL,
+		LOCAL,
 	};
 
 	void on_stop();
@@ -80,6 +81,7 @@ private:
 	std::string m_apiPath;
 	std::string m_networkPath;
 	std::string m_poolPath;
+	std::string m_localPath;
 
 	uv_mutex_t m_dumpDataLock;
 	std::unordered_map<std::string, std::vector<char>> m_dumpData;

@@ -37,6 +37,7 @@ struct Params
 	std::string m_p2pPeerList;
 	std::string m_config;
 	std::string m_apiPath;
+	bool m_localStats = false;
 };
 
 } // namespace p2pool
