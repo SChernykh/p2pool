@@ -241,21 +241,36 @@ private:
 	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
 };
 
-static Cache cache;
+static Cache* cache = nullptr;
 
 bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation)
 {
-	return cache.get_derivation(key1, key2, derivation);
+	return cache->get_derivation(key1, key2, derivation);
 }
 
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
 {
-	return cache.get_public_key(derivation, output_index, base, derived_key);
+	return cache->get_public_key(derivation, output_index, base, derived_key);
+}
+
+void init_crypto_cache()
+{
+	if (!cache) {
+		cache = new Cache();
+	}
+}
+
+void destroy_crypto_cache()
+{
+	if (cache) {
+		delete cache;
+		cache = nullptr;
+	}
 }
 
 void clear_crypto_cache()
 {
-	cache.clear();
+	cache->clear();
 }
 
 } // namespace p2pool

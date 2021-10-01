@@ -23,6 +23,9 @@ void generate_keys(hash& pub, hash& sec);
 bool check_keys(const hash& pub, const hash& sec);
 bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation);
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key);
+
+void init_crypto_cache();
+void destroy_crypto_cache();
 void clear_crypto_cache();
 
 } // namespace p2pool

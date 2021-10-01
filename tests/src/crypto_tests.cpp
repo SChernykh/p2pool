@@ -25,6 +25,8 @@ namespace p2pool {
 
 TEST(crypto, derivation)
 {
+	init_crypto_cache();
+
 	// Run the tests twice to check how crypto cache works
 	for (int i = 0; i < 2; ++i) {
 		std::ifstream f("crypto_tests.txt");
@@ -61,6 +63,8 @@ TEST(crypto, derivation)
 			}
 		} while (!f.eof());
 	}
+
+	destroy_crypto_cache();
 }
 
 }

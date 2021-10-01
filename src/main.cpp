@@ -16,6 +16,7 @@
  */
 
 #include "common.h"
+#include "crypto.h"
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
@@ -68,10 +69,14 @@ int main(int argc, char* argv[])
 	int result;
 
 	memory_tracking_start();
+
+	p2pool::init_crypto_cache();
 	{
 		p2pool::p2pool pool(argc, argv);
 		result = pool.run();
 	}
+	p2pool::destroy_crypto_cache();
+
 	memory_tracking_stop();
 
 	return result;

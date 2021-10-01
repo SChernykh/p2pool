@@ -102,14 +102,11 @@ P2PServer::~P2PServer()
 	uv_mutex_destroy(&m_peerListLock);
 	uv_mutex_destroy(&m_broadcastLock);
 	uv_mutex_destroy(&m_missingBlockRequestsLock);
+
+	clear_cached_blocks();
 	uv_rwlock_destroy(&m_cachedBlocksLock);
 
 	delete m_block;
-
-	for (auto it : m_cachedBlocks) {
-		delete it.second;
-	}
-
 	delete m_cache;
 }
 
@@ -122,6 +119,16 @@ void P2PServer::add_cached_block(const PoolBlock& block)
 
 	PoolBlock* new_block = new PoolBlock(block);
 	m_cachedBlocks.insert({ new_block->m_sidechainId, new_block });
+}
+
+void P2PServer::clear_cached_blocks()
+{
+	WriteLock lock(m_cachedBlocksLock);
+
+	for (auto it : m_cachedBlocks) {
+		delete it.second;
+	}
+	m_cachedBlocks.clear();
 }
 
 void P2PServer::store_in_cache(const PoolBlock& block)

@@ -1552,6 +1552,10 @@ void SideChain::prune_old_blocks()
 
 	if (num_blocks_pruned) {
 		LOGINFO(4, "pruned " << num_blocks_pruned << " old blocks at heights <= " << h);
+
+		// If side-chain started pruning blocks it means the initial sync is complete
+		// It's now safe to delete cached blocks
+		m_pool->p2p_server()->clear_cached_blocks();
 	}
 }
 

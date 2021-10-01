@@ -49,6 +49,7 @@ public:
 	~P2PServer();
 
 	void add_cached_block(const PoolBlock& block);
+	void clear_cached_blocks();
 	void store_in_cache(const PoolBlock& block);
 
 	void connect_to_peers(const std::string& peer_list);
