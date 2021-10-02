@@ -19,6 +19,8 @@
 
 namespace p2pool {
 
+extern const char* VERSION;
+
 template<typename T> struct not_implemented { enum { value = 0 }; };
 
 struct nocopy_nomove

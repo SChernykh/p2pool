@@ -29,6 +29,22 @@ static constexpr char log_category_prefix[] = "Util ";
 
 namespace p2pool {
 
+#define STR2(X) STR(X)
+#define STR(X) #X
+
+const char* VERSION = "v1.1 (built"
+#if defined(__clang__)
+	" with clang/" __clang_version__
+#elif defined(__GNUC__)
+	" with GCC/" STR2(__GNUC__) "." STR2(__GNUC_MINOR__) "." STR2(__GNUC_PATCHLEVEL__)
+#elif defined(_MSC_VER)
+	" with MSVC/" STR2(_MSC_VER)
+#endif
+" on " __DATE__ ")";
+
+#undef STR2
+#undef STR
+
 MinerCallbackHandler::~MinerCallbackHandler() {}
 
 void panic()

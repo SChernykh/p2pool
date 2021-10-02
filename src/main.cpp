@@ -23,7 +23,7 @@
 
 static void usage()
 {
-	printf(
+	printf("P2Pool %s\n"
 		"\nUsage:\n\n" \
 		"--wallet             Wallet address to mine to. Subaddresses and integrated addresses are not supported!\n"
 		"--host               IP address of your Monero node, default is 127.0.0.1\n"
@@ -39,6 +39,7 @@ static void usage()
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
+		p2pool::VERSION,
 #ifdef _WIN32
 		"p2pool.exe"
 #else

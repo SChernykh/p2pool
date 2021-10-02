@@ -50,6 +50,8 @@ p2pool::p2pool(int argc, char* argv[])
 	, m_updateSeed(true)
 	, m_submitBlockData{}
 {
+	LOGINFO(1, log::LightCyan() << VERSION);
+
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
 		panic();
