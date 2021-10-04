@@ -69,6 +69,10 @@ Params::Params(int argc, char* argv[])
 		if ((strcmp(argv[i], "--data-api") == 0) && (i + 1 < argc)) {
 			m_apiPath = argv[++i];
 		}
+
+		if (strcmp(argv[i], "--stratum-api") == 0) {
+			m_localStats = true;
+		}
 	}
 
 	if (m_stratumAddresses.empty()) {

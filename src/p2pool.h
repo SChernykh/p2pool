@@ -49,6 +49,8 @@ public:
 	SideChain& side_chain() { return *m_sideChain; }
 	const MinerData& miner_data() const { return m_minerData; }
 
+	p2pool_api* m_api;
+
 	RandomX_Hasher* hasher() const { return m_hasher; }
 	bool calculate_hash(const void* data, size_t size, const hash& seed, hash& result);
 	static uint64_t get_seed_height(uint64_t height);
@@ -74,6 +76,10 @@ public:
 
 	void api_update_block_found(const ChainMain* data);
 
+	void api_update_network_stats();
+	void api_update_pool_stats();
+	void api_update_stats_mod();
+
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
 private:
@@ -90,7 +96,6 @@ private:
 
 	Params* m_params;
 
-	p2pool_api* m_api;
 	SideChain* m_sideChain;
 	RandomX_Hasher* m_hasher;
 	BlockTemplate* m_blockTemplate;
@@ -120,10 +125,6 @@ private:
 
 	bool parse_block_header(const char* data, size_t size, ChainMain& result);
 	uint32_t parse_block_headers_range(const char* data, size_t size);
-
-	void api_update_network_stats();
-	void api_update_pool_stats();
-	void api_update_stats_mod();
 
 	struct FoundBlock
 	{

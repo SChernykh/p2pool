@@ -152,7 +152,11 @@ private:
 	double m_cumulativeFoundSharesDiff;
 	uint32_t m_totalFoundShares;
 
+	time_t m_apiLastUpdateTime;
+
 	void update_hashrate_data(uint64_t target);
+
+	void api_update_local_stats();
 };
 
 } // namespace p2pool

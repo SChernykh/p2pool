@@ -28,7 +28,7 @@ static constexpr char log_category_prefix[] = "P2Pool API ";
 
 namespace p2pool {
 
-p2pool_api::p2pool_api(const std::string& api_path) : m_apiPath(api_path)
+p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats): m_apiPath(api_path)
 {
 	if (m_apiPath.empty()) {
 		LOGERR(1, "api path is empty");
@@ -60,9 +60,14 @@ p2pool_api::p2pool_api(const std::string& api_path) : m_apiPath(api_path)
 
 	m_networkPath = m_apiPath + "network/";
 	m_poolPath = m_apiPath + "pool/";
+	m_localPath = m_apiPath + "local/";
 
 	create_dir(m_networkPath);
 	create_dir(m_poolPath);
+
+	if (local_stats) {
+		create_dir(m_localPath);
+	}
 }
 
 p2pool_api::~p2pool_api()
@@ -109,6 +114,7 @@ void p2pool_api::dump_to_file_async_internal(const Category& category, const cha
 	case Category::GLOBAL:  path = m_apiPath     + filename; break;
 	case Category::NETWORK: path = m_networkPath + filename; break;
 	case Category::POOL:    path = m_poolPath    + filename; break;
+	case Category::LOCAL:   path = m_localPath    + filename; break;
 	}
 
 	{
