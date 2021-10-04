@@ -336,6 +336,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_req.data = share;
 		share->m_server = this;
 		share->m_client = client;
+		share->m_clientAddr = client->m_addr;
 		share->m_clientResetCounter = client->m_resetCounter.load();
 		share->m_rpcId = client->m_rpcId;
 		share->m_id = id;
@@ -672,6 +673,8 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	StratumClient* client = share->m_client;
 	StratumServer* server = share->m_server;
 
+	const bool bad_share = (share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW);
+
 	if ((client->m_resetCounter.load() == share->m_clientResetCounter) && (client->m_rpcId == share->m_rpcId)) {
 		const bool result = server->send(client,
 			[share](void* buf)
@@ -697,13 +700,16 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				return s.m_pos;
 			});
 
-		if ((share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW)) {
+		if (bad_share) {
 			client->ban(DEFAULT_BAN_TIME);
 			client->close();
 		}
 		else if (!result) {
 			client->close();
 		}
+	}
+	else if (bad_share) {
+		server->ban(share->m_clientAddr, DEFAULT_BAN_TIME);
 	}
 }
 
