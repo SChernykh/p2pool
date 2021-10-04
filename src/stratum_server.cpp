@@ -49,7 +49,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_hashrateDataTail_24h(0)
 	, m_cumulativeFoundSharesDiff(0.0)
 	, m_totalFoundShares(0)
-	, m_apiLastUpdateTime(-1)
+	, m_apiLastUpdateTime(0)
 {
 	m_hashrateData[0] = { time(nullptr), 0 };
 
@@ -377,7 +377,7 @@ uint64_t StratumServer::get_random64()
 
 void StratumServer::print_status()
 {
-	update_hashrate_data(0);
+	update_hashrate_data(0, time(nullptr));
 	print_stratum_status();
 }
 
@@ -530,10 +530,8 @@ void StratumServer::on_blobs_ready()
 	LOGINFO(3, "sent new job to " << extra_nonce << '/' << numClientsProcessed << " clients");
 }
 
-void StratumServer::update_hashrate_data(uint64_t target)
+void StratumServer::update_hashrate_data(uint64_t target, time_t timestamp)
 {
-	const time_t timestamp = time(nullptr);
-
 	uint64_t rem;
 	const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
 
@@ -646,8 +644,9 @@ void StratumServer::on_share_found(uv_work_t* req)
 	const uint64_t value = *reinterpret_cast<uint64_t*>(share->m_resultHash.h + HASH_SIZE - sizeof(uint64_t));
 
 	if (LIKELY(value < target)) {
-		server->update_hashrate_data(target);
-		server->api_update_local_stats();
+		const time_t timestamp = time(nullptr);
+		server->update_hashrate_data(target, timestamp);
+		server->api_update_local_stats(timestamp);
 		share->m_result = SubmittedShare::Result::OK;
 	}
 	else {
@@ -917,26 +916,18 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
 }
 
-void StratumServer::api_update_local_stats()
+void StratumServer::api_update_local_stats(time_t timestamp)
 {
-	if (!m_pool->m_api) {
+	if (!m_pool->api() || !m_pool->params().m_localStats) {
 		return;
 	}
-
-	if (!m_pool->params().m_localStats) {
-		return;
-	}
-
-	const time_t api_time_now = time(nullptr);
 
 	// Rate limit to no more than once in 60 seconds.
-	if (m_apiLastUpdateTime == -1) {
-		m_apiLastUpdateTime = api_time_now;
-	} else if (difftime(api_time_now, m_apiLastUpdateTime) < 60) {
+	if (timestamp < m_apiLastUpdateTime + 60) {
 		return;
-	} else {
-		m_apiLastUpdateTime = api_time_now;
 	}
+
+	m_apiLastUpdateTime = timestamp;
 
 	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
 	int64_t dt_15m, dt_1h, dt_24h;
@@ -981,7 +972,7 @@ void StratumServer::api_update_local_stats()
 	int connections = m_numConnections;
 	int incoming_connections = m_numIncomingConnections;
 
-	m_pool->m_api->set(p2pool_api::Category::LOCAL, "stats",
+	m_pool->api()->set(p2pool_api::Category::LOCAL, "stats",
 		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, average_effort, current_effort, connections, incoming_connections](log::Stream& s)
 		{
 			s << "{\"hashrate_15m\":" << hashrate_15m

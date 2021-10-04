@@ -154,9 +154,8 @@ private:
 
 	time_t m_apiLastUpdateTime;
 
-	void update_hashrate_data(uint64_t target);
-
-	void api_update_local_stats();
+	void update_hashrate_data(uint64_t target, time_t timestamp);
+	void api_update_local_stats(time_t timestamp);
 };
 
 } // namespace p2pool

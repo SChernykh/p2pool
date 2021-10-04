@@ -114,7 +114,7 @@ void p2pool_api::dump_to_file_async_internal(const Category& category, const cha
 	case Category::GLOBAL:  path = m_apiPath     + filename; break;
 	case Category::NETWORK: path = m_networkPath + filename; break;
 	case Category::POOL:    path = m_poolPath    + filename; break;
-	case Category::LOCAL:   path = m_localPath    + filename; break;
+	case Category::LOCAL:   path = m_localPath   + filename; break;
 	}
 
 	{
