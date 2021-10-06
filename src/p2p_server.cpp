@@ -620,7 +620,7 @@ void P2PServer::on_broadcast()
 				}
 
 				if (send_pruned) {
-					LOGINFO(5, "sending BLOCK_BROADCAST (pruned) to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(6, "sending BLOCK_BROADCAST (pruned) to " << log::Gray() << static_cast<char*>(client->m_addrString));
 					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
 
 					*reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(data->pruned_blob.size());
@@ -935,7 +935,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::BLOCK_BROADCAST:
-			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_BROADCAST");
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_BROADCAST");
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t block_size = *reinterpret_cast<uint32_t*>(buf + 1);
