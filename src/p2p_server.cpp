@@ -49,6 +49,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_rng(m_rd())
 	, m_block(new PoolBlock())
 	, m_timer{}
+	, m_timerCounter(0)
 	, m_peerId(m_rng())
 	, m_peerListLastSaved(0)
 {
@@ -226,6 +227,10 @@ void P2PServer::update_peer_connections()
 			peer_list[k] = peer_list.back();
 		}
 		peer_list.pop_back();
+	}
+
+	if ((m_numConnections == 0) && ((m_timerCounter % 30) == 0)) {
+		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
 	}
 }
 
@@ -662,6 +667,8 @@ void P2PServer::print_status()
 
 void P2PServer::on_timer()
 {
+	++m_timerCounter;
+
 	if (!m_initialPeerList.empty()) {
 		connect_to_peers(m_initialPeerList);
 		m_initialPeerList.clear();

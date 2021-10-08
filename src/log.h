@@ -371,6 +371,7 @@ template<> struct log::Stream::Entry<XMRAmount>
 
 template<> struct log::Stream::Entry<NetworkType>
 {
+	// cppcheck-suppress constParameter
 	static NOINLINE void put(const NetworkType& value, Stream* wrapper)
 	{
 		switch (value) {

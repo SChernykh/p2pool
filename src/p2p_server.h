@@ -156,6 +156,7 @@ private:
 	PoolBlock* m_block;
 
 	uv_timer_t m_timer;
+	uint32_t m_timerCounter;
 
 	uint64_t m_peerId;
 
