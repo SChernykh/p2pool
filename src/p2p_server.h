@@ -139,6 +139,7 @@ private:
 
 	void flush_cache();
 	void download_missing_blocks();
+	void check_zmq();
 	void update_peer_connections();
 	void update_peer_list();
 	void save_peer_list_async();

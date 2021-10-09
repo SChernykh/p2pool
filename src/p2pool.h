@@ -78,6 +78,8 @@ public:
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
+	time_t zmq_last_active() const { return m_zmqLastActive; }
+
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
@@ -167,6 +169,8 @@ private:
 	uv_async_t m_submitBlockAsync;
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
+
+	time_t m_zmqLastActive = 0;
 };
 
 } // namespace p2pool

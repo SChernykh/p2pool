@@ -679,6 +679,7 @@ void P2PServer::on_timer()
 	update_peer_list();
 	save_peer_list_async();
 	update_peer_connections();
+	check_zmq();
 }
 
 void P2PServer::flush_cache()
@@ -776,6 +777,21 @@ void P2PServer::download_missing_blocks()
 
 				return p - p0;
 			});
+	}
+}
+
+void P2PServer::check_zmq()
+{
+	if ((m_timerCounter % 30) != 0) {
+		return;
+	}
+
+	const time_t cur_time = time(nullptr);
+	const time_t last_active = m_pool->zmq_last_active();
+
+	if (cur_time >= last_active + 300) {
+		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
+		LOGERR(1, "no ZMQ messages received from monerod in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
 	}
 }
 

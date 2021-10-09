@@ -173,6 +173,8 @@ void p2pool::handle_tx(TxMempoolData& tx)
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
 #endif
+
+	m_zmqLastActive = time(nullptr);
 }
 
 void p2pool::handle_miner_data(MinerData& data)
@@ -226,6 +228,8 @@ void p2pool::handle_miner_data(MinerData& data)
 	else {
 		update_block_template();
 	}
+
+	m_zmqLastActive = time(nullptr);
 }
 
 const char* BLOCK_FOUND = "\n\
@@ -288,6 +292,8 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	}
 
 	api_update_network_stats();
+
+	m_zmqLastActive = time(nullptr);
 }
 
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
