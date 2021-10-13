@@ -838,6 +838,25 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	}
 }
 
+bool BlockTemplate::get_difficulties(const uint32_t template_id, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
+{
+	ReadLock lock(m_lock);
+
+	if (template_id == m_templateId) {
+		mainchain_difficulty = m_difficulty;
+		sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
+		return true;
+	}
+
+	const BlockTemplate* old = m_oldTemplates[template_id % array_size(m_oldTemplates)];
+
+	if (old && (template_id == old->m_templateId)) {
+		return old->get_difficulties(template_id, mainchain_difficulty, sidechain_difficulty);
+	}
+
+	return false;
+}
+
 uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const
 {
 	ReadLock lock(m_lock);

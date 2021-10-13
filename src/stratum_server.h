@@ -121,6 +121,7 @@ private:
 		uint32_t m_extraNonce;
 		uint64_t m_target;
 		hash m_resultHash;
+		difficulty_type m_sidechainDifficulty;
 
 		enum class Result {
 			STALE,

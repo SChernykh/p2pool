@@ -319,6 +319,26 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	}
 
 	if (found) {
+		BlockTemplate& block = m_pool->block_template();
+		difficulty_type mainchain_diff, sidechain_diff;
+
+		if (!block.get_difficulties(template_id, mainchain_diff, sidechain_diff)) {
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
+			return send(client,
+				[id](void* buf)
+				{
+					log::Stream s(reinterpret_cast<char*>(buf));
+					s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Stale share\"}}\n";
+					return s.m_pos;
+				});
+		}
+
+		if (mainchain_diff.check_pow(resultHash)) {
+			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << " found a mainchain block, submitting it");
+			m_pool->submit_block_async(template_id, nonce, extra_nonce);
+			block.update_tx_keys();
+		}
+
 		SubmittedShare* share;
 
 		{
@@ -345,6 +365,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_extraNonce = extra_nonce;
 		share->m_target = target;
 		share->m_resultHash = resultHash;
+		share->m_sidechainDifficulty = sidechain_diff;
 
 		const int err = uv_queue_work(&m_loop, &share->m_req, on_share_found, on_after_share_found);
 		if (err) {
@@ -571,7 +592,6 @@ void StratumServer::on_share_found(uv_work_t* req)
 	StratumClient* client = share->m_client;
 	StratumServer* server = share->m_server;
 	p2pool* pool = server->m_pool;
-	BlockTemplate& block = pool->block_template();
 
 	uint64_t target = share->m_target;
 	if (target >= TARGET_4_BYTES_LIMIT) {
@@ -582,24 +602,21 @@ void StratumServer::on_share_found(uv_work_t* req)
 		LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
 	}
 
-	uint8_t blob[128];
-	uint64_t height;
-	difficulty_type difficulty;
-	difficulty_type sidechain_difficulty;
-	hash seed_hash;
-	size_t nonce_offset;
+	if (share->m_sidechainDifficulty.check_pow(share->m_resultHash)) {
+		uint8_t blob[128];
+		uint64_t height;
+		difficulty_type difficulty;
+		difficulty_type sidechain_difficulty;
+		hash seed_hash;
+		size_t nonce_offset;
 
-	const uint32_t blob_size = block.get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
-	if (!blob_size) {
-		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
-		share->m_result = SubmittedShare::Result::STALE;
-		return;
-	}
+		const uint32_t blob_size = pool->block_template().get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
+		if (!blob_size) {
+			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
+			share->m_result = SubmittedShare::Result::STALE;
+			return;
+		}
 
-	const bool mainchain_solution = difficulty.check_pow(share->m_resultHash);
-	const bool sidechain_solution = sidechain_difficulty.check_pow(share->m_resultHash);
-
-	if (mainchain_solution || sidechain_solution) {
 		for (uint32_t i = 0, nonce = share->m_nonce; i < sizeof(share->m_nonce); ++i) {
 			blob[nonce_offset + i] = nonce & 255;
 			nonce >>= 8;
@@ -630,15 +647,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		++server->m_totalFoundShares;
 
 		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", effort " << effort << '%');
-
-		if (mainchain_solution) {
-			pool->submit_block_async(share->m_templateId, share->m_nonce, share->m_extraNonce);
-			block.update_tx_keys();
-		}
-
-		if (sidechain_solution) {
-			pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
-		}
+		pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
 	}
 
 	// Send the response to miner
