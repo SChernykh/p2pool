@@ -101,7 +101,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 			}
 
 			const int port = atoi(address.substr(k2 + 1).c_str());
-			if ((port > 0) && (port < 655356)) {
+			if ((port > 0) && (port < 65536)) {
 				callback(is_v6, address, ip, port);
 			}
 			else {
