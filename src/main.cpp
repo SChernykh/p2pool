@@ -33,7 +33,7 @@ static void usage()
 		"--p2p                Comma-separated list of IP:port for p2p server to listen on\n"
 		"--addpeers           Comma-separated list of IP:port of other p2pool nodes to connect to\n"
 		"--light-mode         Don't allocate RandomX dataset, saves 2GB of RAM\n"
-		"--loglevel           Verbosity of the log, integer number between 0 and 5\n"
+		"--loglevel           Verbosity of the log, integer number between 0 and %d\n"
 		"--config             Name of the p2pool config file\n"
 		"--data-api           Path to the p2pool JSON data (use it in tandem with an external web-server)\n"
 		"--stratum-api        Enable /local/ path in api path for Stratum Server statistics\n"
@@ -41,6 +41,7 @@ static void usage()
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
 		p2pool::VERSION,
+		p2pool::log::MAX_GLOBAL_LOG_LEVEL,
 #ifdef _WIN32
 		"p2pool.exe"
 #else
