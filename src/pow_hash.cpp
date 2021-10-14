@@ -54,7 +54,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 
 	const randomx_flags flags = randomx_get_flags();
 
-	for (size_t i = 0; i < array_size(m_cache); ++i) {
+	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_cache); ++i) {
 		m_cache[i] = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
 		if (!m_cache[i]) {
 			LOGWARN(1, "couldn't allocate RandomX cache using large pages");
@@ -70,7 +70,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 	uv_rwlock_init_checked(&m_datasetLock);
 	uv_rwlock_init_checked(&m_cacheLock);
 
-	for (size_t i = 0; i < array_size(m_vm); ++i) {
+	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_vm); ++i) {
 		uv_mutex_init_checked(&m_vm[i].mutex);
 		m_vm[i].vm = nullptr;
 	}
@@ -91,7 +91,7 @@ RandomX_Hasher::~RandomX_Hasher()
 	uv_rwlock_destroy(&m_datasetLock);
 	uv_rwlock_destroy(&m_cacheLock);
 
-	for (size_t i = 0; i < array_size(m_vm); ++i) {
+	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_vm); ++i) {
 		{
 			MutexLock lock(m_vm[i].mutex);
 			if (m_vm[i].vm) {
@@ -105,7 +105,7 @@ RandomX_Hasher::~RandomX_Hasher()
 		randomx_release_dataset(m_dataset);
 	}
 
-	for (size_t i = 0; i < array_size(m_cache); ++i) {
+	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_cache); ++i) {
 		if (m_cache[i]) {
 			randomx_release_cache(m_cache[i]);
 		}

@@ -66,7 +66,7 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	m_mempoolTxsOrder.reserve(1024);
 	m_shares.reserve(m_pool->side_chain().chain_window_size() * 2);
 
-	for (size_t i = 0; i < array_size(m_oldTemplates); ++i) {
+	for (size_t i = 0; i < array_size(&BlockTemplate::m_oldTemplates); ++i) {
 		m_oldTemplates[i] = new BlockTemplate(*this);
 	}
 
@@ -79,7 +79,7 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 
 BlockTemplate::~BlockTemplate()
 {
-	for (size_t i = 0; i < array_size(m_oldTemplates); ++i) {
+	for (size_t i = 0; i < array_size(&BlockTemplate::m_oldTemplates); ++i) {
 		delete m_oldTemplates[i];
 	}
 
@@ -185,7 +185,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	WriteLock lock(m_lock);
 
 	if (m_templateId > 0) {
-		*m_oldTemplates[m_templateId % array_size(m_oldTemplates)] = *this;
+		*m_oldTemplates[m_templateId % array_size(&BlockTemplate::m_oldTemplates)] = *this;
 	}
 
 	++m_templateId;
@@ -848,7 +848,7 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, difficulty_type
 		return true;
 	}
 
-	const BlockTemplate* old = m_oldTemplates[template_id % array_size(m_oldTemplates)];
+	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
 		return old->get_difficulties(template_id, mainchain_difficulty, sidechain_difficulty);
@@ -871,7 +871,7 @@ uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t ex
 		return get_hashing_blob_nolock(extra_nonce, blob);
 	}
 
-	const BlockTemplate* old = m_oldTemplates[template_id % array_size(m_oldTemplates)];
+	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
 		return old->get_hashing_blob(template_id, extra_nonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
@@ -972,7 +972,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
-		const BlockTemplate* old = m_oldTemplates[template_id % array_size(m_oldTemplates)];
+		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
 			return old->get_block_template_blob(template_id, nonce_offset, extra_nonce_offset);
 		}
@@ -1035,7 +1035,7 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		return;
 	}
 
-	BlockTemplate* old = m_oldTemplates[template_id % array_size(m_oldTemplates)];
+	BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
 		old->submit_sidechain_block(template_id, nonce, extra_nonce);

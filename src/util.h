@@ -95,6 +95,7 @@ FORCEINLINE void writeVarint(T value, std::vector<uint8_t>& out)
 }
 
 template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) { return N; }
+template<typename T, typename U, size_t N> FORCEINLINE constexpr size_t array_size(T(U::*)[N]) { return N; }
 
 [[noreturn]] void panic();
 

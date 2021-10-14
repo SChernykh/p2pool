@@ -231,7 +231,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 
 		job_id = client->m_perConnectionJobId++;
 
-		StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(client->m_jobs)];
+		StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(&StratumClient::m_jobs)];
 		saved_job.job_id = job_id;
 		saved_job.extra_nonce = extra_nonce;
 		saved_job.template_id = template_id;
@@ -309,7 +309,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	{
 		MutexLock lock(client->m_jobsLock);
 
-		const StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(client->m_jobs)];
+		const StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(&StratumClient::m_jobs)];
 		if (saved_job.job_id == job_id) {
 			template_id = saved_job.template_id;
 			extra_nonce = saved_job.extra_nonce;
@@ -509,7 +509,7 @@ void StratumServer::on_blobs_ready()
 
 				job_id = client->m_perConnectionJobId++;
 
-				StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(client->m_jobs)];
+				StratumClient::SavedJob& saved_job = client->m_jobs[job_id % array_size(&StratumClient::m_jobs)];
 				saved_job.job_id = job_id;
 				saved_job.extra_nonce = extra_nonce;
 				saved_job.template_id = data->m_templateId;
@@ -552,10 +552,9 @@ void StratumServer::on_blobs_ready()
 	LOGINFO(3, "sent new job to " << extra_nonce << '/' << numClientsProcessed << " clients");
 }
 
-void StratumServer::update_hashrate_data(uint64_t target, time_t timestamp)
+void StratumServer::update_hashrate_data(uint64_t hashes, time_t timestamp)
 {
-	uint64_t rem;
-	const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
+	constexpr size_t N = array_size(&StratumServer::m_hashrateData);
 
 	WriteLock lock(m_hashrateDataLock);
 
@@ -567,20 +566,20 @@ void StratumServer::update_hashrate_data(uint64_t target, time_t timestamp)
 		head.m_cumulativeHashes = m_cumulativeHashes;
 	}
 	else {
-		m_hashrateDataHead = (m_hashrateDataHead + 1) % array_size(m_hashrateData);
+		m_hashrateDataHead = (m_hashrateDataHead + 1) % N;
 		data[m_hashrateDataHead] = { timestamp, m_cumulativeHashes };
 	}
 
 	while (data[m_hashrateDataTail_15m].m_timestamp + 15 * 60 < timestamp) {
-		m_hashrateDataTail_15m = (m_hashrateDataTail_15m + 1) % array_size(m_hashrateData);
+		m_hashrateDataTail_15m = (m_hashrateDataTail_15m + 1) % N;
 	}
 
 	while (data[m_hashrateDataTail_1h].m_timestamp + 60 * 60 < timestamp) {
-		m_hashrateDataTail_1h = (m_hashrateDataTail_1h + 1) % array_size(m_hashrateData);
+		m_hashrateDataTail_1h = (m_hashrateDataTail_1h + 1) % N;
 	}
 
 	while (data[m_hashrateDataTail_24h].m_timestamp + 60 * 60 * 24 < timestamp) {
-		m_hashrateDataTail_24h = (m_hashrateDataTail_24h + 1) % array_size(m_hashrateData);
+		m_hashrateDataTail_24h = (m_hashrateDataTail_24h + 1) % N;
 	}
 }
 
@@ -597,6 +596,9 @@ void StratumServer::on_share_found(uv_work_t* req)
 	if (target >= TARGET_4_BYTES_LIMIT) {
 		target = (target >> 32) << 32;
 	}
+
+	uint64_t rem;
+	const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
 
 	if (pool->stopped()) {
 		LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
@@ -635,9 +637,6 @@ void StratumServer::on_share_found(uv_work_t* req)
 			return;
 		}
 
-		uint64_t rem;
-		const uint64_t hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 0;
-
 		const uint64_t n = server->m_cumulativeHashes + hashes;
 		const double diff = sidechain_difficulty.to_double();
 		const double effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
@@ -655,7 +654,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 	if (LIKELY(value < target)) {
 		const time_t timestamp = time(nullptr);
-		server->update_hashrate_data(target, timestamp);
+		server->update_hashrate_data(hashes, timestamp);
 		server->api_update_local_stats(timestamp);
 		share->m_result = SubmittedShare::Result::OK;
 	}
