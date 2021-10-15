@@ -169,6 +169,7 @@ private:
 		raw_ip m_addr;
 		int m_port;
 		uint32_t m_numFailedConnections;
+		time_t m_lastSeen;
 	};
 
 	std::vector<Peer> m_peerList;
