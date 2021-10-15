@@ -268,13 +268,17 @@ void P2PServer::update_peer_list()
 				// Send peer list requests at random intervals (60-120 seconds)
 				client->m_nextPeerListRequest = cur_time + 60 + (get_random64() % 61);
 
-				send(client,
+				const bool result = send(client,
 					[](void* buf)
 					{
 						LOGINFO(5, "sending PEER_LIST_REQUEST");
 						*reinterpret_cast<uint8_t*>(buf) = static_cast<uint8_t>(MessageId::PEER_LIST_REQUEST);
 						return 1;
 					});
+
+				if (result) {
+					++client->m_peerListPendingRequests;
+				}
 			}
 		}
 	}
@@ -826,6 +830,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
 	, m_nextPeerListRequest(0)
+	, m_peerListPendingRequests(0)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
@@ -850,6 +855,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
 	m_nextPeerListRequest = 0;
+	m_peerListPendingRequests = 0;
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
@@ -911,6 +917,13 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		switch (id)
 		{
 		case MessageId::HANDSHAKE_CHALLENGE:
+			if (m_handshakeComplete) {
+				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_CHALLENGE");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent HANDSHAKE_CHALLENGE");
 
 			if (bytes_left >= 1 + CHALLENGE_SIZE + sizeof(uint64_t)) {
@@ -925,6 +938,13 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::HANDSHAKE_SOLUTION:
+			if (m_handshakeComplete) {
+				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_SOLUTION");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent HANDSHAKE_SOLUTION");
 
 			if (bytes_left >= 1 + HASH_SIZE + CHALLENGE_SIZE) {
@@ -1009,6 +1029,13 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::PEER_LIST_RESPONSE:
+			if (m_peerListPendingRequests <= 0) {
+				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected PEER_LIST_RESPONSE");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_RESPONSE");
 
 			if (bytes_left >= 2) {
@@ -1022,6 +1049,8 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 				if (bytes_left >= 2u + num_peers * 19) {
 					bytes_read = 2u + num_peers * 19;
+
+					--m_peerListPendingRequests;
 					if (!on_peer_list_response(buf + 1)) {
 						ban(DEFAULT_BAN_TIME);
 						server->remove_peer_from_list(this);

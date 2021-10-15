@@ -110,6 +110,7 @@ public:
 		bool m_handshakeInvalid;
 		int m_listenPort;
 		time_t m_nextPeerListRequest;
+		int m_peerListPendingRequests;
 		time_t m_lastAlive;
 		time_t m_lastBroadcastTimestamp;
 		time_t m_lastBlockrequestTimestamp;
