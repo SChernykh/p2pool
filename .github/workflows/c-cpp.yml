@@ -96,7 +96,13 @@ jobs:
 
   build-windows-msbuild:
 
-    runs-on: windows-latest
+    runs-on: windows-${{ matrix.config.os }}
+
+    strategy:
+      matrix:
+        config:
+          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\"}
+          - {vs: Visual Studio 17 2022, os: 2022, msbuild: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\Msbuild\\Current\\Bin\\amd64\\"}
 
     steps:
     - name: Checkout repository
@@ -107,23 +113,20 @@ jobs:
     - name: Setup cmake
       uses: lukka/get-cmake@latest
 
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.3
-
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 16 2019"
-        msbuild /m /p:Configuration=Release p2pool.vcxproj
+        cmake .. -G "${{ matrix.config.vs }}"
+        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Build tests
       run: |
         cd tests
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 16 2019"
-        msbuild /m /p:Configuration=Release p2pool_tests.vcxproj
+        cmake .. -G "${{ matrix.config.vs }}"
+        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Release p2pool_tests.vcxproj
 
     - name: Run tests
       run: |
@@ -133,7 +136,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v2
       with:
-        name: p2pool-msbuild.exe
+        name: p2pool-msbuild-${{ matrix.config.os }}.exe
         path: build/Release/p2pool.exe
 
   build-macos:
