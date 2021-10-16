@@ -355,6 +355,12 @@ bool SideChain::block_seen(const PoolBlock& block)
 	return !m_seenBlocks.insert(block.m_sidechainId).second;
 }
 
+void SideChain::unsee_block(const PoolBlock& block)
+{
+	MutexLock lock(m_sidechainLock);
+	m_seenBlocks.erase(block.m_sidechainId);
+}
+
 extern const char* BLOCK_FOUND;
 
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
@@ -407,13 +413,15 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	hash seed;
 	if (!m_pool->get_seed(block.m_txinGenHeight, seed)) {
 		LOGWARN(3, "add_external_block: couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
+		unsee_block(block);
 		return false;
 	}
 
 	hash pow_hash;
 	if (!block.get_pow_hash(m_pool->hasher(), seed, pow_hash)) {
-		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
-		return false;
+		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight << ". Ignoring it.");
+		unsee_block(block);
+		return true;
 	}
 
 	// Check if it has the correct parent and difficulty to go right to monerod for checking

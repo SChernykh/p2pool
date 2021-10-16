@@ -47,6 +47,7 @@ public:
 	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares);
 
 	bool block_seen(const PoolBlock& block);
+	void unsee_block(const PoolBlock& block);
 	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
 	void add_block(const PoolBlock& block);
 	void get_missing_blocks(std::vector<hash>& missing_blocks);
