@@ -73,6 +73,10 @@ Params::Params(int argc, char* argv[])
 		if (strcmp(argv[i], "--stratum-api") == 0) {
 			m_localStats = true;
 		}
+
+		if (strcmp(argv[i], "--no-cache") == 0) {
+			m_blockCache = false;
+		}
 	}
 
 	if (m_stratumAddresses.empty()) {

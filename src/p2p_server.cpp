@@ -42,7 +42,7 @@ namespace p2pool {
 P2PServer::P2PServer(p2pool* pool)
 	: TCPServer(P2PClient::allocate)
 	, m_pool(pool)
-	, m_cache(new BlockCache())
+	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
 	, m_cacheLoaded(false)
 	, m_initialPeerList(pool->params().m_p2pPeerList)
 	, m_rd{}
