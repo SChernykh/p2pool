@@ -640,13 +640,14 @@ void P2PServer::on_broadcast()
 				uint8_t* p = p0;
 
 				bool send_pruned = true;
-				{
-					ReadLock lock(client->m_broadcastedHashesLock);
-					for (const hash& id : data->ancestor_hashes) {
-						if (client->m_broadcastedHashes.find(id) == client->m_broadcastedHashes.end()) {
-							send_pruned = false;
-							break;
-						}
+
+				const hash* a = client->m_broadcastedHashes;
+				const hash* b = client->m_broadcastedHashes + array_size(&P2PClient::m_broadcastedHashes);
+
+				for (const hash& id : data->ancestor_hashes) {
+					if (std::find(a, b, id) == b) {
+						send_pruned = false;
+						break;
 					}
 				}
 
@@ -834,13 +835,12 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
+	, m_broadcastedHashes{}
 {
-	uv_rwlock_init_checked(&m_broadcastedHashesLock);
 }
 
 P2PServer::P2PClient::~P2PClient()
 {
-	uv_rwlock_destroy(&m_broadcastedHashesLock);
 }
 
 void P2PServer::P2PClient::reset()
@@ -860,8 +860,10 @@ void P2PServer::P2PClient::reset()
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
 
-	WriteLock lock(m_broadcastedHashesLock);
-	m_broadcastedHashes.clear();
+	for (hash& h : m_broadcastedHashes) {
+		h = {};
+	}
+	m_broadcastedHashesIndex = 0;
 }
 
 bool P2PServer::P2PClient::on_connect()
@@ -1487,10 +1489,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 		return false;
 	}
 
-	{
-		WriteLock lock2(m_broadcastedHashesLock);
-		m_broadcastedHashes.insert(server->m_block->m_sidechainId);
-	}
+	m_broadcastedHashes[m_broadcastedHashesIndex.fetch_add(1) % array_size(&P2PClient::m_broadcastedHashes)] = server->m_block->m_sidechainId;
 
 	const MinerData& miner_data = server->m_pool->miner_data();
 

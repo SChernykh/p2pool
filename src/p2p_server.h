@@ -115,8 +115,8 @@ public:
 		time_t m_lastBroadcastTimestamp;
 		time_t m_lastBlockrequestTimestamp;
 
-		uv_rwlock_t m_broadcastedHashesLock;
-		std::set<hash> m_broadcastedHashes;
+		hash m_broadcastedHashes[8];
+		std::atomic<uint32_t> m_broadcastedHashesIndex{ 0 };
 	};
 
 	void broadcast(const PoolBlock& block);
