@@ -180,7 +180,7 @@ bool StratumServer::get_custom_user(const char* s, std::string& user)
 {
 	user.clear();
 	// Find first of '+' or '.', drop non-printable characters
-	while (s) {
+	while (s && (user.length() < 64)) {
 		const char c = *s;
 		if (!c) {
 			break;
@@ -360,7 +360,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (mainchain_diff.check_pow(resultHash)) {
-			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (!client->m_customUser.empty() ? " user " + client->m_customUser : "") << " found a mainchain block, submitting it");
+			const std::string& s = client->m_customUser;
+			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (!s.empty() ? " user " : "") << s << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
 			block.update_tx_keys();
 		}
@@ -671,7 +672,8 @@ void StratumServer::on_share_found(uv_work_t* req)
 		server->m_cumulativeFoundSharesDiff += diff;
 		++server->m_totalFoundShares;
 
-		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", client " << static_cast<char*>(client->m_addrString) << (!client->m_customUser.empty() ? " user " + client->m_customUser : "") << ", effort " << effort << '%');
+		const std::string& s = client->m_customUser;
+		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", client " << static_cast<char*>(client->m_addrString) << (!s.empty() ? " user " : "") << s << ", effort " << effort << '%');
 		pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
 	}
 
