@@ -65,6 +65,7 @@ public:
 
 		uint32_t m_perConnectionJobId;
 		difficulty_type m_customDiff;
+		std::string m_customUser;
 	};
 
 	bool on_login(StratumClient* client, uint32_t id, const char* login);
@@ -77,6 +78,7 @@ private:
 	void print_stratum_status() const;
 
 	static bool get_custom_diff(const char* s, difficulty_type& diff);
+	static bool get_custom_user(const char* s, std::string& user);
 
 	static void on_share_found(uv_work_t* req);
 	static void on_after_share_found(uv_work_t* req, int status);
