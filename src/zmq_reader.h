@@ -28,7 +28,7 @@ public:
 	~ZMQReader();
 
 private:
-	static void run_wrapper(void* arg) { reinterpret_cast<ZMQReader*>(arg)->run(); }
+	static void run_wrapper(void* arg);
 	void run();
 	bool connect(const char* address, uint32_t id);
 

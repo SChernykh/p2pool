@@ -76,20 +76,22 @@ ZMQReader::~ZMQReader()
 	}
 }
 
+void ZMQReader::run_wrapper(void* arg)
+{
+	reinterpret_cast<ZMQReader*>(arg)->run();
+	LOGINFO(1, "worker thread stopped");
+}
+
 void ZMQReader::run()
 {
 	try {
 		char addr[32];
 
 		snprintf(addr, sizeof(addr), "tcp://%s:%u", m_address, m_zmqPort);
-		if (!connect(addr, m_zmqPort)) {
-			throw zmq::error_t();
-		}
+		while (!connect(addr, m_zmqPort)) { if (m_finished.load()) return; }
 
 		snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", m_publisherPort);
-		if (!connect(addr, m_publisherPort)) {
-			throw zmq::error_t();
-		}
+		while (!connect(addr, m_publisherPort)) { if (m_finished.load()) return; }
 
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-chain_main");
 		m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
@@ -122,7 +124,6 @@ void ZMQReader::run()
 		LOGERR(1, "exception " << e.what() << ", aborting");
 		panic();
 	}
-	LOGINFO(1, "worker thread stopped");
 }
 
 bool ZMQReader::connect(const char* address, uint32_t id)
