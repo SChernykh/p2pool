@@ -308,7 +308,6 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 	return connect_to_peer_nolock(client, is_v6, reinterpret_cast<sockaddr*>(&addr));
 }
 
-
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect_failed(bool, const raw_ip&, int)
 {

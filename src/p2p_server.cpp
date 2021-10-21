@@ -225,8 +225,8 @@ void P2PServer::update_peer_connections()
 		peer_list = m_peerList;
 	}
 
-	// Try to have at least 8 outgoing connections
-	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < 8) && !peer_list.empty();) {
+	// Try to have at least 10 outgoing connections
+	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < 10) && !peer_list.empty();) {
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
@@ -1041,7 +1041,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_RESPONSE");
 
 			if (bytes_left >= 2) {
-				const uint8_t num_peers = buf[1];
+				const uint32_t num_peers = buf[1];
 				if (num_peers > PEER_LIST_RESPONSE_MAX_PEERS) {
 					LOGWARN(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too long peer list (" << num_peers << ')');
 					ban(DEFAULT_BAN_TIME);
@@ -1049,8 +1049,8 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 					return false;
 				}
 
-				if (bytes_left >= 2u + num_peers * 19) {
-					bytes_read = 2u + num_peers * 19;
+				if (bytes_left >= 2u + num_peers * 19u) {
+					bytes_read = 2u + num_peers * 19u;
 
 					--m_peerListPendingRequests;
 					if (!on_peer_list_response(buf + 1)) {
@@ -1608,6 +1608,13 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 		raw_ip ip;
 		memcpy(ip.data, buf, sizeof(ip.data));
 		buf += sizeof(ip.data);
+
+		// Fill in default bytes for IPv4 addresses
+		if (!is_v6) {
+			memset(ip.data, 0, 10);
+			ip.data[10] = 0xFF;
+			ip.data[11] = 0xFF;
+		}
 
 		int port = 0;
 		memcpy(&port, buf, 2);
