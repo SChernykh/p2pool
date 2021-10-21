@@ -314,7 +314,7 @@ void P2PServer::save_peer_list_async()
 		});
 
 	if (err) {
-		LOGERR(1, "update_peer_list: uv_queue_work failed, error " << uv_err_name(err));
+		LOGERR(1, "save_peer_list_async: uv_queue_work failed, error " << uv_err_name(err));
 		delete work;
 	}
 }
