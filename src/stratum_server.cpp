@@ -394,12 +394,21 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_resultHash = resultHash;
 		share->m_sidechainDifficulty = sidechain_diff;
 
+		// If this share is below sidechain difficulty, process it in this thread because it'll be quick
+		if (!share->m_sidechainDifficulty.check_pow(share->m_resultHash)) {
+			on_share_found(&share->m_req);
+			on_after_share_found(&share->m_req, 0);
+			return true;
+		}
+
+		// Else switch to a worker thread to check PoW which can take a long time
 		const int err = uv_queue_work(&m_loop, &share->m_req, on_share_found, on_after_share_found);
 		if (err) {
 			LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
-			MutexLock lock(m_submittedSharesPoolLock);
-			m_submittedSharesPool.push_back(share);
-			return false;
+
+			// If uv_queue_work failed, process this share here anyway
+			on_share_found(&share->m_req);
+			on_after_share_found(&share->m_req, 0);
 		}
 
 		return true;
