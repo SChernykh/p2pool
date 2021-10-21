@@ -122,7 +122,7 @@ FORCEINLINE static void remove_allocation(void* p)
 
 FORCEINLINE static void* allocate_noexcept(size_t n) noexcept
 {
-	void* p = malloc(n + sizeof(TrackedAllocation));
+	void* p = malloc(n);
 	if (p) {
 		add_alocation(p, n);
 	}
@@ -144,12 +144,33 @@ FORCEINLINE static void deallocate(void* p)
 	free(p);
 }
 
+static void* uv_realloc_hook(void* ptr, size_t size)
+{
+	remove_allocation(ptr);
+
+	void* p = realloc(ptr, size);
+	if (p) {
+		add_alocation(p, size);
+	}
+	return p;
+}
+
+static void* uv_calloc_hook(size_t count, size_t size)
+{
+	void* p = calloc(count, size);
+	if (p) {
+		add_alocation(p, size);
+	}
+	return p;
+}
+
 } // p2pool
 
 void memory_tracking_start()
 {
 	using namespace p2pool;
 
+	uv_replace_allocator(allocate_noexcept, uv_realloc_hook, uv_calloc_hook, deallocate);
 	uv_mutex_init_checked(&allocation_lock);
 	track_memory = true;
 }
