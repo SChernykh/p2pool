@@ -127,7 +127,7 @@ void p2pool_api::dump_to_file_async_internal(const Category& category, const cha
 
 void p2pool_api::dump_to_file()
 {
-	std::unordered_map<std::string, std::vector<char>> data;
+	unordered_map<std::string, std::vector<char>> data;
 	{
 		MutexLock lock(m_dumpDataLock);
 		data = std::move(m_dumpData);

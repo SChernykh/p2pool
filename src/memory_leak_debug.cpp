@@ -120,7 +120,7 @@ FORCEINLINE static void remove_allocation(void* p)
 	__debugbreak();
 }
 
-FORCEINLINE static void* allocate_noexcept(size_t n) noexcept
+void* malloc_hook(size_t n) noexcept
 {
 	void* p = malloc(n);
 	if (p) {
@@ -131,20 +131,20 @@ FORCEINLINE static void* allocate_noexcept(size_t n) noexcept
 
 FORCEINLINE static void* allocate(size_t n)
 {
-	void* p = allocate_noexcept(n);
+	void* p = malloc_hook(n);
 	if (!p) {
 		throw std::bad_alloc();
 	}
 	return p;
 }
 
-FORCEINLINE static void deallocate(void* p)
+void free_hook(void* p) noexcept
 {
 	remove_allocation(p);
 	free(p);
 }
 
-static void* uv_realloc_hook(void* ptr, size_t size)
+void* realloc_hook(void* ptr, size_t size) noexcept
 {
 	remove_allocation(ptr);
 
@@ -155,7 +155,7 @@ static void* uv_realloc_hook(void* ptr, size_t size)
 	return p;
 }
 
-static void* uv_calloc_hook(size_t count, size_t size)
+void* calloc_hook(size_t count, size_t size) noexcept
 {
 	void* p = calloc(count, size);
 	if (p) {
@@ -170,7 +170,7 @@ void memory_tracking_start()
 {
 	using namespace p2pool;
 
-	uv_replace_allocator(allocate_noexcept, uv_realloc_hook, uv_calloc_hook, deallocate);
+	uv_replace_allocator(malloc_hook, realloc_hook, calloc_hook, free_hook);
 	uv_mutex_init_checked(&allocation_lock);
 	track_memory = true;
 }
@@ -228,14 +228,23 @@ void memory_tracking_stop()
 
 NOINLINE void* operator new(size_t n) { return p2pool::allocate(n); }
 NOINLINE void* operator new[](size_t n) { return p2pool::allocate(n); }
-NOINLINE void* operator new(size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate_noexcept(n); }
-NOINLINE void* operator new[](size_t n, const std::nothrow_t&) noexcept { return p2pool::allocate_noexcept(n); }
-NOINLINE void operator delete(void* p) noexcept { p2pool::deallocate(p); }
-NOINLINE void operator delete[](void* p) noexcept { p2pool::deallocate(p); }
-NOINLINE void operator delete(void* p, size_t) noexcept { p2pool::deallocate(p); }
-NOINLINE void operator delete[](void* p, size_t) noexcept { p2pool::deallocate(p); }
+NOINLINE void* operator new(size_t n, const std::nothrow_t&) noexcept { return p2pool::malloc_hook(n); }
+NOINLINE void* operator new[](size_t n, const std::nothrow_t&) noexcept { return p2pool::malloc_hook(n); }
+NOINLINE void operator delete(void* p) noexcept { p2pool::free_hook(p); }
+NOINLINE void operator delete[](void* p) noexcept { p2pool::free_hook(p); }
+NOINLINE void operator delete(void* p, size_t) noexcept { p2pool::free_hook(p); }
+NOINLINE void operator delete[](void* p, size_t) noexcept { p2pool::free_hook(p); }
 
 #else
 void memory_tracking_start() {}
 void memory_tracking_stop() {}
+
+namespace p2pool {
+
+void* malloc_hook(size_t n) noexcept { return malloc(n); }
+void* realloc_hook(void* ptr, size_t size) noexcept { return realloc(ptr, size); }
+void* calloc_hook(size_t count, size_t size) noexcept { return calloc(count, size); }
+void free_hook(void* p) noexcept { free(p); }
+
+}
 #endif

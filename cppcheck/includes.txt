@@ -7,3 +7,4 @@
 ../external/src/llhttp/
 ../external/src/RandomX/src/
 ../external/src/rapidjson/include
+../external/src/robin-hood-hashing/src/include

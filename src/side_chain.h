@@ -19,8 +19,6 @@
 
 #include "uv_util.h"
 #include <map>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace p2pool {
 
@@ -98,9 +96,9 @@ private:
 	mutable uv_mutex_t m_sidechainLock;
 	PoolBlock* m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
-	std::unordered_map<hash, PoolBlock*> m_blocksById;
-	std::unordered_set<hash> m_seenBlocks;
-	std::unordered_map<hash, time_t> m_seenWallets;
+	unordered_map<hash, PoolBlock*> m_blocksById;
+	unordered_set<hash> m_seenBlocks;
+	unordered_map<hash, time_t> m_seenWallets;
 
 	std::vector<DifficultyData> m_difficultyData;
 

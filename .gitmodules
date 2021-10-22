@@ -19,3 +19,6 @@
 [submodule "external/src/libzmq"]
 	path = external/src/libzmq
 	url = https://github.com/SChernykh/libzmq
+[submodule "external/src/robin-hood-hashing"]
+	path = external/src/robin-hood-hashing
+	url = https://github.com/SChernykh/robin-hood-hashing

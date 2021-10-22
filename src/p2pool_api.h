@@ -18,7 +18,6 @@
 #pragma once
 
 #include "uv_util.h"
-#include <unordered_map>
 
 namespace p2pool {
 
@@ -84,7 +83,7 @@ private:
 	std::string m_localPath;
 
 	uv_mutex_t m_dumpDataLock;
-	std::unordered_map<std::string, std::vector<char>> m_dumpData;
+	unordered_map<std::string, std::vector<char>> m_dumpData;
 
 	uv_async_t m_dumpToFileAsync;
 };

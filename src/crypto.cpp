@@ -20,7 +20,6 @@
 #include "keccak.h"
 #include "uv_util.h"
 #include <random>
-#include <unordered_map>
 
 extern "C" {
 #include "crypto-ops.h"
@@ -237,8 +236,8 @@ public:
 
 private:
 	uv_mutex_t m;
-	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2>, hash> derivations;
-	std::unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
+	unordered_map<std::array<uint8_t, HASH_SIZE * 2>, hash> derivations;
+	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
 };
 
 static Cache* cache = nullptr;

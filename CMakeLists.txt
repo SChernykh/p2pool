@@ -82,6 +82,7 @@ include_directories(external/src/libzmq/include)
 include_directories(external/src/llhttp)
 include_directories(external/src/RandomX/src)
 include_directories(external/src/rapidjson/include)
+include_directories(external/src/robin-hood-hashing/src/include)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)

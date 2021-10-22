@@ -19,7 +19,6 @@
 
 #include "uv_util.h"
 #include <map>
-#include <unordered_map>
 
 namespace p2pool {
 
@@ -104,7 +103,7 @@ private:
 
 	mutable uv_rwlock_t m_mainchainLock;
 	std::map<uint64_t, ChainMain> m_mainchainByHeight;
-	std::unordered_map<hash, ChainMain> m_mainchainByHash;
+	unordered_map<hash, ChainMain> m_mainchainByHash;
 
 	enum { TIMESTAMP_WINDOW = 60 };
 	bool get_timestamps(uint64_t (&timestamps)[TIMESTAMP_WINDOW]) const;

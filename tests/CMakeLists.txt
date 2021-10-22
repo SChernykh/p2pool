@@ -84,6 +84,7 @@ set(SOURCES
 	../src/json_rpc_request.cpp
 	../src/keccak.cpp
 	../src/log.cpp
+	../src/memory_leak_debug.cpp
 	../src/mempool.cpp
 	../src/p2p_server.cpp
 	../src/p2pool.cpp
@@ -107,6 +108,7 @@ include_directories(../external/src/libzmq/include)
 include_directories(../external/src/llhttp)
 include_directories(../external/src/RandomX/src)
 include_directories(../external/src/rapidjson/include)
+include_directories(../external/src/robin-hood-hashing/src/include)
 include_directories(src)
 include_directories(googletest/googletest/include)
 

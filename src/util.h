@@ -17,6 +17,21 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 5027)
+#endif
+
+#define ROBIN_HOOD_MALLOC(size) p2pool::malloc_hook(size)
+#define ROBIN_HOOD_CALLOC(count, size) p2pool::calloc_hook((count), (size))
+#define ROBIN_HOOD_FREE(ptr) p2pool::free_hook(ptr)
+
+#include "robin_hood.h"
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 namespace p2pool {
 
 extern const char* VERSION;
@@ -122,20 +137,22 @@ extern thread_local bool is_main_thread;
 
 bool resolve_host(std::string& host, bool& is_v6);
 
+template <typename Key, typename T>
+using unordered_map = robin_hood::detail::Table<false, 80, Key, T, robin_hood::hash<Key>, std::equal_to<Key>>;
+
+template <typename Key>
+using unordered_set = robin_hood::detail::Table<false, 80, Key, void, robin_hood::hash<Key>, std::equal_to<Key>>;
+
 } // namespace p2pool
 
-namespace std {
+namespace robin_hood {
 
 template<>
 struct hash<p2pool::hash>
 {
 	FORCEINLINE size_t operator()(const p2pool::hash& value) const noexcept
 	{
-		uint64_t result = 0xcbf29ce484222325ull;
-		for (size_t i = 0; i < p2pool::HASH_SIZE; ++i) {
-			result = (result ^ value.h[i]) * 0x100000001b3ull;
-		}
-		return static_cast<size_t>(result);
+		return hash_bytes(value.h, p2pool::HASH_SIZE);
 	}
 };
 
@@ -144,12 +161,8 @@ struct hash<std::array<uint8_t, N>>
 {
 	FORCEINLINE size_t operator()(const std::array<uint8_t, N>& value) const noexcept
 	{
-		uint64_t result = 0xcbf29ce484222325ull;
-		for (size_t i = 0; i < N; ++i) {
-			result = (result ^ value[i]) * 0x100000001b3ull;
-		}
-		return static_cast<size_t>(result);
+		return hash_bytes(value.data(), N);
 	}
 };
 
-} // namespace std
+} // namespace robin_hood

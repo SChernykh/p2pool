@@ -19,7 +19,6 @@
 
 #include "tcp_server.h"
 #include <random>
-#include <unordered_map>
 
 namespace p2pool {
 
@@ -132,7 +131,7 @@ private:
 	std::string m_initialPeerList;
 
 	uv_rwlock_t m_cachedBlocksLock;
-	std::unordered_map<hash, PoolBlock*> m_cachedBlocks;
+	unordered_map<hash, PoolBlock*> m_cachedBlocks;
 
 private:
 	static void on_timer(uv_timer_t* timer) { reinterpret_cast<P2PServer*>(timer->data)->on_timer(); }
