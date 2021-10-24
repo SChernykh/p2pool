@@ -69,7 +69,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_exit;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_exit;
 
 static cmd cmds[] = {
 	{ STRCONST("help"), "", "display list of commands", do_help },
@@ -77,6 +77,7 @@ static cmd cmds[] = {
 	{ STRCONST("loglevel"), "<level>", "set log level", do_loglevel },
 	{ STRCONST("addpeers"), "<peeraddr>", "add peer", do_addpeers },
 	{ STRCONST("droppeers"), "", "disconnect all peers", do_droppeers },
+	{ STRCONST("peers"), "", "show all peers", do_showpeers },
 	{ STRCONST("exit"), "", "terminate p2pool", do_exit },
 	{ STRCNULL, NULL, NULL, NULL }
 };
@@ -125,6 +126,14 @@ static int do_droppeers(p2pool *m_pool, const char * /* args */)
 {
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->drop_connections();
+	}
+	return 0;
+}
+
+static int do_showpeers(p2pool* m_pool, const char* /* args */)
+{
+	if (m_pool->p2p_server()) {
+		m_pool->p2p_server()->show_peers();
 	}
 	return 0;
 }

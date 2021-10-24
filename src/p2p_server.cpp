@@ -278,6 +278,7 @@ void P2PServer::update_peer_list()
 					});
 
 				if (result) {
+					client->m_lastPeerListRequestTime = std::chrono::system_clock::now();
 					++client->m_peerListPendingRequests;
 				}
 			}
@@ -693,6 +694,17 @@ void P2PServer::print_status()
 	);
 }
 
+void P2PServer::show_peers()
+{
+	MutexLock lock(m_clientsListLock);
+
+	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if (client->m_listenPort >= 0) {
+			LOGINFO(0, (client->m_isIncoming ? "I " : "O ") << client->m_pingTime << " ms\t" << static_cast<char*>(client->m_addrString));
+		}
+	}
+}
+
 void P2PServer::on_timer()
 {
 	++m_timerCounter;
@@ -832,7 +844,9 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
 	, m_nextPeerListRequest(0)
+	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
+	, m_pingTime(0)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
@@ -856,7 +870,9 @@ void P2PServer::P2PClient::reset()
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
 	m_nextPeerListRequest = 0;
+	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
+	m_pingTime = 0;
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
@@ -1052,6 +1068,9 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 				if (bytes_left >= 2u + num_peers * 19u) {
 					bytes_read = 2u + num_peers * 19u;
+
+					using namespace std::chrono;
+					m_pingTime = duration_cast<milliseconds>(system_clock::now() - m_lastPeerListRequestTime).count();
 
 					--m_peerListPendingRequests;
 					if (!on_peer_list_response(buf + 1)) {

@@ -108,8 +108,12 @@ public:
 		bool m_handshakeComplete;
 		bool m_handshakeInvalid;
 		int m_listenPort;
+
 		time_t m_nextPeerListRequest;
+		std::chrono::system_clock::time_point m_lastPeerListRequestTime;
 		int m_peerListPendingRequests;
+		int64_t m_pingTime;
+
 		time_t m_lastAlive;
 		time_t m_lastBroadcastTimestamp;
 		time_t m_lastBlockrequestTimestamp;
@@ -123,6 +127,7 @@ public:
 	uint64_t get_peerId() const { return m_peerId; }
 
 	void print_status() override;
+	void show_peers();
 
 private:
 	p2pool* m_pool;
