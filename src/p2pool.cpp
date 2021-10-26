@@ -49,6 +49,8 @@ p2pool::p2pool(int argc, char* argv[])
 	, m_params(new Params(argc, argv))
 	, m_updateSeed(true)
 	, m_submitBlockData{}
+	, m_zmqLastActive(0)
+	, m_startTime(time(nullptr))
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
