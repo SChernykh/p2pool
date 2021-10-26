@@ -35,6 +35,7 @@ static volatile bool stopped = false;
 static volatile bool worker_started = false;
 
 #ifdef _WIN32
+static const HANDLE hStdIn  = GetStdHandle(STD_INPUT_HANDLE);
 static const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 static const HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
 #endif
@@ -69,6 +70,9 @@ public:
 
 #ifdef _WIN32
 		DWORD dwConsoleMode;
+		if (GetConsoleMode(hStdIn, &dwConsoleMode)) {
+			SetConsoleMode(hStdIn, dwConsoleMode & ~ENABLE_QUICK_EDIT_MODE);
+		}
 		if (GetConsoleMode(hStdOut, &dwConsoleMode)) {
 			SetConsoleMode(hStdOut, dwConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 		}
