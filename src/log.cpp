@@ -28,6 +28,7 @@ namespace p2pool {
 namespace log {
 
 int GLOBAL_LOG_LEVEL = 3;
+bool CONSOLE_COLORS = true;
 
 #ifndef P2POOL_LOG_DISABLE
 
@@ -159,6 +160,10 @@ private:
 						p += 3;
 						size -= 3;
 
+						if (!CONSOLE_COLORS) {
+							strip_colors(p, size);
+						}
+
 #ifdef _WIN32
 						DWORD k;
 						WriteConsole((severity == 1) ? hStdOut : hStdErr, p, size, &k, nullptr);
@@ -176,7 +181,9 @@ private:
 						}
 
 						if (m_logFile.is_open()) {
-							strip_colors(p, size);
+							if (CONSOLE_COLORS) {
+								strip_colors(p, size);
+							}
 
 							if (severity == 1) {
 								m_logFile.write("NOTICE  ", 8);
