@@ -157,9 +157,9 @@ private:
 
 	struct SubmitBlockData
 	{
-		uint32_t template_id;
-		uint32_t nonce;
-		uint32_t extra_nonce;
+		uint32_t template_id = 0;
+		uint32_t nonce = 0;
+		uint32_t extra_nonce = 0;
 		std::vector<uint8_t> blob;
 	};
 

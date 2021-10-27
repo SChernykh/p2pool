@@ -44,8 +44,8 @@ private:
 
 	struct ThreadSafeVM
 	{
-		uv_mutex_t mutex;
-		randomx_vm* vm;
+		uv_mutex_t mutex{};
+		randomx_vm* vm = nullptr;
 	};
 
 	p2pool* m_pool;
@@ -62,7 +62,7 @@ private:
 	// 1: light VM for the previous seed
 	// 2: full dataset VM for the current seed
 	enum { FULL_DATASET_VM = 2 };
-	ThreadSafeVM m_vm[3];
+	ThreadSafeVM m_vm[3]{};
 
 	hash m_seed[2];
 	uint32_t m_index;
