@@ -533,6 +533,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 			if (parse_block_headers_range(data, size) == BLOCK_HEADERS_REQUIRED) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
+					m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
 					api_update_network_stats();
@@ -1222,11 +1223,11 @@ int p2pool::run()
 	}
 
 	try {
-		ZMQReader z(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 		get_info();
 		load_found_blocks();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
+		delete m_ZMQReader;
 	}
 	catch (const std::exception& e) {
 		const char* s = e.what();

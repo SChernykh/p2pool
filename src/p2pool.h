@@ -31,6 +31,7 @@ class StratumServer;
 class P2PServer;
 class ConsoleCommands;
 class p2pool_api;
+class ZMQReader;
 
 class p2pool : public MinerCallbackHandler
 {
@@ -172,6 +173,8 @@ private:
 
 	time_t m_zmqLastActive;
 	time_t m_startTime;
+
+	ZMQReader* m_ZMQReader = nullptr;
 };
 
 } // namespace p2pool
