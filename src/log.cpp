@@ -160,7 +160,10 @@ private:
 						p += 3;
 						size -= 3;
 
-						if (!CONSOLE_COLORS) {
+						// Read CONSOLE_COLORS only once because its value can be changed in another thread
+						const bool c = CONSOLE_COLORS;
+
+						if (!c) {
 							strip_colors(p, size);
 						}
 
@@ -181,7 +184,7 @@ private:
 						}
 
 						if (m_logFile.is_open()) {
-							if (CONSOLE_COLORS) {
+							if (c) {
 								strip_colors(p, size);
 							}
 
