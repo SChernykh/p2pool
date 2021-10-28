@@ -688,18 +688,22 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 	const auto& result = doc["result"];
 
 	struct {
-		bool busy_syncing, mainnet, testnet, stagenet;
+		bool busy_syncing, synchronized, mainnet, testnet, stagenet;
 	} info;
 
-	if (!PARSE(result, info, busy_syncing) || !PARSE(result, info, mainnet) || !PARSE(result, info, testnet) || !PARSE(result, info, stagenet)) {
+	if (!PARSE(result, info, busy_syncing) ||
+		!PARSE(result, info, synchronized) ||
+		!PARSE(result, info, mainnet) ||
+		!PARSE(result, info, testnet) ||
+		!PARSE(result, info, stagenet)) {
 		LOGWARN(1, "get_info RPC response is invalid, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		get_info();
 		return;
 	}
 
-	if (info.busy_syncing) {
-		LOGINFO(1, "monerod is busy syncing, trying again in 1 second");
+	if (info.busy_syncing || !info.synchronized) {
+		LOGINFO(1, "monerod is " << (info.busy_syncing ? "busy syncing" : "not synchronized") << ", trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		get_info();
 		return;
