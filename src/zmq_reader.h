@@ -30,7 +30,7 @@ public:
 private:
 	static void run_wrapper(void* arg);
 	void run();
-	bool connect(const char* address, uint32_t id);
+	bool connect(const char* address);
 
 	void parse(char* data, size_t size);
 
