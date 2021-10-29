@@ -370,7 +370,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		return false;
 	}
 
-	difficulty_type min_accepted_diff;
+	bool too_low_diff = (block.m_difficulty < m_curDifficulty);
 	{
 		MutexLock lock(m_sidechainLock);
 		if (m_blocksById.find(block.m_sidechainId) != m_blocksById.end()) {
@@ -378,23 +378,25 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			return true;
 		}
 
-		// Find the minimum difficulty in the current PPLNS window
-		min_accepted_diff = m_curDifficulty;
-		for (PoolBlock* tmp = m_chainTip; tmp && (tmp->m_sidechainHeight + m_chainWindowSize > m_chainTip->m_sidechainHeight); tmp = get_parent(tmp)) {
-			if (tmp->m_difficulty < min_accepted_diff) {
-				min_accepted_diff = tmp->m_difficulty;
+		// This is mainly an anti-spam measure, not an actual verification step
+		if (too_low_diff) {
+			// Reduce required diff by 50% (by doubling this block's diff) to account for alternative chains
+			difficulty_type diff2 = block.m_difficulty;
+			diff2 += block.m_difficulty;
+
+			for (PoolBlock* tmp = m_chainTip; tmp && (tmp->m_sidechainHeight + m_chainWindowSize > m_chainTip->m_sidechainHeight); tmp = get_parent(tmp)) {
+				if (diff2 >= tmp->m_difficulty) {
+					too_low_diff = false;
+					break;
+				}
 			}
 		}
 	}
 
 	LOGINFO(4, "add_external_block: height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId << ", mainchain height = " << block.m_txinGenHeight);
 
-	// Reduce it by 50% to account for alternative chains. This is mainly an anti-spam measure, not an actual verification step
-	min_accepted_diff.lo = (min_accepted_diff.lo >> 1) | (min_accepted_diff.hi << 63);
-	min_accepted_diff.hi >>= 1;
-
-	if (block.m_difficulty < min_accepted_diff) {
-		LOGWARN(4, "add_external_block: block has too low difficulty " << block.m_difficulty << ", expected >= " << min_accepted_diff << ". Ignoring it.");
+	if (too_low_diff) {
+		LOGWARN(4, "add_external_block: block has too low difficulty " << block.m_difficulty << ", expected >= ~" << m_curDifficulty << ". Ignoring it.");
 		return true;
 	}
 
