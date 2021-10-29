@@ -192,7 +192,7 @@ private:
 	std::vector<Broadcast*> m_broadcastQueue;
 
 	uv_mutex_t m_missingBlockRequestsLock;
-	std::set<std::pair<uint64_t, uint64_t>> m_missingBlockRequests;
+	unordered_set<std::pair<uint64_t, uint64_t>> m_missingBlockRequests;
 
 	static void on_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->on_broadcast(); }
 	void on_broadcast();

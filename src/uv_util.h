@@ -19,6 +19,9 @@
 
 #include <uv.h>
 
+static_assert(sizeof(in6_addr) == 16, "struct in6_addr has invalid size");
+static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
+
 namespace p2pool {
 
 struct MutexLock : public nocopy_nomove

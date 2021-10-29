@@ -319,8 +319,12 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
 	MutexLock lock(m_bansLock);
 
 	auto it = m_bans.find(ip);
-	if ((it != m_bans.end()) && (time(nullptr) < it->second)) {
-		return true;
+	if (it != m_bans.end()) {
+		const bool banned = (time(nullptr) < it->second);
+		if (!banned) {
+			m_bans.erase(it);
+		}
+		return banned;
 	}
 
 	return false;

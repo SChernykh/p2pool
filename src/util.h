@@ -19,7 +19,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 5027)
+#pragma warning(disable : 4623 5026 5027)
 #endif
 
 #define ROBIN_HOOD_MALLOC(size) p2pool::malloc_hook(size)
@@ -162,6 +162,25 @@ struct hash<std::array<uint8_t, N>>
 	FORCEINLINE size_t operator()(const std::array<uint8_t, N>& value) const noexcept
 	{
 		return hash_bytes(value.data(), N);
+	}
+};
+
+template<>
+struct hash<p2pool::raw_ip>
+{
+	FORCEINLINE size_t operator()(const p2pool::raw_ip& value) const noexcept
+	{
+		return hash_bytes(value.data, sizeof(value.data));
+	}
+};
+
+template<>
+struct hash<std::pair<uint64_t, uint64_t>>
+{
+	FORCEINLINE size_t operator()(const std::pair<uint64_t, uint64_t>& value) const noexcept
+	{
+		static_assert(sizeof(value) == sizeof(uint64_t) * 2, "Invalid std::pair<uint64_t, uint64_t> size");
+		return hash_bytes(&value, sizeof(value));
 	}
 };
 

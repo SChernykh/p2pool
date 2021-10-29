@@ -18,8 +18,6 @@
 #pragma once
 
 #include "uv_util.h"
-#include <map>
-#include <set>
 
 namespace p2pool {
 
@@ -45,36 +43,6 @@ public:
 	uv_loop_t* get_loop() { return &m_loop; }
 
 	int listen_port() const { return m_listenPort; }
-
-	struct raw_ip
-	{
-		alignas(8) uint8_t data[16];
-
-		FORCEINLINE bool operator<(const raw_ip& other) const
-		{
-			const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
-			const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
-
-			if (a[1] < b[1]) return true;
-			if (a[1] > b[1]) return false;
-
-			return a[0] < b[0];
-		}
-
-		FORCEINLINE bool operator==(const raw_ip& other) const
-		{
-			const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
-			const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
-
-			return (a[0] == b[0]) && (a[1] == b[1]);
-		}
-
-		FORCEINLINE bool operator!=(const raw_ip& other) const { return !operator==(other); }
-	};
-
-	static_assert(sizeof(raw_ip) == 16, "struct raw_ip has invalid size");
-	static_assert(sizeof(in6_addr) == 16, "struct in6_addr has invalid size");
-	static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
 
 	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
 	virtual void on_connect_failed(bool is_v6, const raw_ip& ip, int port);
@@ -193,12 +161,12 @@ protected:
 	uint32_t m_numIncomingConnections;
 
 	uv_mutex_t m_bansLock;
-	std::map<raw_ip, time_t> m_bans;
+	unordered_map<raw_ip, time_t> m_bans;
 
 	bool is_banned(const raw_ip& ip);
 
 	uv_mutex_t m_pendingConnectionsLock;
-	std::set<raw_ip> m_pendingConnections;
+	unordered_set<raw_ip> m_pendingConnections;
 
 	uv_async_t m_dropConnectionsAsync;
 	static void on_drop_connections(uv_async_t* async) { reinterpret_cast<TCPServer*>(async->data)->close_sockets(false); }

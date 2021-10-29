@@ -279,6 +279,34 @@ enum class NetworkType {
 	Stagenet,
 };
 
+struct raw_ip
+{
+	alignas(8) uint8_t data[16];
+
+	FORCEINLINE bool operator<(const raw_ip& other) const
+	{
+		const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
+		const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
+
+		if (a[1] < b[1]) return true;
+		if (a[1] > b[1]) return false;
+
+		return a[0] < b[0];
+	}
+
+	FORCEINLINE bool operator==(const raw_ip& other) const
+	{
+		const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
+		const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
+
+		return (a[0] == b[0]) && (a[1] == b[1]);
+	}
+
+	FORCEINLINE bool operator!=(const raw_ip& other) const { return !operator==(other); }
+};
+
+static_assert(sizeof(raw_ip) == 16, "struct raw_ip has invalid size");
+
 void* malloc_hook(size_t n) noexcept;
 void* realloc_hook(void* ptr, size_t size) noexcept;
 void* calloc_hook(size_t count, size_t size) noexcept;
