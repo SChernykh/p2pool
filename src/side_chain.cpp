@@ -1539,6 +1539,7 @@ void SideChain::prune_old_blocks()
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);
+						m_seenBlocks.erase(block->m_sidechainId);
 						delete block;
 						++num_blocks_pruned;
 					}
