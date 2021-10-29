@@ -130,6 +130,8 @@ private:
 	void api_update_pool_stats();
 	void api_update_stats_mod();
 
+	void cleanup_mainchain_data(uint64_t height);
+
 	struct FoundBlock
 	{
 		FORCEINLINE FoundBlock(time_t _t, uint64_t _h, const hash& _id, const difficulty_type& _block_diff, const difficulty_type& _total_hashes)

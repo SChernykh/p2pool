@@ -203,6 +203,8 @@ void p2pool::handle_miner_data(MinerData& data)
 		c.reward = 0;
 
 		m_mainchainByHash[c.id] = c;
+
+		cleanup_mainchain_data(data.height);
 	}
 
 	data.tx_backlog.clear();
@@ -1066,6 +1068,31 @@ void p2pool::api_update_stats_mod()
 				<< hashrate << ",\"roundHashes\":"
 				<< round_hashes << "}}";
 		});
+}
+
+void p2pool::cleanup_mainchain_data(uint64_t height)
+{
+	// Expects m_mainchainLock to be already locked here
+	// Deletes everything older than 720 blocks, except for the 3 latest RandomX seed heights
+
+	constexpr uint64_t PRUNE_DISTANCE = 720;
+	const uint64_t seed_height = get_seed_height(height);
+	const std::array<uint64_t, 3> seed_heights{ seed_height, seed_height - SEEDHASH_EPOCH_BLOCKS, seed_height - SEEDHASH_EPOCH_BLOCKS * 2 };
+
+	for (auto it = m_mainchainByHeight.begin(); it != m_mainchainByHeight.end();) {
+		const uint64_t h = it->first;
+		if (h + PRUNE_DISTANCE >= height) {
+			break;
+		}
+
+		if (std::find(seed_heights.begin(), seed_heights.end(), h) == seed_heights.end()) {
+			m_mainchainByHash.erase(it->second.id);
+			it = m_mainchainByHeight.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
 }
 
 void p2pool::api_update_block_found(const ChainMain* data)
