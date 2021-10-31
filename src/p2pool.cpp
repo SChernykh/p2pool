@@ -226,7 +226,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\n---------------------------------------------------------------------------------------------------------------"
 	);
 
-	if (!is_main_thread) {
+	if (!is_main_thread()) {
 		update_block_template_async();
 	}
 	else {

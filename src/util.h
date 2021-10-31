@@ -133,7 +133,9 @@ private:
 };
 
 extern BackgroundJobTracker bkg_jobs_tracker;
-extern thread_local bool is_main_thread;
+
+void set_main_thread();
+bool is_main_thread();
 
 bool resolve_host(std::string& host, bool& is_v6);
 

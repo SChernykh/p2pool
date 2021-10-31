@@ -54,7 +54,7 @@ public:
 		: m_writePos(0)
 		, m_readPos(0)
 	{
-		is_main_thread = true;
+		set_main_thread();
 
 		m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
 
