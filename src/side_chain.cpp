@@ -77,6 +77,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	}
 
 	uv_mutex_init_checked(&m_sidechainLock);
+	uv_mutex_init_checked(&m_seenBlocksLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
 
@@ -147,6 +148,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 SideChain::~SideChain()
 {
 	uv_mutex_destroy(&m_sidechainLock);
+	uv_mutex_destroy(&m_seenBlocksLock);
 	for (auto& it : m_blocksById) {
 		delete it.second;
 	}
@@ -343,21 +345,21 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 
 bool SideChain::block_seen(const PoolBlock& block)
 {
-	MutexLock lock(m_sidechainLock);
-
 	// Check if it's some old block
-	if (m_chainTip && m_chainTip->m_sidechainHeight > block.m_sidechainHeight + m_chainWindowSize * 2 &&
-		block.m_cumulativeDifficulty < m_chainTip->m_cumulativeDifficulty) {
+	const PoolBlock* tip = m_chainTip;
+	if (tip && tip->m_sidechainHeight > block.m_sidechainHeight + m_chainWindowSize * 2 &&
+		block.m_cumulativeDifficulty < tip->m_cumulativeDifficulty) {
 		return true;
 	}
 
 	// Check if it was received before
+	MutexLock lock(m_seenBlocksLock);
 	return !m_seenBlocks.insert(block.m_sidechainId).second;
 }
 
 void SideChain::unsee_block(const PoolBlock& block)
 {
-	MutexLock lock(m_sidechainLock);
+	MutexLock lock(m_seenBlocksLock);
 	m_seenBlocks.erase(block.m_sidechainId);
 }
 
@@ -1541,7 +1543,7 @@ void SideChain::prune_old_blocks()
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);
-						m_seenBlocks.erase(block->m_sidechainId);
+						unsee_block(*block);
 						delete block;
 						++num_blocks_pruned;
 					}

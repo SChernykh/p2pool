@@ -97,8 +97,10 @@ private:
 	PoolBlock* m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
-	unordered_set<hash> m_seenBlocks;
 	unordered_map<hash, time_t> m_seenWallets;
+
+	uv_mutex_t m_seenBlocksLock;
+	unordered_set<hash> m_seenBlocks;
 
 	std::vector<DifficultyData> m_difficultyData;
 
