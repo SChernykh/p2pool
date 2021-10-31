@@ -98,6 +98,8 @@ private:
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
 	unordered_map<hash, time_t> m_seenWallets;
+	std::vector<MinerShare> m_tmpShares;
+	std::vector<uint64_t> m_tmpRewards;
 
 	uv_mutex_t m_seenBlocksLock;
 	unordered_set<hash> m_seenBlocks;

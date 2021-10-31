@@ -80,6 +80,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	uv_mutex_init_checked(&m_seenBlocksLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
+	m_tmpShares.reserve(m_chainWindowSize * 2);
+	m_tmpRewards.reserve(m_chainWindowSize * 2);
 
 	LOGINFO(1, "generating consensus ID");
 
@@ -568,21 +570,34 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
 
 bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob)
 {
-	std::vector<MinerShare> shares;
-	std::vector<uint64_t> rewards;
-
-	shares.reserve(m_chainWindowSize * 2);
-	rewards.reserve(m_chainWindowSize * 2);
+	blob.clear();
 
 	MutexLock lock(m_sidechainLock);
 
-	if (!get_shares(block, shares) || !split_reward(total_reward, shares, rewards) || (rewards.size() != shares.size())) {
+	auto it = m_blocksById.find(block->m_sidechainId);
+	if (it != m_blocksById.end()) {
+		PoolBlock* b = it->second;
+		const size_t n = b->m_outputs.size();
+
+		blob.reserve(n * 38 + 64);
+		writeVarint(n, blob);
+
+		for (const PoolBlock::TxOutput& output : b->m_outputs) {
+			writeVarint(output.m_reward, blob);
+			blob.emplace_back(TXOUT_TO_KEY);
+			blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+		}
+
+		block->m_outputs = b->m_outputs;
+		return true;
+	}
+
+	if (!get_shares(block, m_tmpShares) || !split_reward(total_reward, m_tmpShares, m_tmpRewards) || (m_tmpRewards.size() != m_tmpShares.size())) {
 		return false;
 	}
 
-	const size_t n = shares.size();
+	const size_t n = m_tmpShares.size();
 
-	blob.clear();
 	blob.reserve(n * 38 + 64);
 
 	writeVarint(n, blob);
@@ -592,16 +607,16 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	hash eph_public_key;
 	for (size_t i = 0; i < n; ++i) {
-		writeVarint(rewards[i], blob);
+		writeVarint(m_tmpRewards[i], blob);
 
 		blob.emplace_back(TXOUT_TO_KEY);
 
-		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
+		if (!m_tmpShares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
 			LOGWARN(6, "get_eph_public_key failed at index " << i);
 		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 
-		block->m_outputs.emplace_back(rewards[i], eph_public_key);
+		block->m_outputs.emplace_back(m_tmpRewards[i], eph_public_key);
 	}
 
 	return true;
