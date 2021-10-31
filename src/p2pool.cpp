@@ -234,6 +234,41 @@ void p2pool::handle_miner_data(MinerData& data)
 	}
 
 	m_zmqLastActive = time(nullptr);
+
+	if (m_serversStarted.load()) {
+		std::vector<uint64_t> missing_heights;
+		{
+			WriteLock lock(m_mainchainLock);
+
+			for (uint64_t h = data.height; h && (h + BLOCK_HEADERS_REQUIRED > data.height); --h) {
+				if (m_mainchainByHeight.find(h) == m_mainchainByHeight.end()) {
+					LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
+					missing_heights.push_back(h);
+				}
+			}
+		}
+
+		for (uint64_t h : missing_heights) {
+			char buf[log::Stream::BUF_SIZE + 1];
+			log::Stream s(buf);
+			s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
+
+			JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
+				[this, h](const char* data, size_t size)
+				{
+					ChainMain block;
+					if (!parse_block_header(data, size, block)) {
+						LOGERR(1, "couldn't download block header for height " << h);
+					}
+				},
+				[h](const char* data, size_t size)
+				{
+					if (size > 0) {
+						LOGERR(1, "couldn't download block header for height " << h << ", error " << log::const_buf(data, size));
+					}
+				});
+		}
+	}
 }
 
 const char* BLOCK_FOUND = "\n\
@@ -1075,7 +1110,7 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 	// Expects m_mainchainLock to be already locked here
 	// Deletes everything older than 720 blocks, except for the 3 latest RandomX seed heights
 
-	constexpr uint64_t PRUNE_DISTANCE = 720;
+	constexpr uint64_t PRUNE_DISTANCE = BLOCK_HEADERS_REQUIRED;
 	const uint64_t seed_height = get_seed_height(height);
 	const std::array<uint64_t, 3> seed_heights{ seed_height, seed_height - SEEDHASH_EPOCH_BLOCKS, seed_height - SEEDHASH_EPOCH_BLOCKS * 2 };
 
