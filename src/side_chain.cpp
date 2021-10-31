@@ -757,9 +757,9 @@ uint64_t SideChain::miner_count()
 
 	MutexLock lock(m_sidechainLock);
 
-	// Delete wallets that weren't seen for more than 48 hours and return how many remain
+	// Delete wallets that weren't seen for more than 72 hours and return how many remain
 	for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
-		if (it->second + 48 * 60 * 60 <= cur_time) {
+		if (it->second + 72 * 60 * 60 <= cur_time) {
 			it = m_seenWallets.erase(it);
 		}
 		else {

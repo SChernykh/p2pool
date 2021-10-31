@@ -128,6 +128,7 @@ public:
 
 	void print_status() override;
 	void show_peers();
+	size_t peer_list_size() const { return m_peerList.size(); }
 
 private:
 	p2pool* m_pool;

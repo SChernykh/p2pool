@@ -1013,7 +1013,7 @@ void p2pool::api_update_pool_stats()
 	uint64_t t;
 	const difficulty_type& diff = m_sideChain->difficulty();
 	const uint64_t hashrate = udiv128(diff.hi, diff.lo, m_sideChain->block_time(), &t);
-	const uint64_t miners = m_sideChain->miner_count();
+	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
 	time_t last_block_found_time = 0;
@@ -1076,7 +1076,7 @@ void p2pool::api_update_stats_mod()
 	s << last_block_found_hash << '\0';
 	memcpy(last_block_found_buf + 4, "...", 4);
 
-	const uint64_t miners = m_sideChain->miner_count();
+	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 
 	uint64_t t;
 	const difficulty_type& diff = m_sideChain->difficulty();
