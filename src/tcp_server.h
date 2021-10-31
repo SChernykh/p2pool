@@ -89,20 +89,20 @@ public:
 		char m_readBuf[READ_BUF_SIZE];
 		uint32_t m_numRead;
 
-		struct WriteBuf
-		{
-			Client* m_client;
-			uv_write_t m_write;
-			char m_data[WRITE_BUF_SIZE];
-		};
-
-		uv_mutex_t m_writeBuffersLock;
-		std::vector<WriteBuf*> m_writeBuffers;
-
 		std::atomic<uint32_t> m_resetCounter{ 0 };
 
 		uv_mutex_t m_sendLock;
 	};
+
+	struct WriteBuf
+	{
+		Client* m_client;
+		uv_write_t m_write;
+		char m_data[WRITE_BUF_SIZE];
+	};
+
+	uv_mutex_t m_writeBuffersLock;
+	std::vector<WriteBuf*> m_writeBuffers;
 
 	struct SendCallbackBase
 	{
