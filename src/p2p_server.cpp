@@ -740,7 +740,7 @@ void P2PServer::on_timer()
 
 void P2PServer::flush_cache()
 {
-	if (!m_cache) {
+	if (!m_cache || ((m_timerCounter % 30) != 2)) {
 		return;
 	}
 
