@@ -2,7 +2,7 @@
 
 Decentralized pool for Monero mining.
 
-Mining on the mainnet has started! You can check the pool status at https://p2pool.io/
+Pool status and monitoring pages can be found at https://p2pool.io/ and https://p2pool.observer/
 
 ### Build status
 
@@ -68,9 +68,9 @@ make -j$(nproc)
 monerod binary compatible with p2pool:
 ```
 sudo apt update && sudo apt install git build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev libpgm-dev qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev ccache doxygen graphviz
-git clone --recursive https://github.com/SChernykh/monero
+git clone --recursive https://github.com/monero-project/monero/
 cd monero
-git checkout p2pool-api-v0.17
+git checkout release-v0.17
 git submodule sync && git submodule update --init --force --recursive
 make release-static -j$(nproc)
 ```
@@ -113,9 +113,9 @@ make -j$(sysctl -n hw.logicalcpu)
 
 monerod binary compatible with p2pool:
 ```
-git clone --recursive https://github.com/SChernykh/monero
+git clone --recursive https://github.com/monero-project/monero/
 cd monero
-git checkout p2pool-api-v0.17
+git checkout release-v0.17
 git submodule sync && git submodule update --init --force --recursive
 brew update && brew bundle --file=contrib/brew/Brewfile
 make -j$(sysctl -n hw.logicalcpu)
@@ -138,9 +138,9 @@ Alternatively, you can select "Clone a repository" within the GUI, then select "
 
 monerod binary compatible with p2pool:
 ```
-git clone --recursive https://github.com/SChernykh/monero
+git clone --recursive https://github.com/monero-project/monero/
 cd monero
-git checkout p2pool-api-v0.17
+git checkout release-v0.17
 git submodule sync && git submodule update --init --force --recursive
 ```
 then follow the instructions from https://github.com/monero-project/monero/#on-windows
@@ -171,10 +171,11 @@ Step-by-step guide:
 - Prepare enough huge pages (each of monerod/p2pool/xmrig needs them): `sudo sysctl vm.nr_hugepages=3072`
 - Get xmrig (linux-static-x64) binary from https://github.com/xmrig/xmrig/releases/latest
 - Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity
+- Use the `monerod` binary bundled with p2pool (official binaries don't have p2pool support yet)
 - Run `./monerod --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist` **don't forget --zmq-pub parameter in the command line**
-- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-fce167d7c)** on startup. Wait until it's synchronized.
 - Run `./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
-- p2pool has _very_ verbose logging by default, it will spam a lot, no I mean A LOT in both console and in p2pool.log. Logs help testing immensely!
+- p2pool has verbose logging by default, you can reduce it by using "loglevel N" command where N is between 0 and 6. Default loglevel is 3.
 - You can use `logrotate` with a config like this to control logfile growth:
     ```
     <path-to-logfile>
@@ -197,7 +198,7 @@ Step-by-step guide:
 *NOTE: Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then click "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
 
 - Download p2pool binaries from https://github.com/SChernykh/p2pool/releases/latest
-- Download xmrig binary from https://github.com/xmrig/xmrig/releases/latest *(xmrig-6.15.0-gcc-win64.zip is the current version)*
+- Download xmrig binary from https://github.com/xmrig/xmrig/releases/latest *(xmrig-6.15.2-gcc-win64.zip is the current version)*
 - Expand the p2pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
 - Expand xmrig binary into appropriate location (same folder as p2pool is fine)
 - Prepare huge pages (each of monerod/p2pool/xmrig needs them): 
@@ -206,7 +207,7 @@ Step-by-step guide:
 - Open a command prompt and navigate to the folder where you extracted p2pool.
 - *When running these commands, Windows Firewall may prompt to allow connections, click "Allow"*
 - Run `.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist` *NOTE: don't forget --zmq-pub parameter in the command line*
-- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-7dbb0d1fc)** on startup. Wait until it's synchronized.
+- Double check that it shows **Monero 'Oxygen Orion' (v0.17.2.3-fce167d7c)** on startup. Wait until it's synchronized.
 - Run `.\p2pool.exe --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS`
 - Wait until initial p2pool sync is finished, it shouldn't take more than 5-10 minutes, once completed xmrig should be able to connect to the stratum server on port 3333.
 - Run `.\xmrig.exe -o 127.0.0.1:3333`. Note that you don't need to specify wallet address for xmrig. **Wallet address set in xmrig config will be ignored!**
