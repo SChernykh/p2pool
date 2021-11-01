@@ -23,6 +23,7 @@
 namespace p2pool {
 
 class p2pool;
+class P2PServer;
 struct DifficultyData;
 struct PoolBlock;
 class Wallet;
@@ -71,10 +72,13 @@ public:
 	time_t last_updated() const;
 	bool is_default() const;
 
+	const PoolBlock* chainTip() const { return m_chainTip; }
+
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
 private:
 	p2pool* m_pool;
+	P2PServer* m_p2pServer;
 	NetworkType m_networkType;
 
 private:
