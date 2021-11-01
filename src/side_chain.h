@@ -78,7 +78,7 @@ public:
 
 private:
 	p2pool* m_pool;
-	P2PServer* m_p2pServer;
+	P2PServer* p2pServer() const;
 	NetworkType m_networkType;
 
 private:

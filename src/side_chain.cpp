@@ -57,7 +57,6 @@ static constexpr uint8_t default_consensus_id[HASH_SIZE] = {
 
 SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
-	, m_p2pServer(pool ? pool->p2p_server() : nullptr)
 	, m_networkType(type)
 	, m_chainTip(nullptr)
 	, m_poolName(pool_name ? pool_name : "default")
@@ -262,6 +261,11 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	}
 
 	get_shares(&block, shares);
+}
+
+P2PServer* SideChain::p2pServer() const
+{
+	return m_pool ? m_pool->p2p_server() : nullptr;
 }
 
 bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) const
@@ -493,8 +497,8 @@ void SideChain::add_block(const PoolBlock& block)
 	);
 
 	// Save it for faster syncing on the next p2pool start
-	if (m_p2pServer) {
-		m_p2pServer->store_in_cache(block);
+	if (p2pServer()) {
+		p2pServer()->store_in_cache(block);
 	}
 
 	PoolBlock* new_block = new PoolBlock(block);
@@ -974,14 +978,14 @@ void SideChain::verify_loop(PoolBlock* block)
 			// If it came through a broadcast, send it to our peers
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
-				if (m_p2pServer && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
-					m_p2pServer->broadcast(*block);
+				if (p2pServer() && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
+					p2pServer()->broadcast(*block);
 				}
 			}
 
 			// Save it for faster syncing on the next p2pool start
-			if (m_p2pServer) {
-				m_p2pServer->store_in_cache(*block);
+			if (p2pServer()) {
+				p2pServer()->store_in_cache(*block);
 			}
 
 			// Try to verify blocks on top of this one
@@ -1335,7 +1339,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		m_pool->update_block_template_async();
 	}
 
-	if (m_p2pServer && block->m_wantBroadcast && !block->m_broadcasted) {
+	if (p2pServer() && block->m_wantBroadcast && !block->m_broadcasted) {
 		block->m_broadcasted = true;
 #ifdef DEBUG_BROADCAST_DELAY_MS
 		struct Work
@@ -1346,7 +1350,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		};
 		Work* work = new Work{};
 		work->req.data = work;
-		work->server = m_p2pServer;
+		work->server = p2pServer();
 		work->block = block;
 		const int err = uv_queue_work(uv_default_loop(), &work->req,
 			[](uv_work_t*)
@@ -1365,7 +1369,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 			LOGERR(1, "update_chain_tip: uv_queue_work failed, error " << uv_err_name(err));
 		}
 #else
-		m_p2pServer->broadcast(*block);
+		p2pServer()->broadcast(*block);
 #endif
 	}
 }
@@ -1586,8 +1590,8 @@ void SideChain::prune_old_blocks()
 
 		// If side-chain started pruning blocks it means the initial sync is complete
 		// It's now safe to delete cached blocks
-		if (m_p2pServer) {
-			m_p2pServer->clear_cached_blocks();
+		if (p2pServer()) {
+			p2pServer()->clear_cached_blocks();
 		}
 	}
 }
