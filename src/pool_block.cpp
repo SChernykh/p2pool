@@ -60,7 +60,6 @@ PoolBlock::PoolBlock()
 	m_mainChainData.reserve(48 * 1024);
 	m_outputs.reserve(2048);
 	m_transactions.reserve(256);
-	m_tmpInts.reserve(m_transactions.capacity() * HASH_SIZE);
 	m_sideChainData.reserve(512);
 	m_uncles.reserve(8);
 	m_tmpTxExtra.reserve(80);
@@ -110,7 +109,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
 	m_sidechainId = b.m_sidechainId;
 	m_tmpTxExtra = b.m_tmpTxExtra;
-	m_tmpInts = b.m_tmpInts;
 	m_depth = b.m_depth;
 	m_verified = b.m_verified;
 	m_invalid = b.m_invalid;
@@ -276,21 +274,21 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher* hasher, const hash& seed_hash, hash
 
 			cnt >>= 1;
 
-			m_tmpInts.resize(cnt * HASH_SIZE);
-			memcpy(m_tmpInts.data(), h, (cnt * 2 - count) * HASH_SIZE);
+			std::vector<uint8_t> tmp_ints(cnt * HASH_SIZE);
+			memcpy(tmp_ints.data(), h, (cnt * 2 - count) * HASH_SIZE);
 
 			for (i = cnt * 2 - count, j = cnt * 2 - count; j < cnt; i += 2, ++j) {
-				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, m_tmpInts.data() + j * HASH_SIZE, HASH_SIZE);
+				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
 			}
 
 			while (cnt > 2) {
 				cnt >>= 1;
 				for (i = 0, j = 0; j < cnt; i += 2, ++j) {
-					keccak(m_tmpInts.data() + i * HASH_SIZE, HASH_SIZE * 2, m_tmpInts.data() + j * HASH_SIZE, HASH_SIZE);
+					keccak(tmp_ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
 				}
 			}
 
-			keccak(m_tmpInts.data(), HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
+			keccak(tmp_ints.data(), HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
 		}
 	}
 	blob_size += HASH_SIZE;

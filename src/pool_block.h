@@ -121,7 +121,6 @@ struct PoolBlock
 
 	// Just temporary stuff, not a part of the block
 	std::vector<uint8_t> m_tmpTxExtra;
-	std::vector<uint8_t> m_tmpInts;
 
 	uint64_t m_depth;
 

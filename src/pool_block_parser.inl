@@ -341,7 +341,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 
 	// Defaults for off-chain variables
 	m_tmpTxExtra.clear();
-	m_tmpInts.clear();
 
 	m_depth = 0;
 
