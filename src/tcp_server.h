@@ -76,7 +76,6 @@ public:
 		Client* m_next;
 
 		uv_tcp_t m_socket;
-		uv_write_t m_write;
 		uv_connect_t m_connectRequest;
 
 		bool m_isV6;

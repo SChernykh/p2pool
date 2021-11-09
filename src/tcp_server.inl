@@ -798,7 +798,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_prev = nullptr;
 	m_next = nullptr;
 	memset(&m_socket, 0, sizeof(m_socket));
-	memset(&m_write, 0, sizeof(m_write));
 	memset(&m_connectRequest, 0, sizeof(m_connectRequest));
 	m_isV6 = false;
 	m_isIncoming = false;
