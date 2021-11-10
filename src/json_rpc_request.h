@@ -36,10 +36,11 @@ public:
 	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb, U&& close_cb)
 	{
 		// It will be deleted in one of the tcp callbacks eventually
-		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)));
+		CallbackBase* close_callback = new Callback<U>(std::move(close_cb));
+		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), close_callback);
 		if (!r->m_valid) {
 			constexpr char err[] = "internal error";
-			close_cb(err, sizeof(err) - 1);
+			(*close_callback)(err, sizeof(err) - 1);
 			delete r;
 		}
 	}
