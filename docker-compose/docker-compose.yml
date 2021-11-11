@@ -1,0 +1,84 @@
+version: '3.4'
+
+networks:
+  p2pool:
+    driver: bridge
+
+volumes:
+  p2pool: 
+    name: ${P2POOL_VOLUME}
+  monero:
+    name: ${MONERO_VOLUME}
+
+services:
+  monero:
+    image: monero:latest
+    build:
+      context: monero
+      args:
+        - MONERO_GIT_TAG=$MONERO_GIT_TAG
+    container_name: p2pool-monero
+    networks:
+      - p2pool
+    ports:
+      - 18080:18080/tcp
+    volumes:
+      - monero:/home/monero/.bitmonero:rw
+      - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
+      - /dev/hugepages:/dev/hugepages:rw
+    restart: unless-stopped
+    command: >-
+      --zmq-pub tcp://0.0.0.0:18083
+      --disable-dns-checkpoints
+      --enable-dns-blocklist
+      --non-interactive
+      --p2p-bind-ip=0.0.0.0
+      --p2p-bind-port=18080
+      --rpc-bind-ip=0.0.0.0
+      --rpc-bind-port=18081
+      --confirm-external-bind
+      ${PRUNE_NODE}
+
+  p2pool:
+    image: p2pool:latest
+    build: ../
+    container_name: p2pool-p2pool
+    networks:
+      - p2pool
+    ports:
+      - ${P2POOL_STRATUM_PORT}:3333/tcp
+      - 37889:37889/tcp
+    volumes:
+      - p2pool:/home/p2pool/.p2pool:rw
+      - /dev/null:/home/p2pool/.p2pool/p2pool.log:rw
+      - /dev/hugepages:/dev/hugepages:rw
+    depends_on:
+      - monero
+    restart: unless-stopped
+    command: >-
+      --host monero
+      --wallet ${WALLET_ADDRESS}
+      --loglevel ${P2POOL_LOGLEVEL}
+
+  xmrig:
+    image: xmrig:latest
+    build: xmrig
+    container_name: p2pool-xmrig
+    networks:
+      - p2pool
+    privileged: true
+    cap_add:
+      - ALL
+    volumes:
+      - /dev:/dev:ro
+      - /lib/modules:/lib/modules:ro
+      - /dev/hugepages:/dev/hugepages:rw
+    depends_on:
+      - p2pool
+    restart: unless-stopped
+    command: >-
+      ${FIXED_MINING_DIFFICULTY}
+      ${NUM_MINING_CPU}
+      --randomx-1gb-pages
+      -o p2pool:3333
+
