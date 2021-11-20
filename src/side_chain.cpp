@@ -429,7 +429,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	hash pow_hash;
-	if (!block.get_pow_hash(m_pool->hasher(), seed, pow_hash)) {
+	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, seed, pow_hash)) {
 		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight << ". Ignoring it.");
 		unsee_block(block);
 		return true;

@@ -39,6 +39,7 @@ struct Params
 	std::string m_apiPath;
 	bool m_localStats = false;
 	bool m_blockCache = true;
+	bool m_disableRandomX = false;
 };
 
 } // namespace p2pool

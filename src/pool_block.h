@@ -28,7 +28,7 @@
 
 namespace p2pool {
 
-class RandomX_Hasher;
+class RandomX_Hasher_Base;
 class SideChain;
 
 /*
@@ -136,7 +136,7 @@ struct PoolBlock
 	void serialize_sidechain_data();
 
 	int deserialize(const uint8_t* data, size_t size, SideChain& sidechain);
-	bool get_pow_hash(RandomX_Hasher* hasher, const hash& seed_hash, hash& pow_hash);
+	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);
 };
 
 } // namespace p2pool

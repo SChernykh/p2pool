@@ -1018,7 +1018,7 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			}
 
 			hash pow_hash;
-			if (!check.get_pow_hash(m_pool->hasher(), m_seedHash, pow_hash)) {
+			if (!check.get_pow_hash(m_pool->hasher(), check.m_txinGenHeight, m_seedHash, pow_hash)) {
 				LOGERR(1, "PoW check failed for the sidechain block. Fix it! ");
 			}
 			else if (!check.m_difficulty.check_pow(pow_hash)) {

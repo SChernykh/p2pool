@@ -23,7 +23,7 @@
 namespace p2pool {
 
 struct Params;
-class RandomX_Hasher;
+class RandomX_Hasher_Base;
 class BlockTemplate;
 class Mempool;
 class SideChain;
@@ -51,8 +51,8 @@ public:
 
 	p2pool_api* api() const { return m_api; }
 
-	RandomX_Hasher* hasher() const { return m_hasher; }
-	bool calculate_hash(const void* data, size_t size, const hash& seed, hash& result);
+	RandomX_Hasher_Base* hasher() const { return m_hasher; }
+	bool calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result);
 	static uint64_t get_seed_height(uint64_t height);
 	bool get_seed(uint64_t height, hash& seed) const;
 
@@ -97,7 +97,7 @@ private:
 
 	p2pool_api* m_api;
 	SideChain* m_sideChain;
-	RandomX_Hasher* m_hasher;
+	RandomX_Hasher_Base* m_hasher;
 	BlockTemplate* m_blockTemplate;
 	MinerData m_minerData;
 	bool m_updateSeed;

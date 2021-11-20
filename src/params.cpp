@@ -81,6 +81,10 @@ Params::Params(int argc, char* argv[])
 		if (strcmp(argv[i], "--no-color") == 0) {
 			log::CONSOLE_COLORS = false;
 		}
+
+		if (strcmp(argv[i], "--no-randomx") == 0) {
+			m_disableRandomX = true;
+		}
 	}
 
 	if (m_stratumAddresses.empty()) {

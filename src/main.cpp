@@ -39,6 +39,7 @@ static void usage()
 		"--stratum-api        Enable /local/ path in api path for Stratum Server statistics\n"
 		"--no-cache           Disable p2pool.cache\n"
 		"--no-color           Disable colors in console output\n"
+		"--no-randomx         Disable internal RandomX hasher: p2pool will use RPC calls to monerod to check PoW hashes\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
