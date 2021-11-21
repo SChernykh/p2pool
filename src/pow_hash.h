@@ -27,18 +27,29 @@ namespace p2pool {
 
 class p2pool;
 
-class RandomX_Hasher
+class RandomX_Hasher_Base
+{
+public:
+	virtual ~RandomX_Hasher_Base() {}
+
+	virtual void set_seed_async(const hash&) {}
+	virtual void set_old_seed(const hash&) {}
+
+	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) = 0;
+};
+
+class RandomX_Hasher : public RandomX_Hasher_Base
 {
 public:
 	explicit RandomX_Hasher(p2pool* pool);
 	~RandomX_Hasher();
 
-	void set_seed_async(const hash& seed);
+	void set_seed_async(const hash& seed) override;
 	void set_seed(const hash& seed);
 
-	void set_old_seed(const hash& seed);
+	void set_old_seed(const hash& seed) override;
 
-	bool calculate(const void* data, size_t size, const hash& seed, hash& result);
+	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) override;
 
 private:
 
@@ -68,6 +79,38 @@ private:
 	uint32_t m_index;
 
 	std::atomic<uint32_t> m_setSeedCounter;
+};
+
+class RandomX_Hasher_RPC : public RandomX_Hasher_Base
+{
+public:
+	explicit RandomX_Hasher_RPC(p2pool* pool);
+	~RandomX_Hasher_RPC();
+
+	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) override;
+
+private:
+	static void loop(void* data);
+
+	p2pool* m_pool;
+
+	uv_mutex_t m_requestMutex;
+	uv_loop_t m_loop;
+	volatile bool m_loopStopped;
+
+	uv_thread_t m_loopThread;
+	uv_mutex_t m_condMutex;
+	uv_cond_t m_cond;
+
+	uv_async_t m_shutdownAsync;
+	uv_async_t m_kickTheLoopAsync;
+
+	static void on_shutdown(uv_async_t* async)
+	{
+		RandomX_Hasher_RPC* server = reinterpret_cast<RandomX_Hasher_RPC*>(async->data);
+		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_shutdownAsync), nullptr);
+		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_kickTheLoopAsync), nullptr);
+	}
 };
 
 } // namespace p2pool

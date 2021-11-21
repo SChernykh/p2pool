@@ -564,6 +564,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	TCPServer* server = static_cast<TCPServer*>(data);
 	uv_run(&server->m_loop, UV_RUN_DEFAULT);
 	uv_loop_close(&server->m_loop);
+	LOGINFO(1, "event loop stopped");
 	server->m_loopStopped = true;
 }
 

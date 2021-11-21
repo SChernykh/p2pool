@@ -22,6 +22,9 @@
 #include "randomx.h"
 #include "configuration.h"
 #include "virtual_machine.hpp"
+#include "json_rpc_request.h"
+#include "json_parsers.h"
+#include <rapidjson/document.h>
 #include <thread>
 
 static constexpr char log_category_prefix[] = "RandomX_Hasher ";
@@ -302,7 +305,7 @@ void RandomX_Hasher::set_old_seed(const hash& seed)
 	LOGINFO(1, log::LightCyan() << "old cache updated");
 }
 
-bool RandomX_Hasher::calculate(const void* data, size_t size, const hash& seed, hash& result)
+bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result)
 {
 	// First try to use the dataset if it's ready
 	if (uv_rwlock_tryrdlock(&m_datasetLock) == 0) {
@@ -346,6 +349,115 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, const hash& seed, 
 	}
 
 	return false;
+}
+
+RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
+	: m_pool(pool)
+	, m_loopStopped(false)
+	, m_loopThread{}
+{
+	int err = uv_loop_init(&m_loop);
+	if (err) {
+		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
+		panic();
+	}
+
+	uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
+	uv_async_init(&m_loop, &m_kickTheLoopAsync, nullptr);
+	m_shutdownAsync.data = this;
+
+	uv_mutex_init_checked(&m_requestMutex);
+	uv_mutex_init_checked(&m_condMutex);
+
+	err = uv_cond_init(&m_cond);
+	if (err) {
+		LOGERR(1, "failed to create cond, error " << uv_err_name(err));
+		panic();
+	}
+
+	err = uv_thread_create(&m_loopThread, loop, this);
+	if (err) {
+		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
+		panic();
+	}
+}
+
+RandomX_Hasher_RPC::~RandomX_Hasher_RPC()
+{
+	uv_async_send(&m_shutdownAsync);
+
+	using namespace std::chrono;
+	while (!m_loopStopped) {
+		std::this_thread::sleep_for(milliseconds(1));
+	}
+
+	uv_mutex_destroy(&m_requestMutex);
+	uv_mutex_destroy(&m_condMutex);
+	uv_cond_destroy(&m_cond);
+
+	LOGINFO(1, "stopped");
+}
+
+void RandomX_Hasher_RPC::loop(void* data)
+{
+	LOGINFO(1, "event loop started");
+	RandomX_Hasher_RPC* hasher = static_cast<RandomX_Hasher_RPC*>(data);
+	uv_run(&hasher->m_loop, UV_RUN_DEFAULT);
+	uv_loop_close(&hasher->m_loop);
+	LOGINFO(1, "event loop stopped");
+	hasher->m_loopStopped = true;
+}
+
+bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& /*seed*/, hash& h)
+{
+	MutexLock lock(m_requestMutex);
+
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(data_ptr);
+	const uint8_t major_version = data[0];
+
+	char buf[log::Stream::BUF_SIZE + 1];
+	log::Stream s(buf);
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"calc_pow\",\"params\":{\"major_version\":" << major_version <<
+		",\"height\":" << height <<
+		",\"block_blob\":\"" << log::hex_buf(data, size) << '"' <<
+		",\"seed_hash\":\"\"}}";
+
+	volatile int result = 0;
+	volatile bool done = false;
+
+	JSONRPCRequest::call(m_pool->params().m_host.c_str(), m_pool->params().m_rpcPort, buf,
+		[&result, &h](const char* data, size_t size)
+		{
+			rapidjson::Document doc;
+			if (doc.Parse(data, size).HasParseError() || !parseValue(doc, "result", h)) {
+				LOGWARN(3, "RPC calc_pow: invalid JSON response (parse error)");
+				result = -1;
+				return;
+			}
+			result = 1;
+		},
+		[this, &result, &done](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGWARN(3, "RPC calc_pow: server returned error " << log::const_buf(data, size));
+				result = -1;
+			}
+
+			MutexLock lock2(m_condMutex);
+			done = true;
+			uv_cond_signal(&m_cond);
+		}, &m_loop);
+
+	uv_async_send(&m_kickTheLoopAsync);
+
+	{
+		MutexLock lock2(m_condMutex);
+		while (!done) {
+			uv_cond_wait(&m_cond, &m_condMutex);
+		}
+	}
+
+	return result > 0;
 }
 
 } // namespace p2pool

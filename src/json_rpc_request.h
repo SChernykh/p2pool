@@ -26,18 +26,18 @@ public:
 	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb)
 	{
 		// It will be deleted in one of the tcp callbacks eventually
-		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), nullptr);
+		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), nullptr, nullptr);
 		if (!r->m_valid) {
 			delete r;
 		}
 	}
 
 	template<typename T, typename U>
-	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb, U&& close_cb)
+	static FORCEINLINE void call(const char* address, int port, const char* req, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
 	{
 		// It will be deleted in one of the tcp callbacks eventually
 		CallbackBase* close_callback = new Callback<U>(std::move(close_cb));
-		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), close_callback);
+		JSONRPCRequest* r = new JSONRPCRequest(address, port, req, new Callback<T>(std::move(cb)), close_callback, loop);
 		if (!r->m_valid) {
 			constexpr char err[] = "internal error";
 			(*close_callback)(err, sizeof(err) - 1);
@@ -63,7 +63,7 @@ private:
 		T m_cb;
 	};
 
-	JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb);
+	JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 	~JSONRPCRequest();
 
 	static void on_connect(uv_connect_t* req, int status);

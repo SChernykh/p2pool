@@ -25,7 +25,7 @@ static constexpr char log_category_prefix[] = "JSONRPCRequest ";
 
 namespace p2pool {
 
-JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb)
+JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 	: m_socket{}
 	, m_connect{}
 	, m_write{}
@@ -38,7 +38,7 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 {
 	m_readBuf[0] = '\0';
 
-	uv_tcp_init(uv_default_loop_checked(), &m_socket);
+	uv_tcp_init(loop ? loop : uv_default_loop_checked(), &m_socket);
 	uv_tcp_nodelay(&m_socket, 1);
 
 	sockaddr_storage addr;

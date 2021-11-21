@@ -661,7 +661,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		}
 
 		hash pow_hash;
-		if (!pool->calculate_hash(blob, blob_size, seed_hash, pow_hash)) {
+		if (!pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash)) {
 			LOGWARN(3, "client " << static_cast<char*>(client->m_addrString) << " couldn't check share PoW");
 			share->m_result = SubmittedShare::Result::COULDNT_CHECK_POW;
 			return;

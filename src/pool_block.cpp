@@ -225,7 +225,7 @@ void PoolBlock::serialize_sidechain_data()
 	writeVarint(m_cumulativeDifficulty.hi, m_sideChainData);
 }
 
-bool PoolBlock::get_pow_hash(RandomX_Hasher* hasher, const hash& seed_hash, hash& pow_hash)
+bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash)
 {
 	alignas(8) uint8_t hashes[HASH_SIZE * 3];
 
@@ -295,7 +295,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher* hasher, const hash& seed_hash, hash
 
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
 
-	return hasher->calculate(blob, blob_size, seed_hash, pow_hash);
+	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash);
 }
 
 } // namespace p2pool

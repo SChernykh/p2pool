@@ -110,7 +110,14 @@ p2pool::p2pool(int argc, char* argv[])
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
 
 	m_sideChain = new SideChain(this, type);
-	m_hasher = new RandomX_Hasher(this);
+
+	if (m_params->m_disableRandomX) {
+		m_hasher = new RandomX_Hasher_RPC(this);
+	}
+	else {
+		m_hasher = new RandomX_Hasher(this);
+	}
+
 	m_blockTemplate = new BlockTemplate(this);
 	m_mempool = new Mempool();
 	m_consoleCommands = new ConsoleCommands(this);
@@ -131,9 +138,9 @@ p2pool::~p2pool()
 	delete m_consoleCommands;
 }
 
-bool p2pool::calculate_hash(const void* data, size_t size, const hash& seed, hash& result)
+bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result)
 {
-	return m_hasher->calculate(data, size, seed, result);
+	return m_hasher->calculate(data, size, height, seed, result);
 }
 
 uint64_t p2pool::get_seed_height(uint64_t height)
@@ -811,10 +818,14 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		return;
 	}
 
-	if (version < 0x30008) {
+	const uint64_t required = m_params->m_disableRandomX ? 0x30009 : 0x30008;
+
+	if (version < required) {
 		const uint64_t version_hi = version >> 16;
 		const uint64_t version_lo = version & 65535;
-		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v3.8");
+		const uint64_t required_version_hi = required >> 16;
+		const uint64_t required_version_lo = required & 65535;
+		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo);
 		panic();
 	}
 
