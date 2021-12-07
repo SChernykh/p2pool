@@ -825,7 +825,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		const uint64_t version_lo = version & 65535;
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
-		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo);
+		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.17.3.0 or newer)");
 		panic();
 	}
 
