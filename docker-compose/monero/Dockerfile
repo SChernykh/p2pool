@@ -1,5 +1,5 @@
 FROM ubuntu:latest
-ARG MONERO_GIT_TAG="master"
+ARG MONERO_GIT_TAG="latest"
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
@@ -47,6 +47,7 @@ RUN set -e && \
 WORKDIR /usr/src
 RUN git clone --recursive https://github.com/monero-project/monero && \
     cd monero && \
+    if [ "x$MONERO_GIT_TAG" = "xlatest" ]; then MONERO_GIT_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)); fi && \
     git checkout $MONERO_GIT_TAG && \
     git submodule sync && git submodule update --init --force --recursive && \
     make release-static -j$(nproc)
@@ -54,9 +55,8 @@ RUN git clone --recursive https://github.com/monero-project/monero && \
 # ---
 
 FROM ubuntu:latest
-ARG MONERO_GIT_TAG="master"
 
-COPY --from=0 /usr/src/monero/build/Linux/$MONERO_GIT_TAG/release/bin/* /
+COPY --from=0 /usr/src/monero/build/Linux/*/release/bin/* /
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \

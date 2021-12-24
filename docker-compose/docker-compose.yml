@@ -1,3 +1,4 @@
+---
 version: '3.4'
 
 networks:
@@ -67,8 +68,6 @@ services:
     networks:
       - p2pool
     privileged: true
-    cap_add:
-      - ALL
     volumes:
       - /dev:/dev:ro
       - /lib/modules:/lib/modules:ro
