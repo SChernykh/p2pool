@@ -53,6 +53,9 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_peerId(m_rng())
 	, m_peerListLastSaved(0)
 {
+	set_max_outgoing_peers(pool->params().m_maxOutgoingPeers);
+	set_max_incoming_peers(pool->params().m_maxIncomingPeers);
+
 	uv_mutex_init_checked(&m_rngLock);
 	uv_mutex_init_checked(&m_blockLock);
 	uv_mutex_init_checked(&m_peerListLock);
@@ -227,7 +230,7 @@ void P2PServer::update_peer_connections()
 	}
 
 	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
-	for (uint32_t i = m_numConnections - m_numIncomingConnections, n = m_pool->params().m_maxOutgoingPeers; (i < n) && !peer_list.empty();) {
+	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < m_maxOutgoingPeers) && !peer_list.empty();) {
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
@@ -903,11 +906,11 @@ bool P2PServer::P2PClient::on_connect()
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
-	if (!server || !server->m_pool) {
+	if (!server) {
 		return false;
 	}
 
-	if (m_isIncoming && (server->m_numIncomingConnections > server->m_pool->params().m_maxIncomingPeers)) {
+	if (m_isIncoming && (server->m_numIncomingConnections > server->m_maxIncomingPeers)) {
 		LOGINFO(5, "Connection from " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " rejected (incoming connections limit was reached)");
 		return false;
 	}

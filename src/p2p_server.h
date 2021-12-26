@@ -130,11 +130,19 @@ public:
 	void show_peers();
 	size_t peer_list_size() const { return m_peerList.size(); }
 
+	uint32_t max_outgoing_peers() const { return m_maxOutgoingPeers; }
+	uint32_t max_incoming_peers() const { return m_maxIncomingPeers; }
+
+	void set_max_outgoing_peers(uint32_t n) { m_maxOutgoingPeers = std::min(std::max(n, 10U), 1000U); }
+	void set_max_incoming_peers(uint32_t n) { m_maxIncomingPeers = std::min(std::max(n, 10U), 1000U); }
+
 private:
 	p2pool* m_pool;
 	BlockCache* m_cache;
 	bool m_cacheLoaded;
 	std::string m_initialPeerList;
+	uint32_t m_maxOutgoingPeers;
+	uint32_t m_maxIncomingPeers;
 
 	uv_rwlock_t m_cachedBlocksLock;
 	unordered_map<hash, PoolBlock*> m_cachedBlocks;
