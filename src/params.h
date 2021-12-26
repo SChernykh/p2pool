@@ -40,6 +40,8 @@ struct Params
 	bool m_localStats = false;
 	bool m_blockCache = true;
 	bool m_disableRandomX = false;
+	uint32_t m_maxOutgoingPeers = 10;
+	uint32_t m_maxIncomingPeers = 1000;
 };
 
 } // namespace p2pool

@@ -30,11 +30,11 @@ Params::Params(int argc, char* argv[])
 		}
 
 		if ((strcmp(argv[i], "--rpc-port") == 0) && (i + 1 < argc)) {
-			m_rpcPort = static_cast<uint32_t>(atoi(argv[++i]));
+			m_rpcPort = strtoul(argv[++i], nullptr, 10);
 		}
 
 		if ((strcmp(argv[i], "--zmq-port") == 0) && (i + 1 < argc)) {
-			m_zmqPort = static_cast<uint32_t>(atoi(argv[++i]));
+			m_zmqPort = strtoul(argv[++i], nullptr, 10);
 		}
 
 		if (strcmp(argv[i], "--light-mode") == 0) {
@@ -58,7 +58,7 @@ Params::Params(int argc, char* argv[])
 		}
 
 		if ((strcmp(argv[i], "--loglevel") == 0) && (i + 1 < argc)) {
-			const int level = std::min(std::max(atoi(argv[++i]), 0), log::MAX_GLOBAL_LOG_LEVEL);
+			const int level = std::min(std::max<int>(strtol(argv[++i], nullptr, 10), 0), log::MAX_GLOBAL_LOG_LEVEL);
 			log::GLOBAL_LOG_LEVEL = level;
 		}
 
@@ -84,6 +84,14 @@ Params::Params(int argc, char* argv[])
 
 		if (strcmp(argv[i], "--no-randomx") == 0) {
 			m_disableRandomX = true;
+		}
+
+		if ((strcmp(argv[i], "--out-peers") == 0) && (i + 1 < argc)) {
+			m_maxOutgoingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 1000UL);
+		}
+
+		if ((strcmp(argv[i], "--in-peers") == 0) && (i + 1 < argc)) {
+			m_maxIncomingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 1000UL);
 		}
 	}
 

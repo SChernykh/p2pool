@@ -226,8 +226,8 @@ void P2PServer::update_peer_connections()
 		peer_list = m_peerList;
 	}
 
-	// Try to have at least 10 outgoing connections
-	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < 10) && !peer_list.empty();) {
+	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
+	for (uint32_t i = m_numConnections - m_numIncomingConnections, n = m_pool->params().m_maxOutgoingPeers; (i < n) && !peer_list.empty();) {
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
@@ -902,6 +902,15 @@ void P2PServer::P2PClient::reset()
 bool P2PServer::P2PClient::on_connect()
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	if (!server || !server->m_pool) {
+		return false;
+	}
+
+	if (m_isIncoming && (server->m_numIncomingConnections > server->m_pool->params().m_maxIncomingPeers)) {
+		LOGINFO(5, "Connection from " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " rejected (incoming connections limit was reached)");
+		return false;
+	}
 
 	// Don't allow multiple connections to/from the same IP
 	// server->m_clientsListLock is already locked here
