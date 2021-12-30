@@ -111,6 +111,16 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_sideChain = new SideChain(this, type);
 
+	if (m_params->m_p2pAddresses.empty()) {
+		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
+
+		char buf[log::Stream::BUF_SIZE + 1];
+		log::Stream s(buf);
+		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port << '\0';
+
+		m_params->m_p2pAddresses = buf;
+	}
+
 	if (m_params->m_disableRandomX) {
 		m_hasher = new RandomX_Hasher_RPC(this);
 	}

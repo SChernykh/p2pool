@@ -29,6 +29,7 @@ class BlockCache;
 static constexpr size_t P2P_BUF_SIZE = 128 * 1024;
 static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
 static constexpr int DEFAULT_P2P_PORT = 37889;
+static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 
 class P2PServer : public TCPServer<P2P_BUF_SIZE, P2P_BUF_SIZE>
 {

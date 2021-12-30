@@ -28,9 +28,8 @@
 
 static constexpr char log_category_prefix[] = "P2PServer ";
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
-static const char* seed_nodes[] = {
-	"seeds.p2pool.io"
-};
+static const char* seed_nodes[] = { "seeds.p2pool.io", ""};
+static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "" };
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
@@ -371,12 +370,10 @@ void P2PServer::load_peer_list()
 {
 	std::string saved_list;
 
-	// Load peers from seed nodes if we're on the default sidechain
-	if (m_pool->side_chain().is_default()) {
-		const int p2p_port = DEFAULT_P2P_PORT;
-
-		for (size_t i = 0; i < array_size(seed_nodes); ++i) {
-			LOGINFO(4, "loading peers from " << seed_nodes[i]);
+	// Load peers from seed nodes if we're on the default or mini sidechain
+	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
+		for (size_t i = 0; nodes[i][0]; ++i) {
+			LOGINFO(4, "loading peers from " << nodes[i]);
 
 			addrinfo hints{};
 			hints.ai_family = AF_UNSPEC;
@@ -384,7 +381,7 @@ void P2PServer::load_peer_list()
 			hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
 
 			addrinfo* result;
-			const int err = getaddrinfo(seed_nodes[i], nullptr, &hints, &result);
+			const int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
 			if (err == 0) {
 				for (addrinfo* r = result; r != NULL; r = r->ai_next) {
 					const char* addr_str;
@@ -407,7 +404,7 @@ void P2PServer::load_peer_list()
 					}
 
 					if (s.m_pos) {
-						LOGINFO(4, "added " << static_cast<char*>(buf) << " from " << seed_nodes[i]);
+						LOGINFO(4, "added " << static_cast<char*>(buf) << " from " << nodes[i]);
 						if (!saved_list.empty()) {
 							saved_list += ',';
 						}
@@ -417,9 +414,16 @@ void P2PServer::load_peer_list()
 				freeaddrinfo(result);
 			}
 			else {
-				LOGWARN(3, "getaddrinfo failed for " << seed_nodes[i] << ": " << gai_strerror(err));
+				LOGWARN(3, "getaddrinfo failed for " << nodes[i] << ": " << gai_strerror(err));
 			}
 		}
+	};
+
+	if (m_pool->side_chain().is_default()) {
+		load_from_seed_nodes(seed_nodes, DEFAULT_P2P_PORT);
+	}
+	else if (m_pool->side_chain().is_mini()) {
+		load_from_seed_nodes(seed_nodes_mini, DEFAULT_P2P_PORT_MINI);
 	}
 
 	// Finally load peers from p2pool_peers.txt

@@ -51,9 +51,8 @@ static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_
 
 namespace p2pool {
 
-static constexpr uint8_t default_consensus_id[HASH_SIZE] = {
-	34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24
-};
+static constexpr uint8_t default_consensus_id[HASH_SIZE] = { 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 };
+static constexpr uint8_t mini_consensus_id[HASH_SIZE] = { 57,130,201,26,149,174,199,250,66,80,189,18,108,216,194,220,136,23,63,24,64,113,221,44,219,86,39,163,53,24,126,196 };
 
 SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
@@ -97,10 +96,15 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	  << m_unclePenalty    << '\0';
 
 	constexpr char default_config[] = "mainnet\0" "default\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
+	constexpr char mini_config[] = "mainnet\0" "mini\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
 
 	// Hardcoded default consensus ID
 	if (memcmp(buf, default_config, sizeof(default_config) - 1) == 0) {
 		m_consensusId.assign(default_consensus_id, default_consensus_id + HASH_SIZE);
+	}
+	// Hardcoded mini consensus ID
+	else if (memcmp(buf, mini_config, sizeof(mini_config) - 1) == 0) {
+		m_consensusId.assign(mini_consensus_id, mini_consensus_id + HASH_SIZE);
 	}
 	else {
 		const randomx_flags flags = randomx_get_flags();
@@ -783,6 +787,11 @@ time_t SideChain::last_updated() const
 bool SideChain::is_default() const
 {
 	return (memcmp(m_consensusId.data(), default_consensus_id, HASH_SIZE) == 0);
+}
+
+bool SideChain::is_mini() const
+{
+	return (memcmp(m_consensusId.data(), mini_consensus_id, HASH_SIZE) == 0);
 }
 
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)

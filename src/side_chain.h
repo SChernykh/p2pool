@@ -71,6 +71,7 @@ public:
 	uint64_t miner_count();
 	time_t last_updated() const;
 	bool is_default() const;
+	bool is_mini() const;
 
 	const PoolBlock* chainTip() const { return m_chainTip; }
 

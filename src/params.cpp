@@ -104,16 +104,6 @@ Params::Params(int argc, char* argv[])
 
 		m_stratumAddresses = buf;
 	}
-
-	if (m_p2pAddresses.empty()) {
-		const int p2p_port = DEFAULT_P2P_PORT;
-
-		char buf[log::Stream::BUF_SIZE + 1];
-		log::Stream s(buf);
-		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port << '\0';
-
-		m_p2pAddresses = buf;
-	}
 }
 
 bool Params::ok() const
