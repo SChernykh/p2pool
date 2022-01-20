@@ -23,7 +23,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 |-|-|-|-|-|-|-|-|
 |Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|Pool admin controls your mined funds, what you mine and can execute network attacks|Only miner software is required
 |Solo|Rare|0%|0.6 XMR or more|No|As stable as your Monero node|100% under your control|Monero node + optional miner
-|**P2Pool**|Regular|0%|less than 0.0004 XMR|No|As stable as your Monero node|100% under your control|Monero node + P2Pool node + miner
+|**P2Pool**|Regular|0%|~0.0003 XMR|No|As stable as your Monero node|100% under your control|Monero node + P2Pool node + miner
 
 ## Features
 
@@ -33,7 +33,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * PPLNS payout scheme
 * **0% fee**
 * **0 XMR payout fee**
-* **Less than 0.0004 XMR minimal payout**
+* **~0.0003 XMR minimal payout**
 * Fast block times, down to 1 second
 * Uncle blocks are supported to avoid orphans - all your shares will be accounted for!
 * Configurable PPLNS window size and block time
@@ -50,7 +50,7 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 
 * Block time: 10 seconds
 * PPLNS window: 2160 blocks (6 hours)
-* Minimum payout = Monero block reward/2160, currently ~0.0004 XMR
+* Minimum payout = Monero block reward/2160, ~0.0003 XMR
 
 ## Build instructions
 
