@@ -21,6 +21,7 @@
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include "miner.h"
 #include "side_chain.h"
 #include <iostream>
 
@@ -69,7 +70,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_outpeers, do_inpeers, do_exit;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_outpeers, do_inpeers, do_start_mining, do_stop_mining, do_exit;
 
 static cmd cmds[] = {
 	{ STRCONST("help"), "", "display list of commands", do_help },
@@ -80,17 +81,18 @@ static cmd cmds[] = {
 	{ STRCONST("peers"), "", "show all peers", do_showpeers },
 	{ STRCONST("outpeers"), "", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "", "set maximum number of incoming connections", do_inpeers },
+	{ STRCONST("start_mining"), "<threads>", "start mining", do_start_mining },
+	{ STRCONST("stop_mining"), "", "stop mining", do_stop_mining },
 	{ STRCONST("exit"), "", "terminate p2pool", do_exit },
 	{ STRCNULL, NULL, NULL, NULL }
 };
 
 static int do_help(p2pool * /* m_pool */, const char * /* args */)
 {
-	int i;
-
 	LOGINFO(0, "List of commands");
-	for (i=0; cmds[i].name.len; i++)
+	for (int i = 0; cmds[i].name.len; ++i) {
 		LOGINFO(0, cmds[i].name.str << " " << cmds[i].arg << "\t" << cmds[i].descr);
+	}
 	return 0;
 }
 
@@ -103,13 +105,16 @@ static int do_status(p2pool *m_pool, const char * /* args */)
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->print_status();
 	}
+	if (m_pool->miner()) {
+		m_pool->miner()->print_status();
+	}
 	bkg_jobs_tracker.print_status();
 	return 0;
 }
 
 static int do_loglevel(p2pool * /* m_pool */, const char *args)
 {
-	int level = atoi(args);
+	int level = strtol(args, nullptr, 10);
 	level = std::min(std::max(level, 0), log::MAX_GLOBAL_LOG_LEVEL);
 	log::GLOBAL_LOG_LEVEL = level;
 	LOGINFO(0, "log level set to " << level);
@@ -155,6 +160,20 @@ static int do_inpeers(p2pool* m_pool, const char* args)
 		m_pool->p2p_server()->set_max_incoming_peers(strtoul(args, nullptr, 10));
 		LOGINFO(0, "max incoming peers set to " << m_pool->p2p_server()->max_incoming_peers());
 	}
+	return 0;
+}
+
+static int do_start_mining(p2pool* m_pool, const char* args)
+{
+	uint32_t threads = strtoul(args, nullptr, 10);
+	threads = std::min(std::max(threads, 1u), 64u);
+	m_pool->start_mining(threads);
+	return 0;
+}
+
+static int do_stop_mining(p2pool* m_pool, const char* /*args*/)
+{
+	m_pool->stop_mining();
 	return 0;
 }
 

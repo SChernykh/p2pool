@@ -27,6 +27,7 @@ set(HEADERS
 	src/keccak.h
 	src/log.h
 	src/mempool.h
+	src/miner.h
 	src/p2p_server.h
 	src/p2pool.h
 	src/p2pool_api.h
@@ -60,6 +61,7 @@ set(SOURCES
 	src/main.cpp
 	src/memory_leak_debug.cpp
 	src/mempool.cpp
+	src/miner.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp
 	src/p2pool_api.cpp

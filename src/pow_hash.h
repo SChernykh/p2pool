@@ -35,6 +35,11 @@ public:
 	virtual void set_seed_async(const hash&) {}
 	virtual void set_old_seed(const hash&) {}
 
+	virtual randomx_cache* cache() const { return nullptr; }
+	virtual randomx_dataset* dataset() const { return nullptr; }
+	virtual uint32_t seed_counter() const { return 0; }
+	virtual void sync_wait() {}
+
 	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) = 0;
 };
 
@@ -48,6 +53,11 @@ public:
 	void set_seed(const hash& seed);
 
 	void set_old_seed(const hash& seed) override;
+
+	randomx_cache* cache() const override { return m_cache[m_index]; }
+	randomx_dataset* dataset() const override { return m_dataset; }
+	uint32_t seed_counter() const override { return m_seedCounter.load(); }
+	void sync_wait() override;
 
 	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) override;
 
@@ -78,7 +88,7 @@ private:
 	hash m_seed[2];
 	uint32_t m_index;
 
-	std::atomic<uint32_t> m_setSeedCounter;
+	std::atomic<uint32_t> m_seedCounter;
 };
 
 class RandomX_Hasher_RPC : public RandomX_Hasher_Base
@@ -96,7 +106,6 @@ private:
 
 	uv_mutex_t m_requestMutex;
 	uv_loop_t m_loop;
-	volatile bool m_loopStopped;
 
 	uv_thread_t m_loopThread;
 	uv_mutex_t m_condMutex;

@@ -1002,7 +1002,7 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		m_poolBlockTemplate->m_nonce = nonce;
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
 		memcpy(m_poolBlockTemplate->m_mainChainData.data() + m_nonceOffset, &nonce, NONCE_SIZE);
-		memcpy(m_poolBlockTemplate->m_mainChainData.data() + m_extraNonceOffsetInTemplate, &extra_nonce, NONCE_SIZE);
+		memcpy(m_poolBlockTemplate->m_mainChainData.data() + m_extraNonceOffsetInTemplate, &extra_nonce, EXTRA_NONCE_SIZE);
 
 		SideChain& side_chain = m_pool->side_chain();
 

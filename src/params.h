@@ -42,6 +42,7 @@ struct Params
 	bool m_disableRandomX = false;
 	uint32_t m_maxOutgoingPeers = 10;
 	uint32_t m_maxIncomingPeers = 1000;
+	uint32_t m_minerThreads = 0;
 };
 
 } // namespace p2pool

@@ -27,6 +27,7 @@
 #include "side_chain.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include "miner.h"
 #include "params.h"
 #include "console_commands.h"
 #include "crypto.h"
@@ -590,6 +591,9 @@ void p2pool::download_block_headers(uint64_t current_height)
 					m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
+					if (m_params->m_minerThreads) {
+						start_mining(m_params->m_minerThreads);
+					}
 					api_update_network_stats();
 				}
 			}
@@ -656,22 +660,12 @@ void p2pool::update_median_timestamp()
 
 void p2pool::stratum_on_block()
 {
-#if 0
-	uint8_t hashing_blob[128];
-	uint64_t height;
-	difficulty_type difficulty;
-	difficulty_type sidechain_difficulty;
-	hash seed_hash;
-	size_t nonce_offset;
-	uint32_t template_id;
-
-	m_blockTemplate->get_hashing_blob(0, hashing_blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset, template_id);
-	submit_block(template_id, 0, 0);
-#else
+	if (m_miner) {
+		m_miner->on_block(*m_blockTemplate);
+	}
 	if (m_stratumServer) {
 		m_stratumServer->on_block(*m_blockTemplate);
 	}
-#endif
 }
 
 void p2pool::get_info()
@@ -1214,6 +1208,21 @@ bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
 	return true;
 }
 
+void p2pool::start_mining(uint32_t threads)
+{
+	stop_mining();
+	m_miner = new Miner(this, threads);
+}
+
+void p2pool::stop_mining()
+{
+	Miner* miner = m_miner;
+	if (miner) {
+		m_miner = nullptr;
+		delete miner;
+	}
+}
+
 static void on_signal(uv_signal_t* handle, int signum)
 {
 	p2pool* pool = reinterpret_cast<p2pool*>(handle->data);
@@ -1322,6 +1331,7 @@ int p2pool::run()
 
 	bkg_jobs_tracker.wait();
 
+	delete m_miner;
 	delete m_stratumServer;
 	delete m_p2pServer;
 

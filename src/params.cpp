@@ -93,6 +93,10 @@ Params::Params(int argc, char* argv[])
 		if ((strcmp(argv[i], "--in-peers") == 0) && (i + 1 < argc)) {
 			m_maxIncomingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 1000UL);
 		}
+
+		if ((strcmp(argv[i], "--start-mining") == 0) && (i + 1 < argc)) {
+			m_minerThreads = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 64UL);
+		}
 	}
 
 	if (m_stratumAddresses.empty()) {

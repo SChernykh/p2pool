@@ -37,7 +37,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 	, m_dataset(nullptr)
 	, m_seed{}
 	, m_index(0)
-	, m_setSeedCounter(0)
+	, m_seedCounter(0)
 {
 	uint64_t memory_allocated = 0;
 
@@ -119,6 +119,10 @@ RandomX_Hasher::~RandomX_Hasher()
 
 void RandomX_Hasher::set_seed_async(const hash& seed)
 {
+	if (m_seed[m_index] == seed) {
+		return;
+	}
+
 	struct Work
 	{
 		p2pool* pool;
@@ -127,10 +131,7 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 		uv_work_t req;
 	};
 
-	Work* work = new Work{};
-	work->pool = m_pool;
-	work->hasher = this;
-	work->seed = seed;
+	Work* work = new Work{ m_pool, this, seed, {} };
 	work->req.data = work;
 
 	const int err = uv_queue_work(uv_default_loop_checked(), &work->req,
@@ -167,7 +168,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 	WriteLock lock(m_datasetLock);
 	uv_rwlock_wrlock(&m_cacheLock);
 
-	m_setSeedCounter.fetch_add(1);
+	m_seedCounter.fetch_add(1);
 
 	if (m_seed[m_index] == seed) {
 		uv_rwlock_wrunlock(&m_cacheLock);
@@ -269,7 +270,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 void RandomX_Hasher::set_old_seed(const hash& seed)
 {
 	// set_seed() must go first, wait for it
-	while (m_setSeedCounter.load() == 0) {
+	while (m_seedCounter.load() == 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
@@ -303,6 +304,12 @@ void RandomX_Hasher::set_old_seed(const hash& seed)
 		}
 	}
 	LOGINFO(1, log::LightCyan() << "old cache updated");
+}
+
+void RandomX_Hasher::sync_wait()
+{
+	ReadLock lock(m_datasetLock);
+	ReadLock lock2(m_cacheLock);
 }
 
 bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result)
@@ -353,7 +360,6 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 
 RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	: m_pool(pool)
-	, m_loopStopped(false)
 	, m_loopThread{}
 {
 	int err = uv_loop_init(&m_loop);
@@ -385,11 +391,7 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 RandomX_Hasher_RPC::~RandomX_Hasher_RPC()
 {
 	uv_async_send(&m_shutdownAsync);
-
-	using namespace std::chrono;
-	while (!m_loopStopped) {
-		std::this_thread::sleep_for(milliseconds(1));
-	}
+	uv_thread_join(&m_loopThread);
 
 	uv_mutex_destroy(&m_requestMutex);
 	uv_mutex_destroy(&m_condMutex);
@@ -405,7 +407,6 @@ void RandomX_Hasher_RPC::loop(void* data)
 	uv_run(&hasher->m_loop, UV_RUN_DEFAULT);
 	uv_loop_close(&hasher->m_loop);
 	LOGINFO(1, "event loop stopped");
-	hasher->m_loopStopped = true;
 }
 
 bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& /*seed*/, hash& h)
