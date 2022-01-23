@@ -32,9 +32,12 @@ namespace {
 class RandomBytes
 {
 public:
-	RandomBytes() : rd(), rng(rd()), dist(0, 255)
+	RandomBytes() : rng(s), dist(0, 255)
 	{
 		uv_mutex_init_checked(&m);
+
+		// Diffuse the initial state in case it has low quality
+		rng.discard(10000);
 	}
 
 	~RandomBytes()
@@ -54,7 +57,22 @@ public:
 private:
 	uv_mutex_t m;
 
-	std::random_device rd;
+	// Fills the whole initial MT19937-64 state with non-deterministic random numbers
+	struct SeedSequence
+	{
+		using result_type = std::random_device::result_type;
+
+		template<typename T>
+		static void generate(T begin, T end)
+		{
+			std::random_device rd;
+			for (T i = begin; i != end; ++i) {
+				*i = rd();
+			}
+		}
+	};
+
+	SeedSequence s;
 	std::mt19937_64 rng;
 	std::uniform_int_distribution<> dist;
 };
