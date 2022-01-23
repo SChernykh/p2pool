@@ -26,6 +26,8 @@
 
 static constexpr char log_category_prefix[] = "Miner ";
 
+using namespace std::chrono;
+
 namespace p2pool {
 
 Miner::Miner(p2pool* pool, uint32_t threads)
@@ -33,13 +35,13 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_threads(threads)
 	, m_stopped(false)
 	, m_nonce(0)
-	, m_nonceTimestamp(std::chrono::high_resolution_clock::now())
+	, m_nonceTimestamp(high_resolution_clock::now())
 	, m_extraNonce(0xF19E3779U)
 	, m_job{}
+	, m_jobIndex(0)
 {
 	on_block(m_pool->block_template());
 
-	m_minerThreads.clear();
 	m_minerThreads.reserve(threads);
 
 	for (uint32_t i = 0; i < threads; ++i) {
@@ -62,15 +64,12 @@ Miner::~Miner()
 		uv_thread_join(&data->m_worker);
 		delete data;
 	}
-
-	m_minerThreads.clear();
 }
 
 void Miner::print_status()
 {
 	const uint32_t hash_count = 0 - m_nonce.load();
 
-	using namespace std::chrono;
 	const double dt = static_cast<double>(duration_cast<nanoseconds>(high_resolution_clock::now() - m_nonceTimestamp).count()) / 1e9;
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
@@ -82,12 +81,13 @@ void Miner::print_status()
 
 void Miner::on_block(const BlockTemplate& block)
 {
-	Job j;
+	const uint32_t next_index = m_jobIndex ^ 1;
+	Job& j = m_job[next_index];
 	hash seed;
 	j.m_blobSize = block.get_hashing_blob(m_extraNonce, j.m_blob, j.m_height, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
-	memcpy(&m_job, &j, sizeof(j));
 	m_nonce.exchange(0);
-	m_nonceTimestamp = std::chrono::high_resolution_clock::now();
+	m_jobIndex = next_index;
+	m_nonceTimestamp = high_resolution_clock::now();
 }
 
 void Miner::run(void* data)
@@ -151,14 +151,14 @@ void Miner::run(WorkerData* data)
 
 		if (first) {
 			first = false;
-			memcpy(&job[index], &miner->m_job, sizeof(m_job));
+			memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
 			job[index].set_nonce(miner->m_nonce.fetch_sub(1), miner->m_extraNonce);
 			randomx_calculate_hash_first(vm, job[index].m_blob, job[index].m_blobSize);
 		}
 
 		const Job& j = job[index];
 		index ^= 1;
-		memcpy(&job[index], &miner->m_job, sizeof(m_job));
+		memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
 		job[index].set_nonce(miner->m_nonce.fetch_sub(1), miner->m_extraNonce);
 
 		hash h;

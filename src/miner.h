@@ -69,7 +69,8 @@ private:
 
 		void set_nonce(uint32_t nonce, uint32_t extra_nonce);
 	};
-	Job m_job;
+	Job m_job[2];
+	volatile uint32_t m_jobIndex;
 
 	void run(WorkerData* data);
 };
