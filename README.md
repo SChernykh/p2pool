@@ -52,71 +52,6 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 * PPLNS window: 2160 blocks (6 hours)
 * Minimum payout = Monero block reward/2160, ~0.0003 XMR
 
-## Build instructions
-
-### Ubuntu 20.04
-
-p2pool binary:
-```
-sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
-git clone --recursive https://github.com/SChernykh/p2pool
-cd p2pool
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
-```
-
-### Arch Linux [AUR](https://wiki.archlinux.org/title/Arch_User_Repository)
-
-Make the package: [p2pool-git](https://aur.archlinux.org/packages/p2pool-git/)
-
-### [Nix/NixOS](https://nixos.org)
-
-This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install p2pool. 
-The commands below use the new flake specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
-
-Because this project has submodules which are not fixed in _nixUnstable_ yet you have to use the `nix/master` branch:
-```
-nix shell github:nixos/nix/master
-```
-
-Run the binary:
-```
-nix run git+https://github.com/SChernykh/p2pool?ref=master
-```
-
-Run the binary with arguments:
-```
-nix run git+https://github.com/SChernykh/p2pool?ref=master -- --help
-```
-
-### macOS
-
-p2pool binary:
-```
-brew update && brew install git cmake libuv zmq libpgm
-git clone --recursive https://github.com/SChernykh/p2pool
-cd p2pool
-mkdir build && cd build
-cmake ..
-make -j$(sysctl -n hw.logicalcpu)
-```
-
-### Windows
-
-p2pool binary (Visual Studio Community 2019 build):
-*NOTE: You need to have the "Desktop Development with C++" module installed.*
-```
-git clone --recursive https://github.com/SChernykh/p2pool
-cd p2pool
-mkdir build
-cd build
-cmake .. -G "Visual Studio 16 2019"
-```
-then open generated build\p2pool.sln in Visual Studio and build it there
-
-Alternatively, you can select "Clone a repository" within the GUI, then select "Build" from the menu. 
-
 ## How to mine on P2Pool
 
 This guide assumes that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. It's highly recommended to create a new mainnet wallet for mining because **wallet addresses are public on p2pool**.
@@ -193,6 +128,72 @@ ECHO Wait until the daemon shows fully synced before continuing. This can take s
 PAUSE
 %~dp0\xmrig.exe -u x+30000 -o 127.0.0.1
 ```
+
+## Build instructions
+
+### Ubuntu 20.04
+
+p2pool binary:
+```
+sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+### Arch Linux [AUR](https://wiki.archlinux.org/title/Arch_User_Repository)
+
+Make the package: [p2pool-git](https://aur.archlinux.org/packages/p2pool-git/)
+
+### [Nix/NixOS](https://nixos.org)
+
+This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install p2pool. 
+The commands below use the new flake specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
+
+Because this project has submodules which are not fixed in _nixUnstable_ yet you have to use the `nix/master` branch:
+```
+nix shell github:nixos/nix/master
+```
+
+Run the binary:
+```
+nix run git+https://github.com/SChernykh/p2pool?ref=master
+```
+
+Run the binary with arguments:
+```
+nix run git+https://github.com/SChernykh/p2pool?ref=master -- --help
+```
+
+### macOS
+
+p2pool binary:
+```
+brew update && brew install git cmake libuv zmq libpgm
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make -j$(sysctl -n hw.logicalcpu)
+```
+
+### Windows
+
+p2pool binary (Visual Studio Community 2019 build):
+*NOTE: You need to have the "Desktop Development with C++" module installed.*
+```
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build
+cd build
+cmake .. -G "Visual Studio 16 2019"
+```
+then open generated build\p2pool.sln in Visual Studio and build it there
+
+Alternatively, you can select "Clone a repository" within the GUI, then select "Build" from the menu. 
+
 
 ## Donations
 
