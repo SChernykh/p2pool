@@ -65,7 +65,12 @@ public:
 
 		uv_cond_init(&m_cond);
 		uv_mutex_init(&m_mutex);
-		uv_thread_create(&m_worker, run_wrapper, this);
+
+		const int err = uv_thread_create(&m_worker, run_wrapper, this);
+		if (err) {
+			fprintf(stderr, "failed to start logger thread (%s), aborting\n", uv_err_name(err));
+			abort();
+		}
 
 		do {} while (!worker_started);
 
