@@ -70,7 +70,7 @@ Params::Params(int argc, char* argv[])
 			m_apiPath = argv[++i];
 		}
 
-		if (strcmp(argv[i], "--stratum-api") == 0) {
+		if ((strcmp(argv[i], "--local-api") == 0) || (strcmp(argv[i], "--stratum-api") == 0)) {
 			m_localStats = true;
 		}
 

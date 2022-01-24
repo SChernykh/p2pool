@@ -22,6 +22,8 @@
 #include "block_template.h"
 #include "pow_hash.h"
 #include "randomx.h"
+#include "params.h"
+#include "p2pool_api.h"
 #include <thread>
 
 static constexpr char log_category_prefix[] = "Miner ";
@@ -34,9 +36,11 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	: m_pool(pool)
 	, m_threads(threads)
 	, m_stopped(false)
+	, m_startTimestamp(high_resolution_clock::now())
 	, m_nonce(0)
-	, m_nonceTimestamp(high_resolution_clock::now())
+	, m_nonceTimestamp(m_startTimestamp)
 	, m_extraNonce(0xF19E3779U)
+	, m_totalHashes(0)
 	, m_job{}
 	, m_jobIndex(0)
 {
@@ -85,9 +89,31 @@ void Miner::on_block(const BlockTemplate& block)
 	Job& j = m_job[next_index];
 	hash seed;
 	j.m_blobSize = block.get_hashing_blob(m_extraNonce, j.m_blob, j.m_height, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
-	m_nonce.exchange(0);
+
+	const uint32_t hash_count = 0 - m_nonce.exchange(0);
 	m_jobIndex = next_index;
-	m_nonceTimestamp = high_resolution_clock::now();
+
+	const auto cur_ts = high_resolution_clock::now();
+	const double dt = static_cast<double>(duration_cast<nanoseconds>(cur_ts - m_nonceTimestamp).count()) / 1e9;
+
+	m_nonceTimestamp = cur_ts;
+	m_totalHashes += hash_count;
+
+	if (m_pool->api() && m_pool->params().m_localStats) {
+		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner",
+			[cur_ts, hash_count, dt, this](log::Stream& s)
+			{
+				const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
+				const double time_running = static_cast<double>(duration_cast<milliseconds>(cur_ts - m_startTimestamp).count()) / 1e3;
+
+				s << "{\"current_hashrate\":" << hr
+					<< ",\"total_hashes\":" << m_totalHashes
+					<< ",\"time_running\":" << time_running
+					<< ",\"shares_found\":" << m_sharesFound.load()
+					<< ",\"threads\":" << m_threads
+					<< "}";
+			});
+	}
 }
 
 void Miner::run(void* data)
@@ -173,6 +199,7 @@ void Miner::run(WorkerData* data)
 		if (j.m_sidechainDiff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << j.m_height << ", diff " << j.m_sidechainDiff << ", worker thread " << data->m_index << '/' << data->m_count);
 			m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce);
+			++m_sharesFound;
 		}
 
 		std::this_thread::yield();

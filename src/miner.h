@@ -51,9 +51,14 @@ private:
 	std::vector<WorkerData*> m_minerThreads;
 	volatile bool m_stopped;
 
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_startTimestamp;
+
 	std::atomic<uint32_t> m_nonce;
 	std::chrono::time_point<std::chrono::high_resolution_clock> m_nonceTimestamp;
 	const uint32_t m_extraNonce;
+
+	uint64_t m_totalHashes;
+	std::atomic<uint32_t> m_sharesFound;
 
 	struct Job
 	{
