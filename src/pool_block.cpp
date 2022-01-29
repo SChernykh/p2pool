@@ -298,4 +298,16 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash);
 }
 
+uint64_t PoolBlock::get_payout(const Wallet& w) const
+{
+	for (size_t i = 0, n = m_outputs.size(); i < n; ++i) {
+		hash eph_public_key;
+		if ((w.get_eph_public_key(m_txkeySec, i, eph_public_key)) && (eph_public_key == m_outputs[i].m_ephPublicKey)) {
+			return m_outputs[i].m_reward;
+		}
+	}
+
+	return 0;
+}
+
 } // namespace p2pool

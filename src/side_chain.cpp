@@ -481,6 +481,11 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			m_watchBlockSidechainId = {};
 			data = m_watchBlock;
 			block_found = true;
+
+			const uint64_t payout = block.get_payout(m_pool->params().m_wallet);
+			if (payout) {
+				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
+			}
 		}
 	}
 
@@ -536,10 +541,16 @@ void SideChain::add_block(const PoolBlock& block)
 	m_seenWallets[new_block->m_minerWallet.spend_public_key()] = new_block->m_localTimestamp;
 }
 
-bool SideChain::has_block(const hash& id)
+PoolBlock* SideChain::find_block(const hash& id)
 {
 	MutexLock lock(m_sidechainLock);
-	return m_blocksById.find(id) != m_blocksById.end();
+
+	auto it = m_blocksById.find(id);
+	if (it != m_blocksById.end()) {
+		return it->second;
+	}
+
+	return nullptr;
 }
 
 void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_id)

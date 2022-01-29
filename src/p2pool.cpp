@@ -32,6 +32,7 @@
 #include "console_commands.h"
 #include "crypto.h"
 #include "p2pool_api.h"
+#include "pool_block.h"
 #include <thread>
 #include <fstream>
 
@@ -339,8 +340,13 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		", reward = " << log::Gray() << log::XMRAmount(data.reward));
 
 	if (!sidechain_id.empty()) {
-		if (side_chain().has_block(sidechain_id)) {
+		PoolBlock* block = side_chain().find_block(sidechain_id);
+		if (block) {
 			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
+			const uint64_t payout = block->get_payout(params().m_wallet);
+			if (payout) {
+				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
+			}
 			api_update_block_found(&data);
 		}
 		else {

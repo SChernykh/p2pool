@@ -137,6 +137,8 @@ struct PoolBlock
 
 	int deserialize(const uint8_t* data, size_t size, SideChain& sidechain);
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);
+
+	uint64_t get_payout(const Wallet& w) const;
 };
 
 } // namespace p2pool

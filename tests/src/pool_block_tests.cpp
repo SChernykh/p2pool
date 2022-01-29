@@ -125,7 +125,7 @@ TEST(pool_block, verify)
 		p += n;
 
 		sidechain.add_block(b);
-		ASSERT_TRUE(sidechain.has_block(b.m_sidechainId));
+		ASSERT_TRUE(sidechain.find_block(b.m_sidechainId) != nullptr);
 	}
 
 	const PoolBlock* tip = sidechain.chainTip();

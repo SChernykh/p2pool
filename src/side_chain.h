@@ -51,7 +51,7 @@ public:
 	void add_block(const PoolBlock& block);
 	void get_missing_blocks(std::vector<hash>& missing_blocks);
 
-	bool has_block(const hash& id);
+	PoolBlock* find_block(const hash& id);
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
 
 	bool get_block_blob(const hash& id, std::vector<uint8_t>& blob);
