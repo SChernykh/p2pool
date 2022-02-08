@@ -45,7 +45,7 @@ public:
 		static Client* allocate() { return new StratumClient(); }
 
 		void reset() override;
-		bool on_connect() override { return true; }
+		bool on_connect() override;
 		bool on_read(char* data, uint32_t size) override;
 
 		bool process_request(char* data, uint32_t size);
@@ -53,6 +53,7 @@ public:
 		bool process_submit(rapidjson::Document& doc, uint32_t id);
 
 		uint32_t m_rpcId;
+		time_t m_connectedTime;
 
 		uv_mutex_t m_jobsLock;
 

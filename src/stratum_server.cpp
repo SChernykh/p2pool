@@ -516,6 +516,8 @@ void StratumServer::on_blobs_ready()
 
 	size_t numClientsProcessed = 0;
 	uint32_t extra_nonce = 0;
+
+	const time_t cur_time = time(nullptr);
 	{
 		MutexLock lock2(m_clientsListLock);
 
@@ -523,7 +525,12 @@ void StratumServer::on_blobs_ready()
 			++numClientsProcessed;
 
 			if (!client->m_rpcId) {
-				// Not logged in yet, on_login() will send the job to this client
+				// Not logged in yet, on_login() will send the job to this client. Also close inactive connections.
+				if (cur_time >= client->m_connectedTime + 10) {
+					LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " didn't send login data");
+					client->ban(DEFAULT_BAN_TIME);
+					client->close();
+				}
 				continue;
 			}
 
@@ -760,6 +767,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 StratumServer::StratumClient::StratumClient()
 	: m_rpcId(0)
+	, m_connectedTime(0)
 	, m_jobs{}
 	, m_perConnectionJobId(0)
 	, m_customDiff{}
@@ -776,10 +784,17 @@ void StratumServer::StratumClient::reset()
 {
 	Client::reset();
 	m_rpcId = 0;
+	m_connectedTime = 0;
 	memset(m_jobs, 0, sizeof(m_jobs));
 	m_perConnectionJobId = 0;
 	m_customDiff = {};
 	m_customUser.clear();
+}
+
+bool StratumServer::StratumClient::on_connect()
+{
+	m_connectedTime = time(nullptr);
+	return true;
 }
 
 bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
