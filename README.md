@@ -60,6 +60,7 @@ This guide assumes that you run everything on the same machine. If it's not the 
 - Official Monero CLI and GUI v0.17.2.3 and newer
 - Monerujo v2.1.0 "Vertant" and newer
 - Cake Wallet v4.2.7 and newer
+- Feather Wallet v1.0.0 and newer
 - MyMonero
 
 **General Considerations**
