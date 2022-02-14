@@ -68,6 +68,7 @@ This guide assumes that you run everything on the same machine. If it's not the 
 - You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
 - Check that ports 18080 (Monero p2p port) and 37889 (p2pool p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same p2pool node. The more the better!
+- Starting from p2pool v1.7, you can add `--mini` to p2pool command line to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
 
 Step-by-step guide:
 

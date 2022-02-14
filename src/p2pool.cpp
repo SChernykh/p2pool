@@ -111,7 +111,7 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
 
-	m_sideChain = new SideChain(this, type);
+	m_sideChain = new SideChain(this, type, m_params->m_mini ? "mini" : nullptr);
 
 	if (m_params->m_p2pAddresses.empty()) {
 		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
