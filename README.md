@@ -106,7 +106,7 @@ Step-by-step guide:
 *NOTE: Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then click "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
 
 - Download p2pool binaries from https://github.com/SChernykh/p2pool/releases/latest
-- Download xmrig binary from https://github.com/xmrig/xmrig/releases/latest *(xmrig-6.15.2-gcc-win64.zip is the current version)*
+- Download xmrig binary from https://github.com/xmrig/xmrig/releases/latest
 - Expand the p2pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
 - Expand xmrig binary into appropriate location (same folder as p2pool is fine)
 - Prepare huge pages (each of monerod/p2pool/xmrig needs them): 
