@@ -159,13 +159,29 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake libuv zmq libpgm
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+
+    - name: Build libuv
+      run: |
+        cd external/src/libuv
+        mkdir build
+        cd build
+        cmake ..
+        make -j3
+
+    - name: Build libzmq
+      run: |
+        cd external/src/libzmq
+        mkdir build
+        cd build
+        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF
+        make -j3
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake ..
+        cmake .. -DSTATIC_BINARY=ON
         make -j3
 
     - name: Build tests
@@ -173,7 +189,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake ..
+        cmake .. -DSTATIC_LIBS=ON
         make -j3
 
     - name: Run tests
