@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(p2pool)
 
-option(STATIC_LINUX_BINARY "Build static Linux binary" OFF)
+option(STATIC_BINARY "Build static binary" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -124,15 +124,18 @@ add_definitions(/DZMQ_STATIC)
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-if (STATIC_LINUX_BINARY)
+if (STATIC_BINARY)
 	add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} ${CMAKE_PROJECT_NAME})
 
+	set(STATIC_LIBS randomx)
+	if (NOT APPLE)
+		set(STATIC_LIBS ${STATIC_LIBS} pthread dl)
+	endif()
+
 	target_link_libraries(${CMAKE_PROJECT_NAME}
-		"${CMAKE_SOURCE_DIR}/external/src/libsodium/src/libsodium/.libs/libsodium.a"
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"
 		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv_a.a"
-		randomx
-		pthread
+		${STATIC_LIBS}
 	)
 else()
 	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})
