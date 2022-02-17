@@ -101,6 +101,7 @@ Step-by-step guide:
 - To set custom fixed difficulty for your miner (for example, 10000), run `./xmrig -u x+10000 -o 127.0.0.1:3333`
 - xmrig should connect and start mining
 - Also check p2pool.log for any warnings and errors: `grep -E 'WARNING|ERROR' p2pool.log`
+- For a more in-depth beginner friendly walkthrough with the option of using Docker, please see SethForPrivacy's guide at: https://sethforprivacy.com/guides/run-a-p2pool-node/
 
 ### Windows 
 
