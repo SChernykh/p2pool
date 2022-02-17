@@ -439,6 +439,13 @@ void StratumServer::print_status()
 	print_stratum_status();
 }
 
+void StratumServer::reset_share_counters()
+{
+	m_cumulativeHashesAtLastShare = 0;
+	m_cumulativeFoundSharesDiff = 0.0;
+	m_totalFoundShares = 0;
+}
+
 void StratumServer::print_stratum_status() const
 {
 	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
@@ -473,8 +480,9 @@ void StratumServer::print_stratum_status() const
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
 	double average_effort = 0.0;
-	if (m_cumulativeFoundSharesDiff > 0.0) {
-		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / m_cumulativeFoundSharesDiff;
+	const double diff = m_cumulativeFoundSharesDiff;
+	if (diff > 0.0) {
+		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
 	}
 
 	LOGINFO(0, "status" <<
@@ -1028,8 +1036,9 @@ void StratumServer::api_update_local_stats(time_t timestamp)
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
 	double average_effort = 0.0;
-	if (m_cumulativeFoundSharesDiff > 0.0) {
-		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / m_cumulativeFoundSharesDiff;
+	const double diff = m_cumulativeFoundSharesDiff;
+	if (diff > 0.0) {
+		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
 	}
 
 	int shares_found = m_totalFoundShares;

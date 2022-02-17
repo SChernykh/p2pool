@@ -27,6 +27,7 @@
 #include "intrin_portable.h"
 #include "keccak.h"
 #include "p2p_server.h"
+#include "stratum_server.h"
 #include "params.h"
 #include "json_parsers.h"
 #include <rapidjson/document.h>
@@ -985,7 +986,8 @@ void SideChain::verify_loop(PoolBlock* block)
 
 			// This block is now verified
 
-			if (is_longer_chain(highest_block, block)) {
+			bool is_alternative;
+			if (is_longer_chain(highest_block, block, is_alternative)) {
 				highest_block = block;
 			}
 			else if (highest_block && (highest_block->m_sidechainHeight > block->m_sidechainHeight)) {
@@ -1330,7 +1332,8 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		return;
 	}
 
-	if (is_longer_chain(m_chainTip, block)) {
+	bool is_alternative;
+	if (is_longer_chain(m_chainTip, block, is_alternative)) {
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {
 			m_chainTip = block;
@@ -1343,6 +1346,12 @@ void SideChain::update_chain_tip(PoolBlock* block)
 			block->m_wantBroadcast = true;
 			if (m_pool) {
 				m_pool->update_block_template_async();
+
+				// Reset stratum share counters when switching to an alternative chain to avoid confusion
+				StratumServer* s = m_pool->stratum_server();
+				if (s && is_alternative) {
+					s->reset_share_counters();
+				}
 			}
 			prune_old_blocks();
 		}
@@ -1405,8 +1414,10 @@ PoolBlock* SideChain::get_parent(const PoolBlock* block)
 	return nullptr;
 }
 
-bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candidate)
+bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative)
 {
+	is_alternative = false;
+
 	if (!candidate || !candidate->m_verified || candidate->m_invalid) {
 		return false;
 	}
@@ -1449,6 +1460,8 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	}
 
 	// They're on totally different chains. Compare total difficulties over the last m_chainWindowSize blocks
+	is_alternative = true;
+
 	difficulty_type block_total_diff;
 	difficulty_type candidate_total_diff;
 
