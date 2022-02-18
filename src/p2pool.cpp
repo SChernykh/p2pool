@@ -111,6 +111,11 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
 
+	if (m_params->m_localStats && !m_api) {
+		LOGERR(1, "--local-api and --stratum-api command line parameters can't be used without --data-api");
+		panic();
+	}
+
 	m_sideChain = new SideChain(this, type, m_params->m_mini ? "mini" : nullptr);
 
 	if (m_params->m_p2pAddresses.empty()) {
