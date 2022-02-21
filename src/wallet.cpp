@@ -79,7 +79,7 @@ static_assert(rev_alphabet.num_symbols == 58, "Check alphabet");
 
 namespace p2pool {
 
-Wallet::Wallet(const char* address)
+Wallet::Wallet(const char* address) : m_prefix(0), m_checksum(0), m_type(NetworkType::Invalid)
 {
 	decode(address);
 }

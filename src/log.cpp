@@ -91,9 +91,13 @@ public:
 		}
 	}
 
-	FORCEINLINE ~Worker()
+	~Worker()
 	{
-		stop();
+		try {
+			stop();
+		}
+		catch (...) {
+		}
 	}
 
 	FORCEINLINE void stop()
