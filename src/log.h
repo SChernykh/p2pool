@@ -384,6 +384,13 @@ template<> struct log::Stream::Entry<NetworkType>
 	}
 };
 
+void put_rawip(const raw_ip& value, Stream* wrapper);
+
+template<> struct log::Stream::Entry<raw_ip>
+{
+	static FORCEINLINE void put(const raw_ip& value, Stream* wrapper) { put_rawip(value, wrapper); }
+};
+
 namespace {
 	template<log::Severity severity> void apply_severity(log::Stream&);
 

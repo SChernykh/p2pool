@@ -320,6 +320,29 @@ NOINLINE void Stream::writeCurrentTime()
 	m_numberWidth = 1;
 }
 
+NOINLINE void put_rawip(const raw_ip& value, Stream* wrapper)
+{
+	const char* addr_str;
+	char addr_str_buf[64];
+
+	static constexpr uint8_t ipv4_prefix[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255 };
+	const bool is_v6 = (memcmp(value.data, ipv4_prefix, 12) != 0);
+
+	if (is_v6) {
+		addr_str = inet_ntop(AF_INET6, value.data, addr_str_buf, sizeof(addr_str_buf));
+	}
+	else {
+		addr_str = inet_ntop(AF_INET, value.data + 12, addr_str_buf, sizeof(addr_str_buf));
+	}
+
+	if (addr_str) {
+		*wrapper << addr_str;
+	}
+	else {
+		*wrapper << "N/A";
+	}
+}
+
 } // namespace log
 
 } // namespace p2pool

@@ -48,6 +48,7 @@ public:
 	virtual void on_connect_failed(bool is_v6, const raw_ip& ip, int port);
 
 	void ban(const raw_ip& ip, uint64_t seconds);
+	virtual void print_bans();
 
 	struct Client
 	{

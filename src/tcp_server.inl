@@ -502,6 +502,30 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::ban(const raw_ip& ip, uint64_t se
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_bans()
+{
+	using namespace std::chrono;
+	const auto cur_time = steady_clock::now();
+
+	std::vector<std::pair<raw_ip, std::chrono::steady_clock::time_point>> bans;
+	{
+		MutexLock lock(m_bansLock);
+
+		bans.reserve(m_bans.size());
+		for (const auto& b : m_bans) {
+			bans.emplace_back(std::make_pair(b.first, b.second));
+		}
+	}
+
+	for (const auto& b : bans) {
+		if (cur_time < b.second) {
+			const uint64_t t = duration_cast<seconds>(b.second - cur_time).count();
+			LOGINFO(0, b.first << " is banned (" << t << " seconds left)");
+		}
+	}
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, SendCallbackBase&& callback)
 {
 	if (!server_event_loop_thread) {
