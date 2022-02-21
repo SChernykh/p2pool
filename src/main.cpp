@@ -21,7 +21,7 @@
 #include "stratum_server.h"
 #include "p2p_server.h"
 
-static void usage()
+void p2pool_usage()
 {
 	printf("P2Pool %s\n"
 		"\nUsage:\n\n" \
@@ -68,13 +68,13 @@ void memory_tracking_stop();
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
-		usage();
+		p2pool_usage();
 		return 0;
 	}
 
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h")) {
-			usage();
+			p2pool_usage();
 			return 0;
 		}
 	}
