@@ -17,6 +17,8 @@
 
 #include "gtest/gtest.h"
 
+void p2pool_usage() {}
+
 int main(int argc, char** argv)
 {
 	testing::InitGoogleTest(&argc, argv);
