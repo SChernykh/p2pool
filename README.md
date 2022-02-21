@@ -99,6 +99,7 @@ sudo sysctl vm.nr_hugepages=3072
 ./monerod --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist
 ``` 
 **Note:** The `--zmq-pub` option is required for P2Pool to work properly.
+
 6. Start P2Pool with the following command/options:
 ```
 ./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS
