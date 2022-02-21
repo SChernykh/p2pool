@@ -91,7 +91,7 @@ private:
 	PoolBlock* get_parent(const PoolBlock* block);
 
 	// Checks if "candidate" has longer (higher difficulty) chain than "block"
-	bool is_longer_chain(const PoolBlock* block, const PoolBlock* candidate);
+	bool is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative);
 	void update_depths(PoolBlock* block);
 	void prune_old_blocks();
 

@@ -23,6 +23,9 @@
 #include "side_chain.h"
 #include "pool_block.h"
 #include "block_cache.h"
+#include "json_rpc_request.h"
+#include "json_parsers.h"
+#include <rapidjson/document.h>
 #include <fstream>
 #include <numeric>
 
@@ -173,6 +176,8 @@ void P2PServer::update_peer_connections()
 	const time_t cur_time = time(nullptr);
 	const time_t last_updated = m_pool->side_chain().last_updated();
 
+	bool has_good_peers = false;
+
 	std::vector<raw_ip> connected_clients;
 	{
 		MutexLock lock(m_clientsListLock);
@@ -205,6 +210,9 @@ void P2PServer::update_peer_connections()
 
 			if (!disconnected) {
 				connected_clients.emplace_back(client->m_addr);
+				if (client->m_handshakeComplete && !client->m_handshakeInvalid && (client->m_listenPort >= 0)) {
+					has_good_peers = true;
+				}
 			}
 		}
 	}
@@ -228,8 +236,20 @@ void P2PServer::update_peer_connections()
 		peer_list = m_peerList;
 	}
 
+	uint32_t N = m_maxOutgoingPeers;
+
+	// Special case: when we can't find p2pool peers, scan through monerod peers (try 25 peers at a time)
+	if (!has_good_peers && !m_peerListMonero.empty()) {
+		LOGINFO(3, "Scanning monerod peers, " << m_peerListMonero.size() << " left");
+		for (uint32_t i = 0; (i < 25) && !m_peerListMonero.empty(); ++i) {
+			peer_list.push_back(m_peerListMonero.back());
+			m_peerListMonero.pop_back();
+		}
+		N = static_cast<uint32_t>(peer_list.size());
+	}
+
 	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
-	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < m_maxOutgoingPeers) && !peer_list.empty();) {
+	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < N) && !peer_list.empty();) {
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
@@ -251,8 +271,11 @@ void P2PServer::update_peer_connections()
 		peer_list.pop_back();
 	}
 
-	if ((m_numConnections == 0) && ((m_timerCounter % 30) == 0)) {
+	if (!has_good_peers && ((m_timerCounter % 30) == 0)) {
 		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
+		if (m_peerListMonero.empty()) {
+			load_monerod_peer_list();
+		}
 	}
 }
 
@@ -369,6 +392,7 @@ void P2PServer::save_peer_list()
 void P2PServer::load_peer_list()
 {
 	std::string saved_list;
+	const size_t old_size = m_peerList.size();
 
 	// Load peers from seed nodes if we're on the default or mini sidechain
 	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
@@ -493,7 +517,102 @@ void P2PServer::load_peer_list()
 			}
 		});
 
-	LOGINFO(4, "peer list loaded (" << m_peerList.size() << " peers)");
+	LOGINFO(4, "peer list loaded (" << (m_peerList.size() - old_size) << " peers)");
+}
+
+void P2PServer::load_monerod_peer_list()
+{
+	const Params& params = m_pool->params();
+
+	JSONRPCRequest::call(params.m_host.c_str(), params.m_rpcPort, "/get_peer_list",
+		[this](const char* data, size_t size)
+		{
+			constexpr char err_str[] = "/get_peer_list RPC request returned invalid JSON ";
+
+			using namespace rapidjson;
+
+			Document doc;
+			if (doc.Parse(data, size).HasParseError()) {
+				LOGWARN(4, err_str << "(parse error)");
+				return;
+			}
+
+			if (!doc.IsObject()) {
+				LOGWARN(4, err_str << "(not an object)");
+				return;
+			}
+
+			if (!doc.HasMember("white_list")) {
+				LOGWARN(4, err_str << "('white_list' not found)");
+				return;
+			}
+
+			const auto& white_list = doc["white_list"];
+
+			if (!white_list.IsArray()) {
+				LOGWARN(4, err_str << "('white_list' is not an array)");
+				return;
+			}
+
+			const int port = m_pool->side_chain().is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
+
+			const SizeType n = white_list.Size();
+
+			m_peerListMonero.clear();
+			m_peerListMonero.reserve(n);
+
+			for (SizeType i = 0; i < n; ++i) {
+				auto& v = white_list[i];
+				const char* ip;
+				uint64_t last_seen;
+				if (!parseValue(v, "host", ip) || !parseValue(v, "last_seen", last_seen)) {
+					continue;
+				}
+
+				Peer p;
+				p.m_lastSeen = last_seen;
+
+				if (strchr(ip, ':')) {
+					sockaddr_in6 addr6;
+					const int err = uv_ip6_addr(ip, port, &addr6);
+					if (err) {
+						continue;
+					}
+					p.m_isV6 = true;
+					memcpy(p.m_addr.data, &addr6.sin6_addr, sizeof(in6_addr));
+				}
+				else {
+					sockaddr_in addr4;
+					const int err = uv_ip4_addr(ip, port, &addr4);
+					if (err) {
+						continue;
+					}
+					p.m_isV6 = false;
+					p.m_addr = {};
+					p.m_addr.data[10] = 0xFF;
+					p.m_addr.data[11] = 0xFF;
+					memcpy(p.m_addr.data + 12, &addr4.sin_addr, sizeof(in_addr));
+				}
+
+				p.m_port = port;
+				p.m_numFailedConnections = 0;
+
+				if (!is_banned(p.m_addr)) {
+					m_peerListMonero.push_back(p);
+				}
+			}
+
+			// Put recently active peers first in the list
+			std::sort(m_peerListMonero.begin(), m_peerListMonero.end(), [](const Peer& a, const Peer& b) { return a.m_lastSeen > b.m_lastSeen; });
+
+			LOGINFO(4, "monerod peer list loaded (" << m_peerListMonero.size() << " peers)");
+		},
+		[](const char* data, size_t size)
+		{
+			if (size > 0) {
+				LOGWARN(4, "/get_peer_list RPC request failed: error " << log::const_buf(data, size));
+			}
+		}, &m_loop);
 }
 
 void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)

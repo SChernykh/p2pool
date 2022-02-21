@@ -160,6 +160,7 @@ private:
 	void save_peer_list_async();
 	void save_peer_list();
 	void load_peer_list();
+	void load_monerod_peer_list();
 	void update_peer_in_list(bool is_v6, const raw_ip& ip, int port);
 	void remove_peer_from_list(P2PClient* client);
 	void remove_peer_from_list(const raw_ip& ip);
@@ -188,6 +189,7 @@ private:
 	};
 
 	std::vector<Peer> m_peerList;
+	std::vector<Peer> m_peerListMonero;
 	time_t m_peerListLastSaved;
 
 	struct Broadcast

@@ -111,6 +111,11 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
 
+	if (m_params->m_localStats && !m_api) {
+		LOGERR(1, "--local-api and --stratum-api command line parameters can't be used without --data-api");
+		panic();
+	}
+
 	m_sideChain = new SideChain(this, type, m_params->m_mini ? "mini" : nullptr);
 
 	if (m_params->m_p2pAddresses.empty()) {
@@ -1114,7 +1119,7 @@ void p2pool::api_update_stats_mod()
 	m_api->set(p2pool_api::Category::GLOBAL, "stats_mod",
 		[&mainnet_tip, last_block_found_time, &last_block_found_buf, last_block_found_height, miners, hashrate, round_hashes, stratum_port](log::Stream& s)
 		{
-			s << "{\"config\":{\"ports\":[{\"port\":" << stratum_port << ",\"tls\":false}],\"fee\":0,\"minPaymentThreshold\":400000000},\"network\":{\"height\":"
+			s << "{\"config\":{\"ports\":[{\"port\":" << stratum_port << ",\"tls\":false}],\"fee\":0,\"minPaymentThreshold\":300000000},\"network\":{\"height\":"
 				<< mainnet_tip.height << "},\"pool\":{\"stats\":{\"lastBlockFound\":\""
 				<< last_block_found_time << "000\"},\"blocks\":[\""
 				<< static_cast<char*>(last_block_found_buf) << static_cast<char*>(last_block_found_buf) + HASH_SIZE * 2 - 4 << ':'

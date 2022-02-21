@@ -55,13 +55,25 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 	m_connect.data = this;
 	m_write.data = this;
 
-	const size_t len = strlen(req);
+	const char* uri = "/json_rpc";
+
+	size_t len = req ? strlen(req) : 0;
+	if (!len) {
+		LOGERR(1, "Empty JSONRPCRequest, fix the code!");
+		m_valid = false;
+		return;
+	}
+
+	if (req[0] == '/') {
+		uri = req;
+		len = 0;
+	}
 
 	m_request.reserve(std::max<size_t>(len + 128, log::Stream::BUF_SIZE + 1));
 	m_request.resize(log::Stream::BUF_SIZE + 1);
 
 	log::Stream s(m_request.data());
-	s << "POST /json_rpc HTTP/1.1\nContent-Type: application/json\nContent-Length: " << len << "\n\n";
+	s << "POST " << uri << " HTTP/1.1\nContent-Type: application/json\nContent-Length: " << len << "\n\n";
 
 	m_request.resize(s.m_pos);
 	m_request.insert(m_request.end(), req, req + len);

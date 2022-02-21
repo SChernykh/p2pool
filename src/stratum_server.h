@@ -75,6 +75,8 @@ public:
 
 	void print_status() override;
 
+	void reset_share_counters();
+
 private:
 	void print_stratum_status() const;
 
