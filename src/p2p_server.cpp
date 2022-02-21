@@ -290,9 +290,9 @@ void P2PServer::update_peer_list()
 				continue;
 			}
 
-			if (cur_time >= client->m_nextPeerListRequest) {
+			if (cur_time >= client->m_nextOutgoingPeerListRequest) {
 				// Send peer list requests at random intervals (60-120 seconds)
-				client->m_nextPeerListRequest = cur_time + 60 + (get_random64() % 61);
+				client->m_nextOutgoingPeerListRequest = cur_time + 60 + (get_random64() % 61);
 
 				const bool result = send(client,
 					[](void* buf)
@@ -945,7 +945,7 @@ void P2PServer::download_missing_blocks()
 			}
 		}
 
-		send(client,
+		const bool result = send(client,
 			[&id](void* buf)
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
@@ -959,6 +959,10 @@ void P2PServer::download_missing_blocks()
 
 				return p - p0;
 			});
+
+		if (result) {
+			++client->m_blockPendingRequests;
+		}
 	}
 }
 
@@ -985,10 +989,12 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeComplete(false)
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
-	, m_nextPeerListRequest(0)
+	, m_prevIncomingPeerListRequest(0)
+	, m_nextOutgoingPeerListRequest(0)
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
 	, m_pingTime(0)
+	, m_blockPendingRequests(0)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
@@ -1011,10 +1017,12 @@ void P2PServer::P2PClient::reset()
 	m_handshakeComplete = false;
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
-	m_nextPeerListRequest = 0;
+	m_prevIncomingPeerListRequest = 0;
+	m_nextOutgoingPeerListRequest = 0;
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
 	m_pingTime = 0;
+	m_blockPendingRequests = 0;
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
@@ -1070,6 +1078,8 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 	uint8_t* buf_begin = reinterpret_cast<uint8_t*>(m_readBuf);
 	uint8_t* buf = buf_begin;
 	uint32_t bytes_left = m_numRead;
+
+	uint32_t num_block_requests = 0;
 
 	uint32_t bytes_read;
 	do {
@@ -1128,6 +1138,13 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::LISTEN_PORT:
+			if (m_listenPort >= 0) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected LISTEN_PORT");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent LISTEN_PORT");
 
 			if (bytes_left >= 1 + sizeof(int32_t)) {
@@ -1141,6 +1158,14 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::BLOCK_REQUEST:
+			++num_block_requests;
+			if (num_block_requests > 100) {
+				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too many BLOCK_REQUEST messages at once");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_REQUEST");
 
 			if (bytes_left >= 1 + HASH_SIZE) {
@@ -1154,12 +1179,21 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::BLOCK_RESPONSE:
+			if (m_blockPendingRequests <= 0) {
+				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected BLOCK_RESPONSE");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_RESPONSE");
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t block_size = *reinterpret_cast<uint32_t*>(buf + 1);
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
+
+					--m_blockPendingRequests;
 					if (!on_block_response(buf + 1 + sizeof(uint32_t), block_size)) {
 						ban(DEFAULT_BAN_TIME);
 						server->remove_peer_from_list(this);
@@ -1571,6 +1605,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	memcpy(p, empty.h, HASH_SIZE);
 	p += HASH_SIZE;
 
+	++m_blockPendingRequests;
 	m_lastBroadcastTimestamp = time(nullptr);
 }
 
@@ -1706,6 +1741,15 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	const time_t cur_time = time(nullptr);
+
+	// Allow peer list requests no more than once every 30 seconds
+	if (cur_time < m_prevIncomingPeerListRequest + 30) {
+		LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is sending PEER_LIST_REQUEST too often");
+		return false;
+	}
+
+	m_prevIncomingPeerListRequest = cur_time;
 
 	Peer peers[PEER_LIST_RESPONSE_MAX_PEERS];
 	uint32_t num_selected_peers = 0;
@@ -1916,6 +1960,8 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		if (!result) {
 			return;
 		}
+
+		++m_blockPendingRequests;
 	}
 }
 
