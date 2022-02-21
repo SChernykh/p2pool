@@ -112,7 +112,7 @@ public:
 
 		time_t m_prevIncomingPeerListRequest;
 		uint64_t m_nextOutgoingPeerListRequest;
-		std::chrono::system_clock::time_point m_lastPeerListRequestTime;
+		std::chrono::high_resolution_clock::time_point m_lastPeerListRequestTime;
 		int m_peerListPendingRequests;
 		int64_t m_pingTime;
 

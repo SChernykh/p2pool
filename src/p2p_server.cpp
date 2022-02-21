@@ -303,7 +303,7 @@ void P2PServer::update_peer_list()
 					});
 
 				if (result) {
-					client->m_lastPeerListRequestTime = std::chrono::system_clock::now();
+					client->m_lastPeerListRequestTime = std::chrono::high_resolution_clock::now();
 					++client->m_peerListPendingRequests;
 				}
 			}
@@ -1255,7 +1255,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 					bytes_read = 2u + num_peers * 19u;
 
 					using namespace std::chrono;
-					m_pingTime = duration_cast<milliseconds>(system_clock::now() - m_lastPeerListRequestTime).count();
+					m_pingTime = duration_cast<milliseconds>(high_resolution_clock::now() - m_lastPeerListRequestTime).count();
 
 					--m_peerListPendingRequests;
 					if (!on_peer_list_response(buf + 1)) {
