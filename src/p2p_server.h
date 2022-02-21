@@ -111,7 +111,7 @@ public:
 		int m_listenPort;
 
 		time_t m_prevIncomingPeerListRequest;
-		time_t m_nextOutgoingPeerListRequest;
+		uint64_t m_nextOutgoingPeerListRequest;
 		std::chrono::system_clock::time_point m_lastPeerListRequestTime;
 		int m_peerListPendingRequests;
 		int64_t m_pingTime;
@@ -176,7 +176,8 @@ private:
 	PoolBlock* m_block;
 
 	uv_timer_t m_timer;
-	uint32_t m_timerCounter;
+	uint64_t m_timerCounter;
+	uint64_t m_timerInterval;
 
 	uint64_t m_peerId;
 

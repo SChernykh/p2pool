@@ -160,7 +160,7 @@ protected:
 	uint32_t m_numIncomingConnections;
 
 	uv_mutex_t m_bansLock;
-	unordered_map<raw_ip, time_t> m_bans;
+	unordered_map<raw_ip, std::chrono::steady_clock::time_point> m_bans;
 
 	bool is_banned(const raw_ip& ip);
 

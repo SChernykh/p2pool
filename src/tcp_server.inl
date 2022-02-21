@@ -322,11 +322,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect_failed(bool, const raw
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
 {
+	const auto cur_time = std::chrono::steady_clock::now();
+
 	MutexLock lock(m_bansLock);
 
 	auto it = m_bans.find(ip);
 	if (it != m_bans.end()) {
-		const bool banned = (time(nullptr) < it->second);
+		const bool banned = (cur_time < it->second);
 		if (!banned) {
 			m_bans.erase(it);
 		}
@@ -435,14 +437,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 
 	using namespace std::chrono;
 
-	const system_clock::time_point start_time = system_clock::now();
+	const auto start_time = steady_clock::now();
 	int64_t counter = 0;
 	uv_async_t asy;
 
 	constexpr uint32_t timeout_seconds = 30;
 
 	while (!m_loopStopped) {
-		const int64_t elapsed_time = duration_cast<milliseconds>(system_clock::now() - start_time).count();
+		const int64_t elapsed_time = duration_cast<milliseconds>(steady_clock::now() - start_time).count();
 
 		if (elapsed_time >= (counter + 1) * 1000) {
 			++counter;
@@ -493,8 +495,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_status()
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::ban(const raw_ip& ip, uint64_t seconds)
 {
+	const auto ban_time = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+
 	MutexLock lock(m_bansLock);
-	m_bans[ip] = time(nullptr) + seconds;
+	m_bans[ip] = ban_time;
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>

@@ -52,6 +52,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_block(new PoolBlock())
 	, m_timer{}
 	, m_timerCounter(0)
+	, m_timerInterval(2)
 	, m_peerId(m_rng())
 	, m_peerListLastSaved(0)
 {
@@ -86,7 +87,7 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 
 	m_timer.data = this;
-	err = uv_timer_start(&m_timer, on_timer, 1000, 2000);
+	err = uv_timer_start(&m_timer, on_timer, 1000, m_timerInterval * 1000);
 	if (err) {
 		LOGERR(1, "failed to start timer, error " << uv_err_name(err));
 		panic();
@@ -281,7 +282,6 @@ void P2PServer::update_peer_connections()
 
 void P2PServer::update_peer_list()
 {
-	const time_t cur_time = time(nullptr);
 	{
 		MutexLock lock(m_clientsListLock);
 
@@ -290,9 +290,9 @@ void P2PServer::update_peer_list()
 				continue;
 			}
 
-			if (cur_time >= client->m_nextOutgoingPeerListRequest) {
+			if (m_timerCounter >= client->m_nextOutgoingPeerListRequest) {
 				// Send peer list requests at random intervals (60-120 seconds)
-				client->m_nextOutgoingPeerListRequest = cur_time + 60 + (get_random64() % 61);
+				client->m_nextOutgoingPeerListRequest = m_timerCounter + (60 + (get_random64() % 61)) / m_timerInterval;
 
 				const bool result = send(client,
 					[](void* buf)
