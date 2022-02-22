@@ -110,7 +110,8 @@ public:
 		bool m_handshakeInvalid;
 		int m_listenPort;
 
-		time_t m_prevIncomingPeerListRequest;
+		uint32_t m_fastPeerListRequestCount;
+		std::chrono::steady_clock::time_point m_prevIncomingPeerListRequest;
 		uint64_t m_nextOutgoingPeerListRequest;
 		std::chrono::high_resolution_clock::time_point m_lastPeerListRequestTime;
 		int m_peerListPendingRequests;

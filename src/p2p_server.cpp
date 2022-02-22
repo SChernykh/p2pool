@@ -989,7 +989,8 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeComplete(false)
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
-	, m_prevIncomingPeerListRequest(0)
+	, m_fastPeerListRequestCount(0)
+	, m_prevIncomingPeerListRequest{}
 	, m_nextOutgoingPeerListRequest(0)
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
@@ -1017,7 +1018,8 @@ void P2PServer::P2PClient::reset()
 	m_handshakeComplete = false;
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
-	m_prevIncomingPeerListRequest = 0;
+	m_fastPeerListRequestCount = 0;
+	m_prevIncomingPeerListRequest = {};
 	m_nextOutgoingPeerListRequest = 0;
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
@@ -1740,13 +1742,18 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
+	using namespace std::chrono;
+
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
-	const time_t cur_time = time(nullptr);
+	const auto cur_time = steady_clock::now();
 
 	// Allow peer list requests no more than once every 30 seconds
-	if (cur_time < m_prevIncomingPeerListRequest + 30) {
-		LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is sending PEER_LIST_REQUEST too often");
-		return false;
+	if (duration_cast<seconds>(cur_time - m_prevIncomingPeerListRequest).count() < 30) {
+		++m_fastPeerListRequestCount;
+		if (m_fastPeerListRequestCount >= 3) {
+			LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is sending PEER_LIST_REQUEST too often");
+			return false;
+		}
 	}
 
 	m_prevIncomingPeerListRequest = cur_time;
