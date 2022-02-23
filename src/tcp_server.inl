@@ -548,10 +548,12 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		buf = new WriteBuf();
 	}
 
-	const size_t bytes_written = callback(buf->m_data);
+	// callback_buf is used in only 1 thread, so it's safe
+	static uint8_t callback_buf[WRITE_BUF_SIZE];
+	const size_t bytes_written = callback(callback_buf);
 
-	if (bytes_written > sizeof(buf->m_data)) {
-		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << sizeof(buf->m_data) << " bytes");
+	if (bytes_written > WRITE_BUF_SIZE) {
+		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << WRITE_BUF_SIZE << " bytes");
 		panic();
 	}
 
@@ -566,9 +568,11 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	buf->m_client = client;
 	buf->m_write.data = buf;
+	buf->m_data.reserve(round_up(bytes_written, 64));
+	buf->m_data.assign(callback_buf, callback_buf + bytes_written);
 
 	uv_buf_t bufs[1];
-	bufs[0].base = buf->m_data;
+	bufs[0].base = reinterpret_cast<char*>(buf->m_data.data());
 	bufs[0].len = static_cast<int>(bytes_written);
 
 	const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);

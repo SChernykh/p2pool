@@ -801,7 +801,7 @@ void P2PServer::on_broadcast()
 				}
 
 				return p - p0;
-				});
+			});
 		}
 	}
 }

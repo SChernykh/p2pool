@@ -98,7 +98,7 @@ public:
 	{
 		Client* m_client;
 		uv_write_t m_write;
-		char m_data[WRITE_BUF_SIZE];
+		std::vector<uint8_t> m_data;
 	};
 
 	uv_mutex_t m_writeBuffersLock;
