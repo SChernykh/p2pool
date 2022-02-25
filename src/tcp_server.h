@@ -96,8 +96,8 @@ public:
 
 	struct WriteBuf
 	{
-		Client* m_client;
-		uv_write_t m_write;
+		Client* m_client = nullptr;
+		uv_write_t m_write = {};
 		std::vector<uint8_t> m_data;
 	};
 
