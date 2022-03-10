@@ -254,7 +254,7 @@ TEST(difficulty_type, check_pow)
 
 			// Max hash value that passes this difficulty
 			memcpy(h.h, data, HASH_SIZE);
-			EXPECT_EQ(diff.check_pow(h), true);
+			ASSERT_EQ(diff.check_pow(h), true);
 
 			// Add 1 to data (256-bit number)
 			for (int j = 0; j <= 3; ++j) {
@@ -267,7 +267,7 @@ TEST(difficulty_type, check_pow)
 
 			// Min hash value that fails this difficulty
 			memcpy(h.h, data, HASH_SIZE);
-			EXPECT_EQ(diff.check_pow(h), false);
+			ASSERT_EQ(diff.check_pow(h), false);
 		}
 
 		const uint64_t target = diff.target();
@@ -276,14 +276,14 @@ TEST(difficulty_type, check_pow)
 		for (int j = 0; j < 10000; ++j) {
 			const uint64_t data[4] = { r(), r(), r(), r() % target };
 			memcpy(h.h, data, HASH_SIZE);
-			EXPECT_EQ(diff.check_pow(h), true);
+			ASSERT_EQ(diff.check_pow(h), true);
 		}
 
 		// Random values that fail
 		for (int j = 0; j < 10000; ++j) {
 			const uint64_t data[4] = { r(), r(), r(), target + (r() % (std::numeric_limits<uint64_t>::max() - target + 1)) };
 			memcpy(h.h, data, HASH_SIZE);
-			EXPECT_EQ(diff.check_pow(h), false);
+			ASSERT_EQ(diff.check_pow(h), false);
 		}
 	}
 }
