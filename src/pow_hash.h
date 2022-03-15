@@ -43,6 +43,7 @@ public:
 	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) = 0;
 };
 
+#ifdef WITH_RANDOMX
 class RandomX_Hasher : public RandomX_Hasher_Base
 {
 public:
@@ -90,6 +91,7 @@ private:
 
 	std::atomic<uint32_t> m_seedCounter;
 };
+#endif
 
 class RandomX_Hasher_RPC : public RandomX_Hasher_Base
 {

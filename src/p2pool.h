@@ -59,7 +59,9 @@ public:
 
 	StratumServer* stratum_server() const { return m_stratumServer; }
 	P2PServer* p2p_server() const { return m_p2pServer; }
+#ifdef WITH_RANDOMX
 	Miner* miner() const { return m_miner; }
+#endif
 
 	virtual void handle_tx(TxMempoolData& tx) override;
 	virtual void handle_miner_data(MinerData& data) override;
@@ -80,8 +82,10 @@ public:
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
+#ifdef WITH_RANDOMX
 	void start_mining(uint32_t threads);
 	void stop_mining();
+#endif
 
 	time_t zmq_last_active() const { return m_zmqLastActive; }
 	time_t start_time() const { return m_startTime; }
@@ -160,7 +164,9 @@ private:
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;
 	P2PServer* m_p2pServer = nullptr;
+#ifdef WITH_RANDOMX
 	Miner* m_miner = nullptr;
+#endif
 
 	ConsoleCommands* m_consoleCommands;
 

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(p2pool)
 
 option(STATIC_BINARY "Build static binary" OFF)
+option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned off, p2pool will rely on monerod for verifying RandomX hashes" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -9,8 +10,11 @@ if (${CMAKE_VERSION} VERSION_GREATER "3.5.2")
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 endif()
 
-add_subdirectory(external/src/RandomX)
-set(LIBS randomx)
+if (WITH_RANDOMX)
+	add_definitions(-DWITH_RANDOMX)
+	add_subdirectory(external/src/RandomX)
+	set(LIBS randomx)
+endif()
 
 include(cmake/flags.cmake)
 
@@ -27,7 +31,6 @@ set(HEADERS
 	src/keccak.h
 	src/log.h
 	src/mempool.h
-	src/miner.h
 	src/p2p_server.h
 	src/p2pool.h
 	src/p2pool_api.h
@@ -61,7 +64,6 @@ set(SOURCES
 	src/main.cpp
 	src/memory_leak_debug.cpp
 	src/mempool.cpp
-	src/miner.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp
 	src/p2pool_api.cpp
@@ -75,6 +77,11 @@ set(SOURCES
 	src/zmq_reader.cpp
 )
 
+if (WITH_RANDOMX)
+	set(HEADERS ${HEADERS} src/miner.h)
+	set(SOURCES ${SOURCES} src/miner.cpp)
+endif()
+
 include_directories(src)
 include_directories(external/src)
 include_directories(external/src/cryptonote)
@@ -82,7 +89,9 @@ include_directories(external/src/libuv/include)
 include_directories(external/src/cppzmq)
 include_directories(external/src/libzmq/include)
 include_directories(external/src/llhttp)
-include_directories(external/src/RandomX/src)
+if (WITH_RANDOMX)
+	include_directories(external/src/RandomX/src)
+endif()
 include_directories(external/src/rapidjson/include)
 include_directories(external/src/robin-hood-hashing/src/include)
 
@@ -127,7 +136,10 @@ add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 if (STATIC_BINARY)
 	add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} ${CMAKE_PROJECT_NAME})
 
-	set(STATIC_LIBS randomx)
+	if (WITH_RANDOMX)
+		set(STATIC_LIBS randomx)
+	endif()
+
 	if (NOT APPLE)
 		set(STATIC_LIBS ${STATIC_LIBS} pthread dl)
 	endif()

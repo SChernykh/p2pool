@@ -39,7 +39,11 @@ struct Params
 	std::string m_apiPath;
 	bool m_localStats = false;
 	bool m_blockCache = true;
+#ifdef WITH_RANDOMX
 	bool m_disableRandomX = false;
+#else
+	bool m_disableRandomX = true;
+#endif
 	uint32_t m_maxOutgoingPeers = 10;
 	uint32_t m_maxIncomingPeers = 1000;
 	uint32_t m_minerThreads = 0;

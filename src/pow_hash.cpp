@@ -19,9 +19,11 @@
 #include "pow_hash.h"
 #include "p2pool.h"
 #include "params.h"
+#ifdef WITH_RANDOMX
 #include "randomx.h"
 #include "configuration.h"
 #include "virtual_machine.hpp"
+#endif
 #include "json_rpc_request.h"
 #include "json_parsers.h"
 #include <rapidjson/document.h>
@@ -31,6 +33,7 @@ static constexpr char log_category_prefix[] = "RandomX_Hasher ";
 
 namespace p2pool {
 
+#ifdef WITH_RANDOMX
 RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 	: m_pool(pool)
 	, m_cache{}
@@ -357,6 +360,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 
 	return false;
 }
+#endif
 
 RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	: m_pool(pool)

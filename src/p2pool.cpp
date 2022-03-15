@@ -27,7 +27,9 @@
 #include "side_chain.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#ifdef WITH_RANDOMX
 #include "miner.h"
+#endif
 #include "params.h"
 #include "console_commands.h"
 #include "crypto.h"
@@ -128,12 +130,16 @@ p2pool::p2pool(int argc, char* argv[])
 		m_params->m_p2pAddresses = buf;
 	}
 
+#ifdef WITH_RANDOMX
 	if (m_params->m_disableRandomX) {
 		m_hasher = new RandomX_Hasher_RPC(this);
 	}
 	else {
 		m_hasher = new RandomX_Hasher(this);
 	}
+#else
+	m_hasher = new RandomX_Hasher_RPC(this);
+#endif
 
 	m_blockTemplate = new BlockTemplate(this);
 	m_mempool = new Mempool();
@@ -602,9 +608,11 @@ void p2pool::download_block_headers(uint64_t current_height)
 					m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
+#ifdef WITH_RANDOMX
 					if (m_params->m_minerThreads) {
 						start_mining(m_params->m_minerThreads);
 					}
+#endif
 					api_update_network_stats();
 				}
 			}
@@ -671,9 +679,11 @@ void p2pool::update_median_timestamp()
 
 void p2pool::stratum_on_block()
 {
+#ifdef WITH_RANDOMX
 	if (m_miner) {
 		m_miner->on_block(*m_blockTemplate);
 	}
+#endif
 	if (m_stratumServer) {
 		m_stratumServer->on_block(*m_blockTemplate);
 	}
@@ -1219,6 +1229,7 @@ bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
 	return true;
 }
 
+#ifdef WITH_RANDOMX
 void p2pool::start_mining(uint32_t threads)
 {
 	stop_mining();
@@ -1233,6 +1244,7 @@ void p2pool::stop_mining()
 		delete miner;
 	}
 }
+#endif
 
 static void on_signal(uv_signal_t* handle, int signum)
 {
@@ -1342,7 +1354,9 @@ int p2pool::run()
 
 	bkg_jobs_tracker.wait();
 
+#ifdef WITH_RANDOMX
 	delete m_miner;
+#endif
 	delete m_stratumServer;
 	delete m_p2pServer;
 

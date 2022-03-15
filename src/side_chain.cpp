@@ -21,10 +21,12 @@
 #include "pool_block.h"
 #include "wallet.h"
 #include "block_template.h"
+#ifdef WITH_RANDOMX
 #include "randomx.h"
 #include "dataset.hpp"
 #include "configuration.h"
 #include "intrin_portable.h"
+#endif
 #include "keccak.h"
 #include "p2p_server.h"
 #include "stratum_server.h"
@@ -108,6 +110,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		m_consensusId.assign(mini_consensus_id, mini_consensus_id + HASH_SIZE);
 	}
 	else {
+#ifdef WITH_RANDOMX
 		const randomx_flags flags = randomx_get_flags();
 		randomx_cache* cache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
 		if (!cache) {
@@ -142,6 +145,10 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h, HASH_SIZE);
 		randomx_release_cache(cache);
 		m_consensusId.assign(id.h, id.h + HASH_SIZE);
+#else
+		LOGERR(1, "Can't calculate consensus ID without RandomX library");
+		panic();
+#endif
 	}
 
 	s.m_pos = 0;

@@ -21,7 +21,9 @@
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#ifdef WITH_RANDOMX
 #include "miner.h"
+#endif
 #include "side_chain.h"
 #include <iostream>
 
@@ -70,7 +72,11 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showbans, do_outpeers, do_inpeers, do_start_mining, do_stop_mining, do_exit;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showbans, do_outpeers, do_inpeers, do_exit;
+
+#ifdef WITH_RANDOMX
+static cmdfunc do_start_mining, do_stop_mining;
+#endif
 
 static cmd cmds[] = {
 	{ STRCONST("help"), "", "display list of commands", do_help },
@@ -82,8 +88,10 @@ static cmd cmds[] = {
 	{ STRCONST("bans"), "", "show all banned IPs", do_showbans },
 	{ STRCONST("outpeers"), "", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "", "set maximum number of incoming connections", do_inpeers },
+#ifdef WITH_RANDOMX
 	{ STRCONST("start_mining"), "<threads>", "start mining", do_start_mining },
 	{ STRCONST("stop_mining"), "", "stop mining", do_stop_mining },
+#endif
 	{ STRCONST("exit"), "", "terminate p2pool", do_exit },
 	{ STRCNULL, NULL, NULL, NULL }
 };
@@ -106,9 +114,11 @@ static int do_status(p2pool *m_pool, const char * /* args */)
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->print_status();
 	}
+#ifdef WITH_RANDOMX
 	if (m_pool->miner()) {
 		m_pool->miner()->print_status();
 	}
+#endif
 	bkg_jobs_tracker.print_status();
 	return 0;
 }
@@ -175,6 +185,7 @@ static int do_inpeers(p2pool* m_pool, const char* args)
 	return 0;
 }
 
+#ifdef WITH_RANDOMX
 static int do_start_mining(p2pool* m_pool, const char* args)
 {
 	uint32_t threads = strtoul(args, nullptr, 10);
@@ -188,6 +199,7 @@ static int do_stop_mining(p2pool* m_pool, const char* /*args*/)
 	m_pool->stop_mining();
 	return 0;
 }
+#endif
 
 static int do_exit(p2pool *m_pool, const char * /* args */)
 {

@@ -19,6 +19,7 @@ set(LIBS gtest)
 
 add_subdirectory(../external/src/RandomX RandomX)
 set(LIBS ${LIBS} randomx)
+add_definitions(-DWITH_RANDOMX)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(WARNING_FLAGS "")
