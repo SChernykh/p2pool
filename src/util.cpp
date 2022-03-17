@@ -382,4 +382,6 @@ bool resolve_host(std::string& host, bool& is_v6)
 	return true;
 }
 
+RandomDeviceSeed RandomDeviceSeed::instance;
+
 } // namespace p2pool

@@ -39,8 +39,7 @@ StratumServer::StratumServer(p2pool* pool)
 	: TCPServer(StratumClient::allocate)
 	, m_pool(pool)
 	, m_extraNonce(0)
-	, m_rd{}
-	, m_rng(m_rd())
+	, m_rng(RandomDeviceSeed::instance)
 	, m_cumulativeHashes(0)
 	, m_cumulativeHashesAtLastShare(0)
 	, m_hashrateDataHead(0)
@@ -51,6 +50,9 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_totalFoundShares(0)
 	, m_apiLastUpdateTime(0)
 {
+	// Diffuse the initial state in case it has low quality
+	m_rng.discard(10000);
+
 	m_hashrateData[0] = { time(nullptr), 0 };
 
 	uv_mutex_init_checked(&m_blobsQueueLock);

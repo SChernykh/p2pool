@@ -19,7 +19,6 @@
 #include "zmq_reader.h"
 #include "json_parsers.h"
 #include <rapidjson/document.h>
-#include <random>
 
 static constexpr char log_category_prefix[] = "ZMQReader ";
 

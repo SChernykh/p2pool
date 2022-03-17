@@ -19,7 +19,6 @@
 
 #include "tcp_server.h"
 #include <rapidjson/document.h>
-#include <random>
 
 namespace p2pool {
 
@@ -109,7 +108,6 @@ private:
 	std::atomic<uint32_t> m_extraNonce;
 
 	uv_mutex_t m_rngLock;
-	std::random_device m_rd;
 	std::mt19937_64 m_rng;
 
 	struct SubmittedShare

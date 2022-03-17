@@ -145,6 +145,24 @@ using unordered_map = robin_hood::detail::Table<false, 80, Key, T, robin_hood::h
 template <typename Key>
 using unordered_set = robin_hood::detail::Table<false, 80, Key, void, robin_hood::hash<Key>, std::equal_to<Key>>;
 
+// Fills the whole initial MT19937-64 state with non-deterministic random numbers
+struct RandomDeviceSeed
+{
+	using result_type = std::random_device::result_type;
+	static_assert(sizeof(result_type) >= 4, "result_type must have at least 32 bits");
+
+	template<typename T>
+	static void generate(T begin, T end)
+	{
+		std::random_device rd;
+		for (T i = begin; i != end; ++i) {
+			*i = rd();
+		}
+	}
+
+	static RandomDeviceSeed instance;
+};
+
 } // namespace p2pool
 
 namespace robin_hood {

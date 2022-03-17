@@ -19,7 +19,6 @@
 #include "crypto.h"
 #include "keccak.h"
 #include "uv_util.h"
-#include <random>
 
 extern "C" {
 #include "crypto-ops.h"
@@ -32,7 +31,7 @@ namespace {
 class RandomBytes
 {
 public:
-	RandomBytes() : rng(s), dist(0, 255)
+	RandomBytes() : rng(RandomDeviceSeed::instance), dist(0, 255)
 	{
 		uv_mutex_init_checked(&m);
 
@@ -57,22 +56,6 @@ public:
 private:
 	uv_mutex_t m;
 
-	// Fills the whole initial MT19937-64 state with non-deterministic random numbers
-	struct SeedSequence
-	{
-		using result_type = std::random_device::result_type;
-
-		template<typename T>
-		static void generate(T begin, T end)
-		{
-			std::random_device rd;
-			for (T i = begin; i != end; ++i) {
-				*i = rd();
-			}
-		}
-	};
-
-	SeedSequence s;
 	std::mt19937_64 rng;
 	std::uniform_int_distribution<> dist;
 };

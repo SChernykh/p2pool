@@ -47,15 +47,18 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
 	, m_cacheLoaded(false)
 	, m_initialPeerList(pool->params().m_p2pPeerList)
-	, m_rd{}
-	, m_rng(m_rd())
+	, m_rng(RandomDeviceSeed::instance)
 	, m_block(new PoolBlock())
 	, m_timer{}
 	, m_timerCounter(0)
 	, m_timerInterval(2)
-	, m_peerId(m_rng())
 	, m_peerListLastSaved(0)
 {
+	// Diffuse the initial state in case it has low quality
+	m_rng.discard(10000);
+
+	m_peerId = m_rng();
+
 	set_max_outgoing_peers(pool->params().m_maxOutgoingPeers);
 	set_max_incoming_peers(pool->params().m_maxIncomingPeers);
 

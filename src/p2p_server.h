@@ -18,7 +18,6 @@
 #pragma once
 
 #include "tcp_server.h"
-#include <random>
 
 namespace p2pool {
 
@@ -170,7 +169,6 @@ private:
 	void remove_peer_from_list(const raw_ip& ip);
 
 	uv_mutex_t m_rngLock;
-	std::random_device m_rd;
 	std::mt19937_64 m_rng;
 
 	uv_mutex_t m_blockLock;
