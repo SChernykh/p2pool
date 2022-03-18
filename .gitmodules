@@ -10,9 +10,6 @@
 [submodule "external/src/cppzmq"]
 	path = external/src/cppzmq
 	url = https://github.com/SChernykh/cppzmq
-[submodule "external/src/libsodium"]
-	path = external/src/libsodium
-	url = https://github.com/SChernykh/libsodium
 [submodule "external/src/libuv"]
 	path = external/src/libuv
 	url = https://github.com/SChernykh/libuv

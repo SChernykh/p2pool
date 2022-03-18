@@ -111,7 +111,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang
 	find_library(ZMQ_LIBRARY NAMES zmq libzmq.a)
 	find_library(UV_LIBRARY_DEBUG NAMES uv libuv.a)
 	find_library(UV_LIBRARY NAMES uv libuv.a)
-	find_library(SODIUM_LIBRARY sodium)
 endif()
 
 find_library(PGM_LIBRARY pgm)
@@ -123,10 +122,6 @@ endif()
 
 if (NORM_LIBRARY)
 	set(LIBS ${LIBS} ${NORM_LIBRARY})
-endif()
-
-if (SODIUM_LIBRARY)
-	set(LIBS ${LIBS} ${SODIUM_LIBRARY})
 endif()
 
 add_definitions(/DZMQ_STATIC)
