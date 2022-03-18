@@ -2,7 +2,7 @@
 
 Decentralized pool for Monero mining.
 
-Pool status and monitoring pages can be found at https://p2pool.io/ and https://p2pool.observer/
+Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/
 
 ### Build Status
 
