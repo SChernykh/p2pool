@@ -781,7 +781,7 @@ difficulty_type SideChain::total_hashes() const
 
 uint64_t SideChain::miner_count()
 {
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 
 	MutexLock lock(m_sidechainLock);
 
@@ -798,7 +798,7 @@ uint64_t SideChain::miner_count()
 	return m_seenWallets.size();
 }
 
-time_t SideChain::last_updated() const
+uint64_t SideChain::last_updated() const
 {
 	return m_chainTip ? m_chainTip->m_localTimestamp : 0;
 }
@@ -1584,7 +1584,8 @@ void SideChain::prune_old_blocks()
 	const uint64_t prune_distance = m_chainWindowSize * 2 + 120 / m_targetBlockTime;
 
 	// Remove old blocks from alternative unconnected chains after long enough time
-	const time_t prune_time = time(nullptr) - m_chainWindowSize * 4 * m_targetBlockTime;
+	const uint64_t cur_time = seconds_since_epoch();
+	const uint64_t prune_delay = m_chainWindowSize * 4 * m_targetBlockTime;
 
 	if (m_chainTip->m_sidechainHeight < prune_distance) {
 		return;
@@ -1599,9 +1600,9 @@ void SideChain::prune_old_blocks()
 		std::vector<PoolBlock*>& v = it->second;
 
 		v.erase(std::remove_if(v.begin(), v.end(),
-			[this, prune_distance, prune_time, &num_blocks_pruned, height](PoolBlock* block)
+			[this, prune_distance, cur_time, prune_delay, &num_blocks_pruned, height](PoolBlock* block)
 			{
-				if ((block->m_depth >= prune_distance) || (block->m_localTimestamp <= prune_time)) {
+				if ((block->m_depth >= prune_distance) || (cur_time >= block->m_localTimestamp + prune_delay)) {
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);

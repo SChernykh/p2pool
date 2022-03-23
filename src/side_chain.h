@@ -69,7 +69,7 @@ public:
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
 	uint64_t miner_count();
-	time_t last_updated() const;
+	uint64_t last_updated() const;
 	bool is_default() const;
 	bool is_mini() const;
 
@@ -102,7 +102,7 @@ private:
 	PoolBlock* m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
-	unordered_map<hash, time_t> m_seenWallets;
+	unordered_map<hash, uint64_t> m_seenWallets;
 	std::vector<MinerShare> m_tmpShares;
 	std::vector<uint64_t> m_tmpRewards;
 

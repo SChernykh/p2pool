@@ -53,7 +53,7 @@ StratumServer::StratumServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	m_hashrateData[0] = { time(nullptr), 0 };
+	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
 	uv_mutex_init_checked(&m_blobsQueueLock);
 	uv_mutex_init_checked(&m_rngLock);
@@ -437,7 +437,7 @@ uint64_t StratumServer::get_random64()
 
 void StratumServer::print_status()
 {
-	update_hashrate_data(0, time(nullptr));
+	update_hashrate_data(0, seconds_since_epoch());
 	print_stratum_status();
 }
 
@@ -527,7 +527,7 @@ void StratumServer::on_blobs_ready()
 	size_t numClientsProcessed = 0;
 	uint32_t extra_nonce = 0;
 
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 	{
 		MutexLock lock2(m_clientsListLock);
 
@@ -605,7 +605,7 @@ void StratumServer::on_blobs_ready()
 	LOGINFO(3, "sent new job to " << extra_nonce << '/' << numClientsProcessed << " clients");
 }
 
-void StratumServer::update_hashrate_data(uint64_t hashes, time_t timestamp)
+void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 {
 	constexpr size_t N = array_size(&StratumServer::m_hashrateData);
 
@@ -707,7 +707,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	const uint64_t value = *reinterpret_cast<uint64_t*>(share->m_resultHash.h + HASH_SIZE - sizeof(uint64_t));
 
 	if (LIKELY(value < target)) {
-		const time_t timestamp = time(nullptr);
+		const uint64_t timestamp = seconds_since_epoch();
 		server->update_hashrate_data(hashes, timestamp);
 		server->api_update_local_stats(timestamp);
 		share->m_result = SubmittedShare::Result::OK;
@@ -803,7 +803,7 @@ void StratumServer::StratumClient::reset()
 
 bool StratumServer::StratumClient::on_connect()
 {
-	m_connectedTime = time(nullptr);
+	m_connectedTime = seconds_since_epoch();
 	return true;
 }
 
@@ -993,7 +993,7 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
 }
 
-void StratumServer::api_update_local_stats(time_t timestamp)
+void StratumServer::api_update_local_stats(uint64_t timestamp)
 {
 	if (!m_pool->api() || !m_pool->params().m_localStats) {
 		return;

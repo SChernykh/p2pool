@@ -163,6 +163,12 @@ struct RandomDeviceSeed
 	static RandomDeviceSeed instance;
 };
 
+FORCEINLINE uint64_t seconds_since_epoch()
+{
+	using namespace std::chrono;
+	return duration_cast<seconds>(steady_clock::now().time_since_epoch()).count();
+}
+
 } // namespace p2pool
 
 namespace robin_hood {

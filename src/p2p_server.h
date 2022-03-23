@@ -110,7 +110,7 @@ public:
 		int m_listenPort;
 
 		uint32_t m_fastPeerListRequestCount;
-		std::chrono::steady_clock::time_point m_prevIncomingPeerListRequest;
+		uint64_t m_prevIncomingPeerListRequest;
 		uint64_t m_nextOutgoingPeerListRequest;
 		std::chrono::high_resolution_clock::time_point m_lastPeerListRequestTime;
 		int m_peerListPendingRequests;
@@ -118,9 +118,9 @@ public:
 
 		int m_blockPendingRequests;
 
-		time_t m_lastAlive;
-		time_t m_lastBroadcastTimestamp;
-		time_t m_lastBlockrequestTimestamp;
+		uint64_t m_lastAlive;
+		uint64_t m_lastBroadcastTimestamp;
+		uint64_t m_lastBlockrequestTimestamp;
 
 		hash m_broadcastedHashes[8];
 		std::atomic<uint32_t> m_broadcastedHashesIndex{ 0 };
@@ -188,12 +188,12 @@ private:
 		raw_ip m_addr;
 		int m_port;
 		uint32_t m_numFailedConnections;
-		time_t m_lastSeen;
+		uint64_t m_lastSeen;
 	};
 
 	std::vector<Peer> m_peerList;
 	std::vector<Peer> m_peerListMonero;
-	time_t m_peerListLastSaved;
+	uint64_t m_peerListLastSaved;
 
 	struct Broadcast
 	{

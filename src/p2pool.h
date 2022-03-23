@@ -87,8 +87,8 @@ public:
 	void stop_mining();
 #endif
 
-	time_t zmq_last_active() const { return m_zmqLastActive; }
-	time_t start_time() const { return m_startTime; }
+	uint64_t zmq_last_active() const { return m_zmqLastActive; }
+	uint64_t start_time() const { return m_startTime; }
 
 private:
 	p2pool(const p2pool&) = delete;
@@ -185,8 +185,8 @@ private:
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
 
-	time_t m_zmqLastActive;
-	time_t m_startTime;
+	uint64_t m_zmqLastActive;
+	uint64_t m_startTime;
 
 	ZMQReader* m_ZMQReader = nullptr;
 };

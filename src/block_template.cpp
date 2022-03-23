@@ -194,8 +194,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_difficulty = data.difficulty;
 	m_seedHash = data.seed_hash;
 
-	const time_t cur_time = time(nullptr);
-
 	// Only choose transactions that were received 10 or more seconds ago
 	size_t total_mempool_transactions;
 	{
@@ -204,6 +202,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		ReadLock mempool_lock(mempool.m_lock);
 
 		total_mempool_transactions = mempool.m_transactions.size();
+
+		const uint64_t cur_time = seconds_since_epoch();
 
 		for (auto& it : mempool.m_transactions) {
 			if (cur_time >= it.second.time_received + 10) {
@@ -252,7 +252,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_poolBlockTemplate->m_minorVersion = HARDFORK_SUPPORTED_VERSION;
 
 	// Timestamp
-	m_timestamp = cur_time;
+	m_timestamp = time(nullptr);
 	if (m_timestamp <= data.median_timestamp) {
 		LOGWARN(2, "timestamp adjusted from " << m_timestamp << " to " << data.median_timestamp + 1 << ". Fix your system time!");
 		m_timestamp = data.median_timestamp + 1;

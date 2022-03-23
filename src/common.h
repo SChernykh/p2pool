@@ -235,7 +235,7 @@ struct TxMempoolData
 	uint64_t blob_size;
 	uint64_t weight;
 	uint64_t fee;
-	time_t time_received;
+	uint64_t time_received;
 };
 
 struct MinerData

@@ -130,7 +130,7 @@ struct PoolBlock
 	bool m_broadcasted;
 	bool m_wantBroadcast;
 
-	time_t m_localTimestamp;
+	uint64_t m_localTimestamp;
 
 	void serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash);
 	void serialize_sidechain_data();

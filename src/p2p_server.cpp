@@ -177,8 +177,8 @@ void P2PServer::on_connect_failed(bool is_v6, const raw_ip& ip, int port)
 
 void P2PServer::update_peer_connections()
 {
-	const time_t cur_time = time(nullptr);
-	const time_t last_updated = m_pool->side_chain().last_updated();
+	const uint64_t cur_time = seconds_since_epoch();
+	const uint64_t last_updated = m_pool->side_chain().last_updated();
 
 	bool has_good_peers = false;
 
@@ -203,7 +203,7 @@ void P2PServer::update_peer_connections()
 				// - It's been at least 10 seconds since the last block request (peer is not syncing)
 				// - Peer should have sent a broadcast by now
 				if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 300)) {
-					const time_t dt = last_updated - client->m_lastBroadcastTimestamp;
+					const uint64_t dt = last_updated - client->m_lastBroadcastTimestamp;
 					LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " is not broadcasting blocks (last update " << dt << " seconds ago)");
 					client->ban(DEFAULT_BAN_TIME);
 					remove_peer_from_list(client);
@@ -316,7 +316,7 @@ void P2PServer::update_peer_list()
 
 void P2PServer::save_peer_list_async()
 {
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 	if (cur_time < m_peerListLastSaved + 300) {
 		return;
 	}
@@ -389,7 +389,7 @@ void P2PServer::save_peer_list()
 	f.close();
 
 	LOGINFO(5, "peer list saved (" << peer_list.size() << " peers)");
-	m_peerListLastSaved = time(nullptr);
+	m_peerListLastSaved = seconds_since_epoch();
 }
 
 void P2PServer::load_peer_list()
@@ -513,7 +513,7 @@ void P2PServer::load_peer_list()
 
 			p.m_port = port;
 			p.m_numFailedConnections = 0;
-			p.m_lastSeen = time(nullptr);
+			p.m_lastSeen = seconds_since_epoch();
 
 			if (!already_added && !is_banned(p.m_addr)) {
 				m_peerList.push_back(p);
@@ -620,7 +620,7 @@ void P2PServer::load_monerod_peer_list()
 
 void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 {
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 
 	MutexLock lock(m_peerListLock);
 
@@ -817,7 +817,7 @@ uint64_t P2PServer::get_random64()
 
 void P2PServer::print_status()
 {
-	const int64_t uptime = time(nullptr) - m_pool->start_time();
+	const int64_t uptime = seconds_since_epoch() - m_pool->start_time();
 
 	const int64_t s = uptime % 60;
 	const int64_t m = (uptime / 60) % 60;
@@ -975,8 +975,8 @@ void P2PServer::check_zmq()
 		return;
 	}
 
-	const time_t cur_time = time(nullptr);
-	const time_t last_active = m_pool->zmq_last_active();
+	const uint64_t cur_time = seconds_since_epoch();
+	const uint64_t last_active = m_pool->zmq_last_active();
 
 	if (cur_time >= last_active + 300) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
@@ -993,7 +993,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
 	, m_fastPeerListRequestCount(0)
-	, m_prevIncomingPeerListRequest{}
+	, m_prevIncomingPeerListRequest(0)
 	, m_nextOutgoingPeerListRequest(0)
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
@@ -1022,7 +1022,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
 	m_fastPeerListRequestCount = 0;
-	m_prevIncomingPeerListRequest = {};
+	m_prevIncomingPeerListRequest = 0;
 	m_nextOutgoingPeerListRequest = 0;
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
@@ -1060,7 +1060,7 @@ bool P2PServer::P2PClient::on_connect()
 		}
 	}
 
-	m_lastAlive = time(nullptr);
+	m_lastAlive = seconds_since_epoch();
 	return send_handshake_challenge();
 }
 
@@ -1276,7 +1276,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		if (bytes_read) {
 			buf += bytes_read;
 			bytes_left -= bytes_read;
-			m_lastAlive = time(nullptr);
+			m_lastAlive = seconds_since_epoch();
 		}
 	} while (bytes_read && bytes_left);
 
@@ -1611,7 +1611,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	p += HASH_SIZE;
 
 	++m_blockPendingRequests;
-	m_lastBroadcastTimestamp = time(nullptr);
+	m_lastBroadcastTimestamp = seconds_since_epoch();
 }
 
 bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
@@ -1632,7 +1632,7 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 
 bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 {
-	m_lastBlockrequestTimestamp = time(nullptr);
+	m_lastBlockrequestTimestamp = seconds_since_epoch();
 
 	hash id;
 	memcpy(id.h, buf, HASH_SIZE);
@@ -1738,20 +1738,18 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	server->m_block->m_wantBroadcast = true;
 
-	m_lastBroadcastTimestamp = time(nullptr);
+	m_lastBroadcastTimestamp = seconds_since_epoch();
 
 	return handle_incoming_block_async(server->m_block);
 }
 
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
-	using namespace std::chrono;
-
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
-	const auto cur_time = steady_clock::now();
+	const uint64_t cur_time = seconds_since_epoch();
 
 	// Allow peer list requests no more than once every 30 seconds
-	if (duration_cast<seconds>(cur_time - m_prevIncomingPeerListRequest).count() < 30) {
+	if (cur_time - m_prevIncomingPeerListRequest < 30) {
 		++m_fastPeerListRequestCount;
 		if (m_fastPeerListRequestCount >= 3) {
 			LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is sending PEER_LIST_REQUEST too often");
@@ -1822,7 +1820,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 
 	MutexLock lock(server->m_peerListLock);
 

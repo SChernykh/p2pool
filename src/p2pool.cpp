@@ -54,7 +54,7 @@ p2pool::p2pool(int argc, char* argv[])
 	, m_updateSeed(true)
 	, m_submitBlockData{}
 	, m_zmqLastActive(0)
-	, m_startTime(time(nullptr))
+	, m_startTime(seconds_since_epoch())
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
@@ -206,7 +206,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
 #endif
 
-	m_zmqLastActive = time(nullptr);
+	m_zmqLastActive = seconds_since_epoch();
 }
 
 void p2pool::handle_miner_data(MinerData& data)
@@ -263,7 +263,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		update_block_template();
 	}
 
-	m_zmqLastActive = time(nullptr);
+	m_zmqLastActive = seconds_since_epoch();
 
 	if (m_serversStarted.load()) {
 		std::vector<uint64_t> missing_heights;
@@ -367,7 +367,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 	api_update_network_stats();
 
-	m_zmqLastActive = time(nullptr);
+	m_zmqLastActive = seconds_since_epoch();
 }
 
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)

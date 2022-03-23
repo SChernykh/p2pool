@@ -52,7 +52,7 @@ public:
 		bool process_submit(rapidjson::Document& doc, uint32_t id);
 
 		uint32_t m_rpcId;
-		time_t m_connectedTime;
+		uint64_t m_connectedTime;
 
 		uv_mutex_t m_jobsLock;
 
@@ -140,7 +140,7 @@ private:
 
 	struct HashrateData
 	{
-		time_t m_timestamp;
+		uint64_t m_timestamp;
 		uint64_t m_cumulativeHashes;
 	};
 
@@ -157,10 +157,10 @@ private:
 	double m_cumulativeFoundSharesDiff;
 	uint32_t m_totalFoundShares;
 
-	time_t m_apiLastUpdateTime;
+	uint64_t m_apiLastUpdateTime;
 
-	void update_hashrate_data(uint64_t hashes, time_t timestamp);
-	void api_update_local_stats(time_t timestamp);
+	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
+	void api_update_local_stats(uint64_t timestamp);
 };
 
 } // namespace p2pool

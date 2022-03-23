@@ -207,7 +207,7 @@ void ZMQReader::parse(char* data, size_t size)
 			return;
 		}
 
-		m_tx.time_received = time(nullptr);
+		m_tx.time_received = seconds_since_epoch();
 
 		for (SizeType i = 0, n = doc.Size(); i < n; ++i) {
 			const auto& v = doc[i];

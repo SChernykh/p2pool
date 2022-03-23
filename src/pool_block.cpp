@@ -53,7 +53,7 @@ PoolBlock::PoolBlock()
 	, m_invalid(false)
 	, m_broadcasted(false)
 	, m_wantBroadcast(false)
-	, m_localTimestamp(time(nullptr))
+	, m_localTimestamp(seconds_since_epoch())
 {
 	uv_mutex_init_checked(&m_lock);
 
@@ -115,7 +115,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_broadcasted = b.m_broadcasted;
 	m_wantBroadcast = b.m_wantBroadcast;
 
-	m_localTimestamp = time(nullptr);
+	m_localTimestamp = seconds_since_epoch();
 
 	if (lock_result == 0) {
 		uv_mutex_unlock(&b.m_lock);

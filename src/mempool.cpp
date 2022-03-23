@@ -44,7 +44,7 @@ void Mempool::add(const TxMempoolData& tx)
 
 void Mempool::swap(std::vector<TxMempoolData>& transactions)
 {
-	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time = seconds_since_epoch();
 
 	WriteLock lock(m_lock);
 
