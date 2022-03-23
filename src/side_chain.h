@@ -119,6 +119,7 @@ private:
 	uint64_t m_unclePenalty;
 
 	std::vector<uint8_t> m_consensusId;
+	std::string m_consensusIdDisplayStr;
 
 	difficulty_type m_curDifficulty;
 

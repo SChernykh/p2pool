@@ -156,7 +156,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	// Hide most consensus ID bytes, we only want it on screen to show that we're on the right sidechain
 	memset(buf + 8, '*', HASH_SIZE * 2 - 16);
-	LOGINFO(1, "consensus ID = " << log::LightCyan() << static_cast<char*>(buf));
+	m_consensusIdDisplayStr.assign(buf);
+	LOGINFO(1, "consensus ID = " << log::LightCyan() << m_consensusIdDisplayStr.c_str());
 }
 
 SideChain::~SideChain()
@@ -745,31 +746,39 @@ void SideChain::print_status()
 	const uint64_t hashrate_est = total_reward ? udiv128(product[1], product[0], total_reward, &rem) : 0;
 	const double block_share = total_reward ? ((static_cast<double>(your_reward) * 100.0) / static_cast<double>(total_reward)) : 0.0;
 
-	uint32_t our_blocks_in_window_total = std::accumulate(our_blocks_in_window.begin(), our_blocks_in_window.end(), decltype(our_blocks_in_window)::value_type(0));
-	uint32_t our_uncles_in_window_total = std::accumulate(our_uncles_in_window.begin(), our_uncles_in_window.end(), decltype(our_uncles_in_window)::value_type(0));
+	const uint32_t our_blocks_in_window_total = std::accumulate(our_blocks_in_window.begin(), our_blocks_in_window.end(), 0U);
+	const uint32_t our_uncles_in_window_total = std::accumulate(our_uncles_in_window.begin(), our_uncles_in_window.end(), 0U);
 
 	std::string our_blocks_in_window_chart;
-	our_blocks_in_window_chart.reserve(our_blocks_in_window.size());
-	for(const auto& p : our_blocks_in_window){
-		our_blocks_in_window_chart += (p > 0 ? (p > 9 ? "+" : std::to_string(p)) : ".");
+	if (our_blocks_in_window_total) {
+		our_blocks_in_window_chart.reserve(our_blocks_in_window.size() + 32);
+		our_blocks_in_window_chart = "\nYour shares position      = [";
+		for (uint32_t p : our_blocks_in_window) {
+			our_blocks_in_window_chart += (p ? ((p > 9) ? '+' : static_cast<char>('0' + p)) : '.');
+		}
+		our_blocks_in_window_chart += ']';
 	}
 
 	std::string our_uncles_in_window_chart;
-	our_uncles_in_window_chart.reserve(our_uncles_in_window.size());
-	for(const auto& p : our_uncles_in_window){
-		our_uncles_in_window_chart += (p > 0 ? (p > 9 ? "+" : std::to_string(p)) : ".");
+	if (our_uncles_in_window_total) {
+		our_uncles_in_window_chart.reserve(our_uncles_in_window.size() + 32);
+		our_uncles_in_window_chart = "\nYour uncles position      = [";
+		for (uint32_t p : our_uncles_in_window) {
+			our_uncles_in_window_chart += (p ? ((p > 9) ? '+' : static_cast<char>('0' + p)) : '.');
+		}
+		our_uncles_in_window_chart += ']';
 	}
 
 	LOGINFO(0, "status" <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
+		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : m_consensusIdDisplayStr.c_str())) <<
 		"\nSide chain height         = " << tip_height + 1 <<
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)" <<
-		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)" <<
-		(our_blocks_in_window_total > 0 ? "\nYour shares position      = " : "") << (our_blocks_in_window_total > 0 ? "[" + our_blocks_in_window_chart + "]" : "") <<
-		(our_uncles_in_window_total > 0 ? "\nYour uncles position      = " : "") << (our_uncles_in_window_total > 0 ? "[" + our_uncles_in_window_chart + "]" : "") <<
+		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)"
+										 << our_blocks_in_window_chart << our_uncles_in_window_chart <<
 		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
 	);
 }
