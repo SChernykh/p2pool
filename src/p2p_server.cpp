@@ -285,6 +285,7 @@ void P2PServer::update_peer_connections()
 
 void P2PServer::update_peer_list()
 {
+	const uint64_t cur_time = seconds_since_epoch();
 	{
 		MutexLock lock(m_clientsListLock);
 
@@ -293,9 +294,9 @@ void P2PServer::update_peer_list()
 				continue;
 			}
 
-			if (m_timerCounter >= client->m_nextOutgoingPeerListRequest) {
+			if (cur_time >= client->m_nextOutgoingPeerListRequest) {
 				// Send peer list requests at random intervals (60-120 seconds)
-				client->m_nextOutgoingPeerListRequest = m_timerCounter + (60 + (get_random64() % 61)) / m_timerInterval;
+				client->m_nextOutgoingPeerListRequest = cur_time + (60 + (get_random64() % 61));
 
 				const bool result = send(client,
 					[](void* buf)
