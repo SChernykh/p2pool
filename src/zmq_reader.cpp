@@ -159,10 +159,10 @@ bool ZMQReader::connect(const char* address)
 	m_subscriber.connect(address);
 
 	using namespace std::chrono;
-	system_clock::time_point start_time = system_clock::now();
+	steady_clock::time_point start_time = steady_clock::now();
 
 	while (!monitor.connected && monitor.check_event(-1)) {
-		const system_clock::time_point cur_time = system_clock::now();
+		const steady_clock::time_point cur_time = steady_clock::now();
 		const int64_t elapsed_time = duration_cast<milliseconds>(cur_time - start_time).count();
 		if (elapsed_time >= 3000) {
 			LOGERR(1, "failed to connect to " << address);

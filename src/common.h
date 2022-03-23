@@ -261,7 +261,7 @@ struct MinerData
 	uint64_t median_timestamp;
 	std::vector<TxMempoolData> tx_backlog;
 
-	std::chrono::system_clock::time_point time_received;
+	std::chrono::high_resolution_clock::time_point time_received;
 };
 
 struct ChainMain

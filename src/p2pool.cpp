@@ -238,7 +238,7 @@ void p2pool::handle_miner_data(MinerData& data)
 	}
 
 	data.tx_backlog.clear();
-	data.time_received = std::chrono::system_clock::now();
+	data.time_received = std::chrono::high_resolution_clock::now();
 	m_minerData = data;
 	m_updateSeed = true;
 	update_median_timestamp();

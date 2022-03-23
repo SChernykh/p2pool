@@ -51,10 +51,10 @@ private:
 	std::vector<WorkerData*> m_minerThreads;
 	volatile bool m_stopped;
 
-	std::chrono::time_point<std::chrono::high_resolution_clock> m_startTimestamp;
+	std::chrono::high_resolution_clock::time_point m_startTimestamp;
 
 	std::atomic<uint32_t> m_nonce;
-	std::chrono::time_point<std::chrono::high_resolution_clock> m_nonceTimestamp;
+	std::chrono::high_resolution_clock::time_point m_nonceTimestamp;
 	const uint32_t m_extraNonce;
 
 	uint64_t m_totalHashes;
