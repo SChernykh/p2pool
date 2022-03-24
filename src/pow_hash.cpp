@@ -41,6 +41,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 	, m_seed{}
 	, m_index(0)
 	, m_seedCounter(0)
+	, m_oldSeedCounter(0)
 {
 	uint64_t memory_allocated = 0;
 
@@ -223,6 +224,11 @@ void RandomX_Hasher::set_seed(const hash& seed)
 			numThreads /= 2;
 		}
 
+		// wait for set_old_seed() before initializing dataset
+		while (m_oldSeedCounter.load() == 0) {
+			std::this_thread::yield();
+		}
+
 		LOGINFO(1, log::LightCyan() << "running " << numThreads << " threads to update dataset");
 
 		ReadLock lock2(m_cacheLock);
@@ -274,13 +280,15 @@ void RandomX_Hasher::set_old_seed(const hash& seed)
 {
 	// set_seed() must go first, wait for it
 	while (m_seedCounter.load() == 0) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::yield();
 	}
 
 	LOGINFO(1, "old seed " << log::LightBlue() << seed);
 
 	{
 		WriteLock lock(m_cacheLock);
+
+		m_oldSeedCounter.fetch_add(1);
 
 		const uint32_t old_index = m_index ^ 1;
 		m_seed[old_index] = seed;

@@ -90,6 +90,7 @@ private:
 	uint32_t m_index;
 
 	std::atomic<uint32_t> m_seedCounter;
+	std::atomic<uint32_t> m_oldSeedCounter;
 };
 #endif
 
