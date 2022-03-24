@@ -514,11 +514,6 @@ void SideChain::add_block(const PoolBlock& block)
 		", verified = " << (block.m_verified ? 1 : 0)
 	);
 
-	// Save it for faster syncing on the next p2pool start
-	if (p2pServer()) {
-		p2pServer()->store_in_cache(block);
-	}
-
 	PoolBlock* new_block = new PoolBlock(block);
 
 	MutexLock lock(m_sidechainLock);
@@ -541,6 +536,11 @@ void SideChain::add_block(const PoolBlock& block)
 	if (new_block->m_verified) {
 		if (!new_block->m_invalid) {
 			update_chain_tip(new_block);
+
+			// Save it for faster syncing on the next p2pool start
+			if (P2PServer* server = p2pServer()) {
+				server->store_in_cache(*new_block);
+			}
 		}
 	}
 	else {
@@ -1013,17 +1013,19 @@ void SideChain::verify_loop(PoolBlock* block)
 					", height " << block->m_sidechainHeight);
 			}
 
+			P2PServer* server = p2pServer();
+
 			// If it came through a broadcast, send it to our peers
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
-				if (p2pServer() && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
-					p2pServer()->broadcast(*block);
+				if (server && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
+					server->broadcast(*block);
 				}
 			}
 
 			// Save it for faster syncing on the next p2pool start
-			if (p2pServer()) {
-				p2pServer()->store_in_cache(*block);
+			if (server) {
+				server->store_in_cache(*block);
 			}
 
 			// Try to verify blocks on top of this one

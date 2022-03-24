@@ -154,6 +154,7 @@ struct BlockCache::Impl : public nocopy_nomove
 BlockCache::BlockCache()
 	: m_impl(new Impl())
 	, m_flushRunning(0)
+	, m_storeIndex(0)
 {
 }
 
@@ -171,7 +172,7 @@ void BlockCache::store(const PoolBlock& block)
 		return;
 	}
 
-	uint8_t* data = m_impl->m_data + (static_cast<size_t>(block.m_sidechainHeight % NUM_BLOCKS) * BLOCK_SIZE);
+	uint8_t* data = m_impl->m_data + (static_cast<size_t>((m_storeIndex++) % NUM_BLOCKS) * BLOCK_SIZE);
 
 	*reinterpret_cast<uint32_t*>(data) = static_cast<uint32_t>(n1 + n2);
 	memcpy(data + sizeof(uint32_t), block.m_mainChainData.data(), n1);
