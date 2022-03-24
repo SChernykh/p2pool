@@ -47,6 +47,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
 	, m_cacheLoaded(false)
 	, m_initialPeerList(pool->params().m_p2pPeerList)
+	, m_cachedBlocks(nullptr)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_block(new PoolBlock())
 	, m_timer{}
@@ -128,18 +129,34 @@ void P2PServer::add_cached_block(const PoolBlock& block)
 		return;
 	}
 
-	PoolBlock* new_block = new PoolBlock(block);
-	m_cachedBlocks.insert({ new_block->m_sidechainId, new_block });
+	if (!m_cachedBlocks) {
+		m_cachedBlocks = new unordered_map<hash, PoolBlock*>();
+	}
+
+	if (m_cachedBlocks->find(block.m_sidechainId) == m_cachedBlocks->end()) {
+		PoolBlock* new_block = new PoolBlock(block);
+		m_cachedBlocks->insert({ new_block->m_sidechainId, new_block });
+	}
 }
 
 void P2PServer::clear_cached_blocks()
 {
+	if (!m_cachedBlocks) {
+		return;
+	}
+
 	WriteLock lock(m_cachedBlocksLock);
 
-	for (auto it : m_cachedBlocks) {
+	if (!m_cachedBlocks) {
+		return;
+	}
+
+	for (auto it : *m_cachedBlocks) {
 		delete it.second;
 	}
-	m_cachedBlocks.clear();
+
+	delete m_cachedBlocks;
+	m_cachedBlocks = nullptr;
 }
 
 void P2PServer::store_in_cache(const PoolBlock& block)
@@ -934,17 +951,28 @@ void P2PServer::download_missing_blocks()
 		return;
 	}
 
+	ReadLock lock2(m_cachedBlocksLock);
+
 	// Try to download each block from a random client
 	for (const hash& id : missing_blocks) {
 		P2PClient* client = clients[get_random64() % clients.size()];
 
 		{
-			MutexLock lock2(m_missingBlockRequestsLock);
+			MutexLock lock3(m_missingBlockRequestsLock);
 
 			const uint64_t truncated_block_id = *reinterpret_cast<const uint64_t*>(id.h);
 			if (!m_missingBlockRequests.insert({ client->m_peerId, truncated_block_id }).second) {
 				// We already asked this peer about this block
 				// Don't try to ask another peer, leave it for another timer tick
+				continue;
+			}
+		}
+
+		if (m_cachedBlocks) {
+			auto it = m_cachedBlocks->find(id);
+			if (it != m_cachedBlocks->end()) {
+				LOGINFO(5, "using cached block for id = " << id);
+				client->handle_incoming_block_async(it->second);
 				continue;
 			}
 		}
@@ -1944,11 +1972,13 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 	ReadLock lock(server->m_cachedBlocksLock);
 
 	for (const hash& id : missing_blocks) {
-		auto it = server->m_cachedBlocks.find(id);
-		if (it != server->m_cachedBlocks.end()) {
-			LOGINFO(5, "using cached block for id = " << id);
-			handle_incoming_block_async(it->second);
-			continue;
+		if (server->m_cachedBlocks) {
+			auto it = server->m_cachedBlocks->find(id);
+			if (it != server->m_cachedBlocks->end()) {
+				LOGINFO(5, "using cached block for id = " << id);
+				handle_incoming_block_async(it->second);
+				continue;
+			}
 		}
 
 		const bool result = m_owner->send(this,

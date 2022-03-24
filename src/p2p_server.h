@@ -149,7 +149,7 @@ private:
 	uint32_t m_maxIncomingPeers;
 
 	uv_rwlock_t m_cachedBlocksLock;
-	unordered_map<hash, PoolBlock*> m_cachedBlocks;
+	unordered_map<hash, PoolBlock*>* m_cachedBlocks;
 
 private:
 	static void on_timer(uv_timer_t* timer) { reinterpret_cast<P2PServer*>(timer->data)->on_timer(); }
