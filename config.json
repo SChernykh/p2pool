@@ -5,7 +5,7 @@
 // Fixed difficulty for miners that connect to your node must be set in their config.json
 //
 {
-	"name": "mainnet test 2",
+	"name": "default",
 	"password": "",
 	"block_time": 10,
 	"min_diff": 100000,
