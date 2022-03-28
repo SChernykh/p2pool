@@ -278,18 +278,21 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		return;
 	}
 
-	const uint64_t max_reward_amounts_weight = std::accumulate(m_rewards.begin(), m_rewards.end(), 0ULL,
-		[](uint64_t a, uint64_t b)
-		{
-			writeVarint(b, [&a](uint8_t) { ++a; });
-			return a;
-		});
+	auto get_reward_amounts_weight = [this]() {
+		return std::accumulate(m_rewards.begin(), m_rewards.end(), 0ULL,
+			[](uint64_t a, uint64_t b)
+			{
+				writeVarint(b, [&a](uint8_t) { ++a; });
+				return a;
+			});
+	};
+	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
-	if (!create_miner_tx(data, m_shares, max_reward_amounts_weight, true)) {
+	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
 		return;
 	}
 
-	const uint64_t miner_tx_weight = m_minerTx.size();
+	uint64_t miner_tx_weight = m_minerTx.size();
 
 	// Select transactions from the mempool
 	uint64_t final_reward, final_fees, final_weight;
@@ -432,8 +435,37 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_finalReward = final_reward;
 
-	if (!create_miner_tx(data, m_shares, max_reward_amounts_weight, false)) {
-		return;
+	const int create_miner_tx_result = create_miner_tx(data, m_shares, max_reward_amounts_weight, false);
+	if (create_miner_tx_result < 0) {
+		if (create_miner_tx_result == -3) {
+			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
+			if (!SideChain::split_reward(base_reward + final_fees, m_shares, m_rewards)) {
+				return;
+			}
+
+			max_reward_amounts_weight = get_reward_amounts_weight();
+
+			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
+				return;
+			}
+
+			final_weight -= miner_tx_weight;
+			final_weight += m_minerTx.size();
+			miner_tx_weight = m_minerTx.size();
+
+			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
+
+			if (!SideChain::split_reward(final_reward, m_shares, m_rewards)) {
+				return;
+			}
+
+			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, false) < 0) {
+				return;
+			}
+		}
+		else {
+			return;
+		}
 	}
 
 	if (m_minerTx.size() != miner_tx_weight) {
@@ -600,7 +632,7 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 }
 #endif
 
-bool BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run)
+int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run)
 {
 	// Miner transaction (coinbase)
 	m_minerTx.clear();
@@ -655,12 +687,12 @@ bool BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Min
 	if (dry_run) {
 		if (reward_amounts_weight != max_reward_amounts_weight) {
 			LOGERR(1, "create_miner_tx: incorrect miner rewards during the dry run (" << reward_amounts_weight << " != " <<  max_reward_amounts_weight << ")");
-			return false;
+			return -1;
 		}
 	}
 	else if (reward_amounts_weight > max_reward_amounts_weight) {
 		LOGERR(1, "create_miner_tx: incorrect miner rewards during the real run (" << reward_amounts_weight << " > " << max_reward_amounts_weight << ")");
-		return false;
+		return -2;
 	}
 
 	m_poolBlockTemplate->m_txkeyPub = m_txkeyPub;
@@ -676,6 +708,10 @@ bool BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Min
 
 	const uint64_t corrected_extra_nonce_size = EXTRA_NONCE_SIZE + max_reward_amounts_weight - reward_amounts_weight;
 	if (corrected_extra_nonce_size > EXTRA_NONCE_SIZE) {
+		if (corrected_extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
+			LOGWARN(4, "create_miner_tx: corrected_extra_nonce_size (" << corrected_extra_nonce_size << ") is too large");
+			return -3;
+		}
 		LOGINFO(4, "increased EXTRA_NONCE from " << EXTRA_NONCE_SIZE << " to " << corrected_extra_nonce_size << " bytes to maintain miner tx weight");
 	}
 	writeVarint(corrected_extra_nonce_size, m_minerTxExtra);
@@ -701,7 +737,7 @@ bool BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Min
 	// Not a part of transaction hash data
 	m_minerTx.push_back(0);
 
-	return true;
+	return 1;
 }
 
 hash BlockTemplate::calc_sidechain_hash() const

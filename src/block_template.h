@@ -61,7 +61,7 @@ private:
 	p2pool* m_pool;
 
 private:
-	bool create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
+	int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
 	hash calc_sidechain_hash() const;
 	hash calc_miner_tx_hash(uint32_t extra_nonce) const;
 	void calc_merkle_tree_main_branch();

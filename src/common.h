@@ -85,6 +85,7 @@ constexpr uint8_t HARDFORK_SUPPORTED_VERSION = 14;
 constexpr uint8_t MINER_REWARD_UNLOCK_TIME = 60;
 constexpr uint8_t NONCE_SIZE = 4;
 constexpr uint8_t EXTRA_NONCE_SIZE = 4;
+constexpr uint8_t EXTRA_NONCE_MAX_SIZE = EXTRA_NONCE_SIZE + 10;
 constexpr uint8_t TX_VERSION = 2;
 constexpr uint8_t TXIN_GEN = 0xFF;
 constexpr uint8_t TXOUT_TO_KEY = 2;
