@@ -353,8 +353,9 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	if (!sidechain_id.empty()) {
 		PoolBlock* block = side_chain().find_block(sidechain_id);
 		if (block) {
-			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
 			const uint64_t payout = block->get_payout(params().m_wallet);
+
+			LOGINFO(0, (payout ? log::LightGreen() : log::LightRed()) << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
 			if (payout) {
 				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
 			}
