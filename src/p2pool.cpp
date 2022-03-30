@@ -1288,6 +1288,10 @@ static bool init_uv_threadpool()
 
 static bool init_signals(p2pool* pool)
 {
+#ifdef SIGPIPE
+	signal(SIGPIPE, SIG_IGN);
+#endif
+
 	constexpr int signal_names[] = {
 		SIGHUP,
 		SIGINT,
