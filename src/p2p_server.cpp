@@ -215,11 +215,11 @@ void P2PServer::update_peer_connections()
 			}
 
 			if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
-				// - Side chain is at least 5 minutes newer (last_updated >= client->m_lastBroadcastTimestamp + 300)
+				// - Side chain is at least 15 minutes newer (last_updated >= client->m_lastBroadcastTimestamp + 900)
 				// - It's been at least 10 seconds since side chain updated (cur_time >= last_updated + 10)
 				// - It's been at least 10 seconds since the last block request (peer is not syncing)
 				// - Peer should have sent a broadcast by now
-				if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 300)) {
+				if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 900)) {
 					const uint64_t dt = last_updated - client->m_lastBroadcastTimestamp;
 					LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " is not broadcasting blocks (last update " << dt << " seconds ago)");
 					client->ban(DEFAULT_BAN_TIME);
