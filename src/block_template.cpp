@@ -190,6 +190,13 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	++m_templateId;
 
+	// When block template generation fails for any reason
+	auto use_old_template = [this]() {
+		const uint32_t id = m_templateId - 1;
+		LOGWARN(4, "using old block template with ID = " << id);
+		*this = *m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)];
+	};
+
 	m_height = data.height;
 	m_difficulty = data.difficulty;
 	m_seedHash = data.seed_hash;
@@ -275,6 +282,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_pool->side_chain().fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
 	if (!SideChain::split_reward(max_reward, m_shares, m_rewards)) {
+		use_old_template();
 		return;
 	}
 
@@ -289,6 +297,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
 	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
+		use_old_template();
 		return;
 	}
 
@@ -430,6 +439,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	}
 
 	if (!SideChain::split_reward(final_reward, m_shares, m_rewards)) {
+		use_old_template();
 		return;
 	}
 
@@ -438,16 +448,25 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	const int create_miner_tx_result = create_miner_tx(data, m_shares, max_reward_amounts_weight, false);
 	if (create_miner_tx_result < 0) {
 		if (create_miner_tx_result == -3) {
+			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
 			LOGINFO(4, "Readjusting miner_tx to reduce extra nonce size");
 
-			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
-			if (!SideChain::split_reward(base_reward + final_fees, m_shares, m_rewards)) {
+			// The difference between max possible reward and the actual reward can't reduce the size of output amount varints by more than 1 byte each
+			// So block weight will be >= current weight - number of outputs
+			const uint64_t w = (final_weight > m_rewards.size()) ? (final_weight - m_rewards.size()) : 0;
+
+			// Block reward will be <= r due to how block size penalty works
+			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
+
+			if (!SideChain::split_reward(r, m_shares, m_rewards)) {
+				use_old_template();
 				return;
 			}
 
 			max_reward_amounts_weight = get_reward_amounts_weight();
 
 			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
+				use_old_template();
 				return;
 			}
 
@@ -458,22 +477,26 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
 
 			if (!SideChain::split_reward(final_reward, m_shares, m_rewards)) {
+				use_old_template();
 				return;
 			}
 
 			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, false) < 0) {
+				use_old_template();
 				return;
 			}
 
 			LOGINFO(4, "New extra nonce size = " << m_poolBlockTemplate->m_extraNonceSize);
 		}
 		else {
+			use_old_template();
 			return;
 		}
 	}
 
 	if (m_minerTx.size() != miner_tx_weight) {
 		LOGERR(1, "miner tx size changed after adjusting reward");
+		use_old_template();
 		return;
 	}
 
