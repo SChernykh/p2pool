@@ -41,6 +41,7 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_nonceTimestamp(m_startTimestamp)
 	, m_extraNonce(0xF19E3779U)
 	, m_totalHashes(0)
+	, m_sharesFound(0)
 	, m_job{}
 	, m_jobIndex(0)
 {
