@@ -438,6 +438,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	const int create_miner_tx_result = create_miner_tx(data, m_shares, max_reward_amounts_weight, false);
 	if (create_miner_tx_result < 0) {
 		if (create_miner_tx_result == -3) {
+			LOGINFO(4, "Readjusting miner_tx to reduce extra nonce size");
+
 			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
 			if (!SideChain::split_reward(base_reward + final_fees, m_shares, m_rewards)) {
 				return;
@@ -462,6 +464,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, false) < 0) {
 				return;
 			}
+
+			LOGINFO(4, "New extra nonce size = " << m_poolBlockTemplate->m_extraNonceSize);
 		}
 		else {
 			return;
