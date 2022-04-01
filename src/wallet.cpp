@@ -195,10 +195,25 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 	return true;
 }
 
-bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key) const
+bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag) const
 {
 	hash derivation;
-	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, derivation)) {
+	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, output_index, derivation, view_tag)) {
+		return false;
+	}
+
+	if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
+		return false;
+	}
+
+	return true;
+}
+
+bool Wallet::get_eph_public_key_with_view_tag(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t expected_view_tag) const
+{
+	hash derivation;
+	uint8_t view_tag;
+	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, output_index, derivation, view_tag) || (view_tag != expected_view_tag)) {
 		return false;
 	}
 

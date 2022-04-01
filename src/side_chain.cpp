@@ -613,13 +613,17 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		PoolBlock* b = it->second;
 		const size_t n = b->m_outputs.size();
 
-		blob.reserve(n * 38 + 64);
+		blob.reserve(n * 39 + 64);
 		writeVarint(n, blob);
 
 		for (const PoolBlock::TxOutput& output : b->m_outputs) {
 			writeVarint(output.m_reward, blob);
-			blob.emplace_back(TXOUT_TO_KEY);
+			blob.emplace_back(output.m_txType);
 			blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+
+			if (output.m_txType == TXOUT_TO_TAGGED_KEY) {
+				blob.emplace_back(output.m_viewTag);
+			}
 		}
 
 		block->m_outputs = b->m_outputs;
@@ -632,25 +636,32 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	const size_t n = m_tmpShares.size();
 
-	blob.reserve(n * 38 + 64);
+	blob.reserve(n * 39 + 64);
 
 	writeVarint(n, blob);
 
 	block->m_outputs.clear();
 	block->m_outputs.reserve(n);
 
+	const uint8_t tx_type = block->get_tx_type();
+
 	hash eph_public_key;
 	for (size_t i = 0; i < n; ++i) {
 		writeVarint(m_tmpRewards[i], blob);
 
-		blob.emplace_back(TXOUT_TO_KEY);
+		blob.emplace_back(tx_type);
 
-		if (!m_tmpShares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
+		uint8_t view_tag;
+		if (!m_tmpShares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(6, "get_eph_public_key failed at index " << i);
 		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 
-		block->m_outputs.emplace_back(m_tmpRewards[i], eph_public_key);
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
+			blob.emplace_back(view_tag);
+		}
+
+		block->m_outputs.emplace_back(m_tmpRewards[i], eph_public_key, tx_type, view_tag);
 	}
 
 	return true;
@@ -737,14 +748,24 @@ void SideChain::print_status()
 		}
 
 		Wallet w = m_pool->params().m_wallet;
-		const std::vector<PoolBlock::TxOutput>& outs = tip->m_outputs;
 
 		hash eph_public_key;
-		for (size_t i = 0, n = outs.size(); i < n; ++i) {
-			if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key) && (outs[i].m_ephPublicKey == eph_public_key)) {
-				your_reward = outs[i].m_reward;
+		for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
+			const PoolBlock::TxOutput& out = tip->m_outputs[i];
+			if (!your_reward) {
+				if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+					if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
+						your_reward = out.m_reward;
+					}
+				}
+				else {
+					uint8_t view_tag;
+					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag) && (out.m_ephPublicKey == eph_public_key)) {
+						your_reward = out.m_reward;
+					}
+				}
 			}
-			total_reward += outs[i].m_reward;
+			total_reward += out.m_reward;
 		}
 	}
 
@@ -1320,17 +1341,20 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
-		if (rewards[i] != block->m_outputs[i].m_reward) {
+		const PoolBlock::TxOutput& out = block->m_outputs[i];
+
+		if (rewards[i] != out.m_reward) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
-				" has invalid reward at index " << i << ": got " << block->m_outputs[i].m_reward << ", expected " << rewards[i]);
+				" has invalid reward at index " << i << ": got " << out.m_reward << ", expected " << rewards[i]);
 			block->m_invalid = true;
 			return;
 		}
 
 		hash eph_public_key;
-		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key)) {
+		uint8_t view_tag;
+		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
@@ -1339,7 +1363,16 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if (eph_public_key != block->m_outputs[i].m_ephPublicKey) {
+		if ((out.m_txType == TXOUT_TO_TAGGED_KEY) && (out.m_viewTag != view_tag)) {
+			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+				", id = " << block->m_sidechainId <<
+				", mainchain height = " << block->m_txinGenHeight <<
+				" has an incorrect view tag at index " << i);
+			block->m_invalid = true;
+			return;
+		}
+
+		if (eph_public_key != out.m_ephPublicKey) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<

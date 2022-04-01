@@ -99,7 +99,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 		if (num_outputs > 0) {
 			// Outputs are in the buffer, just read them
 			// Each output is at least 34 bytes, exit early if there's not enough data left
-			// 1 byte for reward, 1 byte for TXOUT_TO_KEY, 32 bytes for eph_pub_key
+			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key
 			constexpr uint64_t MIN_OUTPUT_SIZE = 34;
 
 			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
@@ -108,14 +108,22 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 			m_outputs.clear();
 			m_outputs.reserve(num_outputs);
 
+			const uint8_t expected_tx_type = get_tx_type();
+
 			for (uint64_t i = 0; i < num_outputs; ++i) {
 				TxOutput t;
 
 				READ_VARINT(t.m_reward);
 				total_reward += t.m_reward;
 
-				EXPECT_BYTE(TXOUT_TO_KEY);
+				EXPECT_BYTE(expected_tx_type);
+				t.m_txType = expected_tx_type;
+
 				READ_BUF(t.m_ephPublicKey.h, HASH_SIZE);
+
+				if (expected_tx_type == TXOUT_TO_TAGGED_KEY) {
+					READ_BYTE(t.m_viewTag);
+				}
 
 				m_outputs.emplace_back(std::move(t));
 			}

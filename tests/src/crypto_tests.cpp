@@ -42,7 +42,8 @@ TEST(crypto, derivation)
 				if (result) {
 					f >> expected_derivation;
 				}
-				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, derivation), result);
+				uint8_t view_tag;
+				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, 0, derivation, view_tag), result);
 				if (result) {
 					ASSERT_EQ(derivation, expected_derivation);
 				}
@@ -60,6 +61,20 @@ TEST(crypto, derivation)
 				if (result) {
 					ASSERT_EQ(derived_key, expected_derived_key);
 				}
+			}
+			else if (name == "derive_view_tag") {
+				hash derivation;
+				uint64_t output_index;
+				std::string result_str;
+				f >> derivation >> output_index >> result_str;
+				uint8_t view_tag;
+				p2pool::derive_view_tag(derivation, output_index, view_tag);
+
+				char buf[log::Stream::BUF_SIZE + 1];
+				log::Stream s(buf);
+				s << log::hex_buf(&view_tag, 1) << '\0';
+
+				ASSERT_EQ(buf, result_str);
 			}
 		} while (!f.eof());
 	}

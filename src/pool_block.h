@@ -81,11 +81,13 @@ struct PoolBlock
 
 	struct TxOutput
 	{
-		FORCEINLINE TxOutput() : m_reward(0), m_ephPublicKey() {}
-		FORCEINLINE TxOutput(uint64_t r, const hash& k) : m_reward(r), m_ephPublicKey(k) {}
+		FORCEINLINE TxOutput() : m_reward(0), m_ephPublicKey(), m_txType(0), m_viewTag(0) {}
+		FORCEINLINE TxOutput(uint64_t r, const hash& k, uint8_t tx_type, uint8_t view_tag) : m_reward(r), m_ephPublicKey(k), m_txType(tx_type), m_viewTag(view_tag) {}
 
 		uint64_t m_reward;
 		hash m_ephPublicKey;
+		uint8_t m_txType;
+		uint8_t m_viewTag;
 	};
 
 	std::vector<TxOutput> m_outputs;
@@ -139,6 +141,10 @@ struct PoolBlock
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);
 
 	uint64_t get_payout(const Wallet& w) const;
+
+	// Both tx types are allowed by Monero consensus during v15 because it needs to process pre-fork mempool transactions,
+	// but P2Pool can switch to using only TXOUT_TO_TAGGED_KEY for miner payouts starting from v15
+	FORCEINLINE uint8_t get_tx_type() const { return (m_majorVersion < HARDFORK_VIEW_TAGS_VERSION) ? TXOUT_TO_KEY : TXOUT_TO_TAGGED_KEY; }
 };
 
 } // namespace p2pool

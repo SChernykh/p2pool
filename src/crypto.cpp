@@ -144,17 +144,19 @@ public:
 		uv_mutex_destroy(&m);
 	}
 
-	bool get_derivation(const hash& key1, const hash& key2, hash& derivation)
+	bool get_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag)
 	{
-		std::array<uint8_t, HASH_SIZE * 2> index;
+		std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)> index;
 		memcpy(index.data(), key1.h, HASH_SIZE);
 		memcpy(index.data() + HASH_SIZE, key2.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE * 2, &output_index, sizeof(size_t));
 
 		{
 			MutexLock lock(m);
 			auto it = derivations.find(index);
 			if (it != derivations.end()) {
-				derivation = it->second;
+				derivation = it->second.derivation;
+				view_tag = it->second.view_tag;
 				return true;
 			}
 		}
@@ -172,9 +174,11 @@ public:
 		ge_p1p1_to_p2(&point2, &point3);
 		ge_tobytes(reinterpret_cast<uint8_t*>(&derivation), &point2);
 
+		derive_view_tag(derivation, output_index, view_tag);
+
 		{
 			MutexLock lock(m);
-			derivations.emplace(index, derivation);
+			derivations.emplace(index, DerivationEntry{ derivation, view_tag } );
 		}
 
 		return true;
@@ -231,21 +235,43 @@ public:
 	}
 
 private:
+	struct DerivationEntry
+	{
+		hash derivation;
+		uint8_t view_tag;
+	};
+
 	uv_mutex_t m;
-	unordered_map<std::array<uint8_t, HASH_SIZE * 2>, hash> derivations;
+	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, DerivationEntry> derivations;
 	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
 };
 
 static Cache* cache = nullptr;
 
-bool generate_key_derivation(const hash& key1, const hash& key2, hash& derivation)
+bool generate_key_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag)
 {
-	return cache->get_derivation(key1, key2, derivation);
+	return cache->get_derivation(key1, key2, output_index, derivation, view_tag);
 }
 
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
 {
 	return cache->get_public_key(derivation, output_index, base, derived_key);
+}
+
+void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_tag)
+{
+	constexpr uint8_t salt[] = "view_tag";
+	constexpr size_t SALT_SIZE = sizeof(salt) - 1;
+
+	uint8_t buf[64];
+	memcpy(buf, salt, SALT_SIZE);
+	memcpy(buf + SALT_SIZE, derivation.h, HASH_SIZE);
+	uint8_t* p = buf + SALT_SIZE + HASH_SIZE;
+	writeVarint(output_index, [&p](uint8_t b) { *(p++) = b; });
+
+	hash view_tag_full;
+	keccak(buf, static_cast<int>(p - buf), view_tag_full.h, HASH_SIZE);
+	view_tag = view_tag_full.h[0];
 }
 
 void init_crypto_cache()
