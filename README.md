@@ -6,10 +6,10 @@ Pool status and monitoring pages can be found at https://p2pool.io/, https://p2p
 
 ### Build Status
 
-![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)  
-![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)  
-![msvc-analysis](https://github.com/SChernykh/p2pool/actions/workflows/msvc-analysis.yml/badge.svg)  
-![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)  
+![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)
+![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)
+![msvc-analysis](https://github.com/SChernykh/p2pool/actions/workflows/msvc-analysis.yml/badge.svg)
+![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)
 <a href="https://scan.coverity.com/projects/schernykh-p2pool">
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/23659/badge.svg"/>
@@ -188,7 +188,7 @@ Please see the relevant instructions for your platform:
 
 ### Ubuntu 20.04
 
-Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on Ubuntu 20.04:  
+Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on Ubuntu 20.04:
 ```
 sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
 git clone --recursive https://github.com/SChernykh/p2pool
@@ -239,7 +239,7 @@ Alternatively, you can select "Clone a repository" within the GUI, then select "
 
 ### macOS
 
-Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on your Mac:  
+Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on your Mac:
 ```
 brew update && brew install git cmake libuv zmq libpgm
 git clone --recursive https://github.com/SChernykh/p2pool
@@ -247,6 +247,18 @@ cd p2pool
 mkdir build && cd build
 cmake ..
 make -j$(sysctl -n hw.logicalcpu)
+```
+
+### FreeBSD
+
+Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on FreeBSD:
+```
+pkg install git cmake libuv libzmq4
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make
 ```
 
 ## Donations
