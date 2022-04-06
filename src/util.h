@@ -109,6 +109,30 @@ FORCEINLINE void writeVarint(T value, std::vector<uint8_t>& out)
 	writeVarint(value, [&out](uint8_t b) { out.emplace_back(b); });
 }
 
+template<typename T>
+const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
+{
+	uint64_t result = 0;
+	int k = 0;
+
+	while (data < data_end) {
+		if (k >= static_cast<int>(sizeof(T)) * 8) {
+			return nullptr;
+		}
+
+		const uint64_t cur_byte = *(data++);
+		result |= (cur_byte & 0x7F) << k;
+		k += 7;
+
+		if ((cur_byte & 0x80) == 0) {
+			b = result;
+			return data;
+		}
+	}
+
+	return nullptr;
+}
+
 template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) { return N; }
 template<typename T, typename U, size_t N> FORCEINLINE constexpr size_t array_size(T(U::*)[N]) { return N; }
 

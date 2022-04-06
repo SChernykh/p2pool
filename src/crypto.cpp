@@ -109,9 +109,9 @@ bool check_keys(const hash& pub, const hash& sec)
 	return pub == pub_check;
 }
 
-static FORCEINLINE void hash_to_scalar(const uint8_t* data, size_t length, uint8_t(&res)[HASH_SIZE])
+static FORCEINLINE void hash_to_scalar(const uint8_t* data, int length, uint8_t (&res)[HASH_SIZE])
 {
-	keccak(data, static_cast<int>(length), res, HASH_SIZE);
+	keccak(data, length, res, HASH_SIZE);
 	sc_reduce32(res);
 }
 
@@ -122,18 +122,13 @@ static FORCEINLINE void derivation_to_scalar(const hash& derivation, size_t outp
 		uint8_t output_index[(sizeof(size_t) * 8 + 6) / 7];
 	} buf;
 
-	uint8_t* begin = buf.derivation;
-	uint8_t* end = buf.output_index;
 	memcpy(buf.derivation, derivation.h, sizeof(buf.derivation));
 
-	size_t k = output_index;
-	while (k >= 0x80) {
-		*(end++) = (static_cast<uint8_t>(k) & 0x7F) | 0x80;
-		k >>= 7;
-	}
-	*(end++) = static_cast<uint8_t>(k);
+	uint8_t* p = buf.output_index;
+	writeVarint(output_index, [&p](uint8_t b) { *(p++) = b; });
 
-	hash_to_scalar(begin, end - begin, res);
+	const uint8_t* data = buf.derivation;
+	hash_to_scalar(data, static_cast<int>(p - data), res);
 }
 
 class Cache

@@ -74,6 +74,7 @@ set(SOURCES
 	src/keccak_tests.cpp
 	src/main.cpp
 	src/pool_block_tests.cpp
+	src/varint_tests.cpp
 	src/wallet_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c

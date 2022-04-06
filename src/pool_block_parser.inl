@@ -46,29 +46,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 #define READ_BYTE(x) do { if (!read_byte(x)) return __LINE__; } while (0)
 #define EXPECT_BYTE(value) do { uint8_t tmp; READ_BYTE(tmp); if (tmp != (value)) return __LINE__; } while (0)
 
-		auto read_varint = [&data, data_end](auto& b) -> bool
-		{
-			uint64_t result = 0;
-			int k = 0;
-
-			while (data < data_end) {
-				if (k >= static_cast<int>(sizeof(b)) * 8) {
-					return false;
-				}
-
-				const uint64_t cur_byte = *(data++);
-				result |= (cur_byte & 0x7F) << k;
-				k += 7;
-
-				if ((cur_byte & 0x80) == 0) {
-					b = result;
-					return true;
-				}
-			}
-			return false;
-		};
-
-#define READ_VARINT(x) do { if (!read_varint(x)) return __LINE__; } while(0)
+#define READ_VARINT(x) do { data = readVarint(data, data_end, x); if (!data) return __LINE__; } while(0)
 
 		auto read_buf = [&data, data_end](void* buf, size_t size) -> bool
 		{
