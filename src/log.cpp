@@ -32,7 +32,7 @@ bool CONSOLE_COLORS = true;
 
 #ifndef P2POOL_LOG_DISABLE
 
-static volatile bool stopped = false;
+static std::atomic<bool> stopped{ false };
 static volatile bool worker_started = false;
 
 #ifdef _WIN32
@@ -102,11 +102,10 @@ public:
 
 	FORCEINLINE void stop()
 	{
-		if (stopped) {
+		if (stopped.exchange(true)) {
 			return;
 		}
 
-		stopped = true;
 		LOGINFO(0, "stopped");
 		uv_thread_join(&m_worker);
 		uv_cond_destroy(&m_cond);
@@ -208,7 +207,6 @@ private:
 							}
 
 							m_logFile.write(p, size);
-							m_logFile.flush();
 						}
 					}
 
@@ -217,6 +215,11 @@ private:
 
 					m_readPos += SLOT_SIZE;
 				} while (m_readPos < writePos);
+			}
+
+			// Flush the log file only after all pending log lines have been written
+			if (m_logFile.is_open()) {
+				m_logFile.flush();
 			}
 		} while (!stopped);
 	}
