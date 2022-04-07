@@ -1293,7 +1293,13 @@ void SideChain::verify(PoolBlock* block)
 		});
 
 	std::vector<uint64_t> rewards;
-	split_reward(total_reward, shares, rewards);
+	if (!split_reward(total_reward, shares, rewards)) {
+		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+			", id = " << block->m_sidechainId <<
+			", mainchain height = " << block->m_txinGenHeight << ": split_reward failed");
+		block->m_invalid = true;
+		return;
+	}
 
 	if (rewards.size() != block->m_outputs.size()) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
