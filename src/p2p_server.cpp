@@ -60,8 +60,10 @@ P2PServer::P2PServer(p2pool* pool)
 
 	m_peerId = m_rng();
 
-	set_max_outgoing_peers(pool->params().m_maxOutgoingPeers);
-	set_max_incoming_peers(pool->params().m_maxIncomingPeers);
+	const Params& params = pool->params();
+
+	set_max_outgoing_peers(params.m_maxOutgoingPeers);
+	set_max_incoming_peers(params.m_maxIncomingPeers);
 
 	uv_mutex_init_checked(&m_rngLock);
 	uv_mutex_init_checked(&m_blockLock);
@@ -98,7 +100,7 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 
 	load_peer_list();
-	start_listening(pool->params().m_p2pAddresses);
+	start_listening(params.m_p2pAddresses);
 }
 
 P2PServer::~P2PServer()
@@ -676,13 +678,15 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 
 void P2PServer::broadcast(const PoolBlock& block)
 {
-	if (block.m_txinGenHeight + 2 < m_pool->miner_data().height) {
-		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+	const MinerData& miner_data = m_pool->miner_data();
+
+	if (block.m_txinGenHeight + 2 < miner_data.height) {
+		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
 		return;
 	}
 
-	if (block.m_txinGenHeight > m_pool->miner_data().height + 2) {
-		LOGWARN(3, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << m_pool->miner_data().height << ')');
+	if (block.m_txinGenHeight > miner_data.height + 2) {
+		LOGWARN(3, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
 		return;
 	}
 

@@ -25,7 +25,6 @@ class Wallet
 {
 public:
 	explicit Wallet(const char* address);
-	~Wallet();
 
 	Wallet(const Wallet& w);
 	Wallet& operator=(const Wallet& w);

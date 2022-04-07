@@ -84,10 +84,6 @@ Wallet::Wallet(const char* address) : m_prefix(0), m_checksum(0), m_type(Network
 	decode(address);
 }
 
-Wallet::~Wallet()
-{
-}
-
 Wallet::Wallet(const Wallet& w)
 {
 	operator=(w);

@@ -1100,10 +1100,11 @@ void p2pool::api_update_stats_mod()
 	{
 		MutexLock lock(m_foundBlocksLock);
 		if (!m_foundBlocks.empty()) {
-			last_block_found_time = m_foundBlocks.back().timestamp;
-			last_block_found_height = m_foundBlocks.back().height;
-			last_block_found_hash = m_foundBlocks.back().id;
-			last_block_total_hashes = m_foundBlocks.back().total_hashes;
+			const FoundBlock& b = m_foundBlocks.back();
+			last_block_found_time = b.timestamp;
+			last_block_found_height = b.height;
+			last_block_found_hash = b.id;
+			last_block_total_hashes = b.total_hashes;
 		}
 	}
 
