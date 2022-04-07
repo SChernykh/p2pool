@@ -199,7 +199,7 @@ void P2PServer::update_peer_connections()
 
 	bool has_good_peers = false;
 
-	std::vector<raw_ip> connected_clients;
+	unordered_set<raw_ip> connected_clients;
 	{
 		MutexLock lock(m_clientsListLock);
 		connected_clients.reserve(m_numConnections);
@@ -230,7 +230,7 @@ void P2PServer::update_peer_connections()
 			}
 
 			if (!disconnected) {
-				connected_clients.emplace_back(client->m_addr);
+				connected_clients.insert(client->m_addr);
 				if (client->m_handshakeComplete && !client->m_handshakeInvalid && (client->m_listenPort >= 0)) {
 					has_good_peers = true;
 				}
@@ -245,7 +245,7 @@ void P2PServer::update_peer_connections()
 		if ((m_timerCounter % 30) == 1) {
 			// Update last seen time for currently connected peers
 			for (Peer& p : m_peerList) {
-				if (std::find_if(connected_clients.begin(), connected_clients.end(), [&p](const raw_ip& addr) { return p.m_addr == addr; }) != connected_clients.end()) {
+				if (connected_clients.find(p.m_addr) != connected_clients.end()) {
 					p.m_lastSeen = cur_time;
 				}
 			}
@@ -274,15 +274,7 @@ void P2PServer::update_peer_connections()
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
-		bool already_connected = false;
-		for (const raw_ip& ip : connected_clients) {
-			if (ip == peer.m_addr) {
-				already_connected = true;
-				break;
-			}
-		}
-
-		if (!already_connected && connect_to_peer(peer.m_isV6, peer.m_addr, peer.m_port)) {
+		if ((connected_clients.find(peer.m_addr) == connected_clients.end()) && connect_to_peer(peer.m_isV6, peer.m_addr, peer.m_port)) {
 			++i;
 		}
 
