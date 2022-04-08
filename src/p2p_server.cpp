@@ -800,21 +800,27 @@ void P2PServer::on_broadcast()
 					LOGINFO(6, "sending BLOCK_BROADCAST (pruned) to " << log::Gray() << static_cast<char*>(client->m_addrString));
 					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
 
-					*reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(data->pruned_blob.size());
+					const uint32_t len = static_cast<uint32_t>(data->pruned_blob.size());
+					memcpy(p, &len, sizeof(uint32_t));
 					p += sizeof(uint32_t);
 
-					memcpy(p, data->pruned_blob.data(), data->pruned_blob.size());
-					p += data->pruned_blob.size();
+					if (len) {
+						memcpy(p, data->pruned_blob.data(), len);
+						p += len;
+					}
 				}
 				else {
 					LOGINFO(5, "sending BLOCK_BROADCAST (full)   to " << log::Gray() << static_cast<char*>(client->m_addrString));
 					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
 
-					*reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(data->blob.size());
+					const uint32_t len = static_cast<uint32_t>(data->blob.size());
+					memcpy(p, &len, sizeof(uint32_t));
 					p += sizeof(uint32_t);
 
-					memcpy(p, data->blob.data(), data->blob.size());
-					p += data->blob.size();
+					if (len) {
+						memcpy(p, data->blob.data(), len);
+						p += len;
+					}
 				}
 
 				return p - p0;
@@ -1219,7 +1225,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_RESPONSE");
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
-				const uint32_t block_size = *reinterpret_cast<uint32_t*>(buf + 1);
+				const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
 
@@ -1237,7 +1243,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_BROADCAST");
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
-				const uint32_t block_size = *reinterpret_cast<uint32_t*>(buf + 1);
+				const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
 					if (!on_block_broadcast(buf + 1 + sizeof(uint32_t), block_size)) {
@@ -1678,11 +1684,14 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 			LOGINFO(5, "sending BLOCK_RESPONSE");
 			*(p++) = static_cast<uint8_t>(MessageId::BLOCK_RESPONSE);
 
-			*reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(blob.size());
+			const uint32_t len = static_cast<uint32_t>(blob.size());
+			memcpy(p, &len, sizeof(uint32_t));
 			p += sizeof(uint32_t);
 
-			memcpy(p, blob.data(), blob.size());
-			p += blob.size();
+			if (len) {
+				memcpy(p, blob.data(), len);
+				p += len;
+			}
 
 			return p - p0;
 		});

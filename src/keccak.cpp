@@ -159,7 +159,7 @@ NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t* md, int mdlen)
 
 	for (; inlen >= rsiz; inlen -= rsiz, in += rsiz) {
 		for (int i = 0; i < rsizw; i++) {
-			st[i] ^= ((uint64_t*)in)[i];
+			st[i] ^= read_unaligned(reinterpret_cast<const uint64_t*>(in) + i);
 		}
 		keccakf(st);
 	}

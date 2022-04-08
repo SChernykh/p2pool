@@ -133,6 +133,16 @@ const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 	return nullptr;
 }
 
+template<typename T>
+FORCEINLINE T read_unaligned(const T* p)
+{
+	static_assert(std::is_integral<T>::value, "T must be an integer type");
+
+	T result;
+	memcpy(&result, p, sizeof(T));
+	return result;
+}
+
 template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) { return N; }
 template<typename T, typename U, size_t N> FORCEINLINE constexpr size_t array_size(T(U::*)[N]) { return N; }
 
