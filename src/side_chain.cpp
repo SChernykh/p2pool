@@ -60,7 +60,7 @@ static constexpr uint8_t mini_consensus_id[HASH_SIZE] = { 57,130,201,26,149,174,
 SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
 	, m_networkType(type)
-	, m_chainTip(nullptr)
+	, m_chainTip{ nullptr }
 	, m_poolName(pool_name ? pool_name : "default")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
@@ -177,7 +177,9 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	block.m_txkeySec = txkeySec;
 	block.m_uncles.clear();
 
-	if (!m_chainTip) {
+	const PoolBlock* tip = m_chainTip;
+
+	if (!tip) {
 		block.m_parent = {};
 		block.m_sidechainHeight = 0;
 		block.m_difficulty = m_minDifficulty;
@@ -187,8 +189,8 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 		return;
 	}
 
-	block.m_parent = m_chainTip->m_sidechainId;
-	block.m_sidechainHeight = m_chainTip->m_sidechainHeight + 1;
+	block.m_parent = tip->m_sidechainId;
+	block.m_sidechainHeight = tip->m_sidechainHeight + 1;
 
 	// Collect uncles from 3 previous block heights
 
@@ -196,15 +198,15 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	std::vector<hash> mined_blocks;
 	mined_blocks.reserve(UNCLE_BLOCK_DEPTH * 2 + 1);
 
-	PoolBlock* tmp = m_chainTip;
-	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, m_chainTip->m_sidechainHeight + 1); tmp && (i < n); ++i) {
+	const PoolBlock* tmp = tip;
+	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, tip->m_sidechainHeight + 1); tmp && (i < n); ++i) {
 		mined_blocks.push_back(tmp->m_sidechainId);
 		mined_blocks.insert(mined_blocks.end(), tmp->m_uncles.begin(), tmp->m_uncles.end());
 		tmp = get_parent(tmp);
 	}
 
-	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, m_chainTip->m_sidechainHeight + 1); i < n; ++i) {
-		for (PoolBlock* uncle : m_blocksByHeight[m_chainTip->m_sidechainHeight - i]) {
+	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, tip->m_sidechainHeight + 1); i < n; ++i) {
+		for (PoolBlock* uncle : m_blocksByHeight[tip->m_sidechainHeight - i]) {
 			// Only add verified and valid blocks
 			if (!uncle || !uncle->m_verified || uncle->m_invalid) {
 				continue;
@@ -218,7 +220,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 			// Only add it if it's on the same chain
 			bool same_chain = false;
 			do {
-				tmp = m_chainTip;
+				tmp = tip;
 				while (tmp->m_sidechainHeight > uncle->m_sidechainHeight) {
 					tmp = get_parent(tmp);
 					if (!tmp) {
@@ -262,7 +264,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	}
 
 	block.m_difficulty = m_curDifficulty;
-	block.m_cumulativeDifficulty = m_chainTip->m_cumulativeDifficulty + block.m_difficulty;
+	block.m_cumulativeDifficulty = tip->m_cumulativeDifficulty + block.m_difficulty;
 
 	for (const hash& uncle_id : block.m_uncles) {
 		auto it = m_blocksById.find(uncle_id);
@@ -367,6 +369,7 @@ bool SideChain::block_seen(const PoolBlock& block)
 {
 	// Check if it's some old block
 	const PoolBlock* tip = m_chainTip;
+
 	if (tip && tip->m_sidechainHeight > block.m_sidechainHeight + m_chainWindowSize * 2 &&
 		block.m_cumulativeDifficulty < tip->m_cumulativeDifficulty) {
 		return true;
@@ -406,7 +409,9 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			difficulty_type diff2 = block.m_difficulty;
 			diff2 += block.m_difficulty;
 
-			for (PoolBlock* tmp = m_chainTip; tmp && (tmp->m_sidechainHeight + m_chainWindowSize > m_chainTip->m_sidechainHeight); tmp = get_parent(tmp)) {
+			const PoolBlock* tip = m_chainTip;
+
+			for (const PoolBlock* tmp = tip; tmp && (tmp->m_sidechainHeight + m_chainWindowSize > tip->m_sidechainHeight); tmp = get_parent(tmp)) {
 				if (diff2 >= tmp->m_difficulty) {
 					too_low_diff = false;
 					break;
@@ -449,7 +454,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	// Check if it has the correct parent and difficulty to go right to monerod for checking
-	const MinerData& miner_data = m_pool->miner_data();
+	MinerData miner_data = m_pool->miner_data();
 	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(pow_hash)) {
 		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
 		m_pool->submit_block_async(block.m_mainChainData);
@@ -573,7 +578,7 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
 {
 	MutexLock lock(m_sidechainLock);
 
-	PoolBlock* block = nullptr;
+	const PoolBlock* block = nullptr;
 
 	// Empty hash means we return current sidechain tip
 	if (id == hash()) {
@@ -661,12 +666,14 @@ void SideChain::print_status()
 	uint64_t rem;
 	uint64_t pool_hashrate = udiv128(m_curDifficulty.hi, m_curDifficulty.lo, m_targetBlockTime, &rem);
 
-	const difficulty_type& network_diff = m_pool->miner_data().difficulty;
+	difficulty_type network_diff = m_pool->miner_data().difficulty;
 	uint64_t network_hashrate = udiv128(network_diff.hi, network_diff.lo, 120, &rem);
 
+	const PoolBlock* tip = m_chainTip;
+
 	uint64_t block_depth = 0;
-	PoolBlock* cur = m_chainTip;
-	const uint64_t tip_height = m_chainTip ? m_chainTip->m_sidechainHeight : 0;
+	const PoolBlock* cur = tip;
+	const uint64_t tip_height = tip ? tip->m_sidechainHeight : 0;
 
 	uint32_t total_blocks_in_window = 0;
 	uint32_t total_uncles_in_window = 0;
@@ -715,7 +722,7 @@ void SideChain::print_status()
 	uint64_t your_reward = 0;
 	uint64_t total_reward = 0;
 
-	if (m_chainTip) {
+	if (tip) {
 		std::sort(blocks_in_window.begin(), blocks_in_window.end());
 		for (uint64_t i = 0; (i < m_chainWindowSize) && (i <= tip_height); ++i) {
 			for (PoolBlock* block : m_blocksByHeight[tip_height - i]) {
@@ -730,11 +737,11 @@ void SideChain::print_status()
 		}
 
 		Wallet w = m_pool->params().m_wallet;
-		const std::vector<PoolBlock::TxOutput>& outs = m_chainTip->m_outputs;
+		const std::vector<PoolBlock::TxOutput>& outs = tip->m_outputs;
 
 		hash eph_public_key;
 		for (size_t i = 0, n = outs.size(); i < n; ++i) {
-			if (w.get_eph_public_key(m_chainTip->m_txkeySec, i, eph_public_key) && (outs[i].m_ephPublicKey == eph_public_key)) {
+			if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key) && (outs[i].m_ephPublicKey == eph_public_key)) {
 				your_reward = outs[i].m_reward;
 			}
 			total_reward += outs[i].m_reward;
@@ -785,7 +792,8 @@ void SideChain::print_status()
 
 difficulty_type SideChain::total_hashes() const
 {
-	return m_chainTip ? m_chainTip->m_cumulativeDifficulty : difficulty_type();
+	const PoolBlock* tip = m_chainTip;
+	return tip ? tip->m_cumulativeDifficulty : difficulty_type();
 }
 
 uint64_t SideChain::miner_count()
@@ -809,7 +817,8 @@ uint64_t SideChain::miner_count()
 
 uint64_t SideChain::last_updated() const
 {
-	return m_chainTip ? m_chainTip->m_localTimestamp : 0;
+	const PoolBlock* tip = m_chainTip;
+	return tip ? tip->m_localTimestamp : 0;
 }
 
 bool SideChain::is_default() const
@@ -1356,8 +1365,10 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		return;
 	}
 
+	const PoolBlock* tip = m_chainTip;
+
 	bool is_alternative;
-	if (is_longer_chain(m_chainTip, block, is_alternative)) {
+	if (is_longer_chain(tip, block, is_alternative)) {
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {
 			m_chainTip = block;
@@ -1365,7 +1376,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 
 			LOGINFO(2, "new chain tip: next height = " << log::Gray() << block->m_sidechainHeight + 1 << log::NoColor() <<
 				", next difficulty = " << log::Gray() << m_curDifficulty << log::NoColor() <<
-				", main chain height = " << log::Gray() << m_chainTip->m_txinGenHeight);
+				", main chain height = " << log::Gray() << block->m_txinGenHeight);
 
 			block->m_wantBroadcast = true;
 			if (m_pool) {
@@ -1380,13 +1391,13 @@ void SideChain::update_chain_tip(PoolBlock* block)
 			prune_old_blocks();
 		}
 	}
-	else if (block->m_sidechainHeight > m_chainTip->m_sidechainHeight) {
+	else if (block->m_sidechainHeight > tip->m_sidechainHeight) {
 		LOGINFO(4, "block " << block->m_sidechainId <<
 			", height = " << block->m_sidechainHeight <<
-			" is not a longer chain than " << m_chainTip->m_sidechainId <<
-			", height " << m_chainTip->m_sidechainHeight);
+			" is not a longer chain than " << tip->m_sidechainId <<
+			", height " << tip->m_sidechainHeight);
 	}
-	else if (block->m_sidechainHeight + UNCLE_BLOCK_DEPTH > m_chainTip->m_sidechainHeight) {
+	else if (block->m_sidechainHeight + UNCLE_BLOCK_DEPTH > tip->m_sidechainHeight) {
 		LOGINFO(4, "possible uncle block: id = " << log::Gray() << block->m_sidechainId << log::NoColor() <<
 			", height = " << log::Gray() << block->m_sidechainHeight);
 		m_pool->update_block_template_async();
@@ -1519,8 +1530,9 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	}
 
 	// Final check: candidate chain must be built on top of recent mainchain blocks
-	if (candidate_mainchain_height + 10 < m_pool->miner_data().height) {
-		LOGWARN(3, "received a longer alternative chain but it's stale: height " << candidate_mainchain_height << ", current height " << m_pool->miner_data().height);
+	MinerData data = m_pool->miner_data();
+	if (candidate_mainchain_height + 10 < data.height) {
+		LOGWARN(3, "received a longer alternative chain but it's stale: height " << candidate_mainchain_height << ", current height " << data.height);
 		return false;
 	}
 
@@ -1604,11 +1616,13 @@ void SideChain::prune_old_blocks()
 	const uint64_t cur_time = seconds_since_epoch();
 	const uint64_t prune_delay = m_chainWindowSize * 4 * m_targetBlockTime;
 
-	if (m_chainTip->m_sidechainHeight < prune_distance) {
+	const PoolBlock* tip = m_chainTip;
+
+	if (tip->m_sidechainHeight < prune_distance) {
 		return;
 	}
 
-	const uint64_t h = m_chainTip->m_sidechainHeight - prune_distance;
+	const uint64_t h = tip->m_sidechainHeight - prune_distance;
 
 	uint64_t num_blocks_pruned = 0;
 

@@ -99,7 +99,7 @@ private:
 	bool check_config();
 
 	mutable uv_mutex_t m_sidechainLock;
-	PoolBlock* m_chainTip;
+	std::atomic<PoolBlock*> m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
 	unordered_map<hash, uint64_t> m_seenWallets;

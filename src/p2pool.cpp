@@ -108,6 +108,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_stopAsync.data = this;
 
 	uv_rwlock_init_checked(&m_mainchainLock);
+	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
@@ -149,6 +150,7 @@ p2pool::p2pool(int argc, char* argv[])
 p2pool::~p2pool()
 {
 	uv_rwlock_destroy(&m_mainchainLock);
+	uv_rwlock_destroy(&m_minerDataLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
 	uv_mutex_destroy(&m_submitBlockDataLock);
 
@@ -203,7 +205,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 		", fee = " << log::Gray() << static_cast<double>(tx.fee) / 1e6 << " um");
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
-	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
+	m_blockTemplate->update(miner_data(), *m_mempool, &m_params->m_wallet);
 #endif
 
 	m_zmqLastActive = seconds_since_epoch();
@@ -239,7 +241,10 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	data.tx_backlog.clear();
 	data.time_received = std::chrono::high_resolution_clock::now();
-	m_minerData = data;
+	{
+		WriteLock lock(m_minerDataLock);
+		m_minerData = data;
+	}
 	m_updateSeed = true;
 	update_median_timestamp();
 
@@ -549,11 +554,13 @@ void p2pool::update_block_template_async()
 
 void p2pool::update_block_template()
 {
+	MinerData data = miner_data();
+
 	if (m_updateSeed) {
-		m_hasher->set_seed_async(m_minerData.seed_hash);
+		m_hasher->set_seed_async(data.seed_hash);
 		m_updateSeed = false;
 	}
-	m_blockTemplate->update(m_minerData, *m_mempool, &m_params->m_wallet);
+	m_blockTemplate->update(data, *m_mempool, &m_params->m_wallet);
 	stratum_on_block();
 	api_update_pool_stats();
 }
@@ -666,6 +673,7 @@ void p2pool::update_median_timestamp()
 	uint64_t timestamps[TIMESTAMP_WINDOW];
 	if (!get_timestamps(timestamps))
 	{
+		WriteLock lock(m_minerDataLock);
 		m_minerData.median_timestamp = 0;
 		return;
 	}
@@ -673,8 +681,11 @@ void p2pool::update_median_timestamp()
 	std::sort(timestamps, timestamps + TIMESTAMP_WINDOW);
 
 	// Shift it +1 block compared to Monero's code because we don't have the latest block yet when we receive new miner data
-	m_minerData.median_timestamp = (timestamps[TIMESTAMP_WINDOW / 2] + timestamps[TIMESTAMP_WINDOW / 2 + 1]) / 2;
-	LOGINFO(4, "median timestamp updated to " << log::Gray() << m_minerData.median_timestamp);
+	const uint64_t ts = (timestamps[TIMESTAMP_WINDOW / 2] + timestamps[TIMESTAMP_WINDOW / 2 + 1]) / 2;
+	LOGINFO(4, "median timestamp updated to " << log::Gray() << ts);
+
+	WriteLock lock(m_minerDataLock);
+	m_minerData.median_timestamp = ts;
 }
 
 void p2pool::stratum_on_block()
@@ -1021,10 +1032,16 @@ void p2pool::api_update_network_stats()
 		return;
 	}
 
+	hash prev_id;
+	{
+		ReadLock lock(m_minerDataLock);
+		prev_id = m_minerData.prev_id;
+	}
+
 	ChainMain mainnet_tip;
 	{
 		ReadLock lock(m_mainchainLock);
-		mainnet_tip = m_mainchainByHash[m_minerData.prev_id];
+		mainnet_tip = m_mainchainByHash[prev_id];
 	}
 
 	m_api->set(p2pool_api::Category::NETWORK, "stats",
@@ -1086,10 +1103,16 @@ void p2pool::api_update_stats_mod()
 		return;
 	}
 
+	hash prev_id;
+	{
+		ReadLock lock(m_minerDataLock);
+		prev_id = m_minerData.prev_id;
+	}
+
 	ChainMain mainnet_tip;
 	{
 		ReadLock lock(m_mainchainLock);
-		mainnet_tip = m_mainchainByHash[m_minerData.prev_id];
+		mainnet_tip = m_mainchainByHash[prev_id];
 	}
 
 	time_t last_block_found_time = 0;

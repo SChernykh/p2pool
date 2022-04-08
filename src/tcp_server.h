@@ -53,7 +53,7 @@ public:
 	struct Client
 	{
 		Client();
-		virtual ~Client();
+		virtual ~Client() {}
 
 		virtual void reset();
 		virtual bool on_connect() = 0;
@@ -90,8 +90,6 @@ public:
 		uint32_t m_numRead;
 
 		std::atomic<uint32_t> m_resetCounter{ 0 };
-
-		uv_mutex_t m_sendLock;
 	};
 
 	struct WriteBuf
@@ -152,7 +150,7 @@ protected:
 	int m_listenPort;
 
 	uv_loop_t m_loop;
-	volatile bool m_loopStopped;
+	std::atomic<bool> m_loopStopped;
 
 	uv_mutex_t m_clientsListLock;
 	std::vector<Client*> m_preallocatedClients;

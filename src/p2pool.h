@@ -48,7 +48,12 @@ public:
 	const Params& params() const { return *m_params; }
 	BlockTemplate& block_template() { return *m_blockTemplate; }
 	SideChain& side_chain() { return *m_sideChain; }
-	const MinerData& miner_data() const { return m_minerData; }
+
+	FORCEINLINE MinerData miner_data() const
+	{
+		ReadLock lock(m_minerDataLock);
+		return m_minerData;
+	}
 
 	p2pool_api* api() const { return m_api; }
 
@@ -108,13 +113,15 @@ private:
 	SideChain* m_sideChain;
 	RandomX_Hasher_Base* m_hasher;
 	BlockTemplate* m_blockTemplate;
-	MinerData m_minerData;
 	bool m_updateSeed;
 	Mempool* m_mempool;
 
 	mutable uv_rwlock_t m_mainchainLock;
 	std::map<uint64_t, ChainMain> m_mainchainByHeight;
 	unordered_map<hash, ChainMain> m_mainchainByHash;
+
+	mutable uv_rwlock_t m_minerDataLock;
+	MinerData m_minerData;
 
 	enum { TIMESTAMP_WINDOW = 60 };
 	bool get_timestamps(uint64_t (&timestamps)[TIMESTAMP_WINDOW]) const;
@@ -185,7 +192,7 @@ private:
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
 
-	uint64_t m_zmqLastActive;
+	std::atomic<uint64_t> m_zmqLastActive;
 	uint64_t m_startTime;
 
 	ZMQReader* m_ZMQReader = nullptr;

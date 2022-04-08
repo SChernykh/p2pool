@@ -27,7 +27,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	, m_loopThread{}
 	, m_finished(0)
 	, m_listenPort(-1)
-	, m_loopStopped(false)
+	, m_loopStopped{false}
 	, m_numConnections(0)
 	, m_numIncomingConnections(0)
 {
@@ -532,8 +532,6 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		LOGERR(1, "sending data from another thread, this is not thread safe");
 	}
 
-	MutexLock lock0(client->m_sendLock);
-
 	WriteBuf* buf = nullptr;
 
 	{
@@ -620,9 +618,11 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_connection(uv_stream_t* se
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* handle)
 {
-	Client* client = static_cast<Client*>(handle->data);
-	MutexLock lock0(client->m_sendLock);
+	if (!server_event_loop_thread) {
+		LOGERR(1, "on_connection_close called from another thread, this is not thread safe");
+	}
 
+	Client* client = static_cast<Client*>(handle->data);
 	TCPServer* owner = client->m_owner;
 
 	LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " disconnected");
@@ -811,15 +811,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
 {
 	Client::reset();
 
-	uv_mutex_init_checked(&m_sendLock);
-
 	m_readBuf[0] = '\0';
-}
-
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::~Client()
-{
-	uv_mutex_destroy(&m_sendLock);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>

@@ -678,7 +678,7 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 
 void P2PServer::broadcast(const PoolBlock& block)
 {
-	const MinerData& miner_data = m_pool->miner_data();
+	MinerData miner_data = m_pool->miner_data();
 
 	if (block.m_txinGenHeight + 2 < miner_data.height) {
 		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
@@ -1736,7 +1736,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	m_broadcastedHashes[m_broadcastedHashesIndex.fetch_add(1) % array_size(&P2PClient::m_broadcastedHashes)] = server->m_block->m_sidechainId;
 
-	const MinerData& miner_data = server->m_pool->miner_data();
+	MinerData miner_data = server->m_pool->miner_data();
 
 	if (server->m_block->m_prevId != miner_data.prev_id) {
 		// This peer is mining on top of a different Monero block, investigate it
