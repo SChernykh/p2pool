@@ -49,7 +49,7 @@ private:
 	};
 
 	std::vector<WorkerData*> m_minerThreads;
-	volatile bool m_stopped;
+	std::atomic<bool> m_stopped;
 
 	std::chrono::high_resolution_clock::time_point m_startTimestamp;
 
@@ -75,7 +75,7 @@ private:
 		void set_nonce(uint32_t nonce, uint32_t extra_nonce);
 	};
 	Job m_job[2];
-	volatile uint32_t m_jobIndex;
+	std::atomic<uint32_t> m_jobIndex;
 
 	void run(WorkerData* data);
 };

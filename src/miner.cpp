@@ -35,7 +35,7 @@ namespace p2pool {
 Miner::Miner(p2pool* pool, uint32_t threads)
 	: m_pool(pool)
 	, m_threads(threads)
-	, m_stopped(false)
+	, m_stopped{ false }
 	, m_startTimestamp(high_resolution_clock::now())
 	, m_nonce(0)
 	, m_nonceTimestamp(m_startTimestamp)
@@ -43,7 +43,7 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_totalHashes(0)
 	, m_sharesFound(0)
 	, m_job{}
-	, m_jobIndex(0)
+	, m_jobIndex{ 0 }
 {
 	on_block(m_pool->block_template());
 

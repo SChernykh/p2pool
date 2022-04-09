@@ -115,9 +115,7 @@ static int do_status(p2pool *m_pool, const char * /* args */)
 		m_pool->p2p_server()->print_status();
 	}
 #ifdef WITH_RANDOMX
-	if (m_pool->miner()) {
-		m_pool->miner()->print_status();
-	}
+	m_pool->print_miner_status();
 #endif
 	bkg_jobs_tracker.print_status();
 	return 0;

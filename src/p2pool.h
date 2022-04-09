@@ -64,8 +64,9 @@ public:
 
 	StratumServer* stratum_server() const { return m_stratumServer; }
 	P2PServer* p2p_server() const { return m_p2pServer; }
+
 #ifdef WITH_RANDOMX
-	Miner* miner() const { return m_miner; }
+	void print_miner_status();
 #endif
 
 	virtual void handle_tx(TxMempoolData& tx) override;
@@ -171,7 +172,9 @@ private:
 	std::atomic<uint32_t> m_serversStarted{ 0 };
 	StratumServer* m_stratumServer = nullptr;
 	P2PServer* m_p2pServer = nullptr;
+
 #ifdef WITH_RANDOMX
+	uv_mutex_t m_minerLock;
 	Miner* m_miner = nullptr;
 #endif
 

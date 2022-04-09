@@ -110,6 +110,9 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
+#ifdef WITH_RANDOMX
+	uv_mutex_init_checked(&m_minerLock);
+#endif
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
 	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
@@ -152,6 +155,9 @@ p2pool::~p2pool()
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
+#ifdef WITH_RANDOMX
+	uv_mutex_destroy(&m_minerLock);
+#endif
 	uv_mutex_destroy(&m_submitBlockDataLock);
 
 	delete m_api;
@@ -188,6 +194,17 @@ bool p2pool::get_seed(uint64_t height, hash& seed) const
 	seed = it->second.id;
 	return true;
 }
+
+#ifdef WITH_RANDOMX
+void p2pool::print_miner_status()
+{
+	MutexLock lock(m_minerLock);
+
+	if (m_miner) {
+		m_miner->print_status();
+	}
+}
+#endif
 
 void p2pool::handle_tx(TxMempoolData& tx)
 {
@@ -691,10 +708,15 @@ void p2pool::update_median_timestamp()
 void p2pool::stratum_on_block()
 {
 #ifdef WITH_RANDOMX
-	if (m_miner) {
-		m_miner->on_block(*m_blockTemplate);
+	{
+		MutexLock lock(m_minerLock);
+
+		if (m_miner) {
+			m_miner->on_block(*m_blockTemplate);
+		}
 	}
 #endif
+
 	if (m_stratumServer) {
 		m_stratumServer->on_block(*m_blockTemplate);
 	}
@@ -1257,15 +1279,18 @@ bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
 void p2pool::start_mining(uint32_t threads)
 {
 	stop_mining();
+
+	MutexLock lock(m_minerLock);
 	m_miner = new Miner(this, threads);
 }
 
 void p2pool::stop_mining()
 {
-	Miner* miner = m_miner;
-	if (miner) {
+	MutexLock lock(m_minerLock);
+
+	if (m_miner) {
+		delete m_miner;
 		m_miner = nullptr;
-		delete miner;
 	}
 }
 #endif
