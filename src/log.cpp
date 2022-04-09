@@ -19,6 +19,7 @@
 #include "uv_util.h"
 #include <ctime>
 #include <fstream>
+#include <thread>
 
 static constexpr char log_category_prefix[] = "Log ";
 static constexpr char log_file_name[] = "p2pool.log";
@@ -47,7 +48,7 @@ public:
 	enum params : int
 	{
 		SLOT_SIZE = 1024,
-		BUF_SIZE = SLOT_SIZE * 16384,
+		BUF_SIZE = SLOT_SIZE * 8192,
 	};
 
 	FORCEINLINE Worker()
@@ -72,7 +73,9 @@ public:
 			abort();
 		}
 
-		do {} while (!worker_started);
+		while (!worker_started) {
+			std::this_thread::yield();
+		}
 
 #ifdef _WIN32
 		DWORD dwConsoleMode;
@@ -130,6 +133,7 @@ public:
 
 		memcpy(p + 1, buf + 1, size - 1);
 
+		// Ensure memory order in the writer thread
 		std::atomic_thread_fence(std::memory_order_seq_cst);
 
 		// Mark that everything is written into this log slot
@@ -158,8 +162,13 @@ private:
 					char* p = m_buf.data() + (m_readPos % BUF_SIZE);
 
 					// Wait until everything is written into this log slot
-					volatile char& severity = *p;
-					while (!severity) {}
+					volatile char& severity = p[0];
+					while (!severity) {
+						std::this_thread::yield();
+					}
+
+					// Ensure memory order in the reader thread
+					std::atomic_thread_fence(std::memory_order_seq_cst);
 
 					uint32_t size = static_cast<uint8_t>(p[2]);
 					size = (size << 8) + static_cast<uint8_t>(p[1]);
