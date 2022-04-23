@@ -1030,6 +1030,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_peerListPendingRequests(0)
 	, m_pingTime(0)
 	, m_blockPendingRequests(0)
+	, m_chainTipBlockRequest(false)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
@@ -1059,6 +1060,7 @@ void P2PServer::P2PClient::reset()
 	m_peerListPendingRequests = 0;
 	m_pingTime = 0;
 	m_blockPendingRequests = 0;
+	m_chainTipBlockRequest = false;
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
@@ -1642,6 +1644,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	p += HASH_SIZE;
 
 	++m_blockPendingRequests;
+	m_chainTipBlockRequest = true;
 	m_lastBroadcastTimestamp = seconds_since_epoch();
 }
 
@@ -1714,6 +1717,18 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 		return false;
 	}
 
+	if (m_chainTipBlockRequest) {
+		m_chainTipBlockRequest = false;
+
+		const uint64_t peer_height = server->m_block->m_txinGenHeight;
+		const uint64_t our_height = server->m_pool->miner_data().height;
+
+		if (peer_height + 2 < our_height) {
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is mining on top of a stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
+			return false;
+		}
+	}
+
 	return handle_incoming_block_async(server->m_block);
 }
 
@@ -1756,7 +1771,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 				}
 			}
 			else {
-				LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted an unreasonably stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " broadcasted an unreasonably stale block (mainchain height " << peer_height << ", expected >= " << our_height << ')');
 				return false;
 			}
 		}

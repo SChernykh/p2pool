@@ -117,6 +117,7 @@ public:
 		int64_t m_pingTime;
 
 		int m_blockPendingRequests;
+		bool m_chainTipBlockRequest;
 
 		uint64_t m_lastAlive;
 		uint64_t m_lastBroadcastTimestamp;
