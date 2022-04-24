@@ -152,10 +152,13 @@ private:
 
 		do {
 			uv_mutex_lock(&m_mutex);
-			uv_cond_wait(&m_cond, &m_mutex);
+			if (m_readPos == m_writePos.load()) {
+				// Nothing to do, wait for the signal
+				uv_cond_wait(&m_cond, &m_mutex);
+			}
 			uv_mutex_unlock(&m_mutex);
 
-			for (uint32_t writePos = m_writePos.load(); m_readPos < writePos; writePos = m_writePos.load()) {
+			for (uint32_t writePos = m_writePos.load(); m_readPos != writePos; writePos = m_writePos.load()) {
 				// We have at least one log slot pending, possibly more than one
 				// Process everything in a loop before reading m_writePos again
 				do {
