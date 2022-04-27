@@ -689,6 +689,8 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_poolBlockTemplate->m_outputs.clear();
 	m_poolBlockTemplate->m_outputs.reserve(num_outputs);
 
+	const uint8_t tx_type = m_poolBlockTemplate->get_tx_type();
+
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
 		writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
@@ -696,18 +698,24 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 				m_minerTx.push_back(b);
 				++reward_amounts_weight;
 			});
-		m_minerTx.push_back(TXOUT_TO_KEY);
+		m_minerTx.push_back(tx_type);
+
+		uint8_t view_tag = 0;
 
 		if (dry_run) {
 			m_minerTx.insert(m_minerTx.end(), HASH_SIZE, 0);
 		}
 		else {
 			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key)) {
+			if (!shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag)) {
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
-			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key);
+			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key, tx_type, view_tag);
+		}
+
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
+			m_minerTx.emplace_back(view_tag);
 		}
 	}
 

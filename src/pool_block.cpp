@@ -157,8 +157,12 @@ void PoolBlock::serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, c
 
 	for (TxOutput& output : m_outputs) {
 		writeVarint(output.m_reward, m_mainChainData);
-		m_mainChainData.push_back(TXOUT_TO_KEY);
+		m_mainChainData.push_back(output.m_txType);
 		m_mainChainData.insert(m_mainChainData.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+
+		if (output.m_txType == TXOUT_TO_TAGGED_KEY) {
+			m_mainChainData.push_back(output.m_viewTag);
+		}
 	}
 
 	m_mainChainOutputsBlobSize = static_cast<int>(m_mainChainData.size()) - m_mainChainOutputsOffset;
@@ -301,9 +305,19 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
 	for (size_t i = 0, n = m_outputs.size(); i < n; ++i) {
+		const TxOutput& out = m_outputs[i];
 		hash eph_public_key;
-		if ((w.get_eph_public_key(m_txkeySec, i, eph_public_key)) && (eph_public_key == m_outputs[i].m_ephPublicKey)) {
-			return m_outputs[i].m_reward;
+
+		if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+			if (w.get_eph_public_key_with_view_tag(m_txkeySec, i, eph_public_key, out.m_viewTag) && (eph_public_key == out.m_ephPublicKey)) {
+				return out.m_reward;
+			}
+		}
+		else {
+			uint8_t view_tag;
+			if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag) && (eph_public_key == out.m_ephPublicKey)) {
+				return out.m_reward;
+			}
 		}
 	}
 

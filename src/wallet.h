@@ -38,7 +38,8 @@ public:
 	FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
 	FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
 
-	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key) const;
+	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag) const;
+	bool get_eph_public_key_with_view_tag(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t expected_view_tag) const;
 
 	FORCEINLINE bool operator<(const Wallet& w) const { return m_spendPublicKey < w.m_spendPublicKey; }
 	FORCEINLINE bool operator==(const Wallet& w) const { return m_spendPublicKey == w.m_spendPublicKey; }

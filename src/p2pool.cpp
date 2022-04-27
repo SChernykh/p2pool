@@ -72,7 +72,8 @@ p2pool::p2pool(int argc, char* argv[])
 	hash pub, sec, eph_public_key;
 	generate_keys(pub, sec);
 
-	if (!m_params->m_wallet.get_eph_public_key(sec, 0, eph_public_key)) {
+	uint8_t view_tag;
+	if (!m_params->m_wallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
 		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
 		panic();
 	}
@@ -620,13 +621,15 @@ void p2pool::download_block_headers(uint64_t current_height)
 			});
 	}
 
+	const uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << current_height - BLOCK_HEADERS_REQUIRED << ",\"end_height\":" << current_height - 1 << "}}\0";
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
 
 	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
-		[this, current_height](const char* data, size_t size)
+		[this, start_height, current_height](const char* data, size_t size)
 		{
-			if (parse_block_headers_range(data, size) == BLOCK_HEADERS_REQUIRED) {
+			if (parse_block_headers_range(data, size) == current_height - start_height) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
 					m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
@@ -641,14 +644,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 				}
 			}
 			else {
-				LOGERR(1, "fatal error: couldn't download block headers for heights " << current_height - BLOCK_HEADERS_REQUIRED << " - " << current_height - 1);
+				LOGERR(1, "fatal error: couldn't download block headers for heights " << start_height << " - " << current_height - 1);
 				panic();
 			}
 		},
-		[current_height](const char* data, size_t size)
+		[start_height, current_height](const char* data, size_t size)
 		{
 			if (size > 0) {
-				LOGERR(1, "fatal error: couldn't download block headers for heights " << current_height - BLOCK_HEADERS_REQUIRED << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
+				LOGERR(1, "fatal error: couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
 				panic();
 			}
 		});
