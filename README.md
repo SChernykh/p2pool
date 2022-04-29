@@ -19,6 +19,7 @@ Pool status and monitoring pages can be found at https://p2pool.io/, https://p2p
 - [Features](#features)
 - [How PPLNS works in P2Pool](#how-pplns-works-in-p2pool)
 - [Default P2Pool parameters](#default-p2pool-parameters)
+- [Monero version support](#monero-version-support)
 - [How to mine on P2Pool](#how-to-mine-on-p2pool)
   - [General Considerations](#general-considerations)
   - [GNU/Linux](#gnulinux)
@@ -63,12 +64,21 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 * PPLNS window: 2160 blocks (6 hours)
 * Minimum payout = Monero block reward/2160, ~0.0003 XMR
 
+## Monero version support
+
+Monero will undergo a network upgrade on July 16th, 2022 (block 2,668,888). In order to continue mining after that date, you must update both Monero and P2Pool software to the latest available versions as soon as they are released.
+
+|Monero protocol version|Required Monero software version|Required P2Pool version
+|-|-|-|
+|v14 (active until July 16th, 2022)|v0.17.3.0 or newer|v1.0 or newer
+|v15, v16  (active after July 16th, 2022)|v0.18.0.0 or newer|v2.0 or newer
+
 ## How to mine on P2Pool
 
 ### General Considerations
 
 - In order to mine on P2Pool, a synced Monero node using monerod v0.17.3.0 or newer is required. If you do not currently have one configured, you can find instructions to do so [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
-- It is highly recommended that you create a separate restricted user account for mining. P2Pool is still relatively new and may still have serious bugs/vulnerabilities. 
+- It is highly recommended that you create a separate restricted user account for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
 - You have to use a primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
 - Starting from P2Pool v1.7, you can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
 - Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
