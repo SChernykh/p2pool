@@ -417,7 +417,7 @@ void P2PServer::load_peer_list()
 			addrinfo hints{};
 			hints.ai_family = AF_UNSPEC;
 			hints.ai_socktype = SOCK_STREAM;
-			hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+			hints.ai_flags = AI_ADDRCONFIG;
 
 			addrinfo* result;
 			const int err = getaddrinfo(nodes[i], nullptr, &hints, &result);

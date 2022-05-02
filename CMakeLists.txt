@@ -100,7 +100,7 @@ if (WIN32)
 elseif (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 	set(LIBS ${LIBS} pthread)
 elseif (NOT APPLE)
-	set(LIBS ${LIBS} pthread gss dl)
+	set(LIBS ${LIBS} pthread dl)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
@@ -132,6 +132,14 @@ if (SODIUM_LIBRARY)
 endif()
 
 add_definitions(/DZMQ_STATIC)
+
+include(CheckSymbolExists)
+
+check_symbol_exists(pthread_cancel pthread.h HAVE_PTHREAD_CANCEL)
+
+if (HAVE_PTHREAD_CANCEL)
+	add_definitions(/DHAVE_PTHREAD_CANCEL)
+endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 

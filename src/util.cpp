@@ -349,7 +349,7 @@ bool resolve_host(std::string& host, bool& is_v6)
 	addrinfo hints{};
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+	hints.ai_flags = AI_ADDRCONFIG;
 
 	addrinfo* r = nullptr;
 	const int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);

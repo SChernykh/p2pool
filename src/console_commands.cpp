@@ -27,6 +27,10 @@
 #include "side_chain.h"
 #include <iostream>
 
+#ifdef HAVE_PTHREAD_CANCEL
+#include <pthread.h>
+#endif
+
 static constexpr char log_category_prefix[] = "ConsoleCommands ";
 
 namespace p2pool {
@@ -45,7 +49,7 @@ ConsoleCommands::~ConsoleCommands()
 
 #ifdef _WIN32
 	TerminateThread(reinterpret_cast<HANDLE>(m_worker->native_handle()), 0);
-#else
+#elif defined HAVE_PTHREAD_CANCEL
 	pthread_cancel(m_worker->native_handle());
 #endif
 
