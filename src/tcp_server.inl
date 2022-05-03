@@ -322,6 +322,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect_failed(bool, const raw
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
 {
+	if (ip.is_localhost()) {
+		return false;
+	}
+
 	const auto cur_time = std::chrono::steady_clock::now();
 
 	MutexLock lock(m_bansLock);
@@ -495,6 +499,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_status()
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::ban(const raw_ip& ip, uint64_t seconds)
 {
+	if (ip.is_localhost()) {
+		return;
+	}
+
 	const auto ban_time = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
 
 	MutexLock lock(m_bansLock);
