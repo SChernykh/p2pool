@@ -556,7 +556,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	// callback_buf is used in only 1 thread, so it's safe
 	static uint8_t callback_buf[WRITE_BUF_SIZE];
-	const size_t bytes_written = callback(callback_buf);
+	const size_t bytes_written = callback(callback_buf, sizeof(callback_buf));
 
 	if (bytes_written > WRITE_BUF_SIZE) {
 		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << WRITE_BUF_SIZE << " bytes");

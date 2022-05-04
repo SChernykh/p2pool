@@ -105,14 +105,14 @@ public:
 	struct SendCallbackBase
 	{
 		virtual ~SendCallbackBase() {}
-		virtual size_t operator()(void*) = 0;
+		virtual size_t operator()(void*, size_t) = 0;
 	};
 
 	template<typename T>
 	struct SendCallback : public SendCallbackBase
 	{
 		explicit FORCEINLINE SendCallback(T&& callback) : m_callback(std::move(callback)) {}
-		size_t operator()(void* buf) override { return m_callback(buf); }
+		size_t operator()(void* buf, size_t buf_size) override { return m_callback(buf, buf_size); }
 
 	private:
 		SendCallback& operator=(SendCallback&&) = delete;

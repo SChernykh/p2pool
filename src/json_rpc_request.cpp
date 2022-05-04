@@ -72,7 +72,7 @@ JSONRPCRequest::JSONRPCRequest(const char* address, int port, const char* req, C
 	m_request.reserve(std::max<size_t>(len + 128, log::Stream::BUF_SIZE + 1));
 	m_request.resize(log::Stream::BUF_SIZE + 1);
 
-	log::Stream s(m_request.data());
+	log::Stream s(m_request.data(), m_request.size());
 	s << "POST " << uri << " HTTP/1.1\nContent-Type: application/json\nContent-Length: " << len << "\n\n";
 
 	m_request.resize(s.m_pos);

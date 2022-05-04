@@ -37,6 +37,8 @@ static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "" };
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 
+static constexpr size_t SEND_BUF_MIN_SIZE = 256;
+
 #include "tcp_server.inl"
 
 namespace p2pool {
@@ -310,9 +312,14 @@ void P2PServer::update_peer_list()
 				client->m_nextOutgoingPeerListRequest = cur_time + (60 + (get_random64() % 61));
 
 				const bool result = send(client,
-					[](void* buf)
+					[](void* buf, size_t buf_size)
 					{
 						LOGINFO(5, "sending PEER_LIST_REQUEST");
+
+						if (buf_size < SEND_BUF_MIN_SIZE) {
+							return 0;
+						}
+
 						*reinterpret_cast<uint8_t*>(buf) = static_cast<uint8_t>(MessageId::PEER_LIST_REQUEST);
 						return 1;
 					});
@@ -780,7 +787,8 @@ void P2PServer::on_broadcast()
 		}
 
 		for (Broadcast* data : broadcast_queue) {
-			send(client, [client, data](void* buf) {
+			send(client, [client, data](void* buf, size_t buf_size) -> size_t
+			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
 
@@ -798,9 +806,14 @@ void P2PServer::on_broadcast()
 
 				if (send_pruned) {
 					LOGINFO(6, "sending BLOCK_BROADCAST (pruned) to " << log::Gray() << static_cast<char*>(client->m_addrString));
-					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
 
 					const uint32_t len = static_cast<uint32_t>(data->pruned_blob.size());
+					if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+						return 0;
+					}
+
+					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
+
 					memcpy(p, &len, sizeof(uint32_t));
 					p += sizeof(uint32_t);
 
@@ -811,9 +824,14 @@ void P2PServer::on_broadcast()
 				}
 				else {
 					LOGINFO(5, "sending BLOCK_BROADCAST (full)   to " << log::Gray() << static_cast<char*>(client->m_addrString));
-					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
 
 					const uint32_t len = static_cast<uint32_t>(data->blob.size());
+					if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+						return 0;
+					}
+
+					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
+
 					memcpy(p, &len, sizeof(uint32_t));
 					p += sizeof(uint32_t);
 
@@ -980,12 +998,17 @@ void P2PServer::download_missing_blocks()
 		}
 
 		const bool result = send(client,
-			[&id](void* buf)
+			[&id](void* buf, size_t buf_size) -> size_t
 			{
+				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
+
+				if (buf_size < SEND_BUF_MIN_SIZE) {
+					return 0;
+				}
+
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
 
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
 				*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
 				memcpy(p, id.h, HASH_SIZE);
@@ -1348,12 +1371,17 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 	m_handshakeChallenge = owner->get_random64();
 
 	return owner->send(this,
-		[this, owner](void* buf)
+		[this, owner](void* buf, size_t buf_size) -> size_t
 		{
+			LOGINFO(5, "sending HANDSHAKE_CHALLENGE");
+
+			if (buf_size < SEND_BUF_MIN_SIZE) {
+				return 0;
+			}
+
 			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 			uint8_t* p = p0;
 
-			LOGINFO(5, "sending HANDSHAKE_CHALLENGE");
 			*(p++) = static_cast<uint8_t>(MessageId::HANDSHAKE_CHALLENGE);
 
 			uint64_t k = m_handshakeChallenge;
@@ -1465,12 +1493,17 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 			}
 
 			const bool result = work->server->send(work->client,
-				[work](void* buf)
+				[work](void* buf, size_t buf_size) -> size_t
 				{
+					LOGINFO(5, "sending HANDSHAKE_SOLUTION");
+
+					if (buf_size < SEND_BUF_MIN_SIZE) {
+						return 0;
+					}
+
 					uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 					uint8_t* p = p0;
 
-					LOGINFO(5, "sending HANDSHAKE_SOLUTION");
 					*(p++) = static_cast<uint8_t>(MessageId::HANDSHAKE_SOLUTION);
 
 					memcpy(p, work->solution.h, HASH_SIZE);
@@ -1615,8 +1648,14 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 		}
 
 		return m_owner->send(this,
-			[this](void* buf)
+			[this](void* buf, size_t buf_size) -> size_t
 			{
+				LOGINFO(5, "sending LISTEN_PORT and BLOCK_REQUEST for the chain tip");
+
+				if (buf_size < SEND_BUF_MIN_SIZE) {
+					return 0;
+				}
+
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
 				on_after_handshake(p);
@@ -1679,15 +1718,21 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	}
 
 	return server->send(this,
-		[&blob](void* buf)
+		[&blob](void* buf, size_t buf_size) -> size_t
 		{
+			LOGINFO(5, "sending BLOCK_RESPONSE");
+
+			const uint32_t len = static_cast<uint32_t>(blob.size());
+
+			if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+				return 0;
+			}
+
 			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 			uint8_t* p = p0;
 
-			LOGINFO(5, "sending BLOCK_RESPONSE");
 			*(p++) = static_cast<uint8_t>(MessageId::BLOCK_RESPONSE);
 
-			const uint32_t len = static_cast<uint32_t>(blob.size());
 			memcpy(p, &len, sizeof(uint32_t));
 			p += sizeof(uint32_t);
 
@@ -1841,12 +1886,17 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	}
 
 	return server->send(this,
-		[&peers, num_selected_peers](void* buf)
+		[&peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
 		{
+			LOGINFO(5, "sending PEER_LIST_RESPONSE");
+
+			if (buf_size < SEND_BUF_MIN_SIZE + 2 + num_selected_peers * 19) {
+				return 0;
+			}
+
 			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 			uint8_t* p = p0;
 
-			LOGINFO(5, "sending PEER_LIST_RESPONSE");
 			*(p++) = static_cast<uint8_t>(MessageId::PEER_LIST_RESPONSE);
 			*(p++) = static_cast<uint8_t>(num_selected_peers);
 
@@ -2002,12 +2052,17 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		}
 
 		const bool result = m_owner->send(this,
-			[&id](void* buf)
+			[&id](void* buf, size_t buf_size) -> size_t
 			{
+				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
+
+				if (buf_size < SEND_BUF_MIN_SIZE + 1 + HASH_SIZE) {
+					return 0;
+				}
+
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
 
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
 				*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
 				memcpy(p, id.h, HASH_SIZE);

@@ -267,7 +267,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	}
 
 	const bool result = send(client,
-		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf)
+		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf, size_t buf_size)
 		{
 			do {
 				client->m_rpcId = static_cast<uint32_t>(static_cast<StratumServer*>(client->m_owner)->get_random64());
@@ -280,7 +280,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 				target_hex.m_size -= sizeof(uint32_t);
 			}
 
-			log::Stream s(reinterpret_cast<char*>(buf));
+			log::Stream s(buf, buf_size);
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"result\":{\"id\":\"";
 			s << log::Hex(client->m_rpcId) << "\",\"job\":{\"blob\":\"";
 			s << log::hex_buf(hashing_blob, blob_size) << "\",\"job_id\":\"";
@@ -353,9 +353,9 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		if (!block.get_difficulties(template_id, mainchain_diff, sidechain_diff)) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
 			return send(client,
-				[id](void* buf)
+				[id](void* buf, size_t buf_size)
 				{
-					log::Stream s(reinterpret_cast<char*>(buf));
+					log::Stream s(buf, buf_size);
 					s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Stale share\"}}\n";
 					return s.m_pos;
 				});
@@ -419,9 +419,9 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a share with invalid job id");
 
 	const bool result = send(client,
-		[id](void* buf)
+		[id](void* buf, size_t buf_size)
 		{
-			log::Stream s(reinterpret_cast<char*>(buf));
+			log::Stream s(buf, buf_size);
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Invalid job id\"}}\n";
 			return s.m_pos;
 		});
@@ -570,7 +570,7 @@ void StratumServer::on_blobs_ready()
 			}
 
 			const bool result = send(client,
-				[data, target, hashing_blob, &job_id](void* buf)
+				[data, target, hashing_blob, &job_id](void* buf, size_t buf_size)
 				{
 					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 
@@ -579,7 +579,7 @@ void StratumServer::on_blobs_ready()
 						target_hex.m_size -= sizeof(uint32_t);
 					}
 
-					log::Stream s(reinterpret_cast<char*>(buf));
+					log::Stream s(buf, buf_size);
 					s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
 					s << log::hex_buf(hashing_blob, data->m_blobSize) << "\",\"job_id\":\"";
 					s << log::Hex(job_id) << "\",\"target\":\"";
@@ -739,9 +739,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	if ((client->m_resetCounter.load() == share->m_clientResetCounter) && (client->m_rpcId == share->m_rpcId)) {
 		const bool result = server->send(client,
-			[share](void* buf)
+			[share](void* buf, size_t buf_size)
 			{
-				log::Stream s(reinterpret_cast<char*>(buf));
+				log::Stream s(buf, buf_size);
 				switch (share->m_result) {
 				case SubmittedShare::Result::STALE:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Stale share\"}}\n";
