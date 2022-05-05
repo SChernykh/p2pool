@@ -271,6 +271,18 @@ cmake ..
 make
 ```
 
+### Android (Termux)
+
+Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally in Termux:
+```
+pkg install git build-essential cmake libuv libzmq
+git clone --recursive https://github.com/SChernykh/p2pool
+cd p2pool
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
 ## Donations
 
 If you'd like to support further development of Monero P2Pool, you're welcome to send any amount of XMR to the following address:
