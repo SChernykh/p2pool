@@ -73,6 +73,7 @@ public:
 	uint64_t get_random64();
 
 	void print_status() override;
+	void show_workers();
 
 	void reset_share_counters();
 

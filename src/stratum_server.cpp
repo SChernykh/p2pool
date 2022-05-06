@@ -441,6 +441,21 @@ void StratumServer::print_status()
 	print_stratum_status();
 }
 
+void StratumServer::show_workers()
+{
+	const uint64_t cur_time = seconds_since_epoch();
+
+	MutexLock lock(m_clientsListLock);
+
+	for (StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
+		LOGINFO(0, static_cast<char*>(c->m_addrString)
+			<< '\t' << (c->m_rpcId ? " " : "*") << log::Duration(cur_time - c->m_connectedTime)
+			<< '\t' << c->m_customDiff
+			<< '\t' << c->m_customUser
+		);
+	}
+}
+
 void StratumServer::reset_share_counters()
 {
 	m_cumulativeHashesAtLastShare = 0;

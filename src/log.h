@@ -184,7 +184,10 @@ INT_ENTRY(unsigned long)
 template<typename T, int base>
 struct BasedValue
 {
-	explicit FORCEINLINE BasedValue(T value) : m_value(value) {}
+	explicit FORCEINLINE BasedValue(T value) : m_value(value)
+	{
+		static_assert(std::is_integral<T>::value, "Must be an integer type here");
+	}
 
 	T m_value;
 };
@@ -192,7 +195,7 @@ struct BasedValue
 template<typename T, int base>
 struct Stream::Entry<BasedValue<T, base>>
 {
-	static FORCEINLINE void put(BasedValue<T, base>&& data, Stream* wrapper)
+	static FORCEINLINE void put(BasedValue<T, base> data, Stream* wrapper)
 	{
 		wrapper->writeInt<T, base>(data.m_value);
 	}
@@ -356,7 +359,7 @@ struct XMRAmount
 
 template<> struct log::Stream::Entry<XMRAmount>
 {
-	static NOINLINE void put(XMRAmount&& value, Stream* wrapper)
+	static NOINLINE void put(XMRAmount value, Stream* wrapper)
 	{
 		constexpr uint64_t denomination = 1000000000000ULL;
 
@@ -375,7 +378,7 @@ template<> struct log::Stream::Entry<XMRAmount>
 template<> struct log::Stream::Entry<NetworkType>
 {
 	// cppcheck-suppress constParameter
-	static NOINLINE void put(const NetworkType& value, Stream* wrapper)
+	static NOINLINE void put(NetworkType value, Stream* wrapper)
 	{
 		switch (value) {
 		case NetworkType::Invalid:  *wrapper << "invalid";  break;
@@ -383,6 +386,31 @@ template<> struct log::Stream::Entry<NetworkType>
 		case NetworkType::Testnet:  *wrapper << "testnet";  break;
 		case NetworkType::Stagenet: *wrapper << "stagenet"; break;
 		}
+	}
+};
+
+struct Duration
+{
+	explicit FORCEINLINE Duration(uint64_t data) : m_data(data) {}
+
+	uint64_t m_data;
+};
+
+template<> struct log::Stream::Entry<Duration>
+{
+	static NOINLINE void put(Duration value, Stream* wrapper)
+	{
+		const uint64_t uptime = value.m_data;
+
+		const int64_t s = uptime % 60;
+		const int64_t m = (uptime / 60) % 60;
+		const int64_t h = (uptime / 3600) % 24;
+		const int64_t d = uptime / 86400;
+
+		if (d > 0) {
+			*wrapper << d << "d ";
+		}
+		*wrapper << h << "h " << m << "m " << s << 's';
 	}
 };
 

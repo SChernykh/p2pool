@@ -855,25 +855,10 @@ uint64_t P2PServer::get_random64()
 
 void P2PServer::print_status()
 {
-	const int64_t uptime = seconds_since_epoch() - m_pool->start_time();
-
-	const int64_t s = uptime % 60;
-	const int64_t m = (uptime / 60) % 60;
-	const int64_t h = (uptime / 3600) % 24;
-	const int64_t d = uptime / 86400;
-
-	char buf[log::Stream::BUF_SIZE + 1];
-	log::Stream s1(buf);
-
-	if (d > 0) {
-		s1 << d << "d ";
-	}
-	s1 << h << "h " << m << "m " << s << 's';
-
 	LOGINFO(0, "status" <<
 		"\nConnections    = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)" <<
 		"\nPeer list size = " << m_peerList.size() <<
-		"\nUptime         = " << log::const_buf(buf, s1.m_pos)
+		"\nUptime         = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
 	);
 }
 

@@ -76,7 +76,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showbans, do_outpeers, do_inpeers, do_exit;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_outpeers, do_inpeers, do_exit;
 
 #ifdef WITH_RANDOMX
 static cmdfunc do_start_mining, do_stop_mining;
@@ -89,6 +89,7 @@ static cmd cmds[] = {
 	{ STRCONST("addpeers"), "<peeraddr>", "add peer", do_addpeers },
 	{ STRCONST("droppeers"), "", "disconnect all peers", do_droppeers },
 	{ STRCONST("peers"), "", "show all peers", do_showpeers },
+	{ STRCONST("workers"), "", "show all connected workers", do_showworkers },
 	{ STRCONST("bans"), "", "show all banned IPs", do_showbans },
 	{ STRCONST("outpeers"), "", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "", "set maximum number of incoming connections", do_inpeers },
@@ -154,6 +155,14 @@ static int do_showpeers(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->show_peers();
+	}
+	return 0;
+}
+
+static int do_showworkers(p2pool* m_pool, const char* /* args */)
+{
+	if (m_pool->stratum_server()) {
+		m_pool->stratum_server()->show_workers();
 	}
 	return 0;
 }
