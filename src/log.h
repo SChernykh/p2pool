@@ -414,6 +414,43 @@ template<> struct log::Stream::Entry<Duration>
 	}
 };
 
+template<typename T>
+struct PadRight
+{
+	FORCEINLINE PadRight(const T& value, int len) : m_value(value), m_len(len) {}
+
+	const T& m_value;
+	int m_len;
+
+	// Declare it to make compiler happy
+	PadRight(const PadRight&);
+
+private:
+	PadRight& operator=(const PadRight&) = delete;
+	PadRight& operator=(PadRight&&) = delete;
+};
+
+template<typename T> FORCEINLINE PadRight<T> pad_right(const T& value, int len) { return PadRight<T>(value, len); }
+
+template<typename T>
+struct log::Stream::Entry<PadRight<T>>
+{
+	static NOINLINE void put(PadRight<T>&& data, Stream* wrapper)
+	{
+		char buf[log::Stream::BUF_SIZE + 1];
+		log::Stream s(buf);
+		s << data.m_value;
+
+		const int len = std::min<int>(data.m_len, log::Stream::BUF_SIZE);
+		if (s.m_pos < len) {
+			memset(buf + s.m_pos, ' ', len - s.m_pos);
+			s.m_pos = len;
+		}
+
+		wrapper->writeBuf(buf, s.m_pos);
+	}
+};
+
 void put_rawip(const raw_ip& value, Stream* wrapper);
 
 template<> struct log::Stream::Entry<raw_ip>

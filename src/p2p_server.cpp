@@ -866,11 +866,16 @@ void P2PServer::show_peers()
 {
 	MutexLock lock(m_clientsListLock);
 
+	size_t n = 0;
+
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (client->m_listenPort >= 0) {
 			LOGINFO(0, (client->m_isIncoming ? "I " : "O ") << client->m_pingTime << " ms\t" << static_cast<char*>(client->m_addrString));
+			++n;
 		}
 	}
+
+	LOGINFO(0, "Total: " << n << " peers");
 }
 
 void P2PServer::on_timer()

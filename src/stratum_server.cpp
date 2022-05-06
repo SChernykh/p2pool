@@ -447,13 +447,23 @@ void StratumServer::show_workers()
 
 	MutexLock lock(m_clientsListLock);
 
-	for (StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
-		LOGINFO(0, static_cast<char*>(c->m_addrString)
-			<< '\t' << (c->m_rpcId ? " " : "*") << log::Duration(cur_time - c->m_connectedTime)
-			<< '\t' << c->m_customDiff
-			<< '\t' << c->m_customUser
-		);
+	int addr_len = 0;
+	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
+		addr_len = std::max(addr_len, static_cast<int>(strlen(c->m_addrString)));
 	}
+
+	size_t n = 0;
+
+	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
+		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
+				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
+				<< log::pad_right(c->m_customDiff, 20)
+				<< (c->m_rpcId ? c->m_customUser.data() : "not logged in")
+		);
+		++n;
+	}
+
+	LOGINFO(0, "Total: " << n << " workers");
 }
 
 void StratumServer::reset_share_counters()
