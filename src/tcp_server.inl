@@ -376,8 +376,11 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 		return false;
 	}
 
-	client->m_connectRequest.data = client;
-	err = uv_tcp_connect(&client->m_connectRequest, &client->m_socket, addr, on_connect);
+	uv_connect_t* connect_request = reinterpret_cast<uv_connect_t*>(client->m_readBuf);
+	memset(connect_request, 0, sizeof(uv_connect_t));
+
+	connect_request->data = client;
+	err = uv_tcp_connect(connect_request, &client->m_socket, addr, on_connect);
 	if (err) {
 		LOGERR(1, "failed to initiate tcp connection, error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
@@ -831,14 +834,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_prev = nullptr;
 	m_next = nullptr;
 	memset(&m_socket, 0, sizeof(m_socket));
-	memset(&m_connectRequest, 0, sizeof(m_connectRequest));
 	m_isV6 = false;
 	m_isIncoming = false;
+	m_readBufInUse = false;
+	m_numRead = 0;
 	m_addr = {};
 	m_port = -1;
 	m_addrString[0] = '\0';
-	m_readBufInUse = false;
-	m_numRead = 0;
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>

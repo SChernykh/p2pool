@@ -70,6 +70,8 @@ public:
 
 		void init_addr_string(bool is_v6, const sockaddr_storage* peer_addr);
 
+		alignas(8) char m_readBuf[READ_BUF_SIZE];
+
 		TCPServer* m_owner;
 
 		// Used to maintain connected clients list
@@ -77,17 +79,15 @@ public:
 		Client* m_next;
 
 		uv_tcp_t m_socket;
-		uv_connect_t m_connectRequest;
 
 		bool m_isV6;
 		bool m_isIncoming;
+		bool m_readBufInUse;
+		uint32_t m_numRead;
+
 		raw_ip m_addr;
 		int m_port;
 		char m_addrString[64];
-
-		bool m_readBufInUse;
-		char m_readBuf[READ_BUF_SIZE];
-		uint32_t m_numRead;
 
 		std::atomic<uint32_t> m_resetCounter{ 0 };
 	};

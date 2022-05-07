@@ -52,6 +52,7 @@ public:
 		bool process_submit(rapidjson::Document& doc, uint32_t id);
 
 		uint32_t m_rpcId;
+		uint32_t m_perConnectionJobId;
 		uint64_t m_connectedTime;
 
 		uv_mutex_t m_jobsLock;
@@ -63,7 +64,6 @@ public:
 			uint64_t target;
 		} m_jobs[4];
 
-		uint32_t m_perConnectionJobId;
 		difficulty_type m_customDiff;
 		char m_customUser[32];
 	};

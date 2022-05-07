@@ -806,9 +806,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 StratumServer::StratumClient::StratumClient()
 	: m_rpcId(0)
+	, m_perConnectionJobId(0)
 	, m_connectedTime(0)
 	, m_jobs{}
-	, m_perConnectionJobId(0)
 	, m_customDiff{}
 	, m_customUser{}
 {
@@ -824,9 +824,9 @@ void StratumServer::StratumClient::reset()
 {
 	Client::reset();
 	m_rpcId = 0;
+	m_perConnectionJobId = 0;
 	m_connectedTime = 0;
 	memset(m_jobs, 0, sizeof(m_jobs));
-	m_perConnectionJobId = 0;
 	m_customDiff = {};
 	memset(m_customUser, 0, sizeof(m_customUser));
 }

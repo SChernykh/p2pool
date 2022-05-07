@@ -443,7 +443,7 @@ struct log::Stream::Entry<PadRight<T>>
 
 		const int len = std::min<int>(data.m_len, log::Stream::BUF_SIZE);
 		if (s.m_pos < len) {
-			memset(buf + s.m_pos, ' ', len - s.m_pos);
+			memset(buf + s.m_pos, ' ', static_cast<size_t>(len) - s.m_pos);
 			s.m_pos = len;
 		}
 
