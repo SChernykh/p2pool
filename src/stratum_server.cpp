@@ -178,11 +178,13 @@ void StratumServer::on_block(const BlockTemplate& block)
 	}
 }
 
-bool StratumServer::get_custom_user(const char* s, std::string& user)
+template<size_t N>
+static bool get_custom_user(const char* s, char (&user)[N])
 {
-	user.clear();
+	size_t len = 0;
+
 	// Find first of '+' or '.', drop non-printable characters
-	while (s && (user.length() < 64)) {
+	while (s && (len < N - 1)) {
 		const char c = *s;
 		if (!c) {
 			break;
@@ -192,15 +194,16 @@ bool StratumServer::get_custom_user(const char* s, std::string& user)
 		}
 		// Limit to printable ASCII characters
 		if (c >= ' ' && c <= '~') {
-			user += c;
+			user[len++] += c;
 		}
 		++s;
 	}
+	user[len] = '\0';
 
-	return !user.empty();
+	return (len > 0);
 }
 
-bool StratumServer::get_custom_diff(const char* s, difficulty_type& diff)
+static bool get_custom_diff(const char* s, difficulty_type& diff)
 {
 	const char* diff_str = nullptr;
 
@@ -250,7 +253,8 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	}
 
 	if (get_custom_user(login, client->m_customUser)) {
-		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom user " << client->m_customUser);
+		const char* s = client->m_customUser;
+		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom user " << s);
 	}
 
 	uint32_t job_id;
@@ -362,8 +366,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (mainchain_diff.check_pow(resultHash)) {
-			const std::string& s = client->m_customUser;
-			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (!s.empty() ? " user " : "") << s << " found a mainchain block, submitting it");
+			const char* s = client->m_customUser;
+			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
 			block.update_tx_keys();
 		}
@@ -458,7 +462,7 @@ void StratumServer::show_workers()
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(c->m_customDiff, 20)
-				<< (c->m_rpcId ? c->m_customUser.data() : "not logged in")
+				<< (c->m_rpcId ? c->m_customUser : "not logged in")
 		);
 		++n;
 	}
@@ -723,8 +727,8 @@ void StratumServer::on_share_found(uv_work_t* req)
 		server->m_cumulativeFoundSharesDiff += diff;
 		++server->m_totalFoundShares;
 
-		const std::string& s = client->m_customUser;
-		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", client " << static_cast<char*>(client->m_addrString) << (!s.empty() ? " user " : "") << s << ", effort " << effort << '%');
+		const char* s = client->m_customUser;
+		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << effort << '%');
 		pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
 	}
 
@@ -806,6 +810,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_jobs{}
 	, m_perConnectionJobId(0)
 	, m_customDiff{}
+	, m_customUser{}
 {
 	uv_mutex_init_checked(&m_jobsLock);
 }
@@ -823,7 +828,7 @@ void StratumServer::StratumClient::reset()
 	memset(m_jobs, 0, sizeof(m_jobs));
 	m_perConnectionJobId = 0;
 	m_customDiff = {};
-	m_customUser.clear();
+	memset(m_customUser, 0, sizeof(m_customUser));
 }
 
 bool StratumServer::StratumClient::on_connect()
