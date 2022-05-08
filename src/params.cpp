@@ -125,6 +125,11 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+		if (strcmp(argv[i], "--no-autodiff") == 0) {
+			m_autoDiff = false;
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

@@ -39,7 +39,7 @@ public:
 	struct StratumClient : public Client
 	{
 		StratumClient();
-		~StratumClient();
+		FORCEINLINE ~StratumClient() {}
 
 		static Client* allocate() { return new StratumClient(); }
 
@@ -55,16 +55,28 @@ public:
 		uint32_t m_perConnectionJobId;
 		uint64_t m_connectedTime;
 
-		uv_mutex_t m_jobsLock;
+		enum { 
+			JOBS_SIZE = 4,
+			AUTO_DIFF_SIZE = 64,
+		};
 
 		struct SavedJob {
 			uint32_t job_id;
 			uint32_t extra_nonce;
 			uint32_t template_id;
 			uint64_t target;
-		} m_jobs[4];
+		} m_jobs[JOBS_SIZE];
+
+		struct AutoDiffData {
+			uint16_t m_timestamp;
+			uint16_t m_hashes;
+		} m_autoDiffData[AUTO_DIFF_SIZE];
+
+		uint64_t m_autoDiffWindowHashes;
+		uint32_t m_autoDiffIndex;
 
 		difficulty_type m_customDiff;
+		difficulty_type m_autoDiff;
 		char m_customUser[32];
 	};
 
@@ -79,11 +91,13 @@ public:
 
 private:
 	void print_stratum_status() const;
+	void update_auto_diff(StratumClient* client, const uint64_t timestamp, const uint64_t hashes);
 
 	static void on_share_found(uv_work_t* req);
 	static void on_after_share_found(uv_work_t* req, int status);
 
 	p2pool* m_pool;
+	bool m_autoDiff;
 
 	struct BlobsData
 	{
@@ -123,6 +137,9 @@ private:
 		uint64_t m_target;
 		hash m_resultHash;
 		difficulty_type m_sidechainDifficulty;
+		uint64_t m_timestamp;
+		uint64_t m_hashes;
+		bool m_highEnoughDifficulty;
 
 		enum class Result {
 			STALE,
@@ -133,7 +150,6 @@ private:
 		} m_result;
 	};
 
-	uv_mutex_t m_submittedSharesPoolLock;
 	std::vector<SubmittedShare*> m_submittedSharesPool;
 
 	struct HashrateData

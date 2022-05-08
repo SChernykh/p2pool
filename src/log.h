@@ -307,6 +307,7 @@ struct Hashrate
 {
 	FORCEINLINE Hashrate() : m_data(0), m_valid(false) {}
 	explicit FORCEINLINE Hashrate(uint64_t data) : m_data(data), m_valid(true) {}
+	FORCEINLINE Hashrate(uint64_t data, bool valid) : m_data(data), m_valid(valid) {}
 
 	uint64_t m_data;
 	bool m_valid;
@@ -314,7 +315,7 @@ struct Hashrate
 
 template<> struct log::Stream::Entry<Hashrate>
 {
-	static NOINLINE void put(Hashrate&& value, Stream* wrapper)
+	static NOINLINE void put(const Hashrate& value, Stream* wrapper)
 	{
 		if (!value.m_valid) {
 			return;

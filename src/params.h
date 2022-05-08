@@ -48,6 +48,7 @@ struct Params
 	uint32_t m_maxIncomingPeers = 1000;
 	uint32_t m_minerThreads = 0;
 	bool m_mini = false;
+	bool m_autoDiff = true;
 };
 
 } // namespace p2pool

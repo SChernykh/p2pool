@@ -198,6 +198,9 @@ struct difficulty_type
 	FORCEINLINE bool operator==(const difficulty_type& other) const { return (lo == other.lo) && (hi == other.hi); }
 	FORCEINLINE bool operator!=(const difficulty_type& other) const { return (lo != other.lo) || (hi != other.hi); }
 
+	FORCEINLINE bool operator==(uint64_t other) const { return (lo == other) && (hi == 0); }
+	FORCEINLINE bool operator!=(uint64_t other) const { return (lo != other) || (hi != 0); }
+
 	friend std::ostream& operator<<(std::ostream& s, const difficulty_type& d);
 	friend std::istream& operator>>(std::istream& s, difficulty_type& d);
 
