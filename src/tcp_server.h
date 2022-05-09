@@ -89,7 +89,7 @@ public:
 		int m_port;
 		char m_addrString[64];
 
-		std::atomic<uint32_t> m_resetCounter{ 0 };
+		std::atomic<uint32_t> m_resetCounter;
 	};
 
 	struct WriteBuf

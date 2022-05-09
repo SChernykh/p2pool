@@ -819,10 +819,21 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t*
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
+	: m_owner(nullptr)
+	, m_prev(nullptr)
+	, m_next(nullptr)
+	, m_socket{}
+	, m_isV6(false)
+	, m_isIncoming(false)
+	, m_readBufInUse(false)
+	, m_numRead(0)
+	, m_addr{}
+	, m_port(0)
+	, m_addrString{}
+	, m_resetCounter{ 0 }
 {
-	Client::reset();
-
 	m_readBuf[0] = '\0';
+	m_readBuf[READ_BUF_SIZE - 1] = '\0';
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
