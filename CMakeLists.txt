@@ -6,7 +6,7 @@ option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.6.0") 
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 endif()
 
