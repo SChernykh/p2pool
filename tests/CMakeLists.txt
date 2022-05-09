@@ -74,7 +74,7 @@ set(SOURCES
 	src/keccak_tests.cpp
 	src/main.cpp
 	src/pool_block_tests.cpp
-	src/varint_tests.cpp
+	src/util_tests.cpp
 	src/wallet_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
@@ -159,6 +159,19 @@ if (NORM_LIBRARY)
 endif()
 
 add_definitions(/DZMQ_STATIC /DP2POOL_LOG_DISABLE)
+
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("int main(){ return __builtin_clzll(1);}" HAVE_BUILTIN_CLZLL)
+check_cxx_source_compiles("#include <intrin.h>\n#pragma intrinsic(_BitScanReverse64)\nint main(){unsigned long r;_BitScanReverse64(&r,1);return r;}" HAVE_BITSCANREVERSE64)
+
+if (HAVE_BUILTIN_CLZLL)
+	add_definitions(/DHAVE_BUILTIN_CLZLL)
+endif()
+
+if (HAVE_BITSCANREVERSE64)
+	add_definitions(/DHAVE_BITSCANREVERSE64)
+endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})

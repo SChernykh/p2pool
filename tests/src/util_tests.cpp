@@ -21,7 +21,7 @@
 
 namespace p2pool {
 
-TEST(varint, read_write)
+TEST(util, varint)
 {
 	std::vector<uint8_t> v;
 	v.reserve(16);
@@ -80,6 +80,14 @@ TEST(varint, read_write)
 	// Invalid value 2
 	uint8_t buf2[1] = { 0x80 };
 	ASSERT_EQ(readVarint(buf2, buf2 + 1, check), nullptr);
+}
+
+TEST(util, bsr)
+{
+	for (uint64_t i = 0, x = 1; i <= 63; ++i, x <<= 1) {
+		ASSERT_EQ(bsr(x), i);
+		ASSERT_EQ(bsr_reference(x), i);
+	}
 }
 
 }

@@ -384,4 +384,43 @@ bool resolve_host(std::string& host, bool& is_v6)
 
 RandomDeviceSeed RandomDeviceSeed::instance;
 
+struct BSR8
+{
+	uint8_t data[256];
+
+	static constexpr BSR8 init() {
+		BSR8 result = { 55 };
+
+		for (int i = 1; i < 256; ++i) {
+			int x = i;
+			result.data[i] = 63;
+			while (x < 0x80) {
+				--result.data[i];
+				x <<= 1;
+			}
+		}
+
+		return result;
+	}
+};
+
+static constexpr BSR8 bsr8_table = BSR8::init();
+
+NOINLINE uint64_t bsr_reference(uint64_t x)
+{
+	uint32_t y = static_cast<uint32_t>(x);
+
+	uint64_t n0 = (x == y) ? 0 : 32;
+	y = static_cast<uint32_t>(x >> n0);
+	n0 ^= 32;
+
+	const uint64_t n1 = (y & 0xFFFF0000UL) ? 0 : 16;
+	y <<= n1;
+
+	const uint64_t n2 = (y & 0xFF000000UL) ? 0 : 8;
+	y <<= n2;
+
+	return bsr8_table.data[y >> 24] - n0 - n1 - n2;
+}
+
 } // namespace p2pool

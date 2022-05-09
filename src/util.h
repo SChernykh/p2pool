@@ -203,6 +203,22 @@ FORCEINLINE uint64_t seconds_since_epoch()
 	return duration_cast<seconds>(steady_clock::now().time_since_epoch()).count();
 }
 
+uint64_t bsr_reference(uint64_t x);
+
+#ifdef HAVE_BUILTIN_CLZLL
+#define bsr(x) (63 - __builtin_clzll(x))
+#elif defined HAVE_BITSCANREVERSE64
+#pragma intrinsic(_BitScanReverse64)
+FORCEINLINE uint64_t bsr(uint64_t x)
+{
+	unsigned long index;
+	_BitScanReverse64(&index, x);
+	return index;
+}
+#else
+#define bsr bsr_reference
+#endif
+
 } // namespace p2pool
 
 namespace robin_hood {

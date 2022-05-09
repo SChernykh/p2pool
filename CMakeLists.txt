@@ -142,6 +142,19 @@ if (HAVE_PTHREAD_CANCEL)
 	add_definitions(/DHAVE_PTHREAD_CANCEL)
 endif()
 
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("int main(){ return __builtin_clzll(1);}" HAVE_BUILTIN_CLZLL)
+check_cxx_source_compiles("#include <intrin.h>\n#pragma intrinsic(_BitScanReverse64)\nint main(){unsigned long r;_BitScanReverse64(&r,1);return r;}" HAVE_BITSCANREVERSE64)
+
+if (HAVE_BUILTIN_CLZLL)
+	add_definitions(/DHAVE_BUILTIN_CLZLL)
+endif()
+
+if (HAVE_BITSCANREVERSE64)
+	add_definitions(/DHAVE_BITSCANREVERSE64)
+endif()
+
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 if (STATIC_BINARY)

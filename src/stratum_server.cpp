@@ -562,19 +562,18 @@ enum HashMaxValue : uint64_t {
 	value = hash_uncompress(std::numeric_limits<uint16_t>::max())
 };
 
-static constexpr FORCEINLINE uint16_t hash_compress(uint64_t h)
+static FORCEINLINE uint16_t hash_compress(uint64_t h)
 {
-	if (h > HashMaxValue::value) {
-		h = HashMaxValue::value;
+	if (h <= HashValue::mask) {
+		return static_cast<uint16_t>(h);
 	}
 
-	uint64_t shift = 0;
-	while (h > HashValue::mask) {
-		h >>= 1;
-		shift += (1 << HashValue::bits);
+	if (h >= HashMaxValue::value) {
+		return std::numeric_limits<uint16_t>::max();
 	}
 
-	return static_cast<uint16_t>(shift | h);
+	const uint64_t shift = bsr(h) - (HashValue::bits - 1);
+	return static_cast<uint16_t>((shift << HashValue::bits) | (h >> shift));
 }
 
 }
