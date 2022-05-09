@@ -194,15 +194,6 @@ private:
 						fwrite(p, 1, size, (severity == 1) ? stdout : stderr);
 #endif
 
-						// Reopen the log file if it's been moved (logrotate support)
-						if (m_logFile.is_open()) {
-							struct stat buf;
-							if (stat(log_file_name, &buf) != 0) {
-								m_logFile.close();
-								m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
-							}
-						}
-
 						if (m_logFile.is_open()) {
 							if (c) {
 								strip_colors(p, size);
@@ -232,6 +223,13 @@ private:
 			// Flush the log file only after all pending log lines have been written
 			if (m_logFile.is_open()) {
 				m_logFile.flush();
+
+				// Reopen the log file if it's been moved (logrotate support)
+				struct stat buf;
+				if (stat(log_file_name, &buf) != 0) {
+					m_logFile.close();
+					m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
+				}
 			}
 		} while (!stopped);
 	}
