@@ -28,8 +28,8 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	, m_finished(0)
 	, m_listenPort(-1)
 	, m_loopStopped{false}
-	, m_numConnections(0)
-	, m_numIncomingConnections(0)
+	, m_numConnections{ 0 }
+	, m_numIncomingConnections{ 0 }
 {
 	int err = uv_loop_init(&m_loop);
 	if (err) {
@@ -495,7 +495,7 @@ template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_status()
 {
 	LOGINFO(0, "status" <<
-		"\nConnections = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)"
+		"\nConnections = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
 	);
 }
 

@@ -855,8 +855,10 @@ uint64_t P2PServer::get_random64()
 
 void P2PServer::print_status()
 {
+	MutexLock lock(m_peerListLock);
+
 	LOGINFO(0, "status" <<
-		"\nConnections    = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)" <<
+		"\nConnections    = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)" <<
 		"\nPeer list size = " << m_peerList.size() <<
 		"\nUptime         = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
 	);

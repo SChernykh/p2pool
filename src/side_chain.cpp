@@ -80,6 +80,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	uv_mutex_init_checked(&m_sidechainLock);
 	uv_mutex_init_checked(&m_seenBlocksLock);
+	uv_rwlock_init_checked(&m_curDifficultyLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
 	m_tmpShares.reserve(m_chainWindowSize * 2);
@@ -164,6 +165,7 @@ SideChain::~SideChain()
 {
 	uv_mutex_destroy(&m_sidechainLock);
 	uv_mutex_destroy(&m_seenBlocksLock);
+	uv_rwlock_destroy(&m_curDifficultyLock);
 	for (auto& it : m_blocksById) {
 		delete it.second;
 	}
@@ -263,7 +265,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 		block.m_uncles.erase(std::unique(block.m_uncles.begin(), block.m_uncles.end()), block.m_uncles.end());
 	}
 
-	block.m_difficulty = m_curDifficulty;
+	block.m_difficulty = difficulty();
 	block.m_cumulativeDifficulty = tip->m_cumulativeDifficulty + block.m_difficulty;
 
 	for (const hash& uncle_id : block.m_uncles) {
@@ -395,7 +397,8 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		return false;
 	}
 
-	bool too_low_diff = (block.m_difficulty < m_curDifficulty);
+	const difficulty_type expected_diff = difficulty();
+	bool too_low_diff = (block.m_difficulty < expected_diff);
 	{
 		MutexLock lock(m_sidechainLock);
 		if (m_blocksById.find(block.m_sidechainId) != m_blocksById.end()) {
@@ -423,7 +426,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	LOGINFO(4, "add_external_block: height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId << ", mainchain height = " << block.m_txinGenHeight);
 
 	if (too_low_diff) {
-		LOGWARN(4, "add_external_block: block has too low difficulty " << block.m_difficulty << ", expected >= ~" << m_curDifficulty << ". Ignoring it.");
+		LOGWARN(4, "add_external_block: block has too low difficulty " << block.m_difficulty << ", expected >= ~" << expected_diff << ". Ignoring it.");
 		return true;
 	}
 
@@ -672,10 +675,12 @@ void SideChain::print_status()
 	std::vector<hash> blocks_in_window;
 	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
 
+	const difficulty_type diff = difficulty();
+
 	MutexLock lock(m_sidechainLock);
 
 	uint64_t rem;
-	uint64_t pool_hashrate = udiv128(m_curDifficulty.hi, m_curDifficulty.lo, m_targetBlockTime, &rem);
+	uint64_t pool_hashrate = udiv128(diff.hi, diff.lo, m_targetBlockTime, &rem);
 
 	difficulty_type network_diff = m_pool->miner_data().difficulty;
 	uint64_t network_hashrate = udiv128(network_diff.hi, network_diff.lo, 120, &rem);
@@ -1405,10 +1410,13 @@ void SideChain::update_chain_tip(PoolBlock* block)
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {
 			m_chainTip = block;
-			m_curDifficulty = diff;
+			{
+				WriteLock lock(m_curDifficultyLock);
+				m_curDifficulty = diff;
+			}
 
 			LOGINFO(2, "new chain tip: next height = " << log::Gray() << block->m_sidechainHeight + 1 << log::NoColor() <<
-				", next difficulty = " << log::Gray() << m_curDifficulty << log::NoColor() <<
+				", next difficulty = " << log::Gray() << diff << log::NoColor() <<
 				", main chain height = " << log::Gray() << block->m_txinGenHeight);
 
 			block->m_wantBroadcast = true;

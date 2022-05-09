@@ -155,8 +155,8 @@ protected:
 	uv_mutex_t m_clientsListLock;
 	std::vector<Client*> m_preallocatedClients;
 	Client* m_connectedClientsList;
-	uint32_t m_numConnections;
-	uint32_t m_numIncomingConnections;
+	std::atomic<uint32_t> m_numConnections;
+	std::atomic<uint32_t> m_numIncomingConnections;
 
 	uv_mutex_t m_bansLock;
 	unordered_map<raw_ip, std::chrono::steady_clock::time_point> m_bans;

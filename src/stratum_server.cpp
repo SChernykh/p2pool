@@ -102,6 +102,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		LOGINFO(4, "no clients connected");
 		return;
 	}
+	m_extraNonce.exchange(num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};
 
@@ -113,9 +114,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	// Even if they do, they'll be added to the beginning of the list and will get their block template in on_login()
 	// We'll iterate through the list backwards so when we get to the beginning and run out of extra_nonce values, it'll be only new clients left
 	blobs_data->m_numClientsExpected = num_connections;
-	m_extraNonce.exchange(blobs_data->m_numClientsExpected);
-
-	blobs_data->m_blobSize = block.get_hashing_blobs(0, blobs_data->m_numClientsExpected, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+	blobs_data->m_blobSize = block.get_hashing_blobs(0, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
 
 	// Integrity checks
 	if (blobs_data->m_blobSize < 76) {
@@ -541,7 +540,7 @@ void StratumServer::print_stratum_status() const
 		"\nShares found       = " << m_totalFoundShares <<
 		"\nAverage effort     = " << average_effort << '%' <<
 		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
-		"\nConnections        = " << m_numConnections << " (" << m_numIncomingConnections << " incoming)"
+		"\nConnections        = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
 	);
 }
 
@@ -734,8 +733,9 @@ void StratumServer::on_blobs_ready()
 			}
 		}
 
-		if (numClientsProcessed != m_numConnections) {
-			LOGWARN(1, "client list is broken, expected " << m_numConnections << ", got " << numClientsProcessed << " clients");
+		const uint32_t num_connections = m_numConnections;
+		if (numClientsProcessed != num_connections) {
+			LOGWARN(1, "client list is broken, expected " << num_connections << ", got " << numClientsProcessed << " clients");
 		}
 	}
 

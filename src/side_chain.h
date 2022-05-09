@@ -65,7 +65,7 @@ public:
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
 	NetworkType network_type() const { return m_networkType; }
-	const difficulty_type& difficulty() const { return m_curDifficulty; }
+	FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
 	uint64_t miner_count();
@@ -121,6 +121,7 @@ private:
 	std::vector<uint8_t> m_consensusId;
 	std::string m_consensusIdDisplayStr;
 
+	mutable uv_rwlock_t m_curDifficultyLock;
 	difficulty_type m_curDifficulty;
 
 	ChainMain m_watchBlock;
