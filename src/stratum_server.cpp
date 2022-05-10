@@ -194,7 +194,7 @@ static bool get_custom_user(const char* s, char (&user)[N])
 		}
 		// Limit to printable ASCII characters
 		if (c >= ' ' && c <= '~') {
-			user[len++] += c;
+			user[len++] = c;
 		}
 		++s;
 	}
