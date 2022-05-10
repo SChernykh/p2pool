@@ -478,8 +478,38 @@ namespace {
 
 #else
 
+// This is to check that LOG() call doesn't modify variables in scope, making program behavior dependent on the log level:
+//
+//		int some_func(int& n) { return ++n; }
+//		...
+//		LOGINFO(1, "Some important value: " << some_func(n));
+//
+// will not compile because the dummy lambda capture uses const-qualified copies of all variables.
+//
+// The check is "free": compiler will remove it entirely in release builds.
+
+struct DummyStream
+{
+	template<typename T>
+	FORCEINLINE DummyStream& operator<<(const T&)
+	{
+		return *this;
+	}
+};
+
+#define SIDE_EFFECT_CHECK(level, ...) \
+	do { \
+		if (0) { \
+			[=]() { \
+				log::DummyStream x; \
+				x << level << __VA_ARGS__; \
+			}; \
+		} \
+	} while (0)
+
 #define LOG(level, severity, ...) \
 	do { \
+		SIDE_EFFECT_CHECK(level, __VA_ARGS__); \
 		if (level <= log::GLOBAL_LOG_LEVEL) { \
 			log::Writer CONCAT(log_wrapper_, __LINE__)(severity); \
 			CONCAT(log_wrapper_, __LINE__) << log::Gray() << log_category_prefix; \

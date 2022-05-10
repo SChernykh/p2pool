@@ -433,7 +433,7 @@ void P2PServer::load_peer_list()
 					const char* addr_str;
 					char addr_str_buf[64];
 
-					char buf[log::Stream::BUF_SIZE + 1];
+					char buf[128];
 					log::Stream s(buf);
 
 					if (r->ai_family == AF_INET6) {
@@ -450,7 +450,7 @@ void P2PServer::load_peer_list()
 					}
 
 					if (s.m_pos) {
-						LOGINFO(4, "added " << static_cast<char*>(buf) << " from " << nodes[i]);
+						LOGINFO(4, "added " << static_cast<const char*>(buf) << " from " << nodes[i]);
 						if (!saved_list.empty()) {
 							saved_list += ',';
 						}
@@ -549,32 +549,34 @@ void P2PServer::load_monerod_peer_list()
 	JSONRPCRequest::call(params.m_host.c_str(), params.m_rpcPort, "/get_peer_list",
 		[this](const char* data, size_t size)
 		{
-			constexpr char err_str[] = "/get_peer_list RPC request returned invalid JSON ";
+#define ERR_STR "/get_peer_list RPC request returned invalid JSON "
 
 			using namespace rapidjson;
 
 			Document doc;
 			if (doc.Parse(data, size).HasParseError()) {
-				LOGWARN(4, err_str << "(parse error)");
+				LOGWARN(4, ERR_STR "(parse error)");
 				return;
 			}
 
 			if (!doc.IsObject()) {
-				LOGWARN(4, err_str << "(not an object)");
+				LOGWARN(4, ERR_STR "(not an object)");
 				return;
 			}
 
 			if (!doc.HasMember("white_list")) {
-				LOGWARN(4, err_str << "('white_list' not found)");
+				LOGWARN(4, ERR_STR "('white_list' not found)");
 				return;
 			}
 
 			const auto& white_list = doc["white_list"];
 
 			if (!white_list.IsArray()) {
-				LOGWARN(4, err_str << "('white_list' is not an array)");
+				LOGWARN(4, ERR_STR "('white_list' is not an array)");
 				return;
 			}
+
+#undef ERR_STR
 
 			const int port = m_pool->side_chain().is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
 
