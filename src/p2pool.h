@@ -202,6 +202,8 @@ private:
 	uv_async_t m_restartZMQAsync;
 
 	ZMQReader* m_ZMQReader = nullptr;
+
+	hash m_getMinerDataHash;
 };
 
 } // namespace p2pool

@@ -35,6 +35,7 @@
 #include "crypto.h"
 #include "p2pool_api.h"
 #include "pool_block.h"
+#include "keccak.h"
 #include <thread>
 #include <fstream>
 
@@ -927,6 +928,14 @@ void p2pool::get_miner_data()
 
 void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 {
+	hash h;
+	keccak(reinterpret_cast<const uint8_t*>(data), static_cast<int>(size), h.h, HASH_SIZE);
+	if (h == m_getMinerDataHash) {
+		LOGWARN(4, "Received a duplicate get_miner_data RPC response, ignoring it");
+		return;
+	}
+	m_getMinerDataHash = h;
+
 	rapidjson::Document doc;
 	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
 
