@@ -48,7 +48,7 @@ NOINLINE void keccakf(uint64_t* st)
 		bc[3] = st[3] ^ st[8] ^ st[13] ^ st[18] ^ st[23];
 		bc[4] = st[4] ^ st[9] ^ st[14] ^ st[19] ^ st[24];
 
-#define X(i) { \
+#define THETA(i) { \
 			const uint64_t t = bc[(i + 4) % 5] ^ ROTL64(bc[(i + 1) % 5], 1); \
 			st[i +  0 ] ^= t; \
 			st[i +  5] ^= t; \
@@ -57,9 +57,11 @@ NOINLINE void keccakf(uint64_t* st)
 			st[i + 20] ^= t; \
 		}
 
-		X(0); X(1); X(2); X(3); X(4);
-
-#undef X
+		THETA(0);
+		THETA(1);
+		THETA(2);
+		THETA(3);
+		THETA(4);
 
 		// Rho Pi
 		const uint64_t t = st[1];
@@ -89,60 +91,25 @@ NOINLINE void keccakf(uint64_t* st)
 		st[10] = ROTL64(t, 1);
 
 		//  Chi
-		// unrolled loop, where only last iteration is different
-		int j = 0;
-		bc[0] = st[j + 0];
-		bc[1] = st[j + 1];
+#define CHI(j) { \
+			const uint64_t st0 = st[j    ]; \
+			const uint64_t st1 = st[j + 1]; \
+			const uint64_t st2 = st[j + 2]; \
+			const uint64_t st3 = st[j + 3]; \
+			const uint64_t st4 = st[j + 4]; \
+			st[j    ] ^= ~st1 & st2; \
+			st[j + 1] ^= ~st2 & st3; \
+			st[j + 2] ^= ~st3 & st4; \
+			st[j + 3] ^= ~st4 & st0; \
+			st[j + 4] ^= ~st0 & st1; \
+		}
 
-		st[j + 0] ^= (~st[j + 1]) & st[j + 2];
-		st[j + 1] ^= (~st[j + 2]) & st[j + 3];
-		st[j + 2] ^= (~st[j + 3]) & st[j + 4];
-		st[j + 3] ^= (~st[j + 4]) & bc[0];
-		st[j + 4] ^= (~bc[0]) & bc[1];
+		CHI( 0);
+		CHI( 5);
+		CHI(10);
+		CHI(15);
+		CHI(20);
 
-		j = 5;
-		bc[0] = st[j + 0];
-		bc[1] = st[j + 1];
-
-		st[j + 0] ^= (~st[j + 1]) & st[j + 2];
-		st[j + 1] ^= (~st[j + 2]) & st[j + 3];
-		st[j + 2] ^= (~st[j + 3]) & st[j + 4];
-		st[j + 3] ^= (~st[j + 4]) & bc[0];
-		st[j + 4] ^= (~bc[0]) & bc[1];
-
-		j = 10;
-		bc[0] = st[j + 0];
-		bc[1] = st[j + 1];
-
-		st[j + 0] ^= (~st[j + 1]) & st[j + 2];
-		st[j + 1] ^= (~st[j + 2]) & st[j + 3];
-		st[j + 2] ^= (~st[j + 3]) & st[j + 4];
-		st[j + 3] ^= (~st[j + 4]) & bc[0];
-		st[j + 4] ^= (~bc[0]) & bc[1];
-
-		j = 15;
-		bc[0] = st[j + 0];
-		bc[1] = st[j + 1];
-
-		st[j + 0] ^= (~st[j + 1]) & st[j + 2];
-		st[j + 1] ^= (~st[j + 2]) & st[j + 3];
-		st[j + 2] ^= (~st[j + 3]) & st[j + 4];
-		st[j + 3] ^= (~st[j + 4]) & bc[0];
-		st[j + 4] ^= (~bc[0]) & bc[1];
-
-		j = 20;
-		bc[0] = st[j + 0];
-		bc[1] = st[j + 1];
-		bc[2] = st[j + 2];
-		bc[3] = st[j + 3];
-		bc[4] = st[j + 4];
-
-		st[j + 0] ^= (~bc[1]) & bc[2];
-		st[j + 1] ^= (~bc[2]) & bc[3];
-		st[j + 2] ^= (~bc[3]) & bc[4];
-		st[j + 3] ^= (~bc[4]) & bc[0];
-		st[j + 4] ^= (~bc[0]) & bc[1];
-		
 		// Iota
 		st[0] ^= keccakf_rndc[round];
 	}
