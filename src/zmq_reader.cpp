@@ -49,13 +49,13 @@ ZMQReader::ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandle
 
 	if (!m_publisherPort) {
 		LOGERR(1, "failed to to bind ZMQ publisher port, aborting");
-		panic();
+		throw zmq::error_t(EFSM);
 	}
 
 	const int err = uv_thread_create(&m_worker, run_wrapper, this);
 	if (err) {
 		LOGERR(1, "failed to start ZMQ thread, error " << uv_err_name(err));
-		panic();
+		throw zmq::error_t(EFSM);
 	}
 }
 
@@ -71,8 +71,7 @@ ZMQReader::~ZMQReader()
 		uv_thread_join(&m_worker);
 	}
 	catch (const std::exception& e) {
-		LOGERR(1, "exception " << e.what() << ", aborting");
-		panic();
+		LOGERR(1, "exception " << e.what());
 	}
 }
 
@@ -104,7 +103,7 @@ void ZMQReader::run()
 		zmq_msg_t message;
 		int rc = zmq_msg_init(&message);
 		if (rc != 0) {
-			throw zmq::error_t();
+			throw zmq::error_t(errno);
 		}
 
 		LOGINFO(1, "worker thread ready");
@@ -112,7 +111,7 @@ void ZMQReader::run()
 		do {
 			rc = zmq_msg_recv(&message, m_subscriber, 0);
 			if (rc < 0) {
-				throw zmq::error_t();
+				throw zmq::error_t(errno);
 			}
 
 			if (m_finished.load()) {
@@ -125,8 +124,7 @@ void ZMQReader::run()
 		zmq_msg_close(&message);
 	}
 	catch (const std::exception& e) {
-		LOGERR(1, "exception " << e.what() << ", aborting");
-		panic();
+		LOGERR(1, "exception " << e.what());
 	}
 }
 
@@ -196,7 +194,7 @@ void ZMQReader::parse(char* data, size_t size)
 	using namespace rapidjson;
 
 	Document doc;
-	if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(value, end - value).HasParseError()) {
+	if (doc.Parse<kParseCommentsFlag | kParseTrailingCommasFlag>(value, end - value).HasParseError()) {
 		LOGWARN(1, "ZeroMQ message failed to parse, skipping it");
 		return;
 	}

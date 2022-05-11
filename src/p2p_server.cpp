@@ -1029,6 +1029,7 @@ void P2PServer::check_zmq()
 	if (cur_time >= last_active + 300) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
 		LOGERR(1, "no ZMQ messages received from monerod in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
+		m_pool->restart_zmq();
 	}
 }
 

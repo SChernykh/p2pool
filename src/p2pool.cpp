@@ -108,6 +108,13 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 	m_stopAsync.data = this;
 
+	err = uv_async_init(uv_default_loop_checked(), &m_restartZMQAsync, on_restart_zmq);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_restartZMQAsync.data = this;
+
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
@@ -438,6 +445,7 @@ void p2pool::on_stop(uv_async_t* async)
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitBlockAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_restartZMQAsync), nullptr);
 	uv_stop(uv_default_loop());
 }
 
@@ -632,7 +640,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
-					m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
+					try {
+						m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
+					}
+					catch (const std::exception& e) {
+						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
+						panic();
+					}
+
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
 #ifdef WITH_RANDOMX
@@ -1374,6 +1389,27 @@ static bool init_signals(p2pool* pool)
 void p2pool::stop()
 {
 	uv_async_send(&m_stopAsync);
+}
+
+void p2pool::restart_zmq()
+{
+	if (!is_main_thread()) {
+		uv_async_send(&m_restartZMQAsync);
+		return;
+	}
+
+	get_miner_data();
+
+	delete m_ZMQReader;
+	m_ZMQReader = nullptr;
+
+	try {
+		m_ZMQReader = new ZMQReader(m_params->m_host.c_str(), m_params->m_zmqPort, this);
+		m_zmqLastActive = seconds_since_epoch();
+	}
+	catch (const std::exception& e) {
+		LOGERR(1, "Couldn't restart ZMQ reader: exception " << e.what());
+	}
 }
 
 int p2pool::run()
