@@ -500,6 +500,7 @@ struct DummyStream
 #define SIDE_EFFECT_CHECK(level, ...) \
 	do { \
 		if (0) { \
+			MSVC_PRAGMA(warning(suppress:26444)) \
 			[=]() { \
 				log::DummyStream x; \
 				x << level << __VA_ARGS__; \

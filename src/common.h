@@ -23,18 +23,21 @@
 #define FORCEINLINE __forceinline
 #define NOINLINE __declspec(noinline)
 #define LIKELY(expression) expression
+#define MSVC_PRAGMA(...) __pragma(__VA_ARGS__)
 
 #elif __GNUC__
 
 #define FORCEINLINE __attribute__((always_inline)) inline
 #define NOINLINE __attribute__((noinline))
 #define LIKELY(expression) __builtin_expect(expression, 1)
+#define MSVC_PRAGMA(...)
 
 #else
 
 #define FORCEINLINE inline
 #define NOINLINE
 #define LIKELY(expression) expression
+#define MSVC_PRAGMA(...)
 
 #endif
 
