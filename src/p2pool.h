@@ -204,6 +204,7 @@ private:
 	ZMQReader* m_ZMQReader = nullptr;
 
 	hash m_getMinerDataHash;
+	bool m_getMinerDataPending = false;
 };
 
 } // namespace p2pool

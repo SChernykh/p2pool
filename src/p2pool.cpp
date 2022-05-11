@@ -911,6 +911,8 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 
 void p2pool::get_miner_data()
 {
+	m_getMinerDataPending = true;
+
 	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}",
 		[this](const char* data, size_t size)
 		{
@@ -922,6 +924,9 @@ void p2pool::get_miner_data()
 				LOGWARN(1, "get_miner_data RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				get_miner_data();
+			}
+			else {
+				m_getMinerDataPending = false;
 			}
 		});
 }
@@ -1407,7 +1412,9 @@ void p2pool::restart_zmq()
 		return;
 	}
 
-	get_miner_data();
+	if (!m_getMinerDataPending) {
+		get_miner_data();
+	}
 
 	delete m_ZMQReader;
 	m_ZMQReader = nullptr;
