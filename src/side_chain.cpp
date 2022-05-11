@@ -584,8 +584,13 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
 	const PoolBlock* block = nullptr;
 
 	// Empty hash means we return current sidechain tip
-	if (id == hash()) {
+	if (id.empty()) {
 		block = m_chainTip;
+
+		// Don't return stale chain tip
+		if (block && (block->m_txinGenHeight + 2 < m_pool->miner_data().height)) {
+			return false;
+		}
 	}
 	else {
 		auto it = m_blocksById.find(id);
