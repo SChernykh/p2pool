@@ -290,6 +290,7 @@ void P2PServer::update_peer_connections()
 
 	if (!has_good_peers && ((m_timerCounter % 30) == 0)) {
 		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
+		load_peer_list();
 		if (m_peerListMonero.empty()) {
 			load_monerod_peer_list();
 		}
@@ -413,8 +414,13 @@ void P2PServer::save_peer_list()
 
 void P2PServer::load_peer_list()
 {
+	size_t old_size;
+	{
+		MutexLock lock(m_peerListLock);
+		old_size = m_peerList.size();
+	}
+
 	std::string saved_list;
-	const size_t old_size = m_peerList.size();
 
 	// Load peers from seed nodes if we're on the default or mini sidechain
 	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
@@ -434,6 +440,8 @@ void P2PServer::load_peer_list()
 					char addr_str_buf[64];
 
 					char buf[128];
+					buf[0] = '\0';
+
 					log::Stream s(buf);
 
 					if (r->ai_family == AF_INET6) {
