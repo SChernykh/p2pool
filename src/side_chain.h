@@ -43,21 +43,21 @@ public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares);
+	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const;
 
 	bool block_seen(const PoolBlock& block);
 	void unsee_block(const PoolBlock& block);
 	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
 	void add_block(const PoolBlock& block);
-	void get_missing_blocks(std::vector<hash>& missing_blocks);
+	void get_missing_blocks(std::vector<hash>& missing_blocks) const;
 
-	PoolBlock* find_block(const hash& id);
+	PoolBlock* find_block(const hash& id) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
 
-	bool get_block_blob(const hash& id, std::vector<uint8_t>& blob);
-	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob);
+	bool get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
+	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob) const;
 
-	void print_status();
+	void print_status() const;
 
 	// Consensus ID can be used to spawn independent P2Pools with their own sidechains
 	// It's never sent over the network to avoid revealing it to the possible man in the middle
@@ -88,7 +88,7 @@ private:
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(PoolBlock* block);
-	PoolBlock* get_parent(const PoolBlock* block);
+	PoolBlock* get_parent(const PoolBlock* block) const;
 
 	// Checks if "candidate" has longer (higher difficulty) chain than "block"
 	bool is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative);
@@ -98,13 +98,13 @@ private:
 	bool load_config(const std::string& filename);
 	bool check_config();
 
-	mutable uv_mutex_t m_sidechainLock;
+	mutable uv_rwlock_t m_sidechainLock;
 	std::atomic<PoolBlock*> m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
+
+	uv_mutex_t m_seenWalletsLock;
 	unordered_map<hash, uint64_t> m_seenWallets;
-	std::vector<MinerShare> m_tmpShares;
-	std::vector<uint64_t> m_tmpRewards;
 
 	uv_mutex_t m_seenBlocksLock;
 	unordered_set<hash> m_seenBlocks;

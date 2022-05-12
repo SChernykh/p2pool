@@ -78,13 +78,12 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		panic();
 	}
 
-	uv_mutex_init_checked(&m_sidechainLock);
+	uv_rwlock_init_checked(&m_sidechainLock);
+	uv_mutex_init_checked(&m_seenWalletsLock);
 	uv_mutex_init_checked(&m_seenBlocksLock);
 	uv_rwlock_init_checked(&m_curDifficultyLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
-	m_tmpShares.reserve(m_chainWindowSize * 2);
-	m_tmpRewards.reserve(m_chainWindowSize * 2);
 
 	LOGINFO(1, "generating consensus ID");
 
@@ -163,7 +162,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 SideChain::~SideChain()
 {
-	uv_mutex_destroy(&m_sidechainLock);
+	uv_rwlock_destroy(&m_sidechainLock);
+	uv_mutex_destroy(&m_seenWalletsLock);
 	uv_mutex_destroy(&m_seenBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
 	for (auto& it : m_blocksById) {
@@ -171,9 +171,9 @@ SideChain::~SideChain()
 	}
 }
 
-void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares)
+void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const
 {
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	block.m_minerWallet = *w;
 	block.m_txkeySec = txkeySec;
@@ -208,7 +208,11 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 	}
 
 	for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, tip->m_sidechainHeight + 1); i < n; ++i) {
-		for (PoolBlock* uncle : m_blocksByHeight[tip->m_sidechainHeight - i]) {
+		auto it = m_blocksByHeight.find(tip->m_sidechainHeight - i);
+		if (it == m_blocksByHeight.end()) {
+			continue;
+		}
+		for (const PoolBlock* uncle : it->second) {
 			// Only add verified and valid blocks
 			if (!uncle || !uncle->m_verified || uncle->m_invalid) {
 				continue;
@@ -232,7 +236,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 				if (!tmp || (tmp->m_sidechainHeight < uncle->m_sidechainHeight)) {
 					break;
 				}
-				PoolBlock* tmp2 = uncle;
+				const PoolBlock* tmp2 = uncle;
 				for (size_t j = 0; (j < UNCLE_BLOCK_DEPTH) && tmp && tmp2 && (tmp->m_sidechainHeight + UNCLE_BLOCK_DEPTH >= block.m_sidechainHeight); ++j) {
 					if (tmp->m_parent == tmp2->m_parent) {
 						same_chain = true;
@@ -400,7 +404,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	const difficulty_type expected_diff = difficulty();
 	bool too_low_diff = (block.m_difficulty < expected_diff);
 	{
-		MutexLock lock(m_sidechainLock);
+		ReadLock lock(m_sidechainLock);
 		if (m_blocksById.find(block.m_sidechainId) != m_blocksById.end()) {
 			LOGINFO(4, "add_external_block: block " << block.m_sidechainId << " is already added");
 			return true;
@@ -482,7 +486,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 	missing_blocks.clear();
 	{
-		MutexLock lock(m_sidechainLock);
+		WriteLock lock(m_sidechainLock);
 		if (!block.m_parent.empty() && (m_blocksById.find(block.m_parent) == m_blocksById.end())) {
 			missing_blocks.push_back(block.m_parent);
 		}
@@ -523,8 +527,12 @@ void SideChain::add_block(const PoolBlock& block)
 	);
 
 	PoolBlock* new_block = new PoolBlock(block);
+	{
+		MutexLock lock(m_seenWalletsLock);
+		m_seenWallets[new_block->m_minerWallet.spend_public_key()] = new_block->m_localTimestamp;
+	}
 
-	MutexLock lock(m_sidechainLock);
+	WriteLock lock(m_sidechainLock);
 
 	auto result = m_blocksById.insert({ new_block->m_sidechainId, new_block });
 	if (!result.second) {
@@ -554,13 +562,11 @@ void SideChain::add_block(const PoolBlock& block)
 	else {
 		verify_loop(new_block);
 	}
-
-	m_seenWallets[new_block->m_minerWallet.spend_public_key()] = new_block->m_localTimestamp;
 }
 
-PoolBlock* SideChain::find_block(const hash& id)
+PoolBlock* SideChain::find_block(const hash& id) const
 {
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	auto it = m_blocksById.find(id);
 	if (it != m_blocksById.end()) {
@@ -572,14 +578,14 @@ PoolBlock* SideChain::find_block(const hash& id)
 
 void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_id)
 {
-	MutexLock lock(m_sidechainLock);
+	WriteLock lock(m_sidechainLock);
 	m_watchBlock = data;
 	m_watchBlockSidechainId = possible_id;
 }
 
-bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
+bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 {
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	const PoolBlock* block = nullptr;
 
@@ -610,11 +616,11 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob)
 	return true;
 }
 
-bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob)
+bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob) const
 {
 	blob.clear();
 
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	auto it = m_blocksById.find(block->m_sidechainId);
 	if (it != m_blocksById.end()) {
@@ -638,11 +644,14 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		return true;
 	}
 
-	if (!get_shares(block, m_tmpShares) || !split_reward(total_reward, m_tmpShares, m_tmpRewards) || (m_tmpRewards.size() != m_tmpShares.size())) {
+	std::vector<MinerShare> tmpShares;
+	std::vector<uint64_t> tmpRewards;
+
+	if (!get_shares(block, tmpShares) || !split_reward(total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
 		return false;
 	}
 
-	const size_t n = m_tmpShares.size();
+	const size_t n = tmpShares.size();
 
 	blob.reserve(n * 39 + 64);
 
@@ -655,12 +664,12 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	hash eph_public_key;
 	for (size_t i = 0; i < n; ++i) {
-		writeVarint(m_tmpRewards[i], blob);
+		writeVarint(tmpRewards[i], blob);
 
 		blob.emplace_back(tx_type);
 
 		uint8_t view_tag;
-		if (!m_tmpShares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
+		if (!tmpShares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(6, "get_eph_public_key failed at index " << i);
 		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
@@ -669,20 +678,20 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			blob.emplace_back(view_tag);
 		}
 
-		block->m_outputs.emplace_back(m_tmpRewards[i], eph_public_key, tx_type, view_tag);
+		block->m_outputs.emplace_back(tmpRewards[i], eph_public_key, tx_type, view_tag);
 	}
 
 	return true;
 }
 
-void SideChain::print_status()
+void SideChain::print_status() const
 {
 	std::vector<hash> blocks_in_window;
 	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
 
 	const difficulty_type diff = difficulty();
 
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	uint64_t rem;
 	uint64_t pool_hashrate = udiv128(diff.hi, diff.lo, m_targetBlockTime, &rem);
@@ -746,7 +755,11 @@ void SideChain::print_status()
 	if (tip) {
 		std::sort(blocks_in_window.begin(), blocks_in_window.end());
 		for (uint64_t i = 0; (i < m_chainWindowSize) && (i <= tip_height); ++i) {
-			for (PoolBlock* block : m_blocksByHeight[tip_height - i]) {
+			auto it = m_blocksByHeight.find(tip_height - i);
+			if (it == m_blocksByHeight.end()) {
+				continue;
+			}
+			for (const PoolBlock* block : it->second) {
 				if (!std::binary_search(blocks_in_window.begin(), blocks_in_window.end(), block->m_sidechainId)) {
 					LOGINFO(4, "orphan block at height " << log::Gray() << block->m_sidechainHeight << log::NoColor() << ": " << log::Gray() << block->m_sidechainId);
 					++total_orphans;
@@ -757,7 +770,7 @@ void SideChain::print_status()
 			}
 		}
 
-		Wallet w = m_pool->params().m_wallet;
+		const Wallet& w = m_pool->params().m_wallet;
 
 		hash eph_public_key;
 		for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
@@ -831,7 +844,7 @@ uint64_t SideChain::miner_count()
 {
 	const uint64_t cur_time = seconds_since_epoch();
 
-	MutexLock lock(m_sidechainLock);
+	MutexLock lock(m_seenWalletsLock);
 
 	// Delete wallets that weren't seen for more than 72 hours and return how many remain
 	for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
@@ -1484,7 +1497,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 	}
 }
 
-PoolBlock* SideChain::get_parent(const PoolBlock* block)
+PoolBlock* SideChain::get_parent(const PoolBlock* block) const
 {
 	if (block) {
 		auto it = m_blocksById.find(block->m_parent);
@@ -1714,11 +1727,11 @@ void SideChain::prune_old_blocks()
 	}
 }
 
-void SideChain::get_missing_blocks(std::vector<hash>& missing_blocks)
+void SideChain::get_missing_blocks(std::vector<hash>& missing_blocks) const
 {
 	missing_blocks.clear();
 
-	MutexLock lock(m_sidechainLock);
+	ReadLock lock(m_sidechainLock);
 
 	for (auto& b : m_blocksById) {
 		if (b.second->m_verified) {
