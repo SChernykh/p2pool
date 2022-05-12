@@ -105,6 +105,7 @@ private:
 
 	uv_mutex_t m_seenWalletsLock;
 	unordered_map<hash, uint64_t> m_seenWallets;
+	uint64_t m_seenWalletsLastPruneTime;
 
 	uv_mutex_t m_seenBlocksLock;
 	unordered_set<hash> m_seenBlocks;

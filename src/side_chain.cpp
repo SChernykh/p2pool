@@ -61,6 +61,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
 	, m_networkType(type)
 	, m_chainTip{ nullptr }
+	, m_seenWalletsLastPruneTime(0)
 	, m_poolName(pool_name ? pool_name : "default")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
@@ -846,14 +847,17 @@ uint64_t SideChain::miner_count()
 
 	MutexLock lock(m_seenWalletsLock);
 
-	// Delete wallets that weren't seen for more than 72 hours and return how many remain
-	for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
-		if (it->second + 72 * 60 * 60 <= cur_time) {
-			it = m_seenWallets.erase(it);
+	// Every 5 minutes, delete wallets that weren't seen for more than 72 hours
+	if (m_seenWalletsLastPruneTime + 5 * 60 <= cur_time) {
+		for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
+			if (it->second + 72 * 60 * 60 < cur_time) {
+				it = m_seenWallets.erase(it);
+			}
+			else {
+				++it;
+			}
 		}
-		else {
-			++it;
-		}
+		m_seenWalletsLastPruneTime = cur_time;
 	}
 
 	return m_seenWallets.size();
