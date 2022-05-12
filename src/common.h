@@ -19,7 +19,7 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable : 4005 4061 4365 4464 4625 4626 4668 4710 4711 4804 4820 5039 5045 5220)
+#pragma warning(disable : 4005 4061 4365 4464 4625 4626 4668 4710 4711 4804 4820 5039 5045 5220 5246)
 #define FORCEINLINE __forceinline
 #define NOINLINE __declspec(noinline)
 #define LIKELY(expression) expression
