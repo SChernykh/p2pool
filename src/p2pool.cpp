@@ -302,7 +302,8 @@ void p2pool::handle_miner_data(MinerData& data)
 			WriteLock lock(m_mainchainLock);
 
 			for (uint64_t h = data.height; h && (h + BLOCK_HEADERS_REQUIRED > data.height); --h) {
-				if (m_mainchainByHeight.find(h) == m_mainchainByHeight.end()) {
+				auto it = m_mainchainByHeight.find(h);
+				if ((it == m_mainchainByHeight.end()) || it->second.difficulty.empty()) {
 					LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
 					missing_heights.push_back(h);
 				}

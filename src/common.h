@@ -209,6 +209,8 @@ struct difficulty_type
 
 	FORCEINLINE double to_double() const { return static_cast<double>(hi) * 18446744073709551616.0 + static_cast<double>(lo); }
 
+	FORCEINLINE bool empty() const { return (lo == 0) && (hi == 0); }
+
 	// Finds a 64-bit target for mining (target = 2^64 / difficulty) and rounds up the result of division
 	// Because of that, there's a very small chance that miners will find a hash that meets the target but is still wrong (hash * difficulty >= 2^256)
 	// A proper difficulty check is in check_pow()
