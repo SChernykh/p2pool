@@ -477,7 +477,7 @@ void StratumServer::show_workers()
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(((c->m_customDiff != 0) || !m_autoDiff) ? c->m_customDiff : c->m_autoDiff, 20)
-				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, c->m_autoDiff.lo != 0), 15)
+				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff.lo != 0)), 15)
 				<< (c->m_rpcId ? c->m_customUser : "not logged in")
 		);
 		++n;
