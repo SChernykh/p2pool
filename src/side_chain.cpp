@@ -1449,6 +1449,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 				StratumServer* s = m_pool->stratum_server();
 				if (s && is_alternative) {
 					s->reset_share_counters();
+					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
 				}
 			}
 			prune_old_blocks();
