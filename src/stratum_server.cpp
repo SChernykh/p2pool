@@ -456,6 +456,7 @@ void StratumServer::print_status()
 void StratumServer::show_workers()
 {
 	const uint64_t cur_time = seconds_since_epoch();
+	const difficulty_type pool_diff = m_pool->side_chain().difficulty();
 
 	MutexLock lock(m_clientsListLock);
 
@@ -474,10 +475,20 @@ void StratumServer::show_workers()
 	);
 
 	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
+		difficulty_type diff;
+		if (c->m_customDiff != 0) {
+			diff = c->m_customDiff;
+		}
+		else if (m_autoDiff && (c->m_autoDiff != 0)) {
+			diff = c->m_autoDiff;
+		}
+		else {
+			diff = pool_diff;
+		}
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
-				<< log::pad_right(((c->m_customDiff != 0) || !m_autoDiff) ? c->m_customDiff : c->m_autoDiff, 20)
-				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff.lo != 0)), 15)
+				<< log::pad_right(diff, 20)
+				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
 				<< (c->m_rpcId ? c->m_customUser : "not logged in")
 		);
 		++n;
