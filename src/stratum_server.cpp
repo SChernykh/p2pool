@@ -499,6 +499,7 @@ void StratumServer::show_workers()
 
 void StratumServer::reset_share_counters()
 {
+	m_cumulativeHashes = 0;
 	m_cumulativeHashesAtLastShare = 0;
 	m_cumulativeFoundSharesDiff = 0.0;
 	m_totalFoundShares = 0;
