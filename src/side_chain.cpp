@@ -1522,6 +1522,8 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	}
 
 	if (!block) {
+		// Switching from an empty to a non-empty chain
+		is_alternative = true;
 		return true;
 	}
 
