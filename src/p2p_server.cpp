@@ -77,7 +77,7 @@ P2PServer::P2PServer(p2pool* pool)
 	int err = uv_async_init(&m_loop, &m_broadcastAsync, on_broadcast);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		return;
+		panic();
 	}
 	m_broadcastAsync.data = this;
 	m_broadcastQueue.reserve(2);

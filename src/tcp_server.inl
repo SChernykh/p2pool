@@ -37,10 +37,18 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 		panic();
 	}
 
-	uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
+	err = uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
 	m_dropConnectionsAsync.data = this;
 
-	uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
+	err = uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
 	m_shutdownAsync.data = this;
 
 	uv_mutex_init_checked(&m_clientsListLock);
