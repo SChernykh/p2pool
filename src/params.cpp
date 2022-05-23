@@ -133,7 +133,7 @@ Params::Params(int argc, char* argv[])
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();
-			panic();
+			throw std::exception();
 		}
 	}
 

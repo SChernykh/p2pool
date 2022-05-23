@@ -61,13 +61,13 @@ p2pool::p2pool(int argc, char* argv[])
 
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
-		panic();
+		throw std::exception();
 	}
 
 	bool is_v6;
 	if (!resolve_host(m_params->m_host, is_v6)) {
 		LOGERR(1, "resolve_host failed for " << m_params->m_host);
-		panic();
+		throw std::exception();
 	}
 
 	hash pub, sec, eph_public_key;
@@ -76,7 +76,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uint8_t view_tag;
 	if (!m_params->m_wallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
 		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
-		panic();
+		throw std::exception();
 	}
 
 	const NetworkType type = m_params->m_wallet.type();
@@ -91,28 +91,28 @@ p2pool::p2pool(int argc, char* argv[])
 	int err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_submitBlockAsync.data = this;
 
 	err = uv_async_init(uv_default_loop_checked(), &m_blockTemplateAsync, on_update_block_template);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_blockTemplateAsync.data = this;
 
 	err = uv_async_init(uv_default_loop_checked(), &m_stopAsync, on_stop);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_stopAsync.data = this;
 
 	err = uv_async_init(uv_default_loop_checked(), &m_restartZMQAsync, on_restart_zmq);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_restartZMQAsync.data = this;
 
@@ -128,7 +128,7 @@ p2pool::p2pool(int argc, char* argv[])
 
 	if (m_params->m_localStats && !m_api) {
 		LOGERR(1, "--local-api and --stratum-api command line parameters can't be used without --data-api");
-		panic();
+		throw std::exception();
 	}
 
 	m_sideChain = new SideChain(this, type, m_params->m_mini ? "mini" : nullptr);

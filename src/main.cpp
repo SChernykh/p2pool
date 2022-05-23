@@ -85,10 +85,15 @@ int main(int argc, char* argv[])
 	memory_tracking_start();
 
 	p2pool::init_crypto_cache();
-	{
+
+	try {
 		p2pool::p2pool pool(argc, argv);
 		result = pool.run();
 	}
+	catch (...) {
+		result = 1;
+	}
+
 	p2pool::destroy_crypto_cache();
 
 	memory_tracking_stop();
