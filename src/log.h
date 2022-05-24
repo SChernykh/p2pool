@@ -470,14 +470,6 @@ namespace {
 #define CONCAT(a, b) CONCAT2(a, b)
 #define CONCAT2(a, b) a##b
 
-#ifdef P2POOL_LOG_DISABLE
-
-#define LOGINFO(level, ...)
-#define LOGWARN(level, ...)
-#define LOGERR(level, ...)
-
-#else
-
 // This is to check that LOG() call doesn't modify variables in scope, making program behavior dependent on the log level:
 //
 //		int some_func(int& n) { return ++n; }
@@ -507,6 +499,14 @@ struct DummyStream
 			}; \
 		} \
 	} while (0)
+
+#ifdef P2POOL_LOG_DISABLE
+
+#define LOGINFO(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
+#define LOGWARN(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
+#define LOGERR(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
+
+#else
 
 #define LOG(level, severity, ...) \
 	do { \

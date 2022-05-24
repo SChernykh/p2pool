@@ -55,7 +55,7 @@ TEST(hash, empty)
 	hash h;
 	ASSERT_EQ(h.empty(), true);
 
-	for (int i = 0; i < HASH_SIZE; ++i) {
+	for (size_t i = 0; i < HASH_SIZE; ++i) {
 		hash h2;
 		h2.h[i] = 1;
 		ASSERT_EQ(h2.empty(), false);
