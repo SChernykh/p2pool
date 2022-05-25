@@ -27,16 +27,24 @@ jobs:
 
   cppcheck-windows:
 
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
-    - name: Install cppcheck
-      run: choco install cppcheck
-
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
         submodules: true
+
+    - name: Checkout cppcheck
+      uses: actions/checkout@v3
+      with:
+        repository: danmar/cppcheck
+        path: cppcheck-main
+
+    - name: Build cppcheck
+      run: |
+        cd cppcheck-main
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64
 
     - name: Setup cmake
       uses: lukka/get-cmake@latest
