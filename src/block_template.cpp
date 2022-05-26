@@ -575,7 +575,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
-	m_shares.clear();
 }
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM

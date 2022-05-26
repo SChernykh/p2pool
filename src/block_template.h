@@ -56,6 +56,7 @@ public:
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE uint64_t final_reward() const { return m_finalReward; }
+	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
 
 private:
 	p2pool* m_pool;

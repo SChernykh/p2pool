@@ -24,6 +24,7 @@
 #include "randomx.h"
 #include "params.h"
 #include "p2pool_api.h"
+#include "side_chain.h"
 #include <thread>
 
 static constexpr char log_category_prefix[] = "Miner ";
@@ -101,8 +102,21 @@ void Miner::on_block(const BlockTemplate& block)
 	m_totalHashes += hash_count;
 
 	if (m_pool->api() && m_pool->params().m_localStats) {
+		const hash& key = m_pool->params().m_wallet.spend_public_key();
+		uint64_t w = 0;
+		uint64_t total = 0;
+
+		for (const MinerShare& s : block.shares()) {
+			total += s.m_weight;
+			if (s.m_wallet->spend_public_key() == key) {
+				w = s.m_weight;
+			}
+		}
+
+		const double block_reward_share_percent = total ? ((static_cast<double>(w) * 100.0) / static_cast<double>(total)) : 0.0;
+
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner",
-			[cur_ts, hash_count, dt, this](log::Stream& s)
+			[cur_ts, hash_count, dt, block_reward_share_percent, this](log::Stream& s)
 			{
 				const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 				const double time_running = static_cast<double>(duration_cast<milliseconds>(cur_ts - m_startTimestamp).count()) / 1e3;
@@ -111,6 +125,7 @@ void Miner::on_block(const BlockTemplate& block)
 					<< ",\"total_hashes\":" << m_totalHashes
 					<< ",\"time_running\":" << time_running
 					<< ",\"shares_found\":" << m_sharesFound.load()
+					<< ",\"block_reward_share_percent\":" << block_reward_share_percent
 					<< ",\"threads\":" << m_threads
 					<< "}";
 			});
