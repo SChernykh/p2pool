@@ -43,7 +43,7 @@ public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	void fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const;
+	void fill_sidechain_data(PoolBlock& block, const Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const;
 
 	bool block_seen(const PoolBlock& block);
 	void unsee_block(const PoolBlock& block);

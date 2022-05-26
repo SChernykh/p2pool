@@ -172,7 +172,7 @@ SideChain::~SideChain()
 	}
 }
 
-void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const
+void SideChain::fill_sidechain_data(PoolBlock& block, const Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const
 {
 	ReadLock lock(m_sidechainLock);
 
@@ -228,11 +228,8 @@ void SideChain::fill_sidechain_data(PoolBlock& block, Wallet* w, const hash& txk
 			bool same_chain = false;
 			do {
 				tmp = tip;
-				while (tmp->m_sidechainHeight > uncle->m_sidechainHeight) {
+				while (tmp && (tmp->m_sidechainHeight > uncle->m_sidechainHeight)) {
 					tmp = get_parent(tmp);
-					if (!tmp) {
-						break;
-					}
 				}
 				if (!tmp || (tmp->m_sidechainHeight < uncle->m_sidechainHeight)) {
 					break;
@@ -1530,7 +1527,7 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	// If these two blocks are on the same chain, they must have a common ancestor
 
 	const PoolBlock* block_ancestor = block;
-	while (block_ancestor->m_sidechainHeight > candidate->m_sidechainHeight) {
+	while (block_ancestor && (block_ancestor->m_sidechainHeight > candidate->m_sidechainHeight)) {
 		const hash& id = block_ancestor->m_parent;
 		block_ancestor = get_parent(block_ancestor);
 		if (!block_ancestor) {

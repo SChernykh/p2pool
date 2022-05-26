@@ -276,7 +276,6 @@ static Worker worker;
 
 #endif // P2POOL_LOG_DISABLE
 
-// cppcheck-suppress uninitMemberVar
 NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 {
 	m_buf[0] = static_cast<char>(severity);

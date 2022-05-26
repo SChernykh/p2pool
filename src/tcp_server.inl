@@ -72,6 +72,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+// cppcheck-suppress functionStatic
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::~TCPServer()
 {
 	if (m_finished.load() == 0) {

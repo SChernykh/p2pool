@@ -1,6 +1,6 @@
 #!/bin/bash
-cppcheck ../src -DZMQ_STATIC --platform=unix64 --std=c++14 --enable=all --inconclusive --inline-suppr --template="{file}:{line}:{id}{inconclusive: INCONCLUSIVE} {message}" -I ../src/ -I ../external/src/ -I ../external/src/cryptonote/ -I ../external/src/libuv/ -I ../external/src/cppzmq/ -I ../external/src/libzmq/ -I ../external/src/llhttp/ -I ../external/src/RandomX/src/ -I ../external/src/rapidjson/include -I ../external/src/robin-hood-hashing/src/include --suppressions-list=suppressions.txt --output-file=errors_full.txt
-grep -v 'external' errors_full.txt | grep -v 'unmatchedSuppression' > errors_filtered.txt
+../cppcheck-main/cppcheck ../src -DSIZE_MAX=UINT64_MAX -DRAPIDJSON_ENDIAN=RAPIDJSON_LITTLEENDIAN --platform=unix64 --std=c++14 --enable=all --inconclusive --inline-suppr --template="{file}:{line}:{id}{inconclusive: INCONCLUSIVE} {message}" --includes-file=includes.txt --suppressions-list=suppressions.txt --output-file=errors_full.txt
+grep -v 'external' errors_full.txt > errors_filtered.txt
 if [ -s errors_filtered.txt ]; then
 	cat errors_filtered.txt
 	exit 1

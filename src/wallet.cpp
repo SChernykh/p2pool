@@ -89,7 +89,6 @@ Wallet::Wallet(const Wallet& w)
 	operator=(w);
 }
 
-// cppcheck-suppress operatorEqVarError
 Wallet& Wallet::operator=(const Wallet& w)
 {
 	if (this == &w) {
@@ -119,7 +118,7 @@ bool Wallet::decode(const char* address)
 
 	static_assert(last_block_size_index >= 0, "Check ADDRESS_LENGTH");
 
-	uint8_t data[static_cast<size_t>(num_full_blocks) * sizeof(uint64_t) + last_block_size_index];
+	uint8_t data[static_cast<size_t>(num_full_blocks) * sizeof(uint64_t) + last_block_size_index] = {};
 	int data_index = 0;
 
 	for (int i = 0; i <= num_full_blocks; ++i) {

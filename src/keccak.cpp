@@ -140,7 +140,7 @@ NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t* md, int mdlen)
 	temp[rsiz - 1] |= 0x80;
 
 	for (int i = 0; i < rsizw; i++) {
-		st[i] ^= ((uint64_t*)temp)[i];
+		st[i] ^= reinterpret_cast<uint64_t*>(temp)[i];
 	}
 
 	keccakf(st);

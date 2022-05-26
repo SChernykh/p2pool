@@ -180,7 +180,6 @@ void RandomX_Hasher::set_seed(const hash& seed)
 	}
 
 	{
-		// cppcheck-suppress unreadVariable
 		ON_SCOPE_LEAVE([this]() { uv_rwlock_wrunlock(&m_cacheLock); });
 
 		if (m_stopped.load()) {
@@ -327,7 +326,6 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 {
 	// First try to use the dataset if it's ready
 	if (uv_rwlock_tryrdlock(&m_datasetLock) == 0) {
-		// cppcheck-suppress unreadVariable
 		ON_SCOPE_LEAVE([this]() { uv_rwlock_rdunlock(&m_datasetLock); });
 
 		if (m_stopped.load()) {

@@ -238,6 +238,7 @@ private:
 	struct DerivationEntry
 	{
 		hash derivation;
+		// cppcheck-suppress unusedStructMember
 		uint8_t view_tag;
 	};
 

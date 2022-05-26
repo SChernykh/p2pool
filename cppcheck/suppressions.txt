@@ -1,6 +1,3 @@
 missingIncludeSystem
 unusedFunction
 useStlAlgorithm
-functionStatic
-functionConst
-unmatchedSuppression

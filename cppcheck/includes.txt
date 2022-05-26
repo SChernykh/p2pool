@@ -1,9 +1,9 @@
 ../src/
 ../external/src/
 ../external/src/cryptonote/
-../external/src/libuv/
+../external/src/libuv/include/
 ../external/src/cppzmq/
-../external/src/libzmq/
+../external/src/libzmq/include/
 ../external/src/llhttp/
 ../external/src/RandomX/src/
 ../external/src/rapidjson/include

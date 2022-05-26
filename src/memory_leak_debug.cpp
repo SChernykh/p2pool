@@ -236,7 +236,9 @@ NOINLINE void operator delete(void* p, size_t) noexcept { p2pool::free_hook(p); 
 NOINLINE void operator delete[](void* p, size_t) noexcept { p2pool::free_hook(p); }
 
 #else
+// cppcheck-suppress functionStatic
 void memory_tracking_start() {}
+// cppcheck-suppress functionStatic
 void memory_tracking_stop() {}
 
 namespace p2pool {

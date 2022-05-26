@@ -12,13 +12,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install cppcheck
-      run: sudo apt update && sudo apt install cppcheck
-
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
         submodules: true
+
+    - name: Checkout cppcheck
+      uses: actions/checkout@v3
+      with:
+        repository: danmar/cppcheck
+        path: cppcheck-main
+
+    - name: Build cppcheck
+      run: |
+        cd cppcheck-main
+        make -j$(nproc) cppcheck
 
     - name: Run cppcheck
       run: |
@@ -27,7 +35,7 @@ jobs:
 
   cppcheck-windows:
 
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
     - name: Checkout repository

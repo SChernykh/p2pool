@@ -151,6 +151,7 @@ void P2PServer::clear_cached_blocks()
 
 	WriteLock lock(m_cachedBlocksLock);
 
+	// cppcheck-suppress identicalConditionAfterEarlyExit
 	if (!m_cachedBlocks) {
 		return;
 	}

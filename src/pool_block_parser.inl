@@ -187,7 +187,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 		const int sidechain_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
 		READ_BUF(m_sidechainId.h, HASH_SIZE);
 
-		// cppcheck-suppress duplicateExpression
 		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
 
 		EXPECT_BYTE(0);

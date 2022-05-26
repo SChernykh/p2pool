@@ -34,6 +34,7 @@ public:
 		LOCAL,
 	};
 
+	// cppcheck-suppress functionConst
 	void on_stop();
 
 	template<typename T>
