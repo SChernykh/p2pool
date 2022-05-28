@@ -58,6 +58,7 @@ public:
 	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob) const;
 
 	void print_status() const;
+	double get_reward_share(const Wallet& w) const;
 
 	// Consensus ID can be used to spawn independent P2Pools with their own sidechains
 	// It's never sent over the network to avoid revealing it to the possible man in the middle

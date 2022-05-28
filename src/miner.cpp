@@ -102,18 +102,7 @@ void Miner::on_block(const BlockTemplate& block)
 	m_totalHashes += hash_count;
 
 	if (m_pool->api() && m_pool->params().m_localStats) {
-		const hash& key = m_pool->params().m_wallet.spend_public_key();
-		uint64_t w = 0;
-		uint64_t total = 0;
-
-		for (const MinerShare& s : block.shares()) {
-			total += s.m_weight;
-			if (s.m_wallet->spend_public_key() == key) {
-				w = s.m_weight;
-			}
-		}
-
-		const double block_reward_share_percent = total ? ((static_cast<double>(w) * 100.0) / static_cast<double>(total)) : 0.0;
+		const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
 
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner",
 			[cur_ts, hash_count, dt, block_reward_share_percent, this](log::Stream& s)

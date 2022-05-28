@@ -832,6 +832,38 @@ void SideChain::print_status() const
 	);
 }
 
+double SideChain::get_reward_share(const Wallet& w) const
+{
+	uint64_t reward = 0;
+	uint64_t total_reward = 0;
+	{
+		ReadLock lock(m_sidechainLock);
+
+		const PoolBlock* tip = m_chainTip;
+		if (tip) {
+			hash eph_public_key;
+			for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
+				const PoolBlock::TxOutput& out = tip->m_outputs[i];
+				if (!reward) {
+					if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+						if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
+							reward = out.m_reward;
+						}
+					}
+					else {
+						uint8_t view_tag;
+						if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag) && (out.m_ephPublicKey == eph_public_key)) {
+							reward = out.m_reward;
+						}
+					}
+				}
+				total_reward += out.m_reward;
+			}
+		}
+	}
+	return total_reward ? (static_cast<double>(reward) / static_cast<double>(total_reward)) : 0.0;
+}
+
 difficulty_type SideChain::total_hashes() const
 {
 	const PoolBlock* tip = m_chainTip;
