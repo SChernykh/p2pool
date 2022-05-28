@@ -50,7 +50,6 @@ public:
 	void update_tx_keys();
 
 	FORCEINLINE uint64_t height() const { return m_height; }
-	FORCEINLINE uint64_t timestamp() const { return m_timestamp; }
 	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }
 
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
@@ -83,7 +82,7 @@ private:
 
 	size_t m_numTransactionHashes;
 	hash m_prevId;
-	uint64_t m_height;
+	std::atomic<uint64_t> m_height;
 	difficulty_type m_difficulty;
 	hash m_seedHash;
 

@@ -133,7 +133,7 @@ public:
 
 	void print_status() override;
 	void show_peers();
-	size_t peer_list_size() const { return m_peerList.size(); }
+	size_t peer_list_size() const { MutexLock lock(m_peerListLock); return m_peerList.size(); }
 
 	uint32_t max_outgoing_peers() const { return m_maxOutgoingPeers; }
 	uint32_t max_incoming_peers() const { return m_maxIncomingPeers; }
@@ -181,7 +181,7 @@ private:
 
 	uint64_t m_peerId;
 
-	uv_mutex_t m_peerListLock;
+	mutable uv_mutex_t m_peerListLock;
 
 	struct Peer
 	{
@@ -194,7 +194,7 @@ private:
 
 	std::vector<Peer> m_peerList;
 	std::vector<Peer> m_peerListMonero;
-	uint64_t m_peerListLastSaved;
+	std::atomic<uint64_t> m_peerListLastSaved;
 
 	struct Broadcast
 	{
