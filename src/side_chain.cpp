@@ -167,7 +167,7 @@ SideChain::~SideChain()
 	uv_mutex_destroy(&m_seenWalletsLock);
 	uv_mutex_destroy(&m_seenBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
-	for (auto& it : m_blocksById) {
+	for (const auto& it : m_blocksById) {
 		delete it.second;
 	}
 }
