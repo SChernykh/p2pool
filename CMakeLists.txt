@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(p2pool)
 
 option(STATIC_BINARY "Build static binary" OFF)
+option(STATIC_LIBS "Link libuv and libzmq statically" OFF)
 option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned off, p2pool will rely on monerod for verifying RandomX hashes" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -157,7 +158,7 @@ endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-if (STATIC_BINARY)
+if (STATIC_BINARY OR STATIC_LIBS)
 	add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} ${CMAKE_PROJECT_NAME})
 
 	if (WITH_RANDOMX)

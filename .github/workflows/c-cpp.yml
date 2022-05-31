@@ -53,6 +53,50 @@ jobs:
         name: p2pool-${{ matrix.config.os }}
         path: build/p2pool
 
+  build-ubuntu-aarch64:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git build-essential cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build libuv
+      run: |
+        cd external/src/libuv
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+        make -j$(nproc)
+
+    - name: Build libzmq
+      run: |
+        cd external/src/libzmq
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+        make -j$(nproc)
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_STRIP=/usr/bin/aarch64-linux-gnu-strip -DSTATIC_LIBS=ON -DARCH_ID=aarch64
+        make -j$(nproc)
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-ubuntu-latest-aarch64
+        path: build/p2pool
+
   build-windows-msys2:
 
     runs-on: windows-latest
