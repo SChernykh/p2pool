@@ -46,7 +46,7 @@ docker-compose up
 
 
 #### Uninstall
-Change to p2pool/docker-compose directory
-Stop and remove all containers: ```docker-compose down```
-Remove the p2pool data: ```docker volume rm p2pool```
+Change to p2pool/docker-compose directory <br />
+Stop and remove all containers: ```docker-compose down``` <br />
+Remove the p2pool data: ```docker volume rm p2pool``` <br />
 Remove the monero data: ```docker volume rm monero```

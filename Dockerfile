@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
@@ -24,7 +24,7 @@ RUN git submodule update --init --recursive && \
 
 # ---
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 COPY --from=0 /usr/src/p2pool/build/p2pool /
 
 RUN set -e && \
@@ -43,6 +43,7 @@ USER p2pool
 
 EXPOSE 3333
 EXPOSE 37889
+EXPOSE 37888
 
 VOLUME /home/p2pool/.p2pool
 
