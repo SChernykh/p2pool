@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
 ARG MONERO_GIT_TAG="latest"
 
 RUN set -e && \
@@ -54,7 +54,7 @@ RUN git clone --recursive https://github.com/monero-project/monero && \
 
 # ---
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 COPY --from=0 /usr/src/monero/build/Linux/*/release/bin/* /
 
