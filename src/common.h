@@ -334,6 +334,8 @@ void* realloc_hook(void* ptr, size_t size) noexcept;
 void* calloc_hook(size_t count, size_t size) noexcept;
 void free_hook(void* p) noexcept;
 
+extern const char* BLOCK_FOUND;
+
 } // namespace p2pool
 
 #include "util.h"

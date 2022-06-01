@@ -390,8 +390,6 @@ void SideChain::unsee_block(const PoolBlock& block)
 	m_seenBlocks.erase(block.m_sidechainId);
 }
 
-extern const char* BLOCK_FOUND;
-
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
 {
 	if (block.m_difficulty < m_minDifficulty) {

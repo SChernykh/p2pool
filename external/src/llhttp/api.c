@@ -1,7 +1,11 @@
 #ifdef _MSC_VER
 #pragma warning(disable : 4100 4668 4710 4711 4820)
+#elif defined __clang__
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 
 #include <stdlib.h>

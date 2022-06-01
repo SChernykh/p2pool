@@ -1035,12 +1035,9 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 		LOGINFO(6, "incoming keepalive from " << log::Gray() << static_cast<char*>(m_addrString));
 		return true;
 	}
-	else {
-		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (unknown method)");
-		return false;
-	}
 
-	return true;
+	LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (unknown method)");
+	return false;
 }
 
 bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint32_t id)

@@ -1,8 +1,18 @@
 #ifdef _MSC_VER
 #pragma warning(disable : 4061 4065 4100 4152 4242 4244 4668 4702 4710 4711 4820 5045)
+#elif defined __clang__
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunreachable-code"
 #elif defined __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
+
+#ifndef LLHTTP_STRICT_MODE
+#define LLHTTP_STRICT_MODE 0
 #endif
 
 #if LLHTTP_STRICT_MODE

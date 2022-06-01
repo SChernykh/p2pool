@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
-	set(WARNING_FLAGS "-Wall -Wextra -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
 	set(OPTIMIZATION_FLAGS "-Ofast -s")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
@@ -42,7 +42,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	set(GENERAL_FLAGS "-pthread")
-	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")

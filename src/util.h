@@ -221,6 +221,10 @@ FORCEINLINE uint64_t bsr(uint64_t x)
 
 } // namespace p2pool
 
+void memory_tracking_start();
+void memory_tracking_stop();
+void p2pool_usage();
+
 namespace robin_hood {
 
 template<>
