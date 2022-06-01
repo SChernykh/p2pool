@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
@@ -20,7 +20,7 @@ RUN git clone https://github.com/xmrig/xmrig.git && \
 
 # ---
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 COPY --from=0 /usr/src/xmrig/build/xmrig /
 
