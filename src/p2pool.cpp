@@ -413,6 +413,13 @@ void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t e
 		m_submitBlockData.blob.clear();
 	}
 
+	// If p2pool is stopped, m_submitBlockAsync is most likely already closed
+	if (m_stopped) {
+		LOGWARN(0, "p2pool is shutting down, but a block was found. Trying to submit it anyway!");
+		submit_block();
+		return;
+	}
+
 	const int err = uv_async_send(&m_submitBlockAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
@@ -428,6 +435,13 @@ void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
 		m_submitBlockData.nonce = 0;
 		m_submitBlockData.extra_nonce = 0;
 		m_submitBlockData.blob = blob;
+	}
+
+	// If p2pool is stopped, m_submitBlockAsync is most likely already closed
+	if (m_stopped) {
+		LOGWARN(0, "p2pool is shutting down, but a block was found. Trying to submit it anyway!");
+		submit_block();
+		return;
 	}
 
 	const int err = uv_async_send(&m_submitBlockAsync);
@@ -574,6 +588,11 @@ void p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32
 
 void p2pool::update_block_template_async()
 {
+	// If p2pool is stopped, m_blockTemplateAsync is most likely already closed
+	if (m_stopped) {
+		return;
+	}
+
 	const int err = uv_async_send(&m_blockTemplateAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
@@ -1403,11 +1422,19 @@ static bool init_signals(p2pool* pool)
 
 void p2pool::stop()
 {
-	uv_async_send(&m_stopAsync);
+	// Can be called only once
+	if (m_stopped.exchange(true) == false) {
+		uv_async_send(&m_stopAsync);
+	}
 }
 
 void p2pool::restart_zmq()
 {
+	// If p2pool is stopped, m_restartZMQAsync is most likely already closed
+	if (m_stopped) {
+		return;
+	}
+
 	if (!is_main_thread()) {
 		uv_async_send(&m_restartZMQAsync);
 		return;

@@ -108,7 +108,7 @@ private:
 
 	void submit_block() const;
 
-	bool m_stopped;
+	std::atomic<bool> m_stopped;
 
 	Params* m_params;
 
