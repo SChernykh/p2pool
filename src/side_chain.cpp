@@ -47,10 +47,12 @@
 
 static constexpr char log_category_prefix[] = "SideChain ";
 
-constexpr uint64_t MIN_DIFFICULTY = 100000;
-constexpr size_t UNCLE_BLOCK_DEPTH = 3;
+static constexpr uint64_t MIN_DIFFICULTY = 100000;
+static constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
+
+static constexpr uint64_t MONERO_BLOCK_TIME = 120;
 
 namespace p2pool {
 
@@ -693,7 +695,7 @@ void SideChain::print_status() const
 	uint64_t pool_hashrate = udiv128(diff.hi, diff.lo, m_targetBlockTime, &rem);
 
 	difficulty_type network_diff = m_pool->miner_data().difficulty;
-	uint64_t network_hashrate = udiv128(network_diff.hi, network_diff.lo, 120, &rem);
+	uint64_t network_hashrate = udiv128(network_diff.hi, network_diff.lo, MONERO_BLOCK_TIME, &rem);
 
 	const PoolBlock* tip = m_chainTip;
 
@@ -1597,6 +1599,7 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	const PoolBlock* new_chain = candidate;
 
 	uint64_t candidate_mainchain_height = 0;
+	uint64_t candidate_mainchain_min_height = 0;
 	hash mainchain_prev_id;
 
 	for (uint64_t i = 0; (i < m_chainWindowSize) && (old_chain || new_chain); ++i) {
@@ -1606,6 +1609,7 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 		}
 
 		if (new_chain) {
+			candidate_mainchain_min_height = candidate_mainchain_min_height ? std::min(candidate_mainchain_min_height, new_chain->m_txinGenHeight) : new_chain->m_txinGenHeight;
 			candidate_total_diff += new_chain->m_difficulty;
 
 			ChainMain data;
@@ -1626,6 +1630,12 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	MinerData data = m_pool->miner_data();
 	if (candidate_mainchain_height + 10 < data.height) {
 		LOGWARN(3, "received a longer alternative chain but it's stale: height " << candidate_mainchain_height << ", current height " << data.height);
+		return false;
+	}
+
+	const uint64_t limit = m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME;
+	if (candidate_mainchain_min_height + limit < data.height) {
+		LOGWARN(3, "received a longer alternative chain but it's stale: min height " << candidate_mainchain_min_height << ", must be >= " << (data.height - limit));
 		return false;
 	}
 
@@ -1703,7 +1713,7 @@ void SideChain::update_depths(PoolBlock* block)
 void SideChain::prune_old_blocks()
 {
 	// Leave 2 minutes worth of spare blocks in addition to 2xPPLNS window for lagging nodes which need to sync
-	const uint64_t prune_distance = m_chainWindowSize * 2 + 120 / m_targetBlockTime;
+	const uint64_t prune_distance = m_chainWindowSize * 2 + MONERO_BLOCK_TIME / m_targetBlockTime;
 
 	// Remove old blocks from alternative unconnected chains after long enough time
 	const uint64_t cur_time = seconds_since_epoch();
@@ -1843,8 +1853,8 @@ bool SideChain::check_config()
 		return false;
 	}
 
-	if ((m_targetBlockTime < 1) || (m_targetBlockTime > 120)) {
-		LOGERR(1, "block_time is invalid (must be between 1 and 120)");
+	if ((m_targetBlockTime < 1) || (m_targetBlockTime > MONERO_BLOCK_TIME)) {
+		LOGERR(1, "block_time is invalid (must be between 1 and " << MONERO_BLOCK_TIME << ")");
 		return false;
 	}
 
