@@ -27,6 +27,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	, m_loopThread{}
 	, m_finished(0)
 	, m_listenPort(-1)
+	, m_loop{}
 	, m_loopStopped{false}
 	, m_numConnections{ 0 }
 	, m_numIncomingConnections{ 0 }
@@ -36,6 +37,9 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
 		panic();
 	}
+
+	// Init loop user data before running it
+	GetLoopUserData(&m_loop);
 
 	err = uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
 	if (err) {

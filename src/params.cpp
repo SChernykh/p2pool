@@ -130,6 +130,11 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+		if ((strcmp(argv[i], "--rpc-login") == 0) && (i + 1 < argc)) {
+			m_rpcLogin = argv[++i];
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

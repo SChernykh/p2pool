@@ -38,6 +38,7 @@
 #include "keccak.h"
 #include <thread>
 #include <fstream>
+#include <curl/curl.h>
 
 constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -88,7 +89,13 @@ p2pool::p2pool(int argc, char* argv[])
 		LOGWARN(1, "Mining to a stagenet wallet address");
 	}
 
-	int err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
+	int err = static_cast<int>(curl_global_init(CURL_GLOBAL_ALL));
+	if (err != CURLE_OK) {
+		LOGERR(1, "Failed to initialize curl, error " << err);
+		throw std::exception();
+	}
+
+	err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
 		throw std::exception();
@@ -176,6 +183,8 @@ p2pool::~p2pool()
 	delete m_mempool;
 	delete m_params;
 	delete m_consoleCommands;
+
+	curl_global_cleanup();
 }
 
 bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result)
@@ -311,11 +320,11 @@ void p2pool::handle_miner_data(MinerData& data)
 		}
 
 		for (uint64_t h : missing_heights) {
-			char buf[log::Stream::BUF_SIZE + 1];
+			char buf[log::Stream::BUF_SIZE + 1] = {};
 			log::Stream s(buf);
 			s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
 
-			JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
+			JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin,
 				[this, h](const char* data, size_t size)
 				{
 					ChainMain block;
@@ -462,7 +471,10 @@ void p2pool::on_stop(uv_async_t* async)
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_restartZMQAsync), nullptr);
-	uv_stop(uv_default_loop());
+
+	uv_loop_t* loop = uv_default_loop_checked();
+	delete GetLoopUserData(loop, false);
+	uv_stop(loop);
 }
 
 void p2pool::submit_block() const
@@ -522,7 +534,7 @@ void p2pool::submit_block() const
 	}
 	request.append("\"]}");
 
-	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, request.c_str(),
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request, m_params->m_rpcLogin,
 		[height, diff, template_id, nonce, extra_nonce, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
@@ -617,7 +629,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 	const uint64_t seed_height = get_seed_height(current_height);
 	const uint64_t prev_seed_height = (seed_height > SEEDHASH_EPOCH_BLOCKS) ? (seed_height - SEEDHASH_EPOCH_BLOCKS) : 0;
 
-	char buf[log::Stream::BUF_SIZE + 1];
+	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
 
 	// First download 2 RandomX seeds
@@ -626,7 +638,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << height << "}}\0";
 
-		JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
+		JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin,
 			[this, prev_seed_height, height](const char* data, size_t size)
 			{
 				ChainMain block;
@@ -655,7 +667,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
 
-	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, buf,
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin,
 		[this, start_height, current_height](const char* data, size_t size)
 		{
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
@@ -763,7 +775,7 @@ void p2pool::stratum_on_block()
 
 void p2pool::get_info()
 {
-	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}",
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", m_params->m_rpcLogin,
 		[this](const char* data, size_t size)
 		{
 			parse_get_info_rpc(data, size);
@@ -869,7 +881,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 void p2pool::get_version()
 {
-	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}",
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", m_params->m_rpcLogin,
 		[this](const char* data, size_t size)
 		{
 			parse_get_version_rpc(data, size);
@@ -933,7 +945,7 @@ void p2pool::get_miner_data()
 {
 	m_getMinerDataPending = true;
 
-	JSONRPCRequest::call(m_params->m_host.c_str(), m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}",
+	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", m_params->m_rpcLogin,
 		[this](const char* data, size_t size)
 		{
 			parse_get_miner_data_rpc(data, size);
@@ -1472,6 +1484,11 @@ int p2pool::run()
 		LOGERR(1, "failed to initialize signal handlers");
 		return 1;
 	}
+
+	// Init default loop user data before running it
+	uv_loop_t* loop = uv_default_loop_checked();
+	loop->data = nullptr;
+	GetLoopUserData(loop);
 
 	try {
 		get_info();
