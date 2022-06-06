@@ -19,3 +19,6 @@
 [submodule "external/src/robin-hood-hashing"]
 	path = external/src/robin-hood-hashing
 	url = https://github.com/SChernykh/robin-hood-hashing
+[submodule "external/src/curl"]
+	path = external/src/curl
+	url = https://github.com/SChernykh/curl

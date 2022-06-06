@@ -177,6 +177,8 @@ protected:
 
 		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_dropConnectionsAsync), nullptr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_shutdownAsync), nullptr);
+
+		delete GetLoopUserData(&server->m_loop, false);
 	}
 };
 

@@ -200,7 +200,7 @@ Please see the relevant instructions for your platform:
 
 Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on Ubuntu 20.04:
 ```
-sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev
+sudo apt update && sudo apt install git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build

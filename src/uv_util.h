@@ -61,4 +61,93 @@ void uv_mutex_init_checked(uv_mutex_t* mutex);
 void uv_rwlock_init_checked(uv_rwlock_t* lock);
 uv_loop_t* uv_default_loop_checked();
 
+struct UV_LoopCallbackBase
+{
+	virtual ~UV_LoopCallbackBase() {}
+	virtual void operator()() = 0;
+};
+
+template<typename T>
+struct UV_LoopCallback : public UV_LoopCallbackBase
+{
+	explicit FORCEINLINE UV_LoopCallback(T&& cb) : m_cb(std::move(cb)) {}
+	void operator()() override { m_cb(); }
+
+private:
+	UV_LoopCallback& operator=(UV_LoopCallback&&) = delete;
+	T m_cb;
+};
+
+struct UV_LoopUserData
+{
+	uv_loop_t* m_loop;
+	uv_async_t* m_async;
+
+	uv_mutex_t m_callbacksLock;
+	std::vector<UV_LoopCallbackBase*> m_callbacks;
+
+	std::vector<UV_LoopCallbackBase*> m_callbacksToRun;
+
+	explicit UV_LoopUserData(uv_loop_t* loop)
+		: m_loop(loop)
+		, m_async(new uv_async_t{})
+		, m_callbacksLock{}
+		, m_callbacks{}
+		, m_callbacksToRun{}
+	{
+		uv_async_init(m_loop, m_async, async_cb);
+		m_async->data = this;
+
+		uv_mutex_init_checked(&m_callbacksLock);
+
+		m_callbacks.reserve(2);
+		m_callbacksToRun.reserve(2);
+	}
+
+	~UV_LoopUserData()
+	{
+		m_loop->data = nullptr;
+		uv_mutex_destroy(&m_callbacksLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(m_async), [](uv_handle_t* h) { delete reinterpret_cast<uv_async_t*>(h); });
+		for (const UV_LoopCallbackBase* cb : m_callbacks) {
+			delete cb;
+		}
+	}
+
+	static void async_cb(uv_async_t* h)
+	{
+		UV_LoopUserData* data = reinterpret_cast<UV_LoopUserData*>(h->data);
+
+		data->m_callbacksToRun.clear();
+		{
+			MutexLock lock(data->m_callbacksLock);
+			std::swap(data->m_callbacks, data->m_callbacksToRun);
+		}
+
+		for (UV_LoopCallbackBase* cb : data->m_callbacksToRun) {
+			(*cb)();
+			delete cb;
+		}
+	}
+
+	UV_LoopUserData(const UV_LoopUserData&) = delete;
+	UV_LoopUserData& operator=(const UV_LoopUserData&) = delete;
+};
+
+UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create = true);
+
+template<typename T>
+void CallOnLoop(uv_loop_t* loop, T&& callback)
+{
+	UV_LoopUserData* data = GetLoopUserData(loop);
+
+	UV_LoopCallbackBase* cb = new UV_LoopCallback<T>(std::move(callback));
+	{
+		MutexLock lock(data->m_callbacksLock);
+		data->m_callbacks.push_back(cb);
+	}
+
+	uv_async_send(data->m_async);
+}
+
 } // namespace p2pool

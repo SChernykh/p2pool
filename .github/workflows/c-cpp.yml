@@ -1,10 +1,6 @@
 name: C/C++ CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   build-ubuntu:
@@ -22,7 +18,7 @@ jobs:
       run: |
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt update
-        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev ${{ matrix.config.c }} ${{ matrix.config.cpp }}
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev ${{ matrix.config.c }} ${{ matrix.config.cpp }}
 
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -34,7 +30,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }}
-        make -j2
+        make -j$(nproc)
 
     - name: Build tests
       run: |
@@ -42,7 +38,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }}
-        make -j2
+        make -j$(nproc)
 
     - name: Run tests
       run: cd tests/build && ./p2pool_tests
@@ -53,6 +49,68 @@ jobs:
         name: p2pool-${{ matrix.config.os }}
         path: build/p2pool
 
+  build-ubuntu-static-libs:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git build-essential cmake autoconf libgss-dev
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build libcurl
+      run: |
+        cd external/src/curl
+        autoreconf -fi
+        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts
+        make -j$(nproc)
+
+    - name: Build libuv
+      run: |
+        cd external/src/libuv
+        mkdir build
+        cd build
+        cmake .. -DBUILD_TESTING=OFF
+        make -j$(nproc)
+
+    - name: Build libzmq
+      run: |
+        cd external/src/libzmq
+        mkdir build
+        cd build
+        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+        make -j$(nproc)
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DSTATIC_LIBS=ON
+        make -j$(nproc)
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake .. -DSTATIC_LIBS=ON
+        make -j$(nproc)
+
+    - name: Run tests
+      run: cd tests/build && ./p2pool_tests
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool-ubuntu-static-libs
+        path: build/p2pool
+
   build-ubuntu-aarch64:
 
     runs-on: ubuntu-latest
@@ -61,19 +119,26 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y git build-essential cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+        sudo apt install -y git build-essential cmake autoconf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
         submodules: true
 
+    - name: Build libcurl
+      run: |
+        cd external/src/curl
+        autoreconf -fi
+        ./configure --host=aarch64-linux-gnu --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts
+        make -j$(nproc)
+
     - name: Build libuv
       run: |
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DBUILD_TESTING=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -115,22 +180,45 @@ jobs:
       uses: eine/setup-msys2@v2
       with:
         update: true
-        install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-libuv
+        install: mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake make autoconf libtool automake
+
+    - name: Build libcurl
+      run: |
+        cd external/src/curl
+        autoreconf -fi
+        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts
+        make -j$(nproc)
+
+    - name: Build libuv
+      run: |
+        cd external/src/libuv
+        mkdir build
+        cd build
+        cmake .. -G "Unix Makefiles" -DBUILD_TESTING=OFF
+        make -j$(nproc)
+
+    - name: Build libzmq
+      run: |
+        cd external/src/libzmq
+        mkdir build
+        cd build
+        cmake .. -G "Unix Makefiles" -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF
+        make -j$(nproc)
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles"
-        make -j2
+        cmake .. -G "Unix Makefiles" -DSTATIC_LIBS=ON
+        make -j$(nproc)
 
     - name: Build tests
       run: |
         cd tests
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles"
-        make -j2
+        cmake .. -G "Unix Makefiles" -DSTATIC_LIBS=ON
+        make -j$(nproc)
 
     - name: Run tests
       run: |
@@ -204,14 +292,21 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake autoconf libtool automake
+
+    - name: Build libcurl
+      run: |
+        cd external/src/curl
+        autoreconf -fi
+        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts
+        make -j3
 
     - name: Build libuv
       run: |
         cd external/src/libuv
         mkdir build
         cd build
-        cmake ..
+        cmake .. -DBUILD_TESTING=OFF
         make -j3
 
     - name: Build libzmq
@@ -219,7 +314,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF
+        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
         make -j3
 
     - name: Build p2pool

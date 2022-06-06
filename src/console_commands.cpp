@@ -232,6 +232,7 @@ void ConsoleCommands::run()
 
 		if (std::cin.eof()) {
 			LOGINFO(1, "EOF, stopping");
+			do_exit(m_pool, nullptr);
 			return;
 		}
 

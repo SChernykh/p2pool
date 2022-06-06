@@ -423,4 +423,16 @@ NOINLINE uint64_t bsr_reference(uint64_t x)
 	return bsr8_table.data[y >> 24] - n0 - n1 - n2;
 }
 
+UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
+{
+	UV_LoopUserData* data = reinterpret_cast<UV_LoopUserData*>(loop->data);
+
+	if (!data && create) {
+		data = new UV_LoopUserData(loop);
+		loop->data = data;
+	}
+
+	return data;
+}
+
 } // namespace p2pool

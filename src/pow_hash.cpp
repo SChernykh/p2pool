@@ -370,6 +370,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 
 RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	: m_pool(pool)
+	, m_loop{}
 	, m_loopThread{}
 {
 	int err = uv_loop_init(&m_loop);
@@ -377,6 +378,9 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
 		panic();
 	}
+
+	// Init loop user data before running it
+	GetLoopUserData(&m_loop);
 
 	uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
 	uv_async_init(&m_loop, &m_kickTheLoopAsync, nullptr);
@@ -426,17 +430,17 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	const uint8_t* data = reinterpret_cast<const uint8_t*>(data_ptr);
 	const uint8_t major_version = data[0];
 
-	char buf[log::Stream::BUF_SIZE + 1];
+	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"calc_pow\",\"params\":{\"major_version\":" << major_version <<
 		",\"height\":" << height <<
 		",\"block_blob\":\"" << log::hex_buf(data, size) << '"' <<
-		",\"seed_hash\":\"\"}}";
+		",\"seed_hash\":\"\"}}\0";
 
 	volatile int result = 0;
 	volatile bool done = false;
 
-	JSONRPCRequest::call(m_pool->params().m_host.c_str(), m_pool->params().m_rpcPort, buf,
+	JSONRPCRequest::call(m_pool->params().m_host, m_pool->params().m_rpcPort, buf, m_pool->params().m_rpcLogin,
 		[&result, &h](const char* data, size_t size)
 		{
 			rapidjson::Document doc;

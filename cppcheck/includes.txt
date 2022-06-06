@@ -4,7 +4,7 @@
 ../external/src/libuv/include/
 ../external/src/cppzmq/
 ../external/src/libzmq/include/
-../external/src/llhttp/
+../external/src/curl/include
 ../external/src/RandomX/src/
 ../external/src/rapidjson/include
 ../external/src/robin-hood-hashing/src/include
