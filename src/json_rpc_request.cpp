@@ -126,22 +126,32 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 
 	m_multiHandle = curl_multi_init();
 	if (!m_multiHandle) {
-		constexpr char msg[] = "curl_multi_init() failed";
+		static constexpr char msg[] = "curl_multi_init() failed";
 		LOGERR(1, msg);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), nullptr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error(msg);
 	}
 
-	curl_multi_setopt(m_multiHandle, CURLMOPT_SOCKETFUNCTION, socket_func);
-	curl_multi_setopt(m_multiHandle, CURLMOPT_SOCKETDATA, this);
+#define curl_multi_setopt_checked(...) \
+	do { \
+		const CURLMcode r = curl_multi_setopt(__VA_ARGS__); \
+		if (r != CURLM_OK) { \
+			static constexpr char msg[] = "curl_multi_setopt(" #__VA_ARGS__ ") failed"; \
+			LOGERR(1, msg << ": " << curl_multi_strerror(r)); \
+			throw std::runtime_error(msg); \
+		} \
+	} while (0)
+
+	curl_multi_setopt_checked(m_multiHandle, CURLMOPT_SOCKETFUNCTION, socket_func);
+	curl_multi_setopt_checked(m_multiHandle, CURLMOPT_SOCKETDATA, this);
 	
-	curl_multi_setopt(m_multiHandle, CURLMOPT_TIMERFUNCTION, timer_func);
-	curl_multi_setopt(m_multiHandle, CURLMOPT_TIMERDATA, this);
+	curl_multi_setopt_checked(m_multiHandle, CURLMOPT_TIMERFUNCTION, timer_func);
+	curl_multi_setopt_checked(m_multiHandle, CURLMOPT_TIMERDATA, this);
 
 	m_handle = curl_easy_init();
 	if (!m_handle) {
-		constexpr char msg[] = "curl_easy_init() failed";
+		static constexpr char msg[] = "curl_easy_init() failed";
 		LOGERR(1, msg);
 		curl_multi_cleanup(m_multiHandle);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), nullptr);
@@ -149,17 +159,27 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		throw std::runtime_error(msg);
 	}
 
-	curl_easy_setopt(m_handle, CURLOPT_WRITEFUNCTION, write_func);
-	curl_easy_setopt(m_handle, CURLOPT_WRITEDATA, this);
+#define curl_easy_setopt_checked(...) \
+	do { \
+		const CURLcode r = curl_easy_setopt(__VA_ARGS__); \
+		if (r != CURLE_OK) { \
+			static constexpr char msg[] = "curl_easy_setopt(" #__VA_ARGS__ ") failed"; \
+			LOGERR(1, msg << ": " << curl_easy_strerror(r)); \
+			throw std::runtime_error(msg); \
+		} \
+	} while (0)
 
-	curl_easy_setopt(m_handle, CURLOPT_URL, m_url.c_str());
-	curl_easy_setopt(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());
-	curl_easy_setopt(m_handle, CURLOPT_CONNECTTIMEOUT, 1);
-	curl_easy_setopt(m_handle, CURLOPT_TIMEOUT, 10);
+	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEFUNCTION, write_func);
+	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEDATA, this);
+
+	curl_easy_setopt_checked(m_handle, CURLOPT_URL, m_url.c_str());
+	curl_easy_setopt_checked(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());
+	curl_easy_setopt_checked(m_handle, CURLOPT_CONNECTTIMEOUT, 1);
+	curl_easy_setopt_checked(m_handle, CURLOPT_TIMEOUT, 10);
 
 	if (!m_auth.empty()) {
-		curl_easy_setopt(m_handle, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST | CURLAUTH_ONLY);
-		curl_easy_setopt(m_handle, CURLOPT_USERPWD, m_auth.c_str());
+		curl_easy_setopt_checked(m_handle, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST | CURLAUTH_ONLY);
+		curl_easy_setopt_checked(m_handle, CURLOPT_USERPWD, m_auth.c_str());
 	}
 
 	CURLMcode curl_err = curl_multi_add_handle(m_multiHandle, m_handle);
