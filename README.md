@@ -275,7 +275,7 @@ make
 
 Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally in Termux:
 ```
-pkg install git build-essential cmake libuv libzmq
+pkg install git build-essential cmake libuv libzmq libcurl
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build
