@@ -144,6 +144,19 @@ void free_hook(void* p) noexcept
 	free(p);
 }
 
+char* strdup_hook(const char* s) noexcept
+{
+#ifdef _MSC_VER
+	char* s1 = _strdup(s);
+#else
+	char* s1 = strdup(s);
+#endif
+	if (s1) {
+		add_alocation(s1, strlen(s) + 1);
+	}
+	return s1;
+}
+
 void* realloc_hook(void* ptr, size_t size) noexcept
 {
 	remove_allocation(ptr);
@@ -247,6 +260,15 @@ void* malloc_hook(size_t n) noexcept { return malloc(n); }
 void* realloc_hook(void* ptr, size_t size) noexcept { return realloc(ptr, size); }
 void* calloc_hook(size_t count, size_t size) noexcept { return calloc(count, size); }
 void free_hook(void* p) noexcept { free(p); }
+
+char* strdup_hook(const char* s) noexcept
+{
+#ifdef _MSC_VER
+	return _strdup(s);
+#else
+	return strdup(s);
+#endif
+}
 
 }
 #endif

@@ -20,6 +20,7 @@
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include <curl/curl.h>
 
 void p2pool_usage()
 {
@@ -81,11 +82,14 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	int result;
-
 	memory_tracking_start();
 
 	p2pool::init_crypto_cache();
+
+	int result = static_cast<int>(curl_global_init_mem(CURL_GLOBAL_ALL, p2pool::malloc_hook, p2pool::free_hook, p2pool::realloc_hook, p2pool::strdup_hook, p2pool::calloc_hook));
+	if (result != CURLE_OK) {
+		return result;
+	}
 
 	try {
 		p2pool::p2pool pool(argc, argv);
@@ -94,6 +98,8 @@ int main(int argc, char* argv[])
 	catch (...) {
 		result = 1;
 	}
+
+	curl_global_cleanup();
 
 	p2pool::destroy_crypto_cache();
 

@@ -333,6 +333,7 @@ void* malloc_hook(size_t n) noexcept;
 void* realloc_hook(void* ptr, size_t size) noexcept;
 void* calloc_hook(size_t count, size_t size) noexcept;
 void free_hook(void* p) noexcept;
+char* strdup_hook(const char* s) noexcept;
 
 extern const char* BLOCK_FOUND;
 

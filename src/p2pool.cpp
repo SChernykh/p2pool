@@ -38,7 +38,6 @@
 #include "keccak.h"
 #include <thread>
 #include <fstream>
-#include <curl/curl.h>
 
 constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -89,13 +88,7 @@ p2pool::p2pool(int argc, char* argv[])
 		LOGWARN(1, "Mining to a stagenet wallet address");
 	}
 
-	int err = static_cast<int>(curl_global_init(CURL_GLOBAL_ALL));
-	if (err != CURLE_OK) {
-		LOGERR(1, "Failed to initialize curl, error " << err);
-		throw std::exception();
-	}
-
-	err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
+	int err = uv_async_init(uv_default_loop_checked(), &m_submitBlockAsync, on_submit_block);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
 		throw std::exception();
@@ -183,8 +176,6 @@ p2pool::~p2pool()
 	delete m_mempool;
 	delete m_params;
 	delete m_consoleCommands;
-
-	curl_global_cleanup();
 }
 
 bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result)
