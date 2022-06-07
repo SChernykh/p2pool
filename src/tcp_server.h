@@ -127,6 +127,7 @@ private:
 	static void loop(void* data);
 	static void on_new_connection(uv_stream_t* server, int status);
 	static void on_connection_close(uv_handle_t* handle);
+	static void on_connection_error(uv_handle_t* handle);
 	static void on_connect(uv_connect_t* req, int status);
 	void on_new_client(uv_stream_t* server);
 	void on_new_client_nolock(uv_stream_t* server, Client* client);

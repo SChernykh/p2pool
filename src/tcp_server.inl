@@ -377,7 +377,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 	err = uv_tcp_nodelay(&client->m_socket, 1);
 	if (err) {
 		LOGERR(1, "failed to set tcp_nodelay on tcp client handle, error " << uv_err_name(err));
-		m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
 	}
 
@@ -385,7 +385,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 
 	if (!m_pendingConnections.insert(client->m_addr).second) {
 		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
-		m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
 	}
 
@@ -397,7 +397,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 	if (err) {
 		LOGERR(1, "failed to initiate tcp connection, error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
-		m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
 	}
 	else {
@@ -677,6 +677,16 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* 
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_error(uv_handle_t* handle)
+{
+	Client* client = reinterpret_cast<Client*>(handle->data);
+	TCPServer* server = client->m_owner;
+
+	MutexLock lock(server->m_clientsListLock);
+	server->m_preallocatedClients.push_back(client);
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int status)
 {
 	Client* client = reinterpret_cast<Client*>(req->data);
@@ -701,11 +711,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
 		}
 		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
-		uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&client->m_socket);
-		if (!uv_is_closing(h)) {
-			uv_close(h, nullptr);
-		}
-		server->m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return;
 	}
 
@@ -744,14 +750,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 	err = uv_tcp_nodelay(&client->m_socket, 1);
 	if (err) {
 		LOGERR(1, "failed to set tcp_nodelay on tcp client handle, error " << uv_err_name(err));
-		m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return;
 	}
 
 	err = uv_accept(server, reinterpret_cast<uv_stream_t*>(&client->m_socket));
 	if (err) {
 		LOGERR(1, "failed to accept client connection, error " << uv_err_name(err));
-		m_preallocatedClients.push_back(client);
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return;
 	}
 
