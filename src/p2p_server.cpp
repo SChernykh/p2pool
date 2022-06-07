@@ -124,6 +124,10 @@ P2PServer::~P2PServer()
 
 	delete m_block;
 	delete m_cache;
+
+	for (const Broadcast* data : m_broadcastQueue) {
+		delete data;
+	}
 }
 
 void P2PServer::add_cached_block(const PoolBlock& block)
@@ -785,7 +789,7 @@ void P2PServer::on_broadcast()
 
 	ON_SCOPE_LEAVE([&broadcast_queue]()
 		{
-			for (Broadcast* data : broadcast_queue) {
+			for (const Broadcast* data : broadcast_queue) {
 				delete data;
 			}
 		});

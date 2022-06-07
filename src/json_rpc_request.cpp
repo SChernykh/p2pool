@@ -338,6 +338,10 @@ void CurlContext::on_close(uv_handle_t* h)
 
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 {
+	if (!loop) {
+		loop = uv_default_loop();
+	}
+
 	CallOnLoop(loop,
 		[=]()
 		{

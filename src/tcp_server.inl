@@ -473,7 +473,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 			}
 			else {
 				LOGWARN(1, "timed out while waiting for event loop to stop");
-				uv_async_init(&m_loop, &asy, nullptr);
+				uv_async_init(&m_loop, &asy, [](uv_async_t* h) { uv_close(reinterpret_cast<uv_handle_t*>(h), nullptr); });
 				uv_stop(&m_loop);
 				uv_async_send(&asy);
 				break;

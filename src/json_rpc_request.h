@@ -40,7 +40,7 @@ private:
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 
 template<typename T, typename U>
-FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, T&& cb, U&& close_cb, uv_loop_t* loop = uv_default_loop_checked())
+FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
 {
 	Call(address, port, req, auth, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)), loop);
 }

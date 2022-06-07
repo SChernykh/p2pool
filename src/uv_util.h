@@ -139,7 +139,7 @@ UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create = true);
 template<typename T>
 void CallOnLoop(uv_loop_t* loop, T&& callback)
 {
-	UV_LoopUserData* data = GetLoopUserData(loop);
+	UV_LoopUserData* data = GetLoopUserData(loop, false);
 
 	UV_LoopCallbackBase* cb = new UV_LoopCallback<T>(std::move(callback));
 	{
