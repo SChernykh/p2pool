@@ -302,18 +302,22 @@ void CurlContext::check_multi_info()
 	int pending;
 	while (CURLMsg* message = curl_multi_info_read(m_multiHandle, &pending)) {
 		if (message->msg == CURLMSG_DONE) {
-			if ((message->data.result != CURLE_OK) || m_response.empty()) {
-				m_error = m_response.empty() ? "empty response" : curl_easy_strerror(message->data.result);
+			if (message->data.result != CURLE_OK) {
+				m_error = curl_easy_strerror(message->data.result);
 			}
+			else {
+				long http_code = 0;
+				curl_easy_getinfo(message->easy_handle, CURLINFO_RESPONSE_CODE, &http_code);
 
-			long http_code = 0;
-			curl_easy_getinfo(message->easy_handle, CURLINFO_RESPONSE_CODE, &http_code);
-
-			if (http_code != 200) {
-				char buf[32] = {};
-				log::Stream s(buf);
-				s << "HTTP error " << static_cast<int>(http_code) << '\0';
-				m_error = buf;
+				if (http_code != 200) {
+					char buf[32] = {};
+					log::Stream s(buf);
+					s << "HTTP error " << static_cast<int>(http_code) << '\0';
+					m_error = buf;
+				}
+				else if (m_response.empty()) {
+					m_error = "empty response";
+				}
 			}
 
 			curl_multi_remove_handle(m_multiHandle, m_handle);
