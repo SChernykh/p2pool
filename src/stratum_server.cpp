@@ -847,6 +847,19 @@ void StratumServer::on_share_found(uv_work_t* req)
 		const char* s = client->m_customUser;
 		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << height << ", diff " << sidechain_difficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << effort << '%');
 		pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
+
+		if(!pool->params().m_onShareFound.empty())
+		{
+		    std::string s = pool->params().m_onShareFound;
+		    s += " TEST";
+		    char sys[s.length() + 1];
+		    strcpy(sys, s.c_str());
+
+		    if(!system(sys))
+		    {
+		        LOGINFO(4, "ERROR Calling onShareFound");
+		    }
+		}
 	}
 
 	// Send the response to miner
