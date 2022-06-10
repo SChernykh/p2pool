@@ -135,7 +135,7 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--notify-on-share-found") == 0) && (i + 1 < argc)) {
+		if ((strcmp(argv[i], "--on-share-found") == 0) && (i + 1 < argc)) {
 			m_onShareFound = argv[++i];
 			ok = true;
 		}

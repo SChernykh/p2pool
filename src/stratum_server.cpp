@@ -850,11 +850,21 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		if(!pool->params().m_onShareFound.empty())
 		{
-		    std::string s = pool->params().m_onShareFound;
-		    s += " TEST";
-		    char sys[s.length() + 1];
-		    strcpy(sys, s.c_str());
+		    std::string cmd = pool->params().m_onShareFound;
+		    //Add the client address
+		    cmd = cmd + " " + client->m_addrString;
+		    //Add the User
+		    cmd = cmd + " " + client->m_customUser;
+		    //The block height
+		    cmd = cmd + " " + std::to_string(height);
+		    //The Difficulty
+		    cmd = cmd + " " + std::to_string(sidechain_difficulty.to_double());
+		    
+		    //system() requires char and not string, convert to char
+		    char sys[cmd.length() + 1];
+		    strcpy(sys, cmd.c_str());
 
+		    //If there is an error, then log it
 		    if(!system(sys))
 		    {
 		        LOGINFO(4, "ERROR Calling onShareFound");
