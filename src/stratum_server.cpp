@@ -851,6 +851,8 @@ void StratumServer::on_share_found(uv_work_t* req)
 		if(!pool->params().m_onShareFound.empty())
 		{
 		    std::string cmd = pool->params().m_onShareFound;
+		    //Add what was found
+		    cmd += " SHARE";
 		    //Add the client address
 		    cmd = cmd + " " + client->m_addrString;
 		    //Add the User
