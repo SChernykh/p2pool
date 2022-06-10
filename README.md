@@ -144,6 +144,12 @@ delaycompress
 nocreate
 }
  ```
+ 
+ - To run a script when a SHARE is found, pass the executable file to the command line parameter `--on-share-found`
+   - The file will get the following args `BLOCK|SHARE` `client_ip_address` `User` `block-height` `diff`  
+ ```
+ --on-share-found /path/to/file
+ ```
 
 ### Windows 
 
