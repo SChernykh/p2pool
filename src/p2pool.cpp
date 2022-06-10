@@ -577,7 +577,7 @@ void p2pool::submit_block() const
 					LOGWARN(3, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
 				}
 				else {
-					LOGERR(0, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
+					LOGERR(0, "submit_block: RPC request failed, error " << log::const_buf(data, size));
 				}
 			}
 		});

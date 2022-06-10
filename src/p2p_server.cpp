@@ -1854,7 +1854,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	if (cur_time - m_prevIncomingPeerListRequest < 30) {
 		++m_fastPeerListRequestCount;
 		if (m_fastPeerListRequestCount >= 3) {
-			LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is sending PEER_LIST_REQUEST too often");
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is sending PEER_LIST_REQUEST too often");
 			return false;
 		}
 	}
