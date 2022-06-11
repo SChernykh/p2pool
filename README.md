@@ -150,6 +150,12 @@ nocreate
  ```
  --on-share-found /path/to/file
  ```
+ 
+ - To run a script when a BLOCK is found, pass the executable file to the command line parameter `--on-block-found`
+   - The file will get the following args `BLOCK` `block_id` `timestamp` `reward` `payout`  
+ ```
+ --on-block-found /path/to/file
+ ```
 
 ### Windows 
 
