@@ -140,6 +140,11 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+		if ((strcmp(argv[i], "--on-block-found") == 0) && (i + 1 < argc)) {
+			m_onBlockFound = argv[++i];
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

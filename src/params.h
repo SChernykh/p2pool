@@ -51,6 +51,7 @@ struct Params
 	bool m_autoDiff = true;
 	std::string m_rpcLogin;
 	std::string m_onShareFound;
+	std::string m_onBlockFound;
 };
 
 } // namespace p2pool

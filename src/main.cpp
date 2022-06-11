@@ -49,6 +49,7 @@ void p2pool_usage()
 		"--no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum\n"
 		"--rpc-login          Specify username[:password] required for Monero RPC server\n"
 		"--on-share-found     Path of file to run when share is found\n"
+		"--on-block-found     Path of file to run when block is found\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
