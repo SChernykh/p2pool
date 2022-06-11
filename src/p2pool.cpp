@@ -398,17 +398,6 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 			    cmd << params().m_onBlockFound << " BLOCK " << data.id << " " << data.timestamp << " " << data.reward << " " << payout;
 
-			    //Show it as a block
-//			    cmd << " BLOCK";
-			    //Pass the block ID
-//			    cmd << " " << data.id;
-			    //Timestamp
-//			    cmd << " " << data.timestamp;
-			    //Reward
-//			    cmd << " " << data.reward;
-			    //Payout
-//			    cmd << " " << log::XMRAmount(payout);
-
 			    //system() requires char and not string, convert to char
 			    std::string ss(cmd.str());
 
