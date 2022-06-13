@@ -395,8 +395,13 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 			if(!params().m_onBlockFound.empty())
 			{
 			    std::stringstream cmd;
+				double po = payout;
+				if(po > 0)
+				{
+					po = po * 0.000000000001; //convert to XMR reward
+				}
 
-			    cmd << params().m_onBlockFound << " BLOCK " << data.id << " " << data.timestamp << " " << data.reward << " " << payout;
+			    cmd << params().m_onBlockFound << " BLOCK " << data.id << " " << data.timestamp << " " << data.reward << " " << po;
 
 			    //system() requires char and not string, convert to char
 			    std::string ss(cmd.str());
