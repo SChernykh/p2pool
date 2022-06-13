@@ -347,7 +347,7 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 		}
 
 		cur = it->second;
-	} while (block_depth < m_chainWindowSize);
+	} while (true);
 
 	// Combine shares with the same wallet addresses
 	std::sort(shares.begin(), shares.end(), [](const auto& a, const auto& b) { return *a.m_wallet < *b.m_wallet; });
@@ -1579,6 +1579,7 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 			}
 		}
 
+		// cppcheck-suppress knownConditionTrueFalse
 		while (block_ancestor && candidate_ancestor) {
 			if (block_ancestor->m_parent == candidate_ancestor->m_parent) {
 				// If they are really on the same chain, we can just compare cumulative difficulties
