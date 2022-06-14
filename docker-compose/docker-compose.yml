@@ -25,7 +25,6 @@ services:
       - 18080:18080/tcp
     volumes:
       - monero:/home/monero/.bitmonero:rw
-      - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
       - /dev/hugepages:/dev/hugepages:rw
     restart: unless-stopped
     command: >-
@@ -37,7 +36,9 @@ services:
       --p2p-bind-port=18080
       --rpc-bind-ip=0.0.0.0
       --rpc-bind-port=18081
+      --restricted-rpc
       --confirm-external-bind
+      --log-file /dev/stdout
       ${PRUNE_NODE}
       ${MONERO_EXTRA_OPTIONS}
 
