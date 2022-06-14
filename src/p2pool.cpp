@@ -394,23 +394,13 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 			if(!params().m_onBlockFound.empty())
 			{
-			    std::stringstream cmd;
-				double po = payout;
-				if(po > 0)
-				{
-					po = po * 0.000000000001; //convert to XMR reward
-				}
+			    char buf[log::Stream::BUF_SIZE + 1];
+			    log::Stream cmd(buf);
 
-			    cmd << params().m_onBlockFound << " BLOCK " << data.id << " " << data.timestamp << " " << data.reward << " " << po;
-
-			    //system() requires char and not string, convert to char
-			    std::string ss(cmd.str());
-
-                char sys[ss.length() + 1];
-                strcpy(sys, ss.c_str());
+			    cmd << params().m_onBlockFound << " BLOCK " << data.id << " " << data.timestamp << " " << data.reward << " " << log::XMRAmount(payout) << '\0';
 
                 //If there is an error, then log it
-                if(!system(sys))
+                if(!system(buf))
                 {
                     LOGINFO(4, "ERROR Calling onBlockFound");
                 }
