@@ -12,7 +12,8 @@ RUN set -e && \
         libsodium-dev \
         libpgm-dev \
         libnorm-dev \
-        libgss-dev
+        libgss-dev \
+        libcurl4-openssl-dev
 
 ADD . /usr/src/p2pool
 WORKDIR /usr/src/p2pool
@@ -32,6 +33,7 @@ RUN set -e && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
     libzmq5 \
     libuv1 \
+    libcurl4 \
       && \
     apt-get clean
 

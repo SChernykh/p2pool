@@ -63,7 +63,8 @@ RUN set -e && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
     libgssapi-krb5-2 \
       && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt
 
 RUN groupadd -r monero -g 1000 && \
     useradd -u 1000 -r -g monero -s /sbin/nologin -c "monero node user" monero
