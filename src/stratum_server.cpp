@@ -853,12 +853,12 @@ void StratumServer::on_share_found(uv_work_t* req)
 			char buf[log::Stream::BUF_SIZE + 1];
 			log::Stream cmd(buf);
 
-			cmd << " SHARE" << " " << client->m_addrString << " " << client->m_customUser << " " << height << " " << sidechain_difficulty << '\0';
+			cmd  << pool->params().m_onShareFound << " SHARE" << " " << static_cast<char*>(client->m_addrString) << " " << s << " " << height << " " << sidechain_difficulty << '\0';
 
 		    //If there is an error, then log it
 		    if(!system(buf))
 		    {
-		        LOGINFO(4, "ERROR Calling onShareFound");
+		        LOGINFO(6, log::Red() << "ERROR Calling onShareFound");
 		    }
 		}
 	}
