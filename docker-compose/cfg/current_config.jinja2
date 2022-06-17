@@ -1,0 +1,22 @@
+{
+    "wallet_address": {{ wallet_address | tojson(indent=2) }},
+    "configure_monero": {{ configure_monero | tojson(indent=2) }},
+    "configure_xmrig": {{ configure_xmrig | tojson(indent=2) }},
+    "sidechain": {{ sidechain | tojson(indent=2) }},
+    "expose_stratum_port": {{ expose_stratum_port | tojson(indent=2) }},
+    "stratum_port": {{ stratum_port | tojson(indent=2) }},
+    "p2pool_log_level": {{ p2pool_log_level | int | tojson(indent=2) }},
+    "enable_autodiff": {{ enable_autodiff | tojson(indent=2) }},
+    "p2pool_options": {{ p2pool_options | tojson(indent=2) }},
+    "monero_version": {{ monero_version | tojson(indent=2) }},
+    "prune_blockchain": {{ prune_blockchain | tojson(indent=2) }},
+    "monero_log_level": {{ monero_log_level | int | tojson(indent=2) }},
+    "monero_options": {{ monero_options | tojson(indent=2) }},
+    "public_monero_node": {{ public_monero_node | tojson(indent=2) }},
+    "monero_node_login": {{ monero_node_login | tojson(indent=2) }},
+    "xmrig_username": {{ xmrig_username | tojson(indent=2) }},
+    "use_fixed_difficulty": {{ use_fixed_difficulty | tojson(indent=2) }},
+    "fixed_difficulty": {{ fixed_difficulty | int | tojson(indent=2) }},
+    "cpu_percent": {{ cpu_percent | int | tojson(indent=2) }},
+    "xmrig_options": {{ xmrig_options | tojson(indent=2) }}
+}

@@ -1,0 +1,6 @@
+#!/bin/bash
+echo ""
+echo ""
+echo "Building and Running P2Pool docker-compose Configuration"
+docker build -t p2pool_config:latest cfg
+docker run -it --rm -v $PWD:/docker-compose --user $(id -u):$(id -g) p2pool_config:latest
