@@ -208,9 +208,11 @@ cmake ..
 make -j$(nproc)
 ```
 
-### Arch Linux [AUR](https://wiki.archlinux.org/title/Arch_User_Repository)
+### [Arch Linux](https://archlinux.org/packages/community/x86_64/p2pool/)
 
-Make the package: [p2pool-git](https://aur.archlinux.org/packages/p2pool-git/)
+```
+pacman -S p2pool
+```
 
 ### [Nix/NixOS](https://nixos.org)
 
