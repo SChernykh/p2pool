@@ -8,10 +8,10 @@ networks:
 volumes:
   p2pool: 
     name: p2pool
-
+{% if configure_monero == True %}
   monero:
     name: monero
-
+{% endif %}
 
 services:
   p2pool:
@@ -21,37 +21,50 @@ services:
     networks:
       - p2pool
     ports:
-
+{% if sidechain[0] == 0 %}
       - 37888:37888/tcp
-
-
+{% else %}
+      - 37889:37889/tcp
+{% endif %}
+{% if expose_stratum_port == True %}
+      - {{ stratum_port | int }}:3333/tcp
+{% endif %}
     volumes:
       - p2pool:/home/p2pool/.p2pool:rw
       - /dev/null:/home/p2pool/.p2pool/p2pool.log:rw
       - /dev/hugepages:/dev/hugepages:rw
-
+{% if configure_monero == True %}
     depends_on:
       - monero
-
+{% endif %}
     restart: unless-stopped
     command: >-
-
+{% if configure_monero == True %}
       --host monero
+{% else %}
+      --host {{ public_monero_node }}
+      --rpc-login {{ monero_node_login }}
+{% endif %}
+      --wallet {{ wallet_address }}
+      --loglevel {{ p2pool_log_level | int }}
+{% if sidechain[0] == 1 %}
+      --mini
+{% endif %}
+{% if enable_autodiff == False %}
+      --no-autodiff
+{% endif %}
+{% if p2pool_options != "" %}
+      {{ p2pool_options }}
+{% endif %}
 
-      --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg
-      --loglevel 3
 
-
-
-
-
-
+{% if configure_monero == True %}
   monero:
     image: monero:latest
     build:
       context: monero
       args:
-        - MONERO_GIT_TAG=latest
+        - MONERO_GIT_TAG={{ monero_version }}
     container_name: p2pool-monero
     networks:
       - p2pool
@@ -72,15 +85,17 @@ services:
       --rpc-bind-ip=0.0.0.0
       --rpc-bind-port=18081
       --confirm-external-bind
-      --log-level=0
-
+      --log-level={{ monero_log_level | int }}
+{% if prune_blockchain == True %}
       --prune-blockchain
+{% endif %}
+{% if monero_options != "" %}
+      {{ monero_options }}
+{% endif %}
+{% endif %}
 
 
-
-
-
-
+{% if configure_xmrig == True %}
   xmrig:
     image: xmrig:latest
     build: xmrig
@@ -98,8 +113,13 @@ services:
     command: >-
       --randomx-1gb-pages
       -o p2pool:3333
-
-      -u p2pool
-
-      --cpu-max-threads-hint=100
-
+{% if enable_autodiff == False and use_fixed_difficulty == True %}
+      -u {{ xmrig_username }}+{{ fixed_difficulty | int }}
+{% else %}
+      -u {{ xmrig_username }}
+{% endif %}
+      --cpu-max-threads-hint={{ cpu_percent | int }}
+{% if xmrig_options != "" %}
+      {{ xmrig_options }}
+{% endif %}
+{% endif %}

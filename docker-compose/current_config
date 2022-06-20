@@ -1,0 +1,24 @@
+{
+    "wallet_address": "44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg",
+    "configure_monero": true,
+    "configure_xmrig": true,
+    "sidechain": [
+  0
+],
+    "expose_stratum_port": false,
+    "stratum_port": "3333",
+    "p2pool_log_level": 3,
+    "enable_autodiff": true,
+    "p2pool_options": "",
+    "monero_version": "latest",
+    "prune_blockchain": true,
+    "monero_log_level": 0,
+    "monero_options": "",
+    "public_monero_node": "",
+    "monero_node_login": "",
+    "xmrig_username": "p2pool",
+    "use_fixed_difficulty": true,
+    "fixed_difficulty": 500000,
+    "cpu_percent": 100,
+    "xmrig_options": ""
+}
