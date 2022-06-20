@@ -104,7 +104,7 @@ struct parse_wrapper<T, difficulty_type>
 			if (!from_hex(s[i], d)) {
 				return false;
 			}
-			out_value.hi = (out_value.hi << 4) || (out_value.lo >> 60);
+			out_value.hi = (out_value.hi << 4) | (out_value.lo >> 60);
 			out_value.lo = (out_value.lo << 4) | d;
 		}
 

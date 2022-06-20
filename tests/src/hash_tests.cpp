@@ -16,6 +16,8 @@
  */
 
 #include "common.h"
+#include "json_parsers.h"
+#include <rapidjson/document.h>
 #include "gtest/gtest.h"
 #include <random>
 #include <sstream>
@@ -70,6 +72,38 @@ TEST(hash, input_output)
 		ASSERT_EQ(ss.str(), s);
 		hash h2;
 		ss >> h2;
+		ASSERT_EQ(h2, h);
+	};
+
+	hash h;
+	check(h, "0000000000000000000000000000000000000000000000000000000000000000");
+
+	memset(h.h, -1, HASH_SIZE);
+	check(h, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+	for (uint8_t i = 0; i < HASH_SIZE; ++i) {
+		h.h[i] = i;
+	}
+	check(h, "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+
+	for (uint8_t i = 0; i < HASH_SIZE; ++i) {
+		h.h[i] = 0xff - i;
+	}
+	check(h, "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0");
+}
+
+TEST(hash, json_parser)
+{
+	auto check = [](const hash& h, const char* s) {
+		std::stringstream ss;
+		ss << "{\"hash\":\"" << s << "\"}";
+
+		using namespace rapidjson;
+		Document doc;
+		doc.Parse(ss.str().c_str());
+
+		hash h2;
+		parseValue(doc, "hash", h2);
 		ASSERT_EQ(h2, h);
 	};
 
