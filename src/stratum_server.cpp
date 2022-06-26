@@ -251,6 +251,10 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom difficulty " << client->m_customDiff);
 		target = std::max(target, client->m_customDiff.target());
 	}
+	else if (m_autoDiff) {
+		// Limit autodiff to 4000000 for maximum compatibility
+		target = std::max(target, TARGET_4_BYTES_LIMIT);
+	}
 
 	if (get_custom_user(login, client->m_customUser)) {
 		const char* s = client->m_customUser;
@@ -686,6 +690,9 @@ void StratumServer::on_blobs_ready()
 				target = std::max(target, client->m_customDiff.target());
 			}
 			else if (m_autoDiff) {
+				// Limit autodiff to 4000000 for maximum compatibility
+				target = std::max(target, TARGET_4_BYTES_LIMIT);
+
 				if (client->m_autoDiff.lo) {
 					const uint32_t k = client->m_autoDiffIndex;
 					const uint16_t elapsed_time = static_cast<uint16_t>(cur_time) - client->m_autoDiffData[(k - 1) % StratumClient::AUTO_DIFF_SIZE].m_timestamp;
