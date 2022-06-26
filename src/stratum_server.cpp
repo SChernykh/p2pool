@@ -388,7 +388,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (target >= TARGET_4_BYTES_LIMIT) {
-			target = (target >> 32) << 32;
+			// "Low diff share" fix: adjust target to the same value as XMRig would use
+			target = std::numeric_limits<uint64_t>::max() / (std::numeric_limits<uint32_t>::max() / (target >> 32));
 		}
 
 		share->m_req.data = share;
