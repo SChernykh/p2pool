@@ -132,7 +132,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 
 		// Get first 8 bytes of the Merkle root hash from each blob
 		for (size_t i = 0; i < num_connections; ++i) {
-			blob_hashes.emplace_back(*reinterpret_cast<const uint64_t*>(data + i * size + 43));
+			blob_hashes.emplace_back(read_unaligned(reinterpret_cast<const uint64_t*>(data + i * size + 43)));
 		}
 
 		// Find duplicates
