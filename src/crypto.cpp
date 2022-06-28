@@ -93,7 +93,6 @@ void generate_keys(hash& pub, hash& sec)
 	ge_p3_tobytes(pub.h, &point);
 }
 
-// cppcheck-suppress constParameter
 void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, size_t len)
 {
 	uint32_t counter = 0;
