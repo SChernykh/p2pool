@@ -76,6 +76,16 @@ TEST(crypto, derivation)
 
 				ASSERT_EQ(buf, result_str);
 			}
+			else if (name == "get_tx_keys") {
+				hash wallet_spend_key, monero_block_id, pub_check, sec_check;
+				f >> wallet_spend_key >> monero_block_id >> pub_check >> sec_check;
+
+				hash pub, sec;
+				p2pool::get_tx_keys(pub, sec, wallet_spend_key, monero_block_id);
+
+				ASSERT_EQ(pub, pub_check);
+				ASSERT_EQ(sec, sec_check);
+			}
 		} while (!f.eof());
 	}
 
