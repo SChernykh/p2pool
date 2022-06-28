@@ -47,7 +47,6 @@ public:
 	uint32_t get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 
 	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, size_t& nonce_offset, size_t& extra_nonce_offset) const;
-	void update_tx_keys();
 
 	FORCEINLINE uint64_t height() const { return m_height; }
 	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }

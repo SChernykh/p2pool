@@ -24,6 +24,10 @@ extern "C" {
 #include "crypto-ops.h"
 }
 
+// l = 2^252 + 27742317777372353535851937790883648493.
+// l fits 15 times in 32 bytes (iow, 15 l is the highest multiple of l that fits in 32 bytes)
+static constexpr uint8_t limit[32] = { 0xe3, 0x6a, 0x67, 0x72, 0x8b, 0xce, 0x13, 0x29, 0x8f, 0x30, 0x82, 0x8c, 0x0b, 0xa4, 0x10, 0x39, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0 };
+
 namespace p2pool {
 
 namespace {
@@ -79,12 +83,32 @@ static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 // cppcheck-suppress constParameter
 void generate_keys(hash& pub, hash& sec)
 {
-	// l = 2^252 + 27742317777372353535851937790883648493.
-	// l fits 15 times in 32 bytes (iow, 15 l is the highest multiple of l that fits in 32 bytes)
-	static constexpr uint8_t limit[32] = { 0xe3, 0x6a, 0x67, 0x72, 0x8b, 0xce, 0x13, 0x29, 0x8f, 0x30, 0x82, 0x8c, 0x0b, 0xa4, 0x10, 0x39, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0 };
-
 	do {
 		do { randomBytes(sec.h); } while (!less32(sec.h, limit));
+		sc_reduce32(sec.h);
+	} while (!sc_isnonzero(sec.h));
+
+	ge_p3 point;
+	ge_scalarmult_base(&point, sec.h);
+	ge_p3_tobytes(pub.h, &point);
+}
+
+// cppcheck-suppress constParameter
+void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, size_t len)
+{
+	uint32_t counter = 0;
+
+	do {
+		do {
+			++counter;
+			keccak_custom([entropy, len, counter](int offset)
+			{
+				if (offset < static_cast<int>(len)) {
+					return entropy[offset];
+				}
+				return static_cast<uint8_t>(counter >> ((offset - len) * 8));
+			}, static_cast<int>(len + sizeof(counter)), sec.h, HASH_SIZE);
+		} while (!less32(sec.h, limit));
 		sc_reduce32(sec.h);
 	} while (!sc_isnonzero(sec.h));
 
@@ -226,12 +250,45 @@ public:
 		return true;
 	}
 
+	void get_tx_keys(hash& pub, hash& sec, const hash& wallet_spend_key, const hash& monero_block_id)
+	{
+		std::array<uint8_t, HASH_SIZE * 2> index;
+		memcpy(index.data(), wallet_spend_key.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE, monero_block_id.h, HASH_SIZE);
+
+		{
+			MutexLock lock(m);
+			auto it = tx_keys.find(index);
+			if (it != tx_keys.end()) {
+				pub = it->second.first;
+				sec = it->second.second;
+				return;
+			}
+		}
+
+		static constexpr char domain[] = "tx_secret_key";
+		static constexpr size_t N = sizeof(domain) - 1;
+		uint8_t entropy[N + HASH_SIZE * 2];
+
+		memcpy(entropy, domain, N);
+		memcpy(entropy + N, wallet_spend_key.h, HASH_SIZE);
+		memcpy(entropy + N + HASH_SIZE, monero_block_id.h, HASH_SIZE);
+
+		generate_keys_deterministic(pub, sec, entropy, sizeof(entropy));
+
+		{
+			MutexLock lock(m);
+			tx_keys.emplace(index, std::pair<hash, hash>(pub, sec));
+		}
+	}
+
 	void clear()
 	{
 		MutexLock lock(m);
 
 		derivations.clear();
 		public_keys.clear();
+		tx_keys.clear();
 	}
 
 private:
@@ -245,6 +302,7 @@ private:
 	uv_mutex_t m;
 	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, DerivationEntry> derivations;
 	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
+	unordered_map<std::array<uint8_t, HASH_SIZE * 2>, std::pair<hash, hash>> tx_keys;
 };
 
 static Cache* cache = nullptr;
@@ -257,6 +315,11 @@ bool generate_key_derivation(const hash& key1, const hash& key2, size_t output_i
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key)
 {
 	return cache->get_public_key(derivation, output_index, base, derived_key);
+}
+
+void get_tx_keys(hash& pub, hash& sec, const hash& wallet_spend_key, const hash& monero_block_id)
+{
+	cache->get_tx_keys(pub, sec, wallet_spend_key, monero_block_id);
 }
 
 void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_tag)

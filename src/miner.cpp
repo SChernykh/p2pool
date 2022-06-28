@@ -198,7 +198,6 @@ void Miner::run(WorkerData* data)
 		if (j.m_diff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(j.m_templateId, j.m_nonce, j.m_extraNonce);
-			m_pool->block_template().update_tx_keys();
 		}
 
 		if (j.m_sidechainDiff.check_pow(h)) {

@@ -374,7 +374,6 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 			const char* s = client->m_customUser;
 			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
-			block.update_tx_keys();
 		}
 
 		SubmittedShare* share;
