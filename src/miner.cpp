@@ -80,8 +80,9 @@ void Miner::print_status()
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
 	LOGINFO(0, "status" <<
-		"\nThreads  = " << m_threads <<
-		"\nHashrate = " << log::Hashrate(hr)
+		"\nThreads      = " << m_threads <<
+		"\nHashrate     = " << log::Hashrate(hr) <<
+		"\nShares found = " << m_sharesFound.load()
 	);
 }
 
