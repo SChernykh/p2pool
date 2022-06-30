@@ -112,7 +112,7 @@ void Miner::on_block(const BlockTemplate& block)
 				const double time_running = static_cast<double>(duration_cast<milliseconds>(cur_ts - m_startTimestamp).count()) / 1e3;
 
 				s << "{\"current_hashrate\":" << hr
-					<< ",\"total_hashes\":" << m_totalHashes
+					<< ",\"total_hashes\":" << m_totalHashes.load()
 					<< ",\"time_running\":" << time_running
 					<< ",\"shares_found\":" << m_sharesFound.load()
 					<< ",\"block_reward_share_percent\":" << block_reward_share_percent
@@ -120,6 +120,12 @@ void Miner::on_block(const BlockTemplate& block)
 					<< "}";
 			});
 	}
+}
+
+void Miner::reset_share_counters()
+{
+	m_totalHashes = 0;
+	m_sharesFound = 0;
 }
 
 void Miner::run(void* data)

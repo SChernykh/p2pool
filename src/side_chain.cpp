@@ -1475,9 +1475,14 @@ void SideChain::update_chain_tip(PoolBlock* block)
 				m_pool->update_block_template_async();
 
 				// Reset stratum share counters when switching to an alternative chain to avoid confusion
-				StratumServer* s = m_pool->stratum_server();
-				if (s && is_alternative) {
-					s->reset_share_counters();
+				if (is_alternative) {
+					StratumServer* s = m_pool->stratum_server();
+					if (s) {
+						s->reset_share_counters();
+					}
+#ifdef WITH_RANDOMX
+					m_pool->reset_miner();
+#endif
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
 				}
 			}
