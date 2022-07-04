@@ -33,6 +33,7 @@ public:
 
 	void print_status();
 	void on_block(const BlockTemplate& block);
+	void reset_share_counters();
 
 private:
 	static void run(void* data);
@@ -57,7 +58,7 @@ private:
 	std::chrono::high_resolution_clock::time_point m_nonceTimestamp;
 	const uint32_t m_extraNonce;
 
-	uint64_t m_totalHashes;
+	std::atomic<uint64_t> m_totalHashes;
 	std::atomic<uint32_t> m_sharesFound;
 
 	struct Job

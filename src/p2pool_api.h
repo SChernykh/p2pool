@@ -38,7 +38,7 @@ public:
 	void on_stop();
 
 	template<typename T>
-	void set(const Category& category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, DumpFileCallback<T>(std::move(callback))); }
+	void set(Category category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, DumpFileCallback<T>(std::move(callback))); }
 
 private:
 	void create_dir(const std::string& path);
@@ -72,7 +72,7 @@ private:
 		T m_callback;
 	};
 
-	void dump_to_file_async_internal(const Category& category, const char* filename, DumpFileCallbackBase&& callback);
+	void dump_to_file_async_internal(Category category, const char* filename, DumpFileCallbackBase&& callback);
 	void dump_to_file();
 	static void on_fs_open(uv_fs_t* req);
 	static void on_fs_write(uv_fs_t* req);

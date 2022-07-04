@@ -50,6 +50,8 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	, m_difficulty{}
 	, m_seedHash{}
 	, m_timestamp(0)
+	, m_txkeyPub{}
+	, m_txkeySec{}
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
 {
@@ -73,8 +75,6 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	m_knapsack.reserve(512 * 309375);
 #endif
-
-	update_tx_keys();
 }
 
 BlockTemplate::~BlockTemplate()
@@ -196,6 +196,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		LOGWARN(4, "using old block template with ID = " << id);
 		*this = *m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)];
 	};
+
+	get_tx_keys(m_txkeyPub, m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
 
 	m_height = data.height;
 	m_difficulty = data.difficulty;
@@ -1055,13 +1057,6 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
 	return m_blockTemplateBlob;
-}
-
-void BlockTemplate::update_tx_keys()
-{
-	WriteLock lock(m_lock);
-
-	generate_keys(m_txkeyPub, m_txkeySec);
 }
 
 void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)

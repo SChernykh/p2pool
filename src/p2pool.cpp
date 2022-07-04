@@ -1348,6 +1348,15 @@ void p2pool::stop_mining()
 		m_miner = nullptr;
 	}
 }
+
+void p2pool::reset_miner()
+{
+	MutexLock lock(m_minerLock);
+
+	if (m_miner) {
+		m_miner->reset_share_counters();
+	}
+}
 #endif
 
 static void on_signal(uv_signal_t* handle, int signum)

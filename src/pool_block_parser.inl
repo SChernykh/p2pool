@@ -229,6 +229,15 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 			return __LINE__;
 		}
 
+		// Enforce deterministic tx keys starting from v15
+		if (m_majorVersion >= HARDFORK_VIEW_TAGS_VERSION) {
+			hash pub, sec;
+			get_tx_keys(pub, sec, spend_pub_key, m_prevId);
+			if ((pub != m_txkeyPub) || (sec != m_txkeySec)) {
+				return __LINE__;
+			}
+		}
+
 		READ_BUF(m_parent.h, HASH_SIZE);
 
 		uint64_t num_uncles;

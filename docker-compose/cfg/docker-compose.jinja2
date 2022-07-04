@@ -8,10 +8,10 @@ networks:
 volumes:
   p2pool: 
     name: p2pool
-
+{% if configure_monero == True %}
   monero:
     name: monero
-
+{% endif %}
 
 services:
   p2pool:
@@ -22,39 +22,58 @@ services:
       - p2pool
     privileged: true
     ports:
-
+{% if sidechain[0] == 0 %}
       - 37888:37888/tcp
-
-
+{% else %}
+      - 37889:37889/tcp
+{% endif %}
+{% if expose_stratum_port == True %}
+      - {{ stratum_port }}:3333/tcp
+{% endif %}
     volumes:
       - p2pool:/home/p2pool/.p2pool:rw
       - /dev/null:/home/p2pool/.p2pool/p2pool.log:rw
       - /dev/hugepages:/dev/hugepages:rw
-
+{% if configure_monero == True %}
     depends_on:
       monero:
         condition: service_healthy
-
+{% endif %}
     restart: unless-stopped
     command: >-
-
+{% if configure_monero == True %}
       --host monero
-
-      --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg
-      --loglevel 3
-
-
-
+{% else %}
+      --host {{ public_monero_node }}
+      --rpc-login {{ monero_node_login }}
+{% endif %}
+      --wallet {{ wallet_address }}
+      --loglevel {{ p2pool_log_level | int }}
+{% if sidechain[0] == 1 %}
+      --mini
+{% endif %}
+{% if enable_autodiff == False %}
+      --no-autodiff
+{% endif %}
+{% if enable_statistics == True %}
       --local-api
       --data-api /home/p2pool/.p2pool
+{% endif %}
+{% if light_mode == True %}
+      --light-mode
+{% endif %}
+{% if no_cache == True %}
+      --no-cache
+{% endif %}
+{% if rpc_login != "" %}
+      --rpc-login {{ rpc_login }}
+{% endif %}
+{% if p2pool_options != "" %}
+      {{ p2pool_options }}
+{% endif %}
 
 
-
-
-
-
-
-
+{% if enable_statistics == True %}
   statistics:
     image: statistics:latest
     build:
@@ -63,28 +82,30 @@ services:
     networks:
       - p2pool
     ports:
-      - 3380:80/tcp
+      - {{ statistics_port }}:80/tcp
     volumes:
       - p2pool:/data:r
     depends_on:
       - p2pool
     restart: unless-stopped
+{% endif %}
 
 
-
-
+{% if configure_monero == True %}
   monero:
     image: monero:latest
     build:
       context: monero
       args:
-        - MONERO_GIT_TAG=latest
+        - MONERO_GIT_TAG={{ monero_version }}
     container_name: p2pool-monero
     networks:
       - p2pool
     ports:
       - 18080:18080/tcp
-
+{% if expose_rpc_port == True %}
+      - {{ rpc_port }}:18081/tcp
+{% endif %}
     volumes:
       - monero:/home/monero/.bitmonero:rw
       - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
@@ -104,22 +125,34 @@ services:
       --p2p-bind-port=18080
       --rpc-bind-ip=0.0.0.0
       --rpc-bind-port=18081
+      --restricted-rpc
       --confirm-external-bind
-      --log-level=0
-
+      --log-level={{ monero_log_level | int }}
+{% if prune_blockchain == True %}
       --prune-blockchain
-
-
-
-
-
+{% if sync_pruned_blocks == True %}
+      --sync-pruned-blocks
+{% endif %}
+{% endif %}
+{% if rpc_login != "" %}
+      --rpc-login {{ rpc_login }}
+{% endif %}
+{% if limit_data_rates == True %}
+      --limit-rate-up {{ rate_limit_up }}
+      --limit-rate-down {{ rate_limit_down }}
+{% endif %}
+{% if fast_sync == True %}
+      --fast-block-sync=1
+{% else %}
       --fast-block-sync=0
+{% endif %}
+{% if monero_options != "" %}
+      {{ monero_options }}
+{% endif %}
+{% endif %}
 
 
-
-
-
-
+{% if configure_xmrig == True %}
   xmrig:
     image: xmrig:latest
     build: xmrig
@@ -137,9 +170,14 @@ services:
     command: >-
       --randomx-1gb-pages
       -o p2pool:3333
-
-      -u p2pool
-
-      --cpu-max-threads-hint=100
-      --cpu-priority=2
-
+{% if enable_autodiff == False and use_fixed_difficulty == True %}
+      -u {{ xmrig_username }}+{{ fixed_difficulty | int }}
+{% else %}
+      -u {{ xmrig_username }}
+{% endif %}
+      --cpu-max-threads-hint={{ cpu_percent | int }}
+      --cpu-priority={{ cpu_priority | int }}
+{% if xmrig_options != "" %}
+      {{ xmrig_options }}
+{% endif %}
+{% endif %}

@@ -136,7 +136,7 @@ const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 template<typename T>
 FORCEINLINE T read_unaligned(const T* p)
 {
-	static_assert(std::is_integral<T>::value, "T must be an integer type");
+	static_assert(std::is_trivially_copyable<T>::value, "T must be a trivially copyable type");
 
 	T result;
 	memcpy(&result, p, sizeof(T));

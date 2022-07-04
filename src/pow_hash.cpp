@@ -440,7 +440,9 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	volatile int result = 0;
 	volatile bool done = false;
 
-	JSONRPCRequest::call(m_pool->params().m_host, m_pool->params().m_rpcPort, buf, m_pool->params().m_rpcLogin,
+	const Params& params = m_pool->params();
+
+	JSONRPCRequest::call(params.m_host, params.m_rpcPort, buf, params.m_rpcLogin,
 		[&result, &h](const char* data, size_t size)
 		{
 			rapidjson::Document doc;

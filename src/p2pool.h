@@ -91,6 +91,7 @@ public:
 #ifdef WITH_RANDOMX
 	void start_mining(uint32_t threads);
 	void stop_mining();
+	void reset_miner();
 #endif
 
 	uint64_t zmq_last_active() const { return m_zmqLastActive; }

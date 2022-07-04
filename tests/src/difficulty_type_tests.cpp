@@ -16,6 +16,8 @@
  */
 
 #include "common.h"
+#include "json_parsers.h"
+#include <rapidjson/document.h>
 #include "gtest/gtest.h"
 #include <random>
 #include <sstream>
@@ -144,6 +146,33 @@ TEST(difficulty_type, input_output)
 	test_value(7766279631452241921ull, 5, "100000000000000000001");
 	test_value(14083847773837265618ull, 6692605942ull, "123456789012345678901234567890");
 	test_value(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), "340282366920938463463374607431768211455");
+}
+
+TEST(difficulty_type, json_parser)
+{
+	auto test_value = [](uint64_t lo, uint64_t hi, const char* s) {
+		difficulty_type diff{ lo, hi };
+		std::stringstream ss;
+		ss << "{\"diff\":\"" << s << "\"}";
+
+		using namespace rapidjson;
+		Document doc;
+		doc.Parse(ss.str().c_str());
+
+		difficulty_type diff2;
+		parseValue(doc, "diff", diff2);
+		ASSERT_EQ(diff2, diff);
+	};
+
+	test_value(0, 0, "0x0");
+	test_value(1, 0, "0x1");
+	test_value(0x123456789abcdefull, 0, "0x123456789abcdef");
+	test_value(0x123456789abcdefull, 0, "0x123456789ABCDEF");
+	test_value(std::numeric_limits<uint64_t>::max(), 0, "0xffffffffffffffff");
+	test_value(0, 1, "0x10000000000000000");
+	test_value(1, 1, "0x10000000000000001");
+	test_value(0x1122334455667788ull, 0x99aabbccddeeff00ull, "0x99aabbccddeeff001122334455667788");
+	test_value(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), "0xffffffffffffffffffffffffffffffff");
 }
 
 TEST(difficulty_type, check_pow)

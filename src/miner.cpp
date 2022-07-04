@@ -80,8 +80,9 @@ void Miner::print_status()
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
 	LOGINFO(0, "status" <<
-		"\nThreads  = " << m_threads <<
-		"\nHashrate = " << log::Hashrate(hr)
+		"\nThreads      = " << m_threads <<
+		"\nHashrate     = " << log::Hashrate(hr) <<
+		"\nShares found = " << m_sharesFound.load()
 	);
 }
 
@@ -111,7 +112,7 @@ void Miner::on_block(const BlockTemplate& block)
 				const double time_running = static_cast<double>(duration_cast<milliseconds>(cur_ts - m_startTimestamp).count()) / 1e3;
 
 				s << "{\"current_hashrate\":" << hr
-					<< ",\"total_hashes\":" << m_totalHashes
+					<< ",\"total_hashes\":" << m_totalHashes.load()
 					<< ",\"time_running\":" << time_running
 					<< ",\"shares_found\":" << m_sharesFound.load()
 					<< ",\"block_reward_share_percent\":" << block_reward_share_percent
@@ -119,6 +120,12 @@ void Miner::on_block(const BlockTemplate& block)
 					<< "}";
 			});
 	}
+}
+
+void Miner::reset_share_counters()
+{
+	m_totalHashes = 0;
+	m_sharesFound = 0;
 }
 
 void Miner::run(void* data)
@@ -198,7 +205,6 @@ void Miner::run(WorkerData* data)
 		if (j.m_diff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(j.m_templateId, j.m_nonce, j.m_extraNonce);
-			m_pool->block_template().update_tx_keys();
 		}
 
 		if (j.m_sidechainDiff.check_pow(h)) {

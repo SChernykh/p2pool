@@ -132,7 +132,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 
 		// Get first 8 bytes of the Merkle root hash from each blob
 		for (size_t i = 0; i < num_connections; ++i) {
-			blob_hashes.emplace_back(*reinterpret_cast<const uint64_t*>(data + i * size + 43));
+			blob_hashes.emplace_back(read_unaligned(reinterpret_cast<const uint64_t*>(data + i * size + 43)));
 		}
 
 		// Find duplicates
@@ -250,6 +250,10 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	if (get_custom_diff(login, client->m_customDiff)) {
 		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom difficulty " << client->m_customDiff);
 		target = std::max(target, client->m_customDiff.target());
+	}
+	else if (m_autoDiff) {
+		// Limit autodiff to 4000000 for maximum compatibility
+		target = std::max(target, TARGET_4_BYTES_LIMIT);
 	}
 
 	if (get_custom_user(login, client->m_customUser)) {
@@ -370,7 +374,6 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 			const char* s = client->m_customUser;
 			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block, submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
-			block.update_tx_keys();
 		}
 
 		SubmittedShare* share;
@@ -384,7 +387,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (target >= TARGET_4_BYTES_LIMIT) {
-			target = (target >> 32) << 32;
+			// "Low diff share" fix: adjust target to the same value as XMRig would use
+			target = std::numeric_limits<uint64_t>::max() / (std::numeric_limits<uint32_t>::max() / (target >> 32));
 		}
 
 		share->m_req.data = share;
@@ -686,6 +690,9 @@ void StratumServer::on_blobs_ready()
 				target = std::max(target, client->m_customDiff.target());
 			}
 			else if (m_autoDiff) {
+				// Limit autodiff to 4000000 for maximum compatibility
+				target = std::max(target, TARGET_4_BYTES_LIMIT);
+
 				if (client->m_autoDiff.lo) {
 					const uint32_t k = client->m_autoDiffIndex;
 					const uint16_t elapsed_time = static_cast<uint16_t>(cur_time) - client->m_autoDiffData[(k - 1) % StratumClient::AUTO_DIFF_SIZE].m_timestamp;
