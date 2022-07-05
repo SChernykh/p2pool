@@ -365,7 +365,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 		loop = uv_default_loop();
 	}
 
-	CallOnLoop(loop,
+	const bool result = CallOnLoop(loop,
 		[=]()
 		{
 			try {
@@ -376,6 +376,10 @@ void Call(const std::string& address, int port, const std::string& req, const st
 				(*close_cb)(msg, strlen(msg));
 			}
 		});
+
+	if (!result) {
+		LOGERR(1, "JSON RPC \"" << req << "\" failed");
+	}
 }
 
 } // namespace JSONRPCRequest

@@ -775,8 +775,10 @@ void p2pool::get_info()
 		{
 			if (size > 0) {
 				LOGWARN(1, "get_info RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				get_info();
+				if (!m_stopped) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					get_info();
+				}
 			}
 		});
 }
@@ -820,6 +822,10 @@ void p2pool::load_found_blocks()
 
 void p2pool::parse_get_info_rpc(const char* data, size_t size)
 {
+	if (m_stopped) {
+		return;
+	}
+
 	rapidjson::Document doc;
 	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
 
@@ -881,14 +887,20 @@ void p2pool::get_version()
 		{
 			if (size > 0) {
 				LOGWARN(1, "get_version RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				get_version();
+				if (!m_stopped) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					get_version();
+				}
 			}
 		});
 }
 
 void p2pool::parse_get_version_rpc(const char* data, size_t size)
 {
+	if (m_stopped) {
+		return;
+	}
+
 	rapidjson::Document doc;
 	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
 
@@ -945,8 +957,10 @@ void p2pool::get_miner_data()
 		{
 			if (size > 0) {
 				LOGWARN(1, "get_miner_data RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				get_miner_data();
+				if (!m_stopped) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					get_miner_data();
+				}
 			}
 			else {
 				m_getMinerDataPending = false;
@@ -956,6 +970,10 @@ void p2pool::get_miner_data()
 
 void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 {
+	if (m_stopped) {
+		return;
+	}
+
 	hash h;
 	keccak(reinterpret_cast<const uint8_t*>(data), static_cast<int>(size), h.h, HASH_SIZE);
 	if (h == m_getMinerDataHash) {
