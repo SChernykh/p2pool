@@ -614,14 +614,14 @@ void StratumServer::update_auto_diff(StratumClient* client, const uint64_t times
 
 	if (k >= N) {
 		// Full window
-		const uint64_t dt = t2 - t1;
+		const uint16_t dt = t2 - t1;
 		client->m_autoDiff.lo = std::max<uint64_t>((client->m_autoDiffWindowHashes * AUTO_DIFF_TARGET_TIME) / (dt ? dt : 1), MIN_DIFF);
 		client->m_autoDiff.hi = 0;
 	}
 	else if (k >= 10) {
 		// Partial window
 		const uint64_t h0 = hash_uncompress(client->m_autoDiffData[0].m_hashes);
-		const uint64_t dt = client->m_autoDiffData[k].m_timestamp - client->m_autoDiffData[0].m_timestamp;
+		const uint16_t dt = client->m_autoDiffData[k].m_timestamp - client->m_autoDiffData[0].m_timestamp;
 
 		client->m_autoDiff.lo = std::max<uint64_t>(((client->m_autoDiffWindowHashes - h0) * AUTO_DIFF_TARGET_TIME) / (dt ? dt : 1), MIN_DIFF);
 		client->m_autoDiff.hi = 0;
