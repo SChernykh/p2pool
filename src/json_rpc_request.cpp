@@ -78,6 +78,8 @@ struct CurlContext
 
 	std::vector<char> m_response;
 	std::string m_error;
+
+	curl_slist* m_headers;
 };
 
 CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
@@ -92,6 +94,7 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_handle(nullptr)
 	, m_req(req)
 	, m_auth(auth)
+	, m_headers(nullptr)
 {
 	{
 		char buf[log::Stream::BUF_SIZE + 1];
@@ -179,6 +182,11 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	curl_easy_setopt_checked(m_handle, CURLOPT_CONNECTTIMEOUT, 1);
 	curl_easy_setopt_checked(m_handle, CURLOPT_TIMEOUT, 10);
 
+	m_headers = curl_slist_append(m_headers, "Content-Type: application/json");
+	if (m_headers) {
+		curl_easy_setopt_checked(m_handle, CURLOPT_HTTPHEADER, m_headers);
+	}
+
 	if (!m_auth.empty()) {
 		curl_easy_setopt_checked(m_handle, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST | CURLAUTH_ONLY);
 		curl_easy_setopt_checked(m_handle, CURLOPT_USERPWD, m_auth.c_str());
@@ -204,6 +212,8 @@ CurlContext::~CurlContext()
 
 	(*m_closeCallback)(m_error.c_str(), m_error.length());
 	delete m_closeCallback;
+
+	curl_slist_free_all(m_headers);
 }
 
 int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
