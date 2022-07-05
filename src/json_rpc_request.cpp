@@ -58,6 +58,8 @@ struct CurlContext
 
 	static void on_close(uv_handle_t* h);
 
+	void close_handles();
+
 	uv_poll_t m_pollHandle;
 	curl_socket_t m_socket;
 
@@ -235,10 +237,7 @@ int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
 	case CURL_POLL_REMOVE:
 	default:
 		curl_multi_assign(m_multiHandle, s, nullptr);
-		uv_poll_stop(&m_pollHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), on_close);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), on_close);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_pollHandle), on_close);
+		close_handles();
 		break;
 	}
 
@@ -266,9 +265,13 @@ void CurlContext::on_timeout(uv_handle_t* req)
 {
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
-	int running_handles;
+	int running_handles = 0;
 	curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
 	ctx->check_multi_info();
+
+	if (running_handles == 0) {
+		ctx->close_handles();
+	}
 }
 
 size_t CurlContext::on_write(const void* buffer, size_t size, size_t count)
@@ -338,6 +341,22 @@ void CurlContext::on_close(uv_handle_t* h)
 	}
 
 	delete ctx;
+}
+
+void CurlContext::close_handles()
+{
+	if (m_pollHandle.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pollHandle))) {
+		uv_poll_stop(&m_pollHandle);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_pollHandle), on_close);
+	}
+
+	if (m_async.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_async))) {
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), on_close);
+	}
+
+	if (m_timer.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_timer))) {
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), on_close);
+	}
 }
 
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
