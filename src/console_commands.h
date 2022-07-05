@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <thread>
+#include "uv_util.h"
 
 namespace p2pool {
 
@@ -31,10 +31,26 @@ public:
 
 private:
 	p2pool* m_pool;
-	std::thread* m_worker;
 
-	static bool stopped;
-	void run();
+	uv_loop_t m_loop;
+	uv_async_t m_shutdownAsync;
+	uv_tty_t m_tty;
+	uv_thread_t m_loopThread;
+
+	char m_readBuf[64];
+	bool m_readBufInUse;
+
+	static void loop(void* data);
+
+	static void on_shutdown(uv_async_t* async)
+	{
+		ConsoleCommands* pThis = reinterpret_cast<ConsoleCommands*>(async->data);
+		uv_close(reinterpret_cast<uv_handle_t*>(&pThis->m_shutdownAsync), nullptr);
+		uv_close(reinterpret_cast<uv_handle_t*>(&pThis->m_tty), nullptr);
+	}
+
+	static void allocCallback(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
+	static void stdinReadCallback(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 };
 
 } // namespace p2pool
