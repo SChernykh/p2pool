@@ -83,6 +83,7 @@ public:
 		bool m_isV6;
 		bool m_isIncoming;
 		bool m_readBufInUse;
+		bool m_isClosing;
 		uint32_t m_numRead;
 
 		raw_ip m_addr;

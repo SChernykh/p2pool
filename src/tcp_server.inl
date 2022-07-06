@@ -556,6 +556,11 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		LOGERR(1, "sending data from another thread, this is not thread safe");
 	}
 
+	if (client->m_isClosing) {
+		LOGWARN(5, "client " << static_cast<const char*>(client->m_addrString) << " is being disconnected, can't send any more data");
+		return true;
+	}
+
 	WriteBuf* buf = nullptr;
 
 	{
@@ -845,6 +850,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
 	, m_isV6(false)
 	, m_isIncoming(false)
 	, m_readBufInUse(false)
+	, m_isClosing(false)
 	, m_numRead(0)
 	, m_addr{}
 	, m_port(0)
@@ -867,6 +873,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_isV6 = false;
 	m_isIncoming = false;
 	m_readBufInUse = false;
+	m_isClosing = false;
 	m_numRead = 0;
 	m_addr = {};
 	m_port = -1;
@@ -902,6 +909,11 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stre
 {
 	Client* pThis = static_cast<Client*>(stream->data);
 	pThis->m_readBufInUse = false;
+
+	if (pThis->m_isClosing) {
+		LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " is being disconnected but data received from it, nread = " << nread << ". Ignoring it.");
+		return;
+	}
 
 	if (nread > 0) {
 		if (pThis->m_owner && !pThis->m_owner->m_finished.load()) {
@@ -944,10 +956,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_write(uv_write_t* req,
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::close()
 {
-	if (!m_owner) {
+	if (m_isClosing || !m_owner) {
 		// Already closed
 		return;
 	}
+
+	m_isClosing = true;
 
 	uv_read_stop(reinterpret_cast<uv_stream_t*>(&m_socket));
 
