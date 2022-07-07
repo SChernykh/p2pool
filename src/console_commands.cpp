@@ -40,32 +40,41 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	, m_readBuf{}
 	, m_readBufInUse(false)
 {
+	if (uv_guess_handle(0) != UV_TTY) {
+		LOGERR(1, "tty is not available");
+		throw std::exception();
+	}
+
 	int err = uv_loop_init(&m_loop);
 	if (err) {
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 
 	err = uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_shutdownAsync.data = this;
 
 	err = uv_tty_init(&m_loop, &m_tty, 0, 1);
 	if (err) {
 		LOGERR(1, "uv_tty_init failed, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 	m_tty.data = this;
 
-	uv_read_start(reinterpret_cast<uv_stream_t*>(&m_tty), allocCallback, stdinReadCallback);
+	err = uv_read_start(reinterpret_cast<uv_stream_t*>(&m_tty), allocCallback, stdinReadCallback);
+	if (err) {
+		LOGERR(1, "uv_read_start failed, error " << uv_err_name(err));
+		throw std::exception();
+	}
 
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		panic();
+		throw std::exception();
 	}
 }
 

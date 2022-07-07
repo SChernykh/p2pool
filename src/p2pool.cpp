@@ -156,7 +156,14 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_blockTemplate = new BlockTemplate(this);
 	m_mempool = new Mempool();
-	m_consoleCommands = new ConsoleCommands(this);
+
+	try {
+		m_consoleCommands = new ConsoleCommands(this);
+	}
+	catch (...) {
+		LOGERR(1, "Couldn't start console commands handler");
+		m_consoleCommands = nullptr;
+	}
 }
 
 p2pool::~p2pool()
