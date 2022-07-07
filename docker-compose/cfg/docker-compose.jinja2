@@ -20,6 +20,7 @@ services:
     container_name: p2pool-p2pool
     networks:
       - p2pool
+    privileged: true
     ports:
 {% if sidechain[0] == 0 %}
       - 37888:37888/tcp
@@ -27,7 +28,7 @@ services:
       - 37889:37889/tcp
 {% endif %}
 {% if expose_stratum_port == True %}
-      - {{ stratum_port | int }}:3333/tcp
+      - {{ stratum_port }}:3333/tcp
 {% endif %}
     volumes:
       - p2pool:/home/p2pool/.p2pool:rw
@@ -53,8 +54,39 @@ services:
 {% if enable_autodiff == False %}
       --no-autodiff
 {% endif %}
+{% if enable_statistics == True %}
+      --local-api
+      --data-api /home/p2pool/.p2pool
+{% endif %}
+{% if light_mode == True %}
+      --light-mode
+{% endif %}
+{% if no_cache == True %}
+      --no-cache
+{% endif %}
+{% if rpc_login != "" %}
+      --rpc-login {{ rpc_login }}
+{% endif %}
 {% if p2pool_options != "" %}
       {{ p2pool_options }}
+{% endif %}
+
+
+{% if enable_statistics == True %}
+  statistics:
+    image: statistics:latest
+    build:
+      context: statistics
+    container_name: p2pool-statistics
+    networks:
+      - p2pool
+    ports:
+      - {{ statistics_port }}:80/tcp
+    volumes:
+      - p2pool:/data:ro
+    depends_on:
+      - p2pool
+    restart: unless-stopped
 {% endif %}
 
 
@@ -70,6 +102,9 @@ services:
       - p2pool
     ports:
       - 18080:18080/tcp
+{% if expose_rpc_port == True %}
+      - {{ rpc_port }}:18081/tcp
+{% endif %}
     volumes:
       - monero:/home/monero/.bitmonero:rw
       - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
@@ -84,10 +119,26 @@ services:
       --p2p-bind-port=18080
       --rpc-bind-ip=0.0.0.0
       --rpc-bind-port=18081
+      --restricted-rpc
       --confirm-external-bind
       --log-level={{ monero_log_level | int }}
 {% if prune_blockchain == True %}
       --prune-blockchain
+{% if sync_pruned_blocks == True %}
+      --sync-pruned-blocks
+{% endif %}
+{% endif %}
+{% if rpc_login != "" %}
+      --rpc-login {{ rpc_login }}
+{% endif %}
+{% if limit_data_rates == True %}
+      --limit-rate-up {{ rate_limit_up }}
+      --limit-rate-down {{ rate_limit_down }}
+{% endif %}
+{% if fast_sync == True %}
+      --fast-block-sync=1
+{% else %}
+      --fast-block-sync=0
 {% endif %}
 {% if monero_options != "" %}
       {{ monero_options }}
@@ -119,6 +170,7 @@ services:
       -u {{ xmrig_username }}
 {% endif %}
       --cpu-max-threads-hint={{ cpu_percent | int }}
+      --cpu-priority={{ cpu_priority | int }}
 {% if xmrig_options != "" %}
       {{ xmrig_options }}
 {% endif %}
