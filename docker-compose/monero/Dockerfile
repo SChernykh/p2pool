@@ -62,6 +62,7 @@ RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
     libgssapi-krb5-2 \
+    netcat \
       && \
     apt-get clean && \
     rm -rf /var/lib/apt

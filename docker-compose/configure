@@ -1,6 +1,45 @@
 #!/bin/bash
 echo ""
 echo ""
+echo "Verifying Requirements:"
+DOCKER_VER=$(docker version -f "{{.Server.Version}}" 2> /dev/null)
+if [ -z "$DOCKER_VER" ]; then
+    echo "Docker not found; install it: https://docs.docker.com/engine/install/"
+    exit 1
+fi
+if [ "$(echo "$DOCKER_VER"| cut -d'.' -f 1)" -ge 19 ] && \
+   [ "$(echo "$DOCKER_VER"| cut -d'.' -f 2)" -ge 0 ]  && \
+   [ "$(echo "$DOCKER_VER"| cut -d'.' -f 3)" -ge 3 ]; then
+    echo "Docker Found; OK"
+else
+    echo "Docker version less than 19.0.3; upgrade it: https://docs.docker.com/engine/install/"
+    exit 1
+fi
+docker compose version 2>&1 > /dev/null
+COMPOSE_PLUGIN_RC=$?
+docker-compose --version 2>&1 > /dev/null
+COMPOSE_CLI_RC=$?
+if [ "$COMPOSE_PLUGIN_RC" -eq 0 ] || [ "$COMPOSE_CLI_RC" -eq 0 ]; then
+    echo "Docker Compose found; OK"
+    if [ "$COMPOSE_PLUGIN_RC" -eq 0 ]; then
+        COMPOSE_COMMAND="docker compose"
+    else
+	COMPOSE_COMMAND="docker-compose"
+    fi
+else
+    echo "Docker Compose not found; install it: https://docs.docker.com/compose/install/compose-plugin/"
+    exit 1
+fi
+echo ""
+echo ""
 echo "Building and Running P2Pool docker-compose Configuration"
 docker build -t p2pool_config:latest cfg
 docker run -it --rm -v $PWD:/docker-compose --user $(id -u):$(id -g) p2pool_config:latest
+CONFIGURE_RC=$?
+echo ""
+echo ""
+if [ "$CONFIGURE_RC" -eq 0 ]; then
+    echo "P2Pool is configured.  Start the project with: $COMPOSE_COMMAND up --build -d"
+else
+    exit 1
+fi

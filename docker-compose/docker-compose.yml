@@ -20,6 +20,7 @@ services:
     container_name: p2pool-p2pool
     networks:
       - p2pool
+    privileged: true
     ports:
 
       - 37888:37888/tcp
@@ -31,7 +32,8 @@ services:
       - /dev/hugepages:/dev/hugepages:rw
 
     depends_on:
-      - monero
+      monero:
+        condition: service_healthy
 
     restart: unless-stopped
     command: >-
@@ -42,6 +44,31 @@ services:
       --loglevel 3
 
 
+
+      --local-api
+      --data-api /home/p2pool/.p2pool
+
+
+
+
+
+
+
+
+  statistics:
+    image: statistics:latest
+    build:
+      context: statistics
+    container_name: p2pool-statistics
+    networks:
+      - p2pool
+    ports:
+      - 3380:80/tcp
+    volumes:
+      - p2pool:/data:ro
+    depends_on:
+      - p2pool
+    restart: unless-stopped
 
 
 
@@ -57,11 +84,17 @@ services:
       - p2pool
     ports:
       - 18080:18080/tcp
+
     volumes:
       - monero:/home/monero/.bitmonero:rw
       - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
       - /dev/hugepages:/dev/hugepages:rw
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "18081"]
+      interval: 2s
+      timeout: 1s
+      start_period: 10s
     command: >-
       --zmq-pub tcp://0.0.0.0:18083
       --disable-dns-checkpoints
@@ -71,10 +104,17 @@ services:
       --p2p-bind-port=18080
       --rpc-bind-ip=0.0.0.0
       --rpc-bind-port=18081
+      --restricted-rpc
       --confirm-external-bind
       --log-level=0
 
       --prune-blockchain
+
+
+
+
+
+      --fast-block-sync=0
 
 
 
@@ -102,4 +142,5 @@ services:
       -u p2pool
 
       --cpu-max-threads-hint=100
+      --cpu-priority=2
 

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
+    <title>Monero P2Pool Server Statistics</title>
+  </head>
+  <body style="font-size:85%;">
+    <script src="{{url_for('static', filename='jquery-3.2.1.slim.min.js')}}"></script>
+    <script src="{{url_for('static', filename='popper.min.js')}}"></script>
+    <script src="{{url_for('static', filename='bootstrap.min.js')}}"></script>
+    <div style="text-align:center;">
+      <img src="{{url_for('static', filename='monero-symbol-480.png')}}" width="75px" height="75px" alt="Monero"/>
+      <h1 style="color: #FFA500;">P2Pool Server Statistics</h1>
+    </div>
+ 
+    <div class="card-group">
+      <div class="col-sm-4 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Local Pool</h2></div>
+          <div class="card-body mb-0 pb-0">
+            <h6 class="card-subtitle text-muted" style="font-size:80%;">(note: stats reset on restart)</h6>
+            <div class="table-responsive table-hover table-condensed table-striped">
+              <table class="table">
+                <tbody>
+                  <tr>
+                    <td>Hashrate 15 Minutes</td>
+                    <td>{{ local_stats["hashrate_15m"]|humanize }}H/s</td>
+                  </tr>
+                  <tr>
+                    <td>Hashrate 1 Hour</td>
+                    <td>{{ local_stats["hashrate_1h"]|humanize }}H/s</td>
+                  </tr>
+                  <tr>
+                    <td>Hashrate 24 Hours</td>
+                    <td>{{ local_stats["hashrate_24h"]|humanize }}H/s</td>
+                  </tr>
+                  <tr>
+                    <td>Shares Found</td>
+                    <td>{{ local_stats["shares_found"] }}</td>
+                  </tr>
+                  <tr>
+                    <td>Current Effort</td>
+                    <td>{{ local_stats["current_effort"] }}%</td>
+                  </tr>
+                  <tr>
+                    <td>Average Effort</td>
+                    <td>{{ local_stats["average_effort"] }}%</td>
+                  </tr>
+                  <tr>
+                    <td>Total Hashes</td>
+                    <td>{{ local_stats["total_hashes"]|humanize }}</td>
+                  </tr>
+                  <tr>
+                    <td>Miner Connections</td>
+                    <td>{{ local_stats["incoming_connections"] }}<td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <div class="col-sm-4 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Global Pool</h2></div>
+          <div class="card-body mb-0 pb-0">
+            <h6 class="card-subtitle text-muted" style="font-size:80%;">&nbsp;</h6>
+            <div class="table-responsive table-hover table-condensed table-striped">
+              <table class="table">
+                <tbody>
+                  <tr>
+                    <td>Hash Rate</td>
+                    <td>{{ pool_stats["pool_statistics"]["hashRate"]|humanize }}H/s</td>
+                  </tr>
+                  <tr>
+                    <td>Round Hashes</td>
+                    <td>{{ stats_mod["pool"]["roundHashes"]|humanize }}</td>
+                  </tr>
+                  <tr>
+                    <td>Last Block Found</td>
+                    <td>{{ pool_stats["pool_statistics"]["lastBlockFound"] }} <br>
+                        {{ pool_stats["pool_statistics"]["lastBlockFoundTime"]|timeago }} ago</td>
+                  </tr>
+                  <tr>
+                    <td>Payout Method</td>
+                    <td>{{ pool_stats["pool_list"]|join(',') }}<br>2160 block window (~6 hours)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <h6 class="card-subtitle text-muted" style="font-size:80%;">(since instance birth: {{ my_bday }} ago)</h6>
+            <div class="table-responsive table-hover table-condensed table-striped">
+              <table class="table">
+                <tbody>
+                  <tr>
+                    <td>Total Hashes</td>
+                    <td>{{ pool_stats["pool_statistics"]["totalHashes"]|humanize }}</td>
+                  </tr>
+                  <tr>
+                    <td>Blocks Found</td>
+                    <td>{{ pool_stats["pool_statistics"]["totalBlocksFound"] }}</td>
+                  </tr>
+                  <tr>
+                    <td>Known Miners</td>
+                    <td>{{ pool_stats["pool_statistics"]["miners"] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <div class="col-sm-4 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Monero Network</h2></div>
+          <div class="card-body mb-0 pb-0">
+            <h6 class="card-subtitle text-muted" style="font-size:80%;">&nbsp;</h6>
+            <div class="table-responsive table-hover table-condensed table-striped">
+              <table class="table">
+                <tbody>
+                  <tr>
+                    <td>Height</td>
+                    <td>{{ network_stats["height"] }}<br>
+                        {{ network_stats["timestamp"]|timeago }} ago</td>
+                  </tr>
+                  <tr>
+                    <td>Difficulty</td>
+                    <td>{{ network_stats["difficulty"]|humanize }}</td>
+                  </tr>
+                  <tr>
+                    <td>Reward</td>
+                    <td>0.{{ network_stats["reward"] }} Monero</td>
+                  </tr>
+                  <tr>
+                    <td>Head&nbsp;Hash</td>
+                    <td>{{ network_stats["hash"] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.setInterval('refresh()', 30000); 	// Call refresh function every 30000 milliseconds (30 seconds).
+      function refresh() {
+          window .location.reload();
+      }
+    </script>
+  
+  </body>
+</html>
