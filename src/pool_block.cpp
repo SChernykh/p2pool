@@ -229,6 +229,22 @@ void PoolBlock::serialize_sidechain_data()
 	writeVarint(m_cumulativeDifficulty.hi, m_sideChainData);
 }
 
+void PoolBlock::reset_offchain_data()
+{
+	// Defaults for off-chain variables
+	m_tmpTxExtra.clear();
+
+	m_depth = 0;
+
+	m_verified = false;
+	m_invalid = false;
+
+	m_broadcasted = false;
+	m_wantBroadcast = false;
+
+	m_localTimestamp = seconds_since_epoch();
+}
+
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash)
 {
 	alignas(8) uint8_t hashes[HASH_SIZE * 3];

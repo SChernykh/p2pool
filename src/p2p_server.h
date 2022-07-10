@@ -97,9 +97,11 @@ public:
 		bool on_peer_list_request(const uint8_t* buf);
 		bool on_peer_list_response(const uint8_t* buf) const;
 
-		bool handle_incoming_block_async(PoolBlock* block);
+		bool handle_incoming_block_async(const PoolBlock* block);
 		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, const raw_ip& addr, std::vector<hash>& missing_blocks);
 		void post_handle_incoming_block(const uint32_t reset_counter, std::vector<hash>& missing_blocks);
+
+		bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }
 
 		uint64_t m_peerId;
 		MessageId m_expectedMessage;
@@ -141,6 +143,9 @@ public:
 	void set_max_outgoing_peers(uint32_t n) { m_maxOutgoingPeers = std::min(std::max(n, 10U), 1000U); }
 	void set_max_incoming_peers(uint32_t n) { m_maxIncomingPeers = std::min(std::max(n, 10U), 1000U); }
 
+	int deserialize_block(const uint8_t* buf, uint32_t size);
+	const PoolBlock* get_block() const { return m_block; }
+
 private:
 	p2pool* m_pool;
 	BlockCache* m_cache;
@@ -174,6 +179,8 @@ private:
 
 	uv_mutex_t m_blockLock;
 	PoolBlock* m_block;
+	std::vector<uint8_t> m_blockDeserializeBuf;
+	int m_blockDeserializeResult;
 
 	uv_timer_t m_timer;
 	uint64_t m_timerCounter;
@@ -206,6 +213,8 @@ private:
 	uv_mutex_t m_broadcastLock;
 	uv_async_t m_broadcastAsync;
 	std::vector<Broadcast*> m_broadcastQueue;
+
+	bool m_lookForMissingBlocks;
 
 	uv_mutex_t m_missingBlockRequestsLock;
 	unordered_set<std::pair<uint64_t, uint64_t>> m_missingBlockRequests;

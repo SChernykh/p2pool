@@ -31,10 +31,10 @@ class Wallet;
 struct MinerShare
 {
 	FORCEINLINE MinerShare() : m_weight(0), m_wallet(nullptr) {}
-	FORCEINLINE MinerShare(uint64_t w, Wallet* x) : m_weight(w), m_wallet(x) {}
+	FORCEINLINE MinerShare(uint64_t w, const Wallet* x) : m_weight(w), m_wallet(x) {}
 
 	uint64_t m_weight;
-	Wallet* m_wallet;
+	const Wallet* m_wallet;
 };
 
 class SideChain
@@ -84,11 +84,11 @@ private:
 	NetworkType m_networkType;
 
 private:
-	bool get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) const;
-	bool get_difficulty(PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
+	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares) const;
+	bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
-	void update_chain_tip(PoolBlock* block);
+	void update_chain_tip(const PoolBlock* block);
 	PoolBlock* get_parent(const PoolBlock* block) const;
 
 	// Checks if "candidate" has longer (higher difficulty) chain than "block"

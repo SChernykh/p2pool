@@ -129,15 +129,17 @@ struct PoolBlock
 	bool m_verified;
 	bool m_invalid;
 
-	bool m_broadcasted;
-	bool m_wantBroadcast;
+	mutable bool m_broadcasted;
+	mutable bool m_wantBroadcast;
 
 	uint64_t m_localTimestamp;
 
 	void serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash);
 	void serialize_sidechain_data();
 
-	int deserialize(const uint8_t* data, size_t size, SideChain& sidechain);
+	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain);
+	void reset_offchain_data();
+
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);
 
 	uint64_t get_payout(const Wallet& w) const;

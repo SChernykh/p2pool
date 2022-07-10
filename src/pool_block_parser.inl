@@ -23,7 +23,7 @@ namespace p2pool {
 // Since data here can come from external and possibly malicious sources, check everything
 // Only the syntax (i.e. the serialized block binary format) and the keccak hash are checked here
 // Semantics must also be checked elsewhere before accepting the block (PoW, reward split between miners, difficulty calculation and so on)
-int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechain)
+int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& sidechain)
 {
 	try {
 		// Sanity check
@@ -333,19 +333,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, SideChain& sidechai
 		return __LINE__;
 	}
 
-	// Defaults for off-chain variables
-	m_tmpTxExtra.clear();
-
-	m_depth = 0;
-
-	m_verified = false;
-	m_invalid = false;
-
-	m_broadcasted = false;
-	m_wantBroadcast = false;
-
-	m_localTimestamp = seconds_since_epoch();
-
+	reset_offchain_data();
 	return 0;
 }
 

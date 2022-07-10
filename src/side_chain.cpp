@@ -38,13 +38,6 @@
 #include <iterator>
 #include <numeric>
 
-// Only uncomment it to debug issues with uncle/orphan blocks
-//#define DEBUG_BROADCAST_DELAY_MS 100
-
-#ifdef DEBUG_BROADCAST_DELAY_MS
-#include <thread>
-#endif
-
 static constexpr char log_category_prefix[] = "SideChain ";
 
 static constexpr uint64_t MIN_DIFFICULTY = 100000;
@@ -289,7 +282,7 @@ P2PServer* SideChain::p2pServer() const
 	return m_pool ? m_pool->p2p_server() : nullptr;
 }
 
-bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) const
+bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares) const
 {
 	shares.clear();
 	shares.reserve(m_chainWindowSize * 2);
@@ -297,7 +290,7 @@ bool SideChain::get_shares(PoolBlock* tip, std::vector<MinerShare>& shares) cons
 	// Collect shares from each block in the PPLNS window, starting from the "tip"
 
 	uint64_t block_depth = 0;
-	PoolBlock* cur = tip;
+	const PoolBlock* cur = tip;
 	do {
 		MinerShare cur_share{ cur->m_difficulty.lo, &cur->m_minerWallet };
 
@@ -946,11 +939,11 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	return true;
 }
 
-bool SideChain::get_difficulty(PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
+bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
 {
 	difficultyData.clear();
 
-	PoolBlock* cur = tip;
+	const PoolBlock* cur = tip;
 	uint64_t oldest_timestamp = std::numeric_limits<uint64_t>::max();
 
 	uint64_t block_depth = 0;
@@ -1442,7 +1435,7 @@ void SideChain::verify(PoolBlock* block)
 	block->m_invalid = false;
 }
 
-void SideChain::update_chain_tip(PoolBlock* block)
+void SideChain::update_chain_tip(const PoolBlock* block)
 {
 	if (!block->m_verified || block->m_invalid) {
 		LOGERR(1, "trying to update chain tip to an unverified or invalid block, fix the code!");
@@ -1460,7 +1453,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 	if (is_longer_chain(tip, block, is_alternative)) {
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {
-			m_chainTip = block;
+			m_chainTip = const_cast<PoolBlock*>(block);
 			{
 				WriteLock lock(m_curDifficultyLock);
 				m_curDifficulty = diff;
@@ -1503,36 +1496,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 
 	if (p2pServer() && block->m_wantBroadcast && !block->m_broadcasted) {
 		block->m_broadcasted = true;
-#ifdef DEBUG_BROADCAST_DELAY_MS
-		struct Work
-		{
-			uv_work_t req;
-			P2PServer* server;
-			PoolBlock* block;
-		};
-		Work* work = new Work{};
-		work->req.data = work;
-		work->server = p2pServer();
-		work->block = block;
-		const int err = uv_queue_work(uv_default_loop(), &work->req,
-			[](uv_work_t*)
-			{
-				num_running_jobs.fetch_add(1);
-				std::this_thread::sleep_for(std::chrono::milliseconds(DEBUG_BROADCAST_DELAY_MS));
-			},
-			[](uv_work_t* req, int)
-			{
-				Work* work = reinterpret_cast<Work*>(req->data);
-				work->server->broadcast(*work->block);
-				delete reinterpret_cast<Work*>(req->data);
-				num_running_jobs.fetch_sub(1);
-			});
-		if (err) {
-			LOGERR(1, "update_chain_tip: uv_queue_work failed, error " << uv_err_name(err));
-		}
-#else
 		p2pServer()->broadcast(*block);
-#endif
 	}
 }
 
