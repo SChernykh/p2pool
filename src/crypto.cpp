@@ -169,17 +169,16 @@ public:
 
 	bool get_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag)
 	{
-		std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)> index;
+		std::array<uint8_t, HASH_SIZE * 2> index;
 		memcpy(index.data(), key1.h, HASH_SIZE);
 		memcpy(index.data() + HASH_SIZE, key2.h, HASH_SIZE);
-		memcpy(index.data() + HASH_SIZE * 2, &output_index, sizeof(size_t));
 
 		{
 			MutexLock lock(m);
 			auto it = derivations.find(index);
 			if (it != derivations.end()) {
-				derivation = it->second.derivation;
-				view_tag = it->second.view_tag;
+				derivation = it->second.m_derivation;
+				view_tag = it->second.get_view_tag(output_index);
 				return true;
 			}
 		}
@@ -197,11 +196,10 @@ public:
 		ge_p1p1_to_p2(&point2, &point3);
 		ge_tobytes(reinterpret_cast<uint8_t*>(&derivation), &point2);
 
-		derive_view_tag(derivation, output_index, view_tag);
-
 		{
 			MutexLock lock(m);
-			derivations.emplace(index, DerivationEntry{ derivation, view_tag } );
+			auto result = derivations.emplace(index, DerivationEntry{ derivation, {} });
+			view_tag = result.first->second.get_view_tag(output_index);
 		}
 
 		return true;
@@ -293,13 +291,25 @@ public:
 private:
 	struct DerivationEntry
 	{
-		hash derivation;
-		// cppcheck-suppress unusedStructMember
-		uint8_t view_tag;
+		hash m_derivation;
+		std::vector<uint32_t> m_viewTags;
+
+		uint8_t get_view_tag(size_t output_index) {
+			auto it = std::find_if(m_viewTags.begin(), m_viewTags.end(), [output_index](uint32_t k) { return (k >> 8) == output_index; });
+			if (it != m_viewTags.end()) {
+				return static_cast<uint8_t>(*it);
+			}
+
+			uint8_t t;
+			derive_view_tag(m_derivation, output_index, t);
+			m_viewTags.emplace_back(static_cast<uint32_t>(output_index << 8) | t);
+
+			return t;
+		}
 	};
 
 	uv_mutex_t m;
-	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, DerivationEntry> derivations;
+	unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> derivations;
 	unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> public_keys;
 	unordered_map<std::array<uint8_t, HASH_SIZE * 2>, std::pair<hash, hash>> tx_keys;
 };
