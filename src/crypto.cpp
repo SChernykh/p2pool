@@ -295,9 +295,10 @@ private:
 		std::vector<uint32_t> m_viewTags;
 
 		uint8_t get_view_tag(size_t output_index) {
-			auto it = std::find_if(m_viewTags.begin(), m_viewTags.end(), [output_index](uint32_t k) { return (k >> 8) == output_index; });
-			if (it != m_viewTags.end()) {
-				return static_cast<uint8_t>(*it);
+			for (uint32_t k : m_viewTags) {
+				if ((k >> 8) == output_index) {
+					return static_cast<uint8_t>(k);
+				}
 			}
 
 			uint8_t t;
