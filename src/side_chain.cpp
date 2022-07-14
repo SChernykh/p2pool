@@ -167,8 +167,9 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		--numThreads;
 	}
 
-	// Use no more than 8 threads
-	numThreads = std::min<uint32_t>(numThreads, 8);
+	// Use between 1 and 8 threads
+	if (numThreads < 1) numThreads = 1;
+	if (numThreads > 8) numThreads = 8;
 
 	LOGINFO(4, "running " << numThreads << " pre-calculation workers");
 
