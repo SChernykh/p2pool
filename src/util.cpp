@@ -205,6 +205,15 @@ std::istream& operator>>(std::istream& s, hash& h)
 	return s;
 }
 
+void uv_cond_init_checked(uv_cond_t* cond)
+{
+	const int result = uv_cond_init(cond);
+	if (result) {
+		LOGERR(1, "failed to create conditional variable, error " << uv_err_name(result));
+		panic();
+	}
+}
+
 void uv_mutex_init_checked(uv_mutex_t* mutex)
 {
 	const int result = uv_mutex_init(mutex);

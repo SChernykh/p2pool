@@ -57,6 +57,7 @@ private:
 
 typedef RWLock<true> WriteLock;
 
+void uv_cond_init_checked(uv_cond_t* cond);
 void uv_mutex_init_checked(uv_mutex_t* mutex);
 void uv_rwlock_init_checked(uv_rwlock_t* lock);
 uv_loop_t* uv_default_loop_checked();

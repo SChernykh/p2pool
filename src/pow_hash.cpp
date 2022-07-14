@@ -389,11 +389,7 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	uv_mutex_init_checked(&m_requestMutex);
 	uv_mutex_init_checked(&m_condMutex);
 
-	err = uv_cond_init(&m_cond);
-	if (err) {
-		LOGERR(1, "failed to create cond, error " << uv_err_name(err));
-		panic();
-	}
+	uv_cond_init_checked(&m_cond);
 
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
