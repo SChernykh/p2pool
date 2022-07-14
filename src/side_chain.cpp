@@ -1968,7 +1968,6 @@ void SideChain::precalc_worker()
 			while (m_precalcJobs.empty()) {
 				uv_cond_wait(&m_precalcJobsCond, &m_precalcJobsMutex);
 
-				// cppcheck-suppress knownConditionTrueFalse
 				if (m_precalcFinished) {
 					return;
 				}
