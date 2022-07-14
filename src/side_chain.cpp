@@ -1539,7 +1539,7 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 
 			block->m_wantBroadcast = true;
 			if (m_pool) {
-				m_pool->update_block_template_async();
+				m_pool->update_block_template_async(is_alternative);
 
 				// Reset stratum share counters when switching to an alternative chain to avoid confusion
 				if (is_alternative) {
@@ -1547,9 +1547,6 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 					if (s) {
 						s->reset_share_counters();
 					}
-#ifdef WITH_RANDOMX
-					m_pool->reset_miner();
-#endif
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
 				}
 			}

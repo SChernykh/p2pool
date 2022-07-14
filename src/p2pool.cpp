@@ -596,12 +596,14 @@ void p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32
 	m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce);
 }
 
-void p2pool::update_block_template_async()
+void p2pool::update_block_template_async(bool is_alternative_block)
 {
 	// If p2pool is stopped, m_blockTemplateAsync is most likely already closed
 	if (m_stopped) {
 		return;
 	}
+
+	m_isAlternativeBlock = is_alternative_block;
 
 	const int err = uv_async_send(&m_blockTemplateAsync);
 	if (err) {
@@ -620,6 +622,16 @@ void p2pool::update_block_template()
 	m_blockTemplate->update(data, *m_mempool, &m_params->m_wallet);
 	stratum_on_block();
 	api_update_pool_stats();
+
+#ifdef WITH_RANDOMX
+	if (m_isAlternativeBlock.exchange(false)) {
+		MutexLock lock(m_minerLock);
+
+		if (m_miner) {
+			m_miner->reset_share_counters();
+		}
+	}
+#endif
 }
 
 void p2pool::download_block_headers(uint64_t current_height)
@@ -1371,15 +1383,6 @@ void p2pool::stop_mining()
 	if (m_miner) {
 		delete m_miner;
 		m_miner = nullptr;
-	}
-}
-
-void p2pool::reset_miner()
-{
-	MutexLock lock(m_minerLock);
-
-	if (m_miner) {
-		m_miner->reset_share_counters();
 	}
 }
 #endif

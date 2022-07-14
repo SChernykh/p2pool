@@ -77,7 +77,7 @@ public:
 	void submit_block_async(const std::vector<uint8_t>& blob);
 	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
-	void update_block_template_async();
+	void update_block_template_async(bool is_alternative_block = false);
 	void update_block_template();
 
 	void download_block_headers(uint64_t current_height);
@@ -91,7 +91,6 @@ public:
 #ifdef WITH_RANDOMX
 	void start_mining(uint32_t threads);
 	void stop_mining();
-	void reset_miner();
 #endif
 
 	uint64_t zmq_last_active() const { return m_zmqLastActive; }
@@ -197,6 +196,8 @@ private:
 	uv_async_t m_submitBlockAsync;
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
+
+	std::atomic<bool> m_isAlternativeBlock{ false };
 
 	std::atomic<uint64_t> m_zmqLastActive;
 	uint64_t m_startTime;
