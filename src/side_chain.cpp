@@ -1936,11 +1936,17 @@ void SideChain::launch_precalc(const PoolBlock* block)
 		return;
 	}
 
-	auto it = m_blocksByHeight.find(block->m_sidechainHeight + m_chainWindowSize - 1);
-	if ((it != m_blocksByHeight.end()) && !it->second.empty()) {
+	for (int h = UNCLE_BLOCK_DEPTH - 1; h >= 0; --h) {
+		auto it = m_blocksByHeight.find(block->m_sidechainHeight + m_chainWindowSize + h - 1);
+		if (it == m_blocksByHeight.end()) {
+			continue;
+		}
 		for (PoolBlock* b : it->second) {
+			if (b->m_precalculated) {
+				continue;
+			}
 			std::vector<const Wallet*> wallets;
-			if (!b->m_precalculated && get_wallets(b, wallets)) {
+			if (get_wallets(b, wallets)) {
 				b->m_precalculated = true;
 				PrecalcJob* job = new PrecalcJob{ b, std::move(wallets) };
 				{
