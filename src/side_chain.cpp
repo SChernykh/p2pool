@@ -173,6 +173,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(4, "running " << numThreads << " pre-calculation workers");
 
+	m_precalcWorkers.reserve(numThreads);
 	for (uint32_t i = 0; i < numThreads; ++i) {
 		m_precalcWorkers.emplace_back(&SideChain::precalc_worker, this);
 	}
@@ -2021,6 +2022,7 @@ void SideChain::finish_precalc()
 	m_precalcWorkers.shrink_to_fit();
 
 	delete m_uniquePrecalcInputs;
+	m_uniquePrecalcInputs = nullptr;
 
 	uv_mutex_destroy(&m_precalcJobsMutex);
 	uv_cond_destroy(&m_precalcJobsCond);
