@@ -132,6 +132,8 @@ struct PoolBlock
 	mutable bool m_broadcasted;
 	mutable bool m_wantBroadcast;
 
+	bool m_precalculated;
+
 	uint64_t m_localTimestamp;
 
 	void serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash);

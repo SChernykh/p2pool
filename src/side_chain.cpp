@@ -63,6 +63,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_chainWindowSize(2160)
 	, m_unclePenalty(20)
 	, m_curDifficulty(m_minDifficulty)
+	, m_precalcFinished(false)
 {
 	LOGINFO(1, log::LightCyan() << "network type  = " << m_networkType);
 
@@ -154,14 +155,39 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	memset(buf + 8, '*', HASH_SIZE * 2 - 16);
 	m_consensusIdDisplayStr.assign(buf);
 	LOGINFO(1, "consensus ID = " << log::LightCyan() << m_consensusIdDisplayStr.c_str());
+
+	uv_cond_init_checked(&m_precalcJobsCond);
+	uv_mutex_init_checked(&m_precalcJobsMutex);
+	m_precalcJobs.reserve(16);
+
+	uint32_t numThreads = std::thread::hardware_concurrency();
+
+	// Leave 1 CPU core free from worker threads
+	if (numThreads > 1) {
+		--numThreads;
+	}
+
+	// Use no more than 8 threads
+	numThreads = std::min<uint32_t>(numThreads, 8);
+
+	LOGINFO(4, "running " << numThreads << " pre-calculation workers");
+
+	for (uint32_t i = 0; i < numThreads; ++i) {
+		m_precalcWorkers.emplace_back(&SideChain::precalc_worker, this);
+	}
+
+	m_uniquePrecalcInputs = new unordered_set<size_t>();
 }
 
 SideChain::~SideChain()
 {
+	finish_precalc();
+
 	uv_rwlock_destroy(&m_sidechainLock);
 	uv_mutex_destroy(&m_seenWalletsLock);
 	uv_mutex_destroy(&m_seenBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
+
 	for (const auto& it : m_blocksById) {
 		delete it.second;
 	}
@@ -364,6 +390,50 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	return true;
 }
 
+bool SideChain::get_wallets(const PoolBlock* tip, std::vector<const Wallet*>& wallets) const
+{
+	// Collect wallets from each block in the PPLNS window, starting from the "tip"
+	wallets.clear();
+	wallets.reserve(m_chainWindowSize * 2);
+
+	uint64_t block_depth = 0;
+	const PoolBlock* cur = tip;
+
+	do {
+		wallets.push_back(&cur->m_minerWallet);
+
+		for (const hash& uncle_id : cur->m_uncles) {
+			auto it = m_blocksById.find(uncle_id);
+			if (it == m_blocksById.end()) {
+				return false;
+			}
+
+			// Skip uncles which are already out of PPLNS window
+			if (tip->m_sidechainHeight - it->second->m_sidechainHeight < m_chainWindowSize) {
+				wallets.push_back(&it->second->m_minerWallet);
+			}
+		}
+
+		++block_depth;
+		if ((block_depth >= m_chainWindowSize) || (cur->m_sidechainHeight == 0)) {
+			break;
+		}
+
+		auto it = m_blocksById.find(cur->m_parent);
+		if (it == m_blocksById.end()) {
+			return false;
+		}
+
+		cur = it->second;
+	} while (true);
+
+	// Remove duplicates
+	std::sort(wallets.begin(), wallets.end(), [](const Wallet* a, const Wallet* b) { return *a < *b; });
+	wallets.erase(std::unique(wallets.begin(), wallets.end(), [](const Wallet* a, const Wallet* b) { return *a == *b; }), wallets.end());
+
+	return true;
+}
+
 bool SideChain::block_seen(const PoolBlock& block)
 {
 	// Check if it's some old block
@@ -537,6 +607,9 @@ void SideChain::add_block(const PoolBlock& block)
 	}
 
 	m_blocksByHeight[new_block->m_sidechainHeight].push_back(new_block);
+
+	// Pre-calculate eph_public_keys during initial sync
+	launch_precalc(new_block);
 
 	update_depths(new_block);
 
@@ -1738,6 +1811,9 @@ void SideChain::prune_old_blocks()
 		if (p2pServer()) {
 			p2pServer()->clear_cached_blocks();
 		}
+
+		// Pre-calc workers are not needed anymore
+		finish_precalc();
 	}
 }
 
@@ -1853,6 +1929,106 @@ bool SideChain::check_config()
 	LOGINFO(1, log::LightCyan() << "uncle penalty = " << m_unclePenalty << '%');
 
 	return true;
+}
+
+void SideChain::launch_precalc(const PoolBlock* block)
+{
+	if (m_precalcFinished) {
+		return;
+	}
+
+	auto it = m_blocksByHeight.find(block->m_sidechainHeight + m_chainWindowSize - 1);
+	if ((it != m_blocksByHeight.end()) && !it->second.empty()) {
+		for (PoolBlock* b : it->second) {
+			std::vector<const Wallet*> wallets;
+			if (!b->m_precalculated && get_wallets(b, wallets)) {
+				b->m_precalculated = true;
+				PrecalcJob* job = new PrecalcJob{ b, std::move(wallets) };
+				{
+					MutexLock lock2(m_precalcJobsMutex);
+					m_precalcJobs.push_back(job);
+				}
+				uv_cond_signal(&m_precalcJobsCond);
+			}
+		}
+	}
+}
+
+void SideChain::precalc_worker()
+{
+	do {
+		PrecalcJob* job;
+		{
+			MutexLock lock(m_precalcJobsMutex);
+
+			if (m_precalcFinished) {
+				return;
+			}
+
+			while (m_precalcJobs.empty()) {
+				uv_cond_wait(&m_precalcJobsCond, &m_precalcJobsMutex);
+
+				// cppcheck-suppress knownConditionTrueFalse
+				if (m_precalcFinished) {
+					return;
+				}
+			}
+
+			job = m_precalcJobs.back();
+			m_precalcJobs.pop_back();
+
+			// Filter out duplicate inputs for get_eph_public_key()
+			uint8_t t[HASH_SIZE * 2 + sizeof(size_t)];
+			memcpy(t, job->b->m_txkeySec.h, HASH_SIZE);
+
+			for (size_t i = 0, n = job->wallets.size(); i < n; ++i) {
+				memcpy(t + HASH_SIZE, job->wallets[i]->view_public_key().h, HASH_SIZE);
+				memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
+				if (!m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
+					job->wallets[i] = nullptr;
+				}
+			}
+		}
+
+		for (size_t i = 0, n = job->wallets.size(); i < n; ++i) {
+			if (job->wallets[i]) {
+				hash eph_public_key;
+				uint8_t view_tag;
+				job->wallets[i]->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
+			}
+		}
+		delete job;
+	} while (true);
+}
+
+void SideChain::finish_precalc()
+{
+	if (m_precalcFinished.exchange(true)) {
+		return;
+	}
+
+	{
+		MutexLock lock(m_precalcJobsMutex);
+		for (PrecalcJob* job : m_precalcJobs) {
+			delete job;
+		}
+		m_precalcJobs.clear();
+		m_precalcJobs.shrink_to_fit();
+		uv_cond_broadcast(&m_precalcJobsCond);
+	}
+
+	for (std::thread& t : m_precalcWorkers) {
+		t.join();
+	}
+	m_precalcWorkers.clear();
+	m_precalcWorkers.shrink_to_fit();
+
+	delete m_uniquePrecalcInputs;
+
+	uv_mutex_destroy(&m_precalcJobsMutex);
+	uv_cond_destroy(&m_precalcJobsCond);
+
+	LOGINFO(4, "pre-calculation workers stopped");
 }
 
 } // namespace p2pool

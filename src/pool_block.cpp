@@ -53,6 +53,7 @@ PoolBlock::PoolBlock()
 	, m_invalid(false)
 	, m_broadcasted(false)
 	, m_wantBroadcast(false)
+	, m_precalculated(false)
 	, m_localTimestamp(seconds_since_epoch())
 {
 	uv_mutex_init_checked(&m_lock);
@@ -114,6 +115,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_invalid = b.m_invalid;
 	m_broadcasted = b.m_broadcasted;
 	m_wantBroadcast = b.m_wantBroadcast;
+	m_precalculated = b.m_precalculated;
 
 	m_localTimestamp = seconds_since_epoch();
 
@@ -241,6 +243,8 @@ void PoolBlock::reset_offchain_data()
 
 	m_broadcasted = false;
 	m_wantBroadcast = false;
+
+	m_precalculated = false;
 
 	m_localTimestamp = seconds_since_epoch();
 }

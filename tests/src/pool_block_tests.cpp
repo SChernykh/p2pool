@@ -103,39 +103,39 @@ TEST(pool_block, deserialize)
 TEST(pool_block, verify)
 {
 	init_crypto_cache();
+	{
+		PoolBlock b;
+		SideChain sidechain(nullptr, NetworkType::Mainnet);
 
-	PoolBlock b;
-	SideChain sidechain(nullptr, NetworkType::Mainnet);
+		std::ifstream f("sidechain_dump.dat", std::ios::binary | std::ios::ate);
+		ASSERT_EQ(f.good() && f.is_open(), true);
 
-	std::ifstream f("sidechain_dump.dat", std::ios::binary | std::ios::ate);
-	ASSERT_EQ(f.good() && f.is_open(), true);
+		std::vector<uint8_t> buf(f.tellg());
+		f.seekg(0);
+		f.read(reinterpret_cast<char*>(buf.data()), buf.size());
+		ASSERT_EQ(f.good(), true);
 
-	std::vector<uint8_t> buf(f.tellg());
-	f.seekg(0);
-	f.read(reinterpret_cast<char*>(buf.data()), buf.size());
-	ASSERT_EQ(f.good(), true);
+		for (const uint8_t *p = buf.data(), *e = buf.data() + buf.size(); p < e;) {
+			ASSERT_TRUE(p + sizeof(uint32_t) <= e);
+			const uint32_t n = *reinterpret_cast<const uint32_t*>(p);
+			p += sizeof(uint32_t);
 
-	for (const uint8_t *p = buf.data(), *e = buf.data() + buf.size(); p < e;) {
-		ASSERT_TRUE(p + sizeof(uint32_t) <= e);
-		const uint32_t n = *reinterpret_cast<const uint32_t*>(p);
-		p += sizeof(uint32_t);
+			ASSERT_TRUE(p + n <= e);
+			ASSERT_EQ(b.deserialize(p, n, sidechain), 0);
+			p += n;
 
-		ASSERT_TRUE(p + n <= e);
-		ASSERT_EQ(b.deserialize(p, n, sidechain), 0);
-		p += n;
+			sidechain.add_block(b);
+			ASSERT_TRUE(sidechain.find_block(b.m_sidechainId) != nullptr);
+		}
 
-		sidechain.add_block(b);
-		ASSERT_TRUE(sidechain.find_block(b.m_sidechainId) != nullptr);
+		const PoolBlock* tip = sidechain.chainTip();
+		ASSERT_TRUE(tip != nullptr);
+		ASSERT_TRUE(tip->m_verified);
+		ASSERT_FALSE(tip->m_invalid);
+
+		ASSERT_EQ(tip->m_txinGenHeight, 2483901);
+		ASSERT_EQ(tip->m_sidechainHeight, 522805);
 	}
-
-	const PoolBlock* tip = sidechain.chainTip();
-	ASSERT_TRUE(tip != nullptr);
-	ASSERT_TRUE(tip->m_verified);
-	ASSERT_FALSE(tip->m_invalid);
-
-	ASSERT_EQ(tip->m_txinGenHeight, 2483901);
-	ASSERT_EQ(tip->m_sidechainHeight, 522805);
-
 	destroy_crypto_cache();
 }
 
