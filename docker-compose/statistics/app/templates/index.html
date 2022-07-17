@@ -12,13 +12,13 @@
     <script src="{{url_for('static', filename='bootstrap.min.js')}}"></script>
     <div style="text-align:center;">
       <img src="{{url_for('static', filename='monero-symbol-480.png')}}" width="75px" height="75px" alt="Monero"/>
-      <h1 style="color: #FFA500;">P2Pool Server Statistics</h1>
+      <h1 style="color: #FF6600;">P2Pool Server Statistics</h1>
     </div>
  
     <div class="card-group">
       <div class="col-sm-4 grid-margin stretch-card">
         <div class="card">
-          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Local Pool</h2></div>
+          <div class="card-header text-black mb-1 pb-1" style="text-align: center; background-color: #FF6600;"><h2>Local Pool</h2></div>
           <div class="card-body mb-0 pb-0">
             <h6 class="card-subtitle text-muted" style="font-size:80%;">(note: stats reset on restart)</h6>
             <div class="table-responsive table-hover table-condensed table-striped">
@@ -54,7 +54,7 @@
                   </tr>
                   <tr>
                     <td>Miner Connections</td>
-                    <td>{{ local_stats["incoming_connections"] }}<td>
+                    <td>{{ local_stats["incoming_connections"] }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -65,7 +65,7 @@
   
       <div class="col-sm-4 grid-margin stretch-card">
         <div class="card">
-          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Global Pool</h2></div>
+          <div class="card-header text-black mb-1 pb-1" style="text-align: center; background-color: #FF6600;"><h2>Global Pool</h2></div>
           <div class="card-body mb-0 pb-0">
             <h6 class="card-subtitle text-muted" style="font-size:80%;">&nbsp;</h6>
             <div class="table-responsive table-hover table-condensed table-striped">
@@ -116,7 +116,7 @@
   
       <div class="col-sm-4 grid-margin stretch-card">
         <div class="card">
-          <div class="card-header text-black mb-1 pb-1" style="background-color: #FFA500;"><h2>Monero Network</h2></div>
+          <div class="card-header text-black mb-1 pb-1" style="text-align: center; background-color: #FF6600;"><h2>Monero Network</h2></div>
           <div class="card-body mb-0 pb-0">
             <h6 class="card-subtitle text-muted" style="font-size:80%;">&nbsp;</h6>
             <div class="table-responsive table-hover table-condensed table-striped">

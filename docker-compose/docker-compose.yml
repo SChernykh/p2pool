@@ -7,7 +7,10 @@ networks:
 
 volumes:
   p2pool: 
+
     name: p2pool
+
+
 
   monero:
     name: monero
@@ -32,8 +35,7 @@ services:
       - /dev/hugepages:/dev/hugepages:rw
 
     depends_on:
-      monero:
-        condition: service_healthy
+      - monero
 
     restart: unless-stopped
     command: >-
@@ -90,11 +92,6 @@ services:
       - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
       - /dev/hugepages:/dev/hugepages:rw
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "18081"]
-      interval: 2s
-      timeout: 1s
-      start_period: 10s
     command: >-
       --zmq-pub tcp://0.0.0.0:18083
       --disable-dns-checkpoints
