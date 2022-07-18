@@ -7,7 +7,12 @@ networks:
 
 volumes:
   p2pool: 
+{% if sidechain[0] == 0 %}
     name: p2pool
+{% else %}
+    name: p2pool-mini
+{% endif %}
+
 {% if configure_monero == True %}
   monero:
     name: monero

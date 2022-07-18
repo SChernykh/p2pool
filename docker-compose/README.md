@@ -24,7 +24,7 @@ Make sure to set your own monero **Wallet Address**.  The default is to donate m
 
 #### Build the docker containers
 ```
-docker compose build
+docker compose build --no-cache
 ```
 
 #### Run the node, pool, and CPU miner (or updated configuration)
@@ -42,7 +42,8 @@ docker compose up
 #### Other usefull commands
 * You can **run everything in the background** by adding the "-d" argument to the "docker compose up" command: ```docker compose up -d```
 * You can **stop everything** with CTRL-C or ```docker compose down```
-* You can see logs when running in the background for with the "docker logs" command:  ```docker logs -f p2pool-xmrig``` or ```docker logs -f p2pool-p2pool``` or ```docker logs -f p2pool-monero```
+* You can **update** by building new images with the ```--no-cache``` option.  Example: ```docker compose build --no-cache``` or just update Monero with: ```docker compose build --no-cache monero``` followed by ```docker compose up```
+* You can see logs when running in the background for with the "docker compose logs" command:  ```docker compose logs -f```
 * You can pause mining with: ```docker compose pause xmrig``` and resume mining with: ```docker compose unpause xmrig```
 * You can disable mining with: ```docker compose stop xmrig``` and re-enable mining with: ```docker compose start xmrig```
 * You can view your Server Statistics using a web browser if you enabled that feature in the configuration at: http://localhost:3380 (or alternate port as configured)
@@ -52,4 +53,5 @@ docker compose up
 Change to p2pool/docker-compose directory <br />
 Stop and remove all containers: ```docker compose down``` <br />
 Remove the p2pool data: ```docker volume rm p2pool``` <br />
+Remove the p2pool-mini data: ```docker volume rm p2pool-mini``` <br />
 Remove the monero data: ```docker volume rm monero```
