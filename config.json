@@ -12,3 +12,27 @@
 	"pplns_window": 2160,
 	"uncle_penalty": 20
 }
+
+// p2pool configuration settings
+{
+	"wallet": "",
+	"host": "127.0.0.1",
+	"rpc_port": "18081",
+	"zmq_port": "18083",
+	"stratum": "",
+	"p2p": "",
+	"addpeers": "",
+	"light_mode": false,
+	"loglevel": 3,
+	"data_api": "",
+	"local_api": "",
+	"no_cache": false,
+	"no_color": false,
+	"no_randomx": false,
+	"out_peers": 10,
+	"in_peers": 10,
+	"start_mining": null,
+	"mini": false,
+	"no_autodiff": false,
+	"rpc_login": "",
+}
