@@ -2011,29 +2011,36 @@ void SideChain::finish_precalc()
 		return;
 	}
 
+	try
 	{
-		MutexLock lock(m_precalcJobsMutex);
-		for (PrecalcJob* job : m_precalcJobs) {
-			delete job;
+		{
+			MutexLock lock(m_precalcJobsMutex);
+			for (PrecalcJob* job : m_precalcJobs) {
+				delete job;
+			}
+			m_precalcJobs.clear();
+			m_precalcJobs.shrink_to_fit();
+			uv_cond_broadcast(&m_precalcJobsCond);
 		}
-		m_precalcJobs.clear();
-		m_precalcJobs.shrink_to_fit();
-		uv_cond_broadcast(&m_precalcJobsCond);
+
+		for (std::thread& t : m_precalcWorkers) {
+			t.join();
+		}
+		m_precalcWorkers.clear();
+		m_precalcWorkers.shrink_to_fit();
+
+		delete m_uniquePrecalcInputs;
+		m_uniquePrecalcInputs = nullptr;
+
+		uv_mutex_destroy(&m_precalcJobsMutex);
+		uv_cond_destroy(&m_precalcJobsCond);
+
+		LOGINFO(4, "pre-calculation workers stopped");
 	}
-
-	for (std::thread& t : m_precalcWorkers) {
-		t.join();
+	catch (const std::exception& e)
+	{
+		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
-	m_precalcWorkers.clear();
-	m_precalcWorkers.shrink_to_fit();
-
-	delete m_uniquePrecalcInputs;
-	m_uniquePrecalcInputs = nullptr;
-
-	uv_mutex_destroy(&m_precalcJobsMutex);
-	uv_cond_destroy(&m_precalcJobsCond);
-
-	LOGINFO(4, "pre-calculation workers stopped");
 }
 
 } // namespace p2pool
