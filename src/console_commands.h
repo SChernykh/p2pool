@@ -40,6 +40,8 @@ private:
 	char m_readBuf[64];
 	bool m_readBufInUse;
 
+	std::string m_command;
+
 	static void loop(void* data);
 
 	static void on_shutdown(uv_async_t* async)

@@ -76,6 +76,8 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
 		throw std::exception();
 	}
+
+	m_command.reserve(64);
 }
 
 ConsoleCommands::~ConsoleCommands()
@@ -252,25 +254,32 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 	ConsoleCommands* pThis = static_cast<ConsoleCommands*>(stream->data);
 
 	if (nread > 0) {
-		for (size_t i = 0; i < static_cast<size_t>(nread); ++i) {
-			if ((buf->base[i] == '\r') || (buf->base[i] == '\n')) {
-				buf->base[i] = '\0';
+		std::string& command = pThis->m_command;
+		command.append(buf->base, nread);
 
-				cmd* c = cmds;
-				for (; c->name.len; ++c) {
-					if (!strncmp(buf->base, c->name.str, c->name.len)) {
-						const char* args = (c->name.len + 1 <= i) ? (buf->base + c->name.len + 1) : "";
-						c->func(pThis->m_pool, args);
-						break;
-					}
-				}
-
-				if (!c->name.len) {
-					LOGWARN(0, "Unknown command " << buf->base);
-				}
+		do {
+			size_t k = command.find_first_of("\r\n");
+			if (k == std::string::npos) {
 				break;
 			}
-		}
+			command[k] = '\0';
+
+			cmd* c = cmds;
+			for (; c->name.len; ++c) {
+				if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
+					const char* args = (c->name.len + 1 <= k) ? (command.c_str() + c->name.len + 1) : "";
+					c->func(pThis->m_pool, args);
+					break;
+				}
+			}
+
+			if (!c->name.len) {
+				LOGWARN(0, "Unknown command " << command);
+			}
+
+			k = command.find_first_not_of("\r\n", k + 1);
+			command.erase(0, k);
+		} while (true);
 	}
 	else if (nread < 0) {
 		LOGWARN(4, "read error " << uv_err_name(static_cast<int>(nread)));
