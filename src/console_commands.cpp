@@ -76,8 +76,6 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
 		throw std::exception();
 	}
-
-	m_command.reserve(64);
 }
 
 ConsoleCommands::~ConsoleCommands()
