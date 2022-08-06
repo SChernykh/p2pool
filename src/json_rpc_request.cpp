@@ -60,6 +60,8 @@ struct CurlContext
 
 	void close_handles();
 
+	bool m_closing;
+
 	uv_poll_t m_pollHandle;
 	curl_socket_t m_socket;
 
@@ -83,7 +85,8 @@ struct CurlContext
 };
 
 CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
-	: m_pollHandle{}
+	: m_closing(false)
+	, m_pollHandle{}
 	, m_socket{}
 	, m_callback(cb)
 	, m_closeCallback(close_cb)
@@ -222,7 +225,7 @@ int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
 	case CURL_POLL_IN:
 	case CURL_POLL_OUT:
 	case CURL_POLL_INOUT:
-		{
+		if (!m_closing && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pollHandle))) {
 			if (!m_socket) {
 				m_socket = s;
 				curl_multi_assign(m_multiHandle, s, this);
@@ -240,7 +243,13 @@ int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
 				m_pollHandle.data = this;
 			}
 
-			uv_poll_start(&m_pollHandle, events, curl_perform);
+			const int result = uv_poll_start(&m_pollHandle, events, curl_perform);
+			if (result < 0) {
+				LOGERR(1, "uv_poll_start failed with error " << uv_err_name(result));
+			}
+		}
+		else {
+			LOGERR(1, "Poll handle is closing, can't process socket action " << action);
 		}
 		break;
 
@@ -355,6 +364,8 @@ void CurlContext::on_close(uv_handle_t* h)
 
 void CurlContext::close_handles()
 {
+	m_closing = true;
+
 	if (m_pollHandle.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pollHandle))) {
 		uv_poll_stop(&m_pollHandle);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_pollHandle), on_close);
