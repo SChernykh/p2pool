@@ -49,7 +49,7 @@ TEST(pool_block, deserialize)
 	f.read(reinterpret_cast<char*>(buf.data()), buf.size());
 	ASSERT_EQ(f.good(), true);
 
-	ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain), 0);
+	ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain, nullptr), 0);
 
 	ASSERT_EQ(b.m_mainChainData.size(), 5607);
 	ASSERT_EQ(b.m_mainChainHeaderSize, 43);
@@ -121,7 +121,7 @@ TEST(pool_block, verify)
 			p += sizeof(uint32_t);
 
 			ASSERT_TRUE(p + n <= e);
-			ASSERT_EQ(b.deserialize(p, n, sidechain), 0);
+			ASSERT_EQ(b.deserialize(p, n, sidechain, nullptr), 0);
 			p += n;
 
 			sidechain.add_block(b);

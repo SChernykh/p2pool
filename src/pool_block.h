@@ -139,7 +139,7 @@ struct PoolBlock
 	void serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash);
 	void serialize_sidechain_data();
 
-	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain);
+	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop);
 	void reset_offchain_data();
 
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);

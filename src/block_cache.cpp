@@ -198,7 +198,7 @@ void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
 			continue;
 		}
 
-		if (block.deserialize(data + sizeof(uint32_t), n, side_chain) == 0) {
+		if (block.deserialize(data + sizeof(uint32_t), n, side_chain, uv_default_loop_checked()) == 0) {
 			server.add_cached_block(block);
 			++blocks_loaded;
 		}

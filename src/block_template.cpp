@@ -548,7 +548,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		buf.insert(buf.end(), m_poolBlockTemplate->m_sideChainData.begin(), m_poolBlockTemplate->m_sideChainData.end());
 
 		PoolBlock check;
-		const int result = check.deserialize(buf.data(), buf.size(), m_pool->side_chain());
+		const int result = check.deserialize(buf.data(), buf.size(), m_pool->side_chain(), nullptr);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
@@ -1077,7 +1077,7 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			buf.insert(buf.end(), m_poolBlockTemplate->m_sideChainData.begin(), m_poolBlockTemplate->m_sideChainData.end());
 
 			PoolBlock check;
-			const int result = check.deserialize(buf.data(), buf.size(), side_chain);
+			const int result = check.deserialize(buf.data(), buf.size(), side_chain, nullptr);
 			if (result != 0) {
 				LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 			}

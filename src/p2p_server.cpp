@@ -900,7 +900,7 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size)
 		result = m_blockDeserializeResult;
 	}
 	else {
-		result = m_block->deserialize(buf, size, m_pool->side_chain());
+		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop);
 		m_blockDeserializeBuf.assign(buf, buf + size);
 		m_blockDeserializeResult = result;
 		m_lookForMissingBlocks = true;
