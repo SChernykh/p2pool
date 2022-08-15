@@ -762,8 +762,11 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 					}
 
 					++work->num_helper_jobs_finished;
-					delete work;
-				}, nullptr);
+				},
+				[](uv_work_t* req, int /*status*/)
+				{
+					delete reinterpret_cast<Work*>(req->data);
+				});
 
 			if (err) {
 				LOGERR(1, "get_outputs_blob: uv_queue_work failed, error " << uv_err_name(err));

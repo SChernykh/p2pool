@@ -32,7 +32,7 @@ namespace p2pool {
 
 static bool track_memory = false;
 
-constexpr size_t N = 1048576;
+constexpr size_t N = 2097152;
 constexpr size_t MAX_FRAMES = 30;
 
 struct TrackedAllocation
