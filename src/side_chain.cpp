@@ -1904,9 +1904,18 @@ void SideChain::get_missing_blocks(std::vector<hash>& missing_blocks) const
 			missing_blocks.push_back(b.second->m_parent);
 		}
 
+		int num_missing_uncles = 0;
+
 		for (const hash& h : b.second->m_uncles) {
 			if (!h.empty() && (m_blocksById.find(h) == m_blocksById.end())) {
 				missing_blocks.push_back(h);
+
+				// Get no more than 2 first missing uncles at a time from each block
+				// Blocks with more than 2 uncles are very rare and they will be processed in several steps
+				++num_missing_uncles;
+				if (num_missing_uncles >= 2) {
+					break;
+				}
 			}
 		}
 	}
