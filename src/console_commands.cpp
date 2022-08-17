@@ -272,7 +272,7 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 			}
 
 			if (!c->name.len) {
-				LOGWARN(0, "Unknown command " << command);
+				LOGWARN(0, "Unknown command " << command.c_str());
 			}
 
 			k = command.find_first_not_of("\r\n", k + 1);
