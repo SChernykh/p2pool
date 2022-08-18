@@ -226,12 +226,12 @@ nix shell github:nixos/nix/master
 
 Run the binary:
 ```
-nix run git+https://github.com/SChernykh/p2pool?ref=master
+nix run git+https://github.com/SChernykh/p2pool?ref=master&submodules=1
 ```
 
 Run the binary with arguments:
 ```
-nix run git+https://github.com/SChernykh/p2pool?ref=master -- --help
+nix run git+https://github.com/SChernykh/p2pool?ref=master&submodules=1 -- --help
 ```
 
 ### Windows

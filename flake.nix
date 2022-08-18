@@ -23,7 +23,7 @@
           };
 
           buildInputs = builtins.attrValues {
-            inherit (pkgs) libuv zeromq libsodium gss;
+            inherit (pkgs) libuv zeromq libsodium gss curl;
           };
 
           installPhase = ''
