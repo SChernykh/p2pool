@@ -78,6 +78,8 @@ public:
 		difficulty_type m_customDiff;
 		difficulty_type m_autoDiff;
 		char m_customUser[32];
+
+		int32_t m_score;
 	};
 
 	bool on_login(StratumClient* client, uint32_t id, const char* login);

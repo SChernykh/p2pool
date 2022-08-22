@@ -33,6 +33,10 @@ static constexpr uint64_t AUTO_DIFF_TARGET_TIME = 30;
 // Use short target format (4 bytes) for diff <= 4 million
 static constexpr uint64_t TARGET_4_BYTES_LIMIT = std::numeric_limits<uint64_t>::max() / 4000001;
 
+static constexpr int32_t BAD_SHARE_POINTS = -5;
+static constexpr int32_t GOOD_SHARE_POINTS = 1;
+static constexpr int32_t BAN_THRESHOLD_POINTS = -15;
+
 #include "tcp_server.inl"
 
 namespace p2pool {
@@ -840,8 +844,11 @@ void StratumServer::on_share_found(uv_work_t* req)
 		if (pow_hash != share->m_resultHash) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " submitted a share with invalid PoW");
 			share->m_result = SubmittedShare::Result::INVALID_POW;
+			client->m_score += BAD_SHARE_POINTS;
 			return;
 		}
+
+		client->m_score += GOOD_SHARE_POINTS;
 
 		const uint64_t n = server->m_cumulativeHashes + hashes;
 		const double diff = sidechain_difficulty.to_double();
@@ -868,6 +875,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	else {
 		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a low diff share");
 		share->m_result = SubmittedShare::Result::LOW_DIFF;
+		client->m_score += BAD_SHARE_POINTS;
 	}
 }
 
@@ -910,7 +918,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				return s.m_pos;
 			});
 
-		if (bad_share) {
+		if (bad_share && (client->m_score <= BAN_THRESHOLD_POINTS)) {
 			client->ban(DEFAULT_BAN_TIME);
 			client->close();
 		}
@@ -934,6 +942,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_customDiff{}
 	, m_autoDiff{}
 	, m_customUser{}
+	, m_score(0)
 {
 }
 
@@ -953,6 +962,8 @@ void StratumServer::StratumClient::reset()
 	m_customDiff = {};
 	m_autoDiff = {};
 	m_customUser[0] = '\0';
+
+	m_score = 0;
 }
 
 bool StratumServer::StratumClient::on_connect()
