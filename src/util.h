@@ -68,7 +68,7 @@ private:
 
 template<typename T> FORCEINLINE ScopeGuard<T> on_scope_leave(T&& handler) { return ScopeGuard<T>(std::move(handler)); }
 
-#define ON_SCOPE_LEAVE(x) auto CONCAT(scope_guard_, __LINE__) = on_scope_leave(x);
+#define ON_SCOPE_LEAVE(...) auto CONCAT(scope_guard_, __LINE__) = on_scope_leave(__VA_ARGS__);
 
 struct MinerCallbackHandler
 {

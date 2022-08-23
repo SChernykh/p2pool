@@ -823,14 +823,15 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	return true;
 }
 
-void SideChain::print_status() const
+void SideChain::print_status(bool obtain_sidechain_lock) const
 {
 	std::vector<hash> blocks_in_window;
 	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
 
 	const difficulty_type diff = difficulty();
 
-	ReadLock lock(m_sidechainLock);
+	if (obtain_sidechain_lock) uv_rwlock_rdlock(&m_sidechainLock);
+	ON_SCOPE_LEAVE([this, obtain_sidechain_lock]() { if (obtain_sidechain_lock) uv_rwlock_rdunlock(&m_sidechainLock); });
 
 	uint64_t rem;
 	uint64_t pool_hashrate = udiv128(diff.hi, diff.lo, m_targetBlockTime, &rem);
@@ -2123,6 +2124,17 @@ void SideChain::finish_precalc()
 	{
 		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
+
+#ifdef DEV_TEST_SYNC
+	if (m_pool) {
+		LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
+		print_status(false);
+		if (m_pool->p2p_server()) {
+			m_pool->p2p_server()->print_status();
+		}
+		m_pool->stop();
+	}
+#endif
 }
 
 } // namespace p2pool

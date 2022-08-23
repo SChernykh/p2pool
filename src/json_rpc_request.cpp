@@ -60,10 +60,7 @@ struct CurlContext
 
 	void close_handles();
 
-	bool m_closing;
-
-	uv_poll_t m_pollHandle;
-	curl_socket_t m_socket;
+	std::vector<std::pair<curl_socket_t, uv_poll_t*>> m_pollHandles;
 
 	CallbackBase* m_callback;
 	CallbackBase* m_closeCallback;
@@ -85,10 +82,7 @@ struct CurlContext
 };
 
 CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
-	: m_closing(false)
-	, m_pollHandle{}
-	, m_socket{}
-	, m_callback(cb)
+	: m_callback(cb)
 	, m_closeCallback(close_cb)
 	, m_loop(loop)
 	, m_timer{}
@@ -99,6 +93,8 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_auth(auth)
 	, m_headers(nullptr)
 {
+	m_pollHandles.reserve(2);
+
 	{
 		char buf[log::Stream::BUF_SIZE + 1];
 		buf[0] = '\0';
@@ -213,6 +209,15 @@ CurlContext::~CurlContext()
 	}
 	delete m_callback;
 
+	if (m_response.empty()) {
+		if (m_error.empty()) {
+			m_error = "Empty response";
+		}
+		else {
+			m_error += " (empty response)";
+		}
+	}
+
 	(*m_closeCallback)(m_error.c_str(), m_error.length());
 	delete m_closeCallback;
 
@@ -221,42 +226,72 @@ CurlContext::~CurlContext()
 
 int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
 {
+	auto it = std::find_if(m_pollHandles.begin(), m_pollHandles.end(), [s](const auto& value) { return value.first == s; });
+
 	switch (action) {
 	case CURL_POLL_IN:
 	case CURL_POLL_OUT:
 	case CURL_POLL_INOUT:
-		if (!m_closing && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pollHandle))) {
-			if (!m_socket) {
-				m_socket = s;
-				curl_multi_assign(m_multiHandle, s, this);
+		{
+			uv_poll_t* h = nullptr;
+
+			if (it != m_pollHandles.end()) {
+				h = it->second;
 			}
-			else if (m_socket != s) {
-				LOGERR(1, "This code can't work with multiple parallel requests. Fix the code!");
+			else {
+				h = new uv_poll_t{};
+
+				// cppcheck-suppress nullPointer
+				h->data = this;
+
+				const int result = uv_poll_init_socket(m_loop, h, s);
+				if (result < 0) {
+					LOGERR(1, "uv_poll_init_socket failed: " << uv_err_name(result));
+					delete h;
+					h = nullptr;
+				}
+				else {
+					m_pollHandles.emplace_back(s, h);
+				}
 			}
 
-			int events = 0;
-			if (action != CURL_POLL_IN)  events |= UV_WRITABLE;
-			if (action != CURL_POLL_OUT) events |= UV_READABLE;
+			if (h) {
+				const CURLMcode err = curl_multi_assign(m_multiHandle, s, this);
+				if (err != CURLM_OK) {
+					LOGERR(1, "curl_multi_assign(action = " << action << ") failed: " << curl_multi_strerror(err));
+				}
 
-			if (!m_pollHandle.data) {
-				uv_poll_init_socket(m_loop, &m_pollHandle, s);
-				m_pollHandle.data = this;
-			}
+				int events = 0;
+				if (action != CURL_POLL_IN)  events |= UV_WRITABLE;
+				if (action != CURL_POLL_OUT) events |= UV_READABLE;
 
-			const int result = uv_poll_start(&m_pollHandle, events, curl_perform);
-			if (result < 0) {
-				LOGERR(1, "uv_poll_start failed with error " << uv_err_name(result));
+				const int result = uv_poll_start(h, events, curl_perform);
+				if (result < 0) {
+					LOGERR(1, "uv_poll_start failed with error " << uv_err_name(result));
+				}
 			}
-		}
-		else {
-			LOGERR(1, "Poll handle is closing, can't process socket action " << action);
+			else {
+				LOGERR(1, "failed to start polling on socket " << static_cast<int>(s));
+			}
 		}
 		break;
 
 	case CURL_POLL_REMOVE:
 	default:
-		curl_multi_assign(m_multiHandle, s, nullptr);
-		close_handles();
+		{
+			if (it != m_pollHandles.end()) {
+				uv_poll_t* h = it->second;
+				m_pollHandles.erase(it);
+
+				uv_poll_stop(h);
+				uv_close(reinterpret_cast<uv_handle_t*>(h), [](uv_handle_t* h) { delete reinterpret_cast<uv_poll_t*>(h); });
+			}
+
+			const CURLMcode err = curl_multi_assign(m_multiHandle, s, nullptr);
+			if (err != CURLM_OK) {
+				LOGERR(1, "curl_multi_assign(action = " << action << ") failed: " << curl_multi_strerror(err));
+			}
+		}
 		break;
 	}
 
@@ -285,7 +320,11 @@ void CurlContext::on_timeout(uv_handle_t* req)
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
 	int running_handles = 0;
-	curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
+	CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
+	if (err != CURLM_OK) {
+		LOGERR(1, "curl_multi_socket_action failed, error " << curl_multi_strerror(err));
+	}
+
 	ctx->check_multi_info();
 
 	if (running_handles == 0) {
@@ -314,9 +353,17 @@ void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
-	int running_handles;
-	curl_multi_socket_action(ctx->m_multiHandle, ctx->m_socket, flags, &running_handles);
+	int running_handles = 0;
+	auto it = std::find_if(ctx->m_pollHandles.begin(), ctx->m_pollHandles.end(), [req](const auto& value) { return value.second == req; });
+	if (it != ctx->m_pollHandles.end()) {
+		curl_multi_socket_action(ctx->m_multiHandle, it->first, flags, &running_handles);
+	}
+
 	ctx->check_multi_info();
+
+	if (running_handles == 0) {
+		ctx->close_handles();
+	}
 }
 
 void CurlContext::check_multi_info()
@@ -355,7 +402,7 @@ void CurlContext::on_close(uv_handle_t* h)
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(h->data);
 	h->data = nullptr;
 
-	if (ctx->m_timer.data || ctx->m_async.data || ctx->m_pollHandle.data) {
+	if (ctx->m_timer.data || ctx->m_async.data) {
 		return;
 	}
 
@@ -364,12 +411,11 @@ void CurlContext::on_close(uv_handle_t* h)
 
 void CurlContext::close_handles()
 {
-	m_closing = true;
-
-	if (m_pollHandle.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_pollHandle))) {
-		uv_poll_stop(&m_pollHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_pollHandle), on_close);
+	for (const auto& p : m_pollHandles) {
+		uv_poll_stop(p.second);
+		uv_close(reinterpret_cast<uv_handle_t*>(p.second), [](uv_handle_t* h) { delete reinterpret_cast<uv_poll_t*>(h); });
 	}
+	m_pollHandles.clear();
 
 	if (m_async.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_async))) {
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), on_close);

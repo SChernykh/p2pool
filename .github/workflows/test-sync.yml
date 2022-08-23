@@ -1,0 +1,103 @@
+name: Sync test
+
+on: [push, pull_request]
+
+jobs:
+  sync-test-ubuntu:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DDEV_TEST_SYNC=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+        make -j$(nproc)
+
+    - name: Run p2pool
+      timeout-minutes: 15
+      run: |
+        cd build
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 4
+
+    - name: Archive p2pool.log
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool_ubuntu.log
+        path: build/p2pool.log
+
+  sync-test-macos:
+
+    runs-on: macos-12
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake autoconf libtool automake libuv zmq libpgm curl
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DDEV_TEST_SYNC=ON
+        make -j3
+
+    - name: Run p2pool
+      timeout-minutes: 15
+      run: |
+        cd build
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 4
+
+    - name: Archive p2pool.log
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool_macos.log
+        path: build/p2pool.log
+
+  sync-test-windows:
+
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup cmake
+      uses: lukka/get-cmake@latest
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=Release p2pool.vcxproj
+
+    - name: Run p2pool
+      timeout-minutes: 15
+      run: |
+        cd build/Release
+        ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 4
+
+    - name: Archive p2pool.log
+      uses: actions/upload-artifact@v2
+      with:
+        name: p2pool_windows.log
+        path: build/Release/p2pool.log

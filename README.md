@@ -253,7 +253,7 @@ Alternatively, you can select "Clone a repository" within the GUI, then select "
 
 Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on your Mac:
 ```
-brew update && brew install git cmake libuv zmq libpgm
+brew update && brew install git cmake libuv zmq libpgm curl
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build
@@ -265,7 +265,7 @@ make -j$(sysctl -n hw.logicalcpu)
 
 Run the following commands to install the necessary prerequisites, clone this repo, and build P2Pool locally on FreeBSD:
 ```
-pkg install git cmake libuv libzmq4
+pkg install git cmake libuv libzmq4 curl
 git clone --recursive https://github.com/SChernykh/p2pool
 cd p2pool
 mkdir build && cd build
