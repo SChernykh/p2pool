@@ -103,11 +103,24 @@ TEST(pool_block, deserialize)
 TEST(pool_block, verify)
 {
 	init_crypto_cache();
+
+	struct STest
+	{
+		const char* m_poolName;
+		const char* m_fileName;
+		uint64_t m_txinGenHeight;
+		uint64_t m_sidechainHeight;
+	} tests[2] = {
+		{ "default", "sidechain_dump.dat", 2483901, 522805 },
+		{ "mini", "sidechain_dump_mini.dat", 2696040, 2424349 },
+	};
+
+	for (const STest& t : tests)
 	{
 		PoolBlock b;
-		SideChain sidechain(nullptr, NetworkType::Mainnet);
+		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
 
-		std::ifstream f("sidechain_dump.dat", std::ios::binary | std::ios::ate);
+		std::ifstream f(t.m_fileName, std::ios::binary | std::ios::ate);
 		ASSERT_EQ(f.good() && f.is_open(), true);
 
 		std::vector<uint8_t> buf(f.tellg());
@@ -133,9 +146,10 @@ TEST(pool_block, verify)
 		ASSERT_TRUE(tip->m_verified);
 		ASSERT_FALSE(tip->m_invalid);
 
-		ASSERT_EQ(tip->m_txinGenHeight, 2483901);
-		ASSERT_EQ(tip->m_sidechainHeight, 522805);
+		ASSERT_EQ(tip->m_txinGenHeight, t.m_txinGenHeight);
+		ASSERT_EQ(tip->m_sidechainHeight, t.m_sidechainHeight);
 	}
+
 	destroy_crypto_cache();
 }
 
