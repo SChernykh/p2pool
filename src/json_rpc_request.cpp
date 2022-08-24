@@ -58,7 +58,7 @@ struct CurlContext
 
 	static void on_close(uv_handle_t* h);
 
-	void close_handles();
+	void shutdown();
 
 	std::vector<std::pair<curl_socket_t, uv_poll_t*>> m_pollHandles;
 
@@ -211,7 +211,7 @@ CurlContext::~CurlContext()
 
 	if (m_response.empty()) {
 		if (m_error.empty()) {
-			m_error = "Empty response";
+			m_error = "empty response";
 		}
 		else {
 			m_error += " (empty response)";
@@ -307,11 +307,24 @@ int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 
 	if (timeout_ms == 0) {
 		// 0 ms timeout, but we can't just call on_timeout() here - we have to kick the UV loop
-		uv_async_send(&m_async);
-		return 0;
+		const int result = uv_async_send(&m_async);
+		if (result < 0) {
+			LOGERR(1, "uv_async_send failed with error " << uv_err_name(result));
+
+			// if async call didn't work, try to use the timer with 1 ms timeout
+			timeout_ms = 1;
+		}
+		else {
+			return 0;
+		}
 	}
 
-	uv_timer_start(&m_timer, reinterpret_cast<uv_timer_cb>(on_timeout), timeout_ms, 0);
+	const int result = uv_timer_start(&m_timer, reinterpret_cast<uv_timer_cb>(on_timeout), timeout_ms, 0);
+	if (result < 0) {
+		LOGERR(1, "uv_timer_start failed with error " << uv_err_name(result));
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -320,7 +333,7 @@ void CurlContext::on_timeout(uv_handle_t* req)
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
 	int running_handles = 0;
-	CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
+	const CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
 	if (err != CURLM_OK) {
 		LOGERR(1, "curl_multi_socket_action failed, error " << curl_multi_strerror(err));
 	}
@@ -328,15 +341,16 @@ void CurlContext::on_timeout(uv_handle_t* req)
 	ctx->check_multi_info();
 
 	if (running_handles == 0) {
-		ctx->close_handles();
+		ctx->shutdown();
 	}
 }
 
 size_t CurlContext::on_write(const void* buffer, size_t size, size_t count)
 {
+	const size_t realsize = size * count;
 	const char* p = reinterpret_cast<const char*>(buffer);
-	m_response.insert(m_response.end(), p, p + size * count);
-	return count;
+	m_response.insert(m_response.end(), p, p + realsize);
+	return realsize;
 }
 
 void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
@@ -356,13 +370,16 @@ void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 	int running_handles = 0;
 	auto it = std::find_if(ctx->m_pollHandles.begin(), ctx->m_pollHandles.end(), [req](const auto& value) { return value.second == req; });
 	if (it != ctx->m_pollHandles.end()) {
-		curl_multi_socket_action(ctx->m_multiHandle, it->first, flags, &running_handles);
+		const CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, it->first, flags, &running_handles);
+		if (err != CURLM_OK) {
+			LOGERR(1, "curl_multi_socket_action failed, error " << curl_multi_strerror(err));
+		}
 	}
 
 	ctx->check_multi_info();
 
 	if (running_handles == 0) {
-		ctx->close_handles();
+		ctx->shutdown();
 	}
 }
 
@@ -409,7 +426,7 @@ void CurlContext::on_close(uv_handle_t* h)
 	delete ctx;
 }
 
-void CurlContext::close_handles()
+void CurlContext::shutdown()
 {
 	for (const auto& p : m_pollHandles) {
 		uv_poll_stop(p.second);
