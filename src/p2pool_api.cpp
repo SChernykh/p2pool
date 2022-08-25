@@ -28,7 +28,9 @@ static constexpr char log_category_prefix[] = "P2Pool API ";
 
 namespace p2pool {
 
-p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats): m_apiPath(api_path)
+p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats)
+	: m_apiPath(api_path)
+	, m_counter(0)
 {
 	if (m_apiPath.empty()) {
 		LOGERR(1, "api path is empty");
@@ -131,12 +133,12 @@ void p2pool_api::dump_to_file()
 	{
 		MutexLock lock(m_dumpDataLock);
 		data = std::move(m_dumpData);
-		m_dumpData.clear();
 	}
 
 	for (auto& it : data) {
-		DumpFileWork* work = new DumpFileWork{ {}, 0, it.first, std::move(it.second) };
+		DumpFileWork* work = new DumpFileWork{ {}, 0, it.first, it.first + std::to_string(m_counter), std::move(it.second) };
 		work->req.data = work;
+		++m_counter;
 
 		const int flags = O_WRONLY | O_CREAT | O_TRUNC
 #ifdef O_BINARY
@@ -144,8 +146,7 @@ void p2pool_api::dump_to_file()
 #endif
 			;
 
-		const std::string tmp_name = it.first + ".tmp";
-		const int result = uv_fs_open(uv_default_loop_checked(), &work->req, tmp_name.c_str(), flags, 0644, on_fs_open);
+		const int result = uv_fs_open(uv_default_loop_checked(), &work->req, work->tmp_name.c_str(), flags, 0644, on_fs_open);
 		if (result < 0) {
 			LOGWARN(4, "failed to open " << it.first << ", error " << uv_err_name(result));
 			delete work;
@@ -205,10 +206,9 @@ void p2pool_api::on_fs_close(uv_fs_t* req)
 
 	uv_fs_req_cleanup(req);
 
-	const std::string tmp_name = work->name + ".tmp";
-	const int result = uv_fs_rename(uv_default_loop_checked(), &work->req, tmp_name.c_str(), work->name.c_str(), on_fs_rename);
+	const int result = uv_fs_rename(uv_default_loop_checked(), &work->req, work->tmp_name.c_str(), work->name.c_str(), on_fs_rename);
 	if (result < 0) {
-		LOGWARN(4, "failed to rename " << work->name << ", error " << uv_err_name(result));
+		LOGWARN(4, "failed to rename " << work->tmp_name << ", error " << uv_err_name(result));
 		delete work;
 		return;
 	}
@@ -219,7 +219,7 @@ void p2pool_api::on_fs_rename(uv_fs_t* req)
 	DumpFileWork* work = reinterpret_cast<DumpFileWork*>(req->data);
 
 	if (req->result < 0) {
-		LOGWARN(4, "failed to rename " << work->name << ", error " << uv_err_name(static_cast<int>(req->result)));
+		LOGWARN(4, "failed to rename " << work->tmp_name << ", error " << uv_err_name(static_cast<int>(req->result)));
 	}
 
 	uv_fs_req_cleanup(req);

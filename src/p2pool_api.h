@@ -50,6 +50,7 @@ private:
 		int fd;
 
 		std::string name;
+		std::string tmp_name;
 		std::vector<char> buf;
 	};
 
@@ -87,6 +88,8 @@ private:
 	unordered_map<std::string, std::vector<char>> m_dumpData;
 
 	uv_async_t m_dumpToFileAsync;
+
+	uint64_t m_counter;
 };
 
 } // namespace p2pool
