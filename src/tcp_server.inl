@@ -185,7 +185,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr6), UV_TCP_IPV6ONLY);
 				if (err) {
-					LOGERR(1, "failed to bind tcp server IPv6 socket, error " << uv_err_name(err));
+					LOGERR(1, "failed to bind tcp server IPv6 socket " << address << ", error " << uv_err_name(err));
 					panic();
 				}
 			}
@@ -199,14 +199,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr), 0);
 				if (err) {
-					LOGERR(1, "failed to bind tcp server IPv4 socket, error " << uv_err_name(err));
+					LOGERR(1, "failed to bind tcp server IPv4 socket " << address << ", error " << uv_err_name(err));
 					panic();
 				}
 			}
 
 			err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
 			if (err) {
-				LOGERR(1, "failed to listen on tcp server socket, error " << uv_err_name(err));
+				LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
 				panic();
 			}
 
@@ -395,13 +395,13 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 	connect_request->data = client;
 	err = uv_tcp_connect(connect_request, &client->m_socket, addr, on_connect);
 	if (err) {
-		LOGERR(1, "failed to initiate tcp connection, error " << uv_err_name(err));
+		LOGERR(1, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
 	}
 	else {
-		LOGINFO(5, "connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
+		LOGINFO(5, "connecting to " << log::Gray() << static_cast<const char*>(client->m_addrString));
 	}
 
 	return true;
