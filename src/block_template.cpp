@@ -910,11 +910,12 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	}
 }
 
-bool BlockTemplate::get_difficulties(const uint32_t template_id, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
+bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& height, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id == m_templateId) {
+		height = m_height;
 		mainchain_difficulty = m_difficulty;
 		sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 		return true;
@@ -923,7 +924,7 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, difficulty_type
 	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		return old->get_difficulties(template_id, mainchain_difficulty, sidechain_difficulty);
+		return old->get_difficulties(template_id, height, mainchain_difficulty, sidechain_difficulty);
 	}
 
 	return false;

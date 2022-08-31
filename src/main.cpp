@@ -48,6 +48,7 @@ void p2pool_usage()
 		"--mini               Connect to p2pool-mini sidechain. Note that it will also change default p2p port from %d to %d\n"
 		"--no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum\n"
 		"--rpc-login          Specify username[:password] required for Monero RPC server\n"
+		"--socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",

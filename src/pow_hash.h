@@ -100,7 +100,7 @@ public:
 	explicit RandomX_Hasher_RPC(p2pool* pool);
 	~RandomX_Hasher_RPC();
 
-	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) override;
+	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h) override;
 
 private:
 	static void loop(void* data);

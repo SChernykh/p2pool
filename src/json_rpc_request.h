@@ -37,12 +37,12 @@ private:
 	T m_cb;
 };
 
-void Call(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
+void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 
 template<typename T, typename U>
-FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
+FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
 {
-	Call(address, port, req, auth, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)), loop);
+	Call(address, port, req, auth, proxy, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)), loop);
 }
 
 } // namespace JSONRPCRequest

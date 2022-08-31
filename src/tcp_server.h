@@ -36,7 +36,7 @@ public:
 
 	bool connect_to_peer(bool is_v6, const char* ip, int port);
 
-	void drop_connections() { uv_async_send(&m_dropConnectionsAsync); }
+	void drop_connections_async() { uv_async_send(&m_dropConnectionsAsync); }
 	void shutdown_tcp();
 	virtual void print_status();
 
@@ -45,7 +45,7 @@ public:
 	int listen_port() const { return m_listenPort; }
 
 	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
-	virtual void on_connect_failed(bool is_v6, const raw_ip& ip, int port);
+	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
 
 	void ban(const raw_ip& ip, uint64_t seconds);
 	virtual void print_bans();
@@ -58,6 +58,7 @@ public:
 		virtual void reset();
 		virtual bool on_connect() = 0;
 		virtual bool on_read(char* data, uint32_t size) = 0;
+		bool on_proxy_handshake(char* data, uint32_t size);
 		virtual void on_read_failed(int /*err*/) {}
 		virtual void on_disconnected() {}
 
@@ -68,7 +69,7 @@ public:
 		void close();
 		void ban(uint64_t seconds);
 
-		void init_addr_string(bool is_v6, const sockaddr_storage* peer_addr);
+		void init_addr_string();
 
 		alignas(8) char m_readBuf[READ_BUF_SIZE];
 
@@ -88,7 +89,13 @@ public:
 
 		raw_ip m_addr;
 		int m_port;
-		char m_addrString[64];
+		char m_addrString[72];
+
+		enum class Socks5ProxyState {
+			Default,
+			MethodSelectionSent,
+			ConnectRequestSent,
+		} m_socks5ProxyState;
 
 		std::atomic<uint32_t> m_resetCounter;
 	};
@@ -100,7 +107,6 @@ public:
 		std::vector<uint8_t> m_data;
 	};
 
-	uv_mutex_t m_writeBuffersLock;
 	std::vector<WriteBuf*> m_writeBuffers;
 
 	struct SendCallbackBase
@@ -131,9 +137,9 @@ private:
 	static void on_connection_error(uv_handle_t* handle);
 	static void on_connect(uv_connect_t* req, int status);
 	void on_new_client(uv_stream_t* server);
-	void on_new_client_nolock(uv_stream_t* server, Client* client);
+	void on_new_client(uv_stream_t* server, Client* client);
 
-	bool connect_to_peer_nolock(Client* client, bool is_v6, const sockaddr* addr);
+	bool connect_to_peer(Client* client);
 
 	bool send_internal(Client* client, SendCallbackBase&& callback);
 
@@ -147,6 +153,11 @@ private:
 
 protected:
 	void start_listening(const std::string& listen_addresses);
+
+	std::string m_socks5Proxy;
+	bool m_socks5ProxyV6;
+	raw_ip m_socks5ProxyIP;
+	int m_socks5ProxyPort;
 
 	std::atomic<int> m_finished;
 	int m_listenPort;
@@ -165,7 +176,6 @@ protected:
 
 	bool is_banned(const raw_ip& ip);
 
-	uv_mutex_t m_pendingConnectionsLock;
 	unordered_set<raw_ip> m_pendingConnections;
 
 	uv_async_t m_dropConnectionsAsync;

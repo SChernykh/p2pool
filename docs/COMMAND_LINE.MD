@@ -23,6 +23,7 @@
 --mini               Connect to p2pool-mini sidechain. Note that it will also change default p2p port from 37889 to 37888
 --no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum
 --rpc-login          Specify username[:password] required for Monero RPC server
+--socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections
 ```
 
 ### Example command line

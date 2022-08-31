@@ -27,7 +27,7 @@ namespace JSONRPCRequest {
 
 struct CurlContext
 {
-	CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
+	CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 	~CurlContext();
 
 	static int socket_func(CURL* easy, curl_socket_t s, int action, void* userp, void* socketp)
@@ -73,7 +73,6 @@ struct CurlContext
 
 	std::string m_url;
 	std::string m_req;
-	std::string m_auth;
 
 	std::vector<char> m_response;
 	std::string m_error;
@@ -81,7 +80,7 @@ struct CurlContext
 	curl_slist* m_headers;
 };
 
-CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
+CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 	: m_callback(cb)
 	, m_closeCallback(close_cb)
 	, m_loop(loop)
@@ -90,7 +89,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_multiHandle(nullptr)
 	, m_handle(nullptr)
 	, m_req(req)
-	, m_auth(auth)
 	, m_headers(nullptr)
 {
 	m_pollHandles.reserve(2);
@@ -176,19 +174,31 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEDATA, this);
 
+	const int timeout = proxy.empty() ? 1 : 5;
+
 	curl_easy_setopt_checked(m_handle, CURLOPT_URL, m_url.c_str());
 	curl_easy_setopt_checked(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());
-	curl_easy_setopt_checked(m_handle, CURLOPT_CONNECTTIMEOUT, 1);
-	curl_easy_setopt_checked(m_handle, CURLOPT_TIMEOUT, 10);
+	curl_easy_setopt_checked(m_handle, CURLOPT_CONNECTTIMEOUT, timeout);
+	curl_easy_setopt_checked(m_handle, CURLOPT_TIMEOUT, timeout * 10);
 
 	m_headers = curl_slist_append(m_headers, "Content-Type: application/json");
 	if (m_headers) {
 		curl_easy_setopt_checked(m_handle, CURLOPT_HTTPHEADER, m_headers);
 	}
 
-	if (!m_auth.empty()) {
+	if (!auth.empty()) {
 		curl_easy_setopt_checked(m_handle, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST | CURLAUTH_ONLY);
-		curl_easy_setopt_checked(m_handle, CURLOPT_USERPWD, m_auth.c_str());
+		curl_easy_setopt_checked(m_handle, CURLOPT_USERPWD, auth.c_str());
+	}
+
+	if (!proxy.empty()) {
+		if (is_localhost(address)) {
+			LOGINFO(5, "not using proxy to connect to localhost address " << log::Gray() << address);
+		}
+		else {
+			curl_easy_setopt_checked(m_handle, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+			curl_easy_setopt_checked(m_handle, CURLOPT_PROXY, proxy.c_str());
+		}
 	}
 
 	CURLMcode curl_err = curl_multi_add_handle(m_multiHandle, m_handle);
@@ -443,7 +453,7 @@ void CurlContext::shutdown()
 	}
 }
 
-void Call(const std::string& address, int port, const std::string& req, const std::string& auth, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
+void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 {
 	if (!loop) {
 		loop = uv_default_loop();
@@ -453,7 +463,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 		[=]()
 		{
 			try {
-				new CurlContext(address, port, req, auth, cb, close_cb, loop);
+				new CurlContext(address, port, req, auth, proxy, cb, close_cb, loop);
 			}
 			catch (const std::exception& e) {
 				const char* msg = e.what();

@@ -135,6 +135,11 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+		if ((strcmp(argv[i], "--socks5") == 0) && (i + 1 < argc)) {
+			m_socks5Proxy = argv[++i];
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();
@@ -153,7 +158,7 @@ Params::Params(int argc, char* argv[])
 	}
 }
 
-bool Params::ok() const
+bool Params::valid() const
 {
 	return !m_host.empty() && m_rpcPort && m_zmqPort && m_wallet.valid();
 }
