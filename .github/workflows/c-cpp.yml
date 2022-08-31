@@ -115,7 +115,14 @@ jobs:
 
   build-ubuntu-aarch64:
 
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.config.os }}
+
+    strategy:
+      matrix:
+        config:
+          - {os: ubuntu-18.04}
+          - {os: ubuntu-20.04}
+          - {os: ubuntu-22.04}
 
     steps:
     - name: Install dependencies
@@ -161,7 +168,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v2
       with:
-        name: p2pool-ubuntu-latest-aarch64
+        name: p2pool-${{ matrix.config.os }}-aarch64
         path: build/p2pool
 
   build-windows-msys2:
