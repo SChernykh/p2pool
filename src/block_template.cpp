@@ -745,7 +745,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	const uint64_t corrected_extra_nonce_size = EXTRA_NONCE_SIZE + max_reward_amounts_weight - reward_amounts_weight;
 	if (corrected_extra_nonce_size > EXTRA_NONCE_SIZE) {
 		if (corrected_extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
-			LOGWARN(4, "create_miner_tx: corrected_extra_nonce_size (" << corrected_extra_nonce_size << ") is too large");
+			LOGWARN(5, "create_miner_tx: corrected_extra_nonce_size (" << corrected_extra_nonce_size << ") is too large");
 			return -3;
 		}
 		LOGINFO(4, "increased EXTRA_NONCE from " << EXTRA_NONCE_SIZE << " to " << corrected_extra_nonce_size << " bytes to maintain miner tx weight");
