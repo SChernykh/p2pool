@@ -353,8 +353,15 @@ static thread_local bool main_thread = false;
 void set_main_thread() { main_thread = true; }
 bool is_main_thread() { return main_thread; }
 
+bool disable_resolve_host = false;
+
 bool resolve_host(std::string& host, bool& is_v6)
 {
+	if (disable_resolve_host) {
+		LOGERR(1, "resolve_host was called with DNS disabled for host " << host);
+		return false;
+	}
+
 	addrinfo hints{};
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;

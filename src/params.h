@@ -51,6 +51,7 @@ struct Params
 	bool m_autoDiff = true;
 	std::string m_rpcLogin;
 	std::string m_socks5Proxy;
+	bool m_dns = true;
 };
 
 } // namespace p2pool

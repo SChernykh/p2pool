@@ -24,6 +24,7 @@
 --no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum
 --rpc-login          Specify username[:password] required for Monero RPC server
 --socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections
+--no-dns             disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)
 ```
 
 ### Example command line

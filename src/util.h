@@ -171,6 +171,7 @@ extern BackgroundJobTracker bkg_jobs_tracker;
 void set_main_thread();
 bool is_main_thread();
 
+extern bool disable_resolve_host;
 bool resolve_host(std::string& host, bool& is_v6);
 
 template <typename Key, typename T>

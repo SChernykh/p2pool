@@ -246,7 +246,7 @@ void P2PServer::connect_to_peers(const std::string& peer_list)
 	parse_address_list(peer_list,
 		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
-			if (!m_socks5Proxy.empty() || resolve_host(ip, is_v6)) {
+			if (!m_pool->params().m_dns || resolve_host(ip, is_v6)) {
 				connect_to_peer(is_v6, ip.c_str(), port);
 			}
 		});
@@ -356,7 +356,7 @@ void P2PServer::update_peer_connections()
 		peer_list.pop_back();
 	}
 
-	if (!has_good_peers && ((m_timerCounter % 30) == 0)) {
+	if (!has_good_peers && ((m_timerCounter % 10) == 0)) {
 		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
 		load_peer_list();
 		if (m_peerListMonero.empty()) {
@@ -536,11 +536,13 @@ void P2PServer::load_peer_list()
 		}
 	};
 
-	if (m_pool->side_chain().is_default()) {
-		load_from_seed_nodes(seed_nodes, DEFAULT_P2P_PORT);
-	}
-	else if (m_pool->side_chain().is_mini()) {
-		load_from_seed_nodes(seed_nodes_mini, DEFAULT_P2P_PORT_MINI);
+	if (m_pool->params().m_dns) {
+		if (m_pool->side_chain().is_default()) {
+			load_from_seed_nodes(seed_nodes, DEFAULT_P2P_PORT);
+		}
+		else if (m_pool->side_chain().is_mini()) {
+			load_from_seed_nodes(seed_nodes_mini, DEFAULT_P2P_PORT_MINI);
+		}
 	}
 
 	// Finally load peers from p2pool_peers.txt

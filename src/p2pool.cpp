@@ -64,10 +64,18 @@ p2pool::p2pool(int argc, char* argv[])
 		throw std::exception();
 	}
 
-	bool is_v6;
-	if (m_params->m_socks5Proxy.empty() && !resolve_host(m_params->m_host, is_v6)) {
-		LOGERR(1, "resolve_host failed for " << m_params->m_host);
-		throw std::exception();
+	if (m_params->m_socks5Proxy.empty()) {
+		if (m_params->m_dns) {
+			bool is_v6;
+			if (!resolve_host(m_params->m_host, is_v6)) {
+				LOGERR(1, "resolve_host failed for " << m_params->m_host);
+				throw std::exception();
+			}
+		}
+		else if (m_params->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
+			LOGERR(1, "Can't resolve hostname " << m_params->m_host << " with DNS disabled");
+			throw std::exception();
+		}
 	}
 
 	hash pub, sec, eph_public_key;
