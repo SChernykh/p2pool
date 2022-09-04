@@ -24,14 +24,20 @@ static constexpr char log_category_prefix[] = "ZMQReader ";
 
 namespace p2pool {
 
-ZMQReader::ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandler* handler)
+ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler)
 	: m_address(address)
 	, m_zmqPort(zmq_port)
+	, m_proxy(proxy)
 	, m_handler(handler)
 	, m_tx()
 	, m_minerData()
 	, m_chainmainData()
 {
+	if (!m_proxy.empty() && is_localhost(address)) {
+		LOGINFO(5, "not using proxy to connect to localhost address " << log::Gray() << address);
+		m_proxy.clear();
+	}
+
 	for (uint32_t i = m_publisherPort; i < std::numeric_limits<uint16_t>::max(); ++i) {
 		try {
 			m_publisherPort = 0;
@@ -84,14 +90,18 @@ void ZMQReader::run_wrapper(void* arg)
 void ZMQReader::run()
 {
 	try {
-		char addr[32];
+		if (!m_proxy.empty()) {
+			m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer(m_proxy.c_str(), m_proxy.length()));
+		}
 
-		snprintf(addr, sizeof(addr), "tcp://%s:%u", m_address, m_zmqPort);
+		std::string addr = "tcp://" + m_address + ':' + std::to_string(m_zmqPort);
 		if (!connect(addr)) {
 			return;
 		}
 
-		snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", m_publisherPort);
+		m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer());
+
+		addr = "tcp://127.0.0.1:" + std::to_string(m_publisherPort);
 		if (!connect(addr)) {
 			return;
 		}
@@ -128,7 +138,7 @@ void ZMQReader::run()
 	}
 }
 
-bool ZMQReader::connect(const char* address)
+bool ZMQReader::connect(const std::string& address)
 {
 	struct ConnectMonitor : public zmq::monitor_t
 	{

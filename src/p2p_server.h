@@ -51,6 +51,7 @@ public:
 	void clear_cached_blocks();
 	void store_in_cache(const PoolBlock& block);
 
+	void connect_to_peers_async(const char* peer_list);
 	void connect_to_peers(const std::string& peer_list);
 	void on_connect_failed(bool is_v6, const raw_ip& ip, int port) override;
 
@@ -134,7 +135,7 @@ public:
 	uint64_t get_peerId() const { return m_peerId; }
 
 	void print_status() override;
-	void show_peers();
+	void show_peers_async();
 	size_t peer_list_size() const { MutexLock lock(m_peerListLock); return m_peerList.size(); }
 
 	uint32_t max_outgoing_peers() const { return m_maxOutgoingPeers; }
@@ -221,6 +222,17 @@ private:
 
 	static void on_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->on_broadcast(); }
 	void on_broadcast();
+
+	uv_mutex_t m_connectToPeersLock;
+	uv_async_t m_connectToPeersAsync;
+	std::string m_connectToPeersData;
+
+	static void on_connect_to_peers(uv_async_t* handle);
+
+	uv_async_t m_showPeersAsync;
+
+	static void on_show_peers(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->show_peers(); }
+	void show_peers();
 };
 
 } // namespace p2pool

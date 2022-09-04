@@ -161,21 +161,21 @@ static void do_loglevel(p2pool * /* m_pool */, const char *args)
 static void do_addpeers(p2pool *m_pool, const char *args)
 {
 	if (m_pool->p2p_server()) {
-		m_pool->p2p_server()->connect_to_peers(args);
+		m_pool->p2p_server()->connect_to_peers_async(args);
 	}
 }
 
 static void do_droppeers(p2pool *m_pool, const char * /* args */)
 {
 	if (m_pool->p2p_server()) {
-		m_pool->p2p_server()->drop_connections();
+		m_pool->p2p_server()->drop_connections_async();
 	}
 }
 
 static void do_showpeers(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->p2p_server()) {
-		m_pool->p2p_server()->show_peers();
+		m_pool->p2p_server()->show_peers_async();
 	}
 }
 

@@ -219,6 +219,9 @@ FORCEINLINE uint64_t bsr(uint64_t x)
 #define bsr bsr_reference
 #endif
 
+bool str_to_ip(bool is_v6, const char* ip, raw_ip& result);
+bool is_localhost(const std::string& host);
+
 } // namespace p2pool
 
 void memory_tracking_start();

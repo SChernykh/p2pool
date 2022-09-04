@@ -139,6 +139,8 @@ private:
 		uint64_t m_target;
 		hash m_resultHash;
 		difficulty_type m_sidechainDifficulty;
+		uint64_t m_mainchainHeight;
+		double m_effort;
 		uint64_t m_timestamp;
 		uint64_t m_hashes;
 		bool m_highEnoughDifficulty;

@@ -25,6 +25,9 @@ template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client)
 	: m_allocateNewClient(allocate_new_client)
 	, m_loopThread{}
+	, m_socks5ProxyV6(false)
+	, m_socks5ProxyIP{}
+	, m_socks5ProxyPort(-1)
 	, m_finished(0)
 	, m_listenPort(-1)
 	, m_loop{}
@@ -57,18 +60,6 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 
 	uv_mutex_init_checked(&m_clientsListLock);
 	uv_mutex_init_checked(&m_bansLock);
-	uv_mutex_init_checked(&m_pendingConnectionsLock);
-	uv_mutex_init_checked(&m_writeBuffersLock);
-
-	m_writeBuffers.resize(DEFAULT_BACKLOG);
-	for (size_t i = 0; i < m_writeBuffers.size(); ++i) {
-		m_writeBuffers[i] = new WriteBuf();
-	}
-
-	m_preallocatedClients.reserve(DEFAULT_BACKLOG);
-	for (int i = 0; i < DEFAULT_BACKLOG; ++i) {
-		m_preallocatedClients.emplace_back(m_allocateNewClient());
-	}
 
 	m_connectedClientsList = m_allocateNewClient();
 	m_connectedClientsList->m_next = m_connectedClientsList;
@@ -228,8 +219,6 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 		return false;
 	}
 
-	MutexLock lock(m_clientsListLock);
-
 	if (m_finished.load()) {
 		return false;
 	}
@@ -247,48 +236,27 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 
 	client->m_owner = this;
 	client->m_port = port;
+	client->m_isV6 = is_v6;
+
+	if (!str_to_ip(is_v6, ip, client->m_addr)) {
+		m_preallocatedClients.push_back(client);
+		return false;
+	}
 
 	log::Stream s(client->m_addrString);
-
-	sockaddr_storage addr;
 	if (is_v6) {
-		sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
-		const int err = uv_ip6_addr(ip, port, addr6);
-		if (err) {
-			LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
-			m_preallocatedClients.push_back(client);
-			return false;
-		}
-
-		memcpy(client->m_addr.data, &addr6->sin6_addr, sizeof(in6_addr));
-
 		s << '[' << ip << "]:" << port << '\0';
 	}
 	else {
-		sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
-		const int err = uv_ip4_addr(ip, port, addr4);
-		if (err) {
-			LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
-			m_preallocatedClients.push_back(client);
-			return false;
-		}
-
-		client->m_addr = {};
-		client->m_addr.data[10] = 0xFF;
-		client->m_addr.data[11] = 0xFF;
-		memcpy(client->m_addr.data + 12, &addr4->sin_addr, sizeof(in_addr));
-
 		s << ip << ':' << port << '\0';
 	}
 
-	return connect_to_peer_nolock(client, is_v6, reinterpret_cast<sockaddr*>(&addr));
+	return connect_to_peer(client);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
 {
-	MutexLock lock(m_clientsListLock);
-
 	if (m_finished.load()) {
 		return false;
 	}
@@ -307,29 +275,10 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 	client->m_owner = this;
 	client->m_addr = ip;
 	client->m_port = port;
+	client->m_isV6 = is_v6;
+	client->init_addr_string();
 
-	sockaddr_storage addr{};
-
-	if (is_v6) {
-		sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
-		addr6->sin6_family = AF_INET6;
-		memcpy(&addr6->sin6_addr, ip.data, sizeof(in6_addr));
-		addr6->sin6_port = htons(static_cast<uint16_t>(port));
-	}
-	else {
-		sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
-		addr4->sin_family = AF_INET;
-		memcpy(&addr4->sin_addr, ip.data + 12, sizeof(in_addr));
-		addr4->sin_port = htons(static_cast<uint16_t>(port));
-	}
-
-	client->init_addr_string(is_v6, &addr);
-	return connect_to_peer_nolock(client, is_v6, reinterpret_cast<sockaddr*>(&addr));
-}
-
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect_failed(bool, const raw_ip&, int)
-{
+	return connect_to_peer(client);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -356,15 +305,13 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* client, bool is_v6, const sockaddr* addr)
+bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 {
 	if (is_banned(client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
 		m_preallocatedClients.push_back(client);
 		return false;
 	}
-
-	client->m_isV6 = is_v6;
 
 	int err = uv_tcp_init(&m_loop, &client->m_socket);
 	if (err) {
@@ -381,8 +328,6 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 		return false;
 	}
 
-	MutexLock lock(m_pendingConnectionsLock);
-
 	if (!m_pendingConnections.insert(client->m_addr).second) {
 		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
@@ -391,9 +336,40 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer_nolock(Client* cl
 
 	uv_connect_t* connect_request = reinterpret_cast<uv_connect_t*>(client->m_readBuf);
 	memset(connect_request, 0, sizeof(uv_connect_t));
-
 	connect_request->data = client;
-	err = uv_tcp_connect(connect_request, &client->m_socket, addr, on_connect);
+
+	sockaddr_storage addr{};
+
+	if (m_socks5Proxy.empty()) {
+		if (client->m_isV6) {
+			sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
+			addr6->sin6_family = AF_INET6;
+			memcpy(&addr6->sin6_addr, client->m_addr.data, sizeof(in6_addr));
+			addr6->sin6_port = htons(static_cast<uint16_t>(client->m_port));
+		}
+		else {
+			sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
+			addr4->sin_family = AF_INET;
+			memcpy(&addr4->sin_addr, client->m_addr.data + 12, sizeof(in_addr));
+			addr4->sin_port = htons(static_cast<uint16_t>(client->m_port));
+		}
+	}
+	else {
+		if (m_socks5ProxyV6) {
+			sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
+			addr6->sin6_family = AF_INET6;
+			memcpy(&addr6->sin6_addr, m_socks5ProxyIP.data, sizeof(in6_addr));
+			addr6->sin6_port = htons(static_cast<uint16_t>(m_socks5ProxyPort));
+		}
+		else {
+			sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
+			addr4->sin_family = AF_INET;
+			memcpy(&addr4->sin_addr, m_socks5ProxyIP.data + 12, sizeof(in_addr));
+			addr4->sin_port = htons(static_cast<uint16_t>(m_socks5ProxyPort));
+		}
+	}
+
+	err = uv_tcp_connect(connect_request, &client->m_socket, reinterpret_cast<sockaddr*>(&addr), on_connect);
 	if (err) {
 		LOGERR(1, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
@@ -429,15 +405,16 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets
 		}
 	}
 
-	MutexLock lock(m_clientsListLock);
-
 	size_t numClosed = 0;
+	{
+		MutexLock lock(m_clientsListLock);
 
-	for (Client* c = m_connectedClientsList->m_next; c != m_connectedClientsList; c = c->m_next) {
-		uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&c->m_socket);
-		if (!uv_is_closing(h)) {
-			uv_close(h, on_connection_close);
-			++numClosed;
+		for (Client* c = m_connectedClientsList->m_next; c != m_connectedClientsList; c = c->m_next) {
+			uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&c->m_socket);
+			if (!uv_is_closing(h)) {
+				uv_close(h, on_connection_close);
+				++numClosed;
+			}
 		}
 	}
 
@@ -485,21 +462,8 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 
 	uv_thread_join(&m_loopThread);
 
-	for (Client* c : m_preallocatedClients) {
-		delete c;
-	}
-
 	uv_mutex_destroy(&m_clientsListLock);
 	uv_mutex_destroy(&m_bansLock);
-	uv_mutex_destroy(&m_pendingConnectionsLock);
-
-	{
-		MutexLock lock(m_writeBuffersLock);
-		for (WriteBuf* buf : m_writeBuffers) {
-			delete buf;
-		}
-	}
-	uv_mutex_destroy(&m_writeBuffersLock);
 
 	LOGINFO(1, "stopped");
 }
@@ -561,17 +525,13 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		return true;
 	}
 
-	WriteBuf* buf = nullptr;
+	WriteBuf* buf;
 
-	{
-		MutexLock lock(m_writeBuffersLock);
-		if (!m_writeBuffers.empty()) {
-			buf = m_writeBuffers.back();
-			m_writeBuffers.pop_back();
-		}
+	if (!m_writeBuffers.empty()) {
+		buf = m_writeBuffers.back();
+		m_writeBuffers.pop_back();
 	}
-
-	if (!buf) {
+	else {
 		buf = new WriteBuf();
 	}
 
@@ -586,10 +546,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	if (bytes_written == 0) {
 		LOGWARN(1, "send callback wrote 0 bytes, nothing to do");
-		{
-			MutexLock lock(m_writeBuffersLock);
-			m_writeBuffers.push_back(buf);
-		}
+		m_writeBuffers.push_back(buf);
 		return true;
 	}
 
@@ -604,11 +561,8 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
 	if (err) {
-		{
-			MutexLock lock(m_writeBuffersLock);
-			m_writeBuffers.push_back(buf);
-		}
 		LOGWARN(1, "failed to start writing data to client connection " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
+		m_writeBuffers.push_back(buf);
 		return false;
 	}
 
@@ -621,8 +575,27 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	LOGINFO(1, "event loop started");
 	server_event_loop_thread = true;
 	TCPServer* server = static_cast<TCPServer*>(data);
+
+	server->m_writeBuffers.resize(DEFAULT_BACKLOG);
+	server->m_preallocatedClients.reserve(DEFAULT_BACKLOG);
+	for (size_t i = 0; i < DEFAULT_BACKLOG; ++i) {
+		server->m_writeBuffers[i] = new WriteBuf();
+		server->m_preallocatedClients.emplace_back(server->m_allocateNewClient());
+	}
+
 	uv_run(&server->m_loop, UV_RUN_DEFAULT);
 	uv_loop_close(&server->m_loop);
+
+	for (WriteBuf* buf : server->m_writeBuffers) {
+		delete buf;
+	}
+	server->m_writeBuffers.clear();
+
+	for (Client* c : server->m_preallocatedClients) {
+		delete c;
+	}
+	server->m_preallocatedClients.clear();
+
 	LOGINFO(1, "event loop stopped");
 	server->m_loopStopped = true;
 }
@@ -647,10 +620,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_connection(uv_stream_t* se
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* handle)
 {
-	if (!server_event_loop_thread) {
-		LOGERR(1, "on_connection_close called from another thread, this is not thread safe");
-	}
-
 	Client* client = static_cast<Client*>(handle->data);
 	TCPServer* owner = client->m_owner;
 
@@ -685,10 +654,7 @@ template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_error(uv_handle_t* handle)
 {
 	Client* client = reinterpret_cast<Client*>(handle->data);
-	TCPServer* server = client->m_owner;
-
-	MutexLock lock(server->m_clientsListLock);
-	server->m_preallocatedClients.push_back(client);
+	client->m_owner->m_preallocatedClients.push_back(client);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -701,12 +667,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 		return;
 	}
 
-	{
-		MutexLock lock(server->m_pendingConnectionsLock);
-		server->m_pendingConnections.erase(client->m_addr);
-	}
-
-	MutexLock lock(server->m_clientsListLock);
+	server->m_pendingConnections.erase(client->m_addr);
 
 	if (status) {
 		if (status == UV_ETIMEDOUT) {
@@ -720,14 +681,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 		return;
 	}
 
-	server->on_new_client_nolock(nullptr, client);
+	server->on_new_client(nullptr, client);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server)
 {
-	MutexLock lock(m_clientsListLock);
-
 	if (m_finished.load()) {
 		return;
 	}
@@ -766,62 +725,53 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 		return;
 	}
 
-	on_new_client_nolock(server, client);
+	on_new_client(server, client);
 }
 
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t* server, Client* client)
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server, Client* client)
 {
+	MutexLock lock(m_clientsListLock);
+
 	client->m_prev = m_connectedClientsList;
 	client->m_next = m_connectedClientsList->m_next;
 	m_connectedClientsList->m_next->m_prev = client;
 	m_connectedClientsList->m_next = client;
 
 	++m_numConnections;
-	client->m_isIncoming = false;
 
-	sockaddr_storage peer_addr;
-	int peer_addr_len = static_cast<int>(sizeof(peer_addr));
-	int err = uv_tcp_getpeername(&client->m_socket, reinterpret_cast<sockaddr*>(&peer_addr), &peer_addr_len);
-	if (err) {
-		LOGERR(1, "failed to get IP address of the client connection, error " << uv_err_name(err));
-		client->close();
-		return;
-	}
+	client->m_isIncoming = (server != nullptr);
 
-	bool is_v6;
-	if (server) {
-		is_v6 = (std::find(m_listenSockets6.begin(), m_listenSockets6.end(), reinterpret_cast<uv_tcp_t*>(server)) != m_listenSockets6.end());
-		client->m_isV6 = is_v6;
-	}
-	else {
-		is_v6 = client->m_isV6;
-	}
+	if (client->m_isIncoming) {
+		client->m_isV6 = (std::find(m_listenSockets6.begin(), m_listenSockets6.end(), reinterpret_cast<uv_tcp_t*>(server)) != m_listenSockets6.end());
 
-	if (is_v6) {
-		memcpy(client->m_addr.data, &reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_addr, sizeof(in6_addr));
-		client->m_port = ntohs(reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_port);
-	}
-	else {
-		client->m_addr = {};
-		client->m_addr.data[10] = 0xFF;
-		client->m_addr.data[11] = 0xFF;
-		memcpy(client->m_addr.data + 12, &reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_addr, sizeof(in_addr));
-		client->m_port = ntohs(reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_port);
-	}
+		sockaddr_storage peer_addr;
+		int peer_addr_len = static_cast<int>(sizeof(peer_addr));
+		int err = uv_tcp_getpeername(&client->m_socket, reinterpret_cast<sockaddr*>(&peer_addr), &peer_addr_len);
+		if (err) {
+			LOGERR(1, "failed to get IP address of the client connection, error " << uv_err_name(err));
+			client->close();
+			return;
+		}
 
-	client->init_addr_string(is_v6, &peer_addr);
+		if (client->m_isV6) {
+			memcpy(client->m_addr.data, &reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_addr, sizeof(in6_addr));
+			client->m_port = ntohs(reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_port);
+		}
+		else {
+			client->m_addr = {};
+			client->m_addr.data[10] = 0xFF;
+			client->m_addr.data[11] = 0xFF;
+			memcpy(client->m_addr.data + 12, &reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_addr, sizeof(in_addr));
+			client->m_port = ntohs(reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_port);
+		}
 
-	if (server) {
-		LOGINFO(5, "new connection from " << log::Gray() << static_cast<char*>(client->m_addrString));
-		client->m_isIncoming = true;
+		client->init_addr_string();
 		++m_numIncomingConnections;
 	}
-	else {
-		LOGINFO(5, "new connection to " << log::Gray() << static_cast<char*>(client->m_addrString));
-		client->m_isIncoming = false;
-	}
+
+	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
 
 	if (is_banned(client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
@@ -829,12 +779,44 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client_nolock(uv_stream_t*
 		return;
 	}
 
-	if (client->m_owner->m_finished.load() || !client->on_connect()) {
+	TCPServer* owner = client->m_owner;
+
+	if (owner->m_finished.load()) {
 		client->close();
 		return;
 	}
 
-	err = uv_read_start(reinterpret_cast<uv_stream_t*>(&client->m_socket), Client::on_alloc, Client::on_read);
+	if (owner->m_socks5Proxy.empty()) {
+		if (!client->on_connect()) {
+			client->close();
+			return;
+		}
+	}
+	else {
+		const bool result = owner->send(client,
+			[](void* buf, size_t buf_size) -> size_t
+			{
+				if (buf_size < 3) {
+					return 0;
+				}
+
+				uint8_t* p = reinterpret_cast<uint8_t*>(buf);
+				p[0] = 5; // Protocol version (SOCKS5)
+				p[1] = 1; // NMETHODS
+				p[2] = 0; // Method 0 (no authentication)
+
+				return 3;
+			});
+
+		if (result) {
+			client->m_socks5ProxyState = Client::Socks5ProxyState::MethodSelectionSent;
+		}
+		else {
+			client->close();
+		}
+	}
+
+	const int err = uv_read_start(reinterpret_cast<uv_stream_t*>(&client->m_socket), Client::on_alloc, Client::on_read);
 	if (err) {
 		LOGERR(1, "failed to start reading from client connection, error " << uv_err_name(err));
 		client->close();
@@ -855,6 +837,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
 	, m_addr{}
 	, m_port(0)
 	, m_addrString{}
+	, m_socks5ProxyState(Socks5ProxyState::Default)
 	, m_resetCounter{ 0 }
 {
 	m_readBuf[0] = '\0';
@@ -878,6 +861,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_addr = {};
 	m_port = -1;
 	m_addrString[0] = '\0';
+	m_socks5ProxyState = Socks5ProxyState::Default;
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -907,32 +891,156 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_alloc(uv_handle_t* han
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
-	Client* pThis = static_cast<Client*>(stream->data);
-	pThis->m_readBufInUse = false;
+	Client* client = static_cast<Client*>(stream->data);
+	client->m_readBufInUse = false;
 
-	if (pThis->m_isClosing) {
-		LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " is being disconnected but data received from it, nread = " << nread << ". Ignoring it.");
+	if (client->m_isClosing) {
+		LOGWARN(5, "client " << static_cast<const char*>(client->m_addrString) << " is being disconnected but data received from it, nread = " << nread << ". Ignoring it.");
 		return;
 	}
 
 	if (nread > 0) {
-		if (pThis->m_owner && !pThis->m_owner->m_finished.load()) {
-			if (!pThis->on_read(buf->base, static_cast<uint32_t>(nread))) {
-				pThis->close();
+		if (client->m_owner && !client->m_owner->m_finished.load()) {
+			if (client->m_socks5ProxyState == Socks5ProxyState::Default) {
+				if (!client->on_read(buf->base, static_cast<uint32_t>(nread))) {
+					client->close();
+				}
+			}
+			else if (!client->on_proxy_handshake(buf->base, static_cast<uint32_t>(nread))) {
+				client->close();
 			}
 		}
 	}
 	else if (nread < 0) {
 		if (nread != UV_EOF) {
 			const int err = static_cast<int>(nread);
-			LOGWARN(5, "client " << static_cast<const char*>(pThis->m_addrString) << " failed to read response, err = " << uv_err_name(err));
-			pThis->on_read_failed(err);
+			LOGWARN(5, "client " << static_cast<const char*>(client->m_addrString) << " failed to read response, err = " << uv_err_name(err));
+			client->on_read_failed(err);
 		}
 		else {
-			pThis->on_disconnected();
+			client->on_disconnected();
 		}
-		pThis->close();
+		client->close();
 	}
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_proxy_handshake(char* data, uint32_t size)
+{
+	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + sizeof(m_readBuf))) {
+		LOGERR(1, "peer " << static_cast<char*>(m_addrString) << " invalid data pointer or size in on_read()");
+		return false;
+	}
+	m_numRead += size;
+
+	uint32_t n = 0;
+
+	switch (m_socks5ProxyState) {
+	case Socks5ProxyState::MethodSelectionSent:
+		if (m_numRead >= 2) {
+			if ((m_readBuf[0] != 5) && (m_readBuf[1] != 0)) {
+				LOGWARN(5, "SOCKS5 proxy returned an invalid METHOD selection message");
+				return false;
+			}
+			n = 2;
+
+			const bool result = m_owner->send(this,
+				[this](void* buf, size_t buf_size) -> size_t
+				{
+					if (buf_size < 20) {
+						return 0;
+					}
+
+					uint8_t* p = reinterpret_cast<uint8_t*>(buf);
+					p[0] = 5; // Protocol version (SOCKS5)
+					p[1] = 1; // CONNECT
+					p[2] = 0; // RESERVED
+					if (m_isV6) {
+						p[3] = 4; // ATYP
+						memcpy(p + 4, m_addr.data, 16);
+						p[20] = static_cast<uint8_t>(m_port >> 8);
+						p[21] = static_cast<uint8_t>(m_port & 0xFF);
+					}
+					else {
+						p[3] = 1; // ATYP
+						memcpy(p + 4, m_addr.data + 12, 4);
+						p[8] = static_cast<uint8_t>(m_port >> 8);
+						p[9] = static_cast<uint8_t>(m_port & 0xFF);
+					}
+
+					return m_isV6 ? 22 : 10;
+				});
+
+			if (result) {
+				m_socks5ProxyState = Socks5ProxyState::ConnectRequestSent;
+			}
+			else {
+				close();
+			}
+		}
+		break;
+
+	case Socks5ProxyState::ConnectRequestSent:
+		if (m_numRead >= 4) {
+			uint8_t* p = reinterpret_cast<uint8_t*>(m_readBuf);
+			if ((p[0] != 5) && (p[1] != 0) && p[2] != 0) {
+				LOGWARN(5, "SOCKS5 proxy returned an invalid reply to CONNECT");
+				return false;
+			}
+
+			switch (p[3]) {
+			case 1:
+				if (m_numRead >= 10) {
+					m_socks5ProxyState = Socks5ProxyState::Default;
+					n = 10;
+				}
+				break;
+			case 3:
+				if (m_numRead >= 5) {
+					const uint32_t len = p[4];
+					if (m_numRead >= 7 + len) {
+						m_socks5ProxyState = Socks5ProxyState::Default;
+						n = 7 + len;
+					}
+				}
+				break;
+			case 4:
+				if (m_numRead >= 22) {
+					m_socks5ProxyState = Socks5ProxyState::Default;
+					n = 22;
+				}
+				break;
+			}
+		}
+		break;
+
+	default:
+		return false;
+	}
+
+	// Move the possible unfinished message to the beginning of m_readBuf to free up more space for reading
+	if (n > 0) {
+		m_numRead -= n;
+		if (m_numRead > 0) {
+			memmove(m_readBuf, m_readBuf + n, m_numRead);
+		}
+	}
+
+	if (m_socks5ProxyState == Socks5ProxyState::Default) {
+		if (!on_connect()) {
+			return false;
+		}
+
+		if (m_numRead > 0) {
+			const uint32_t nread = m_numRead;
+			m_numRead = 0;
+			if (!on_read(m_readBuf, nread)) {
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -943,7 +1051,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_write(uv_write_t* req,
 	TCPServer* server = client->m_owner;
 
 	if (server) {
-		MutexLock lock(server->m_writeBuffersLock);
 		server->m_writeBuffers.push_back(buf);
 	}
 
@@ -982,16 +1089,16 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::ban(uint64_t seconds)
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::init_addr_string(bool is_v6, const sockaddr_storage* peer_addr)
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::init_addr_string()
 {
 	const char* addr_str;
 	char addr_str_buf[64];
 
-	if (is_v6) {
-		addr_str = inet_ntop(AF_INET6, &reinterpret_cast<const sockaddr_in6*>(peer_addr)->sin6_addr, addr_str_buf, sizeof(addr_str_buf));
+	if (m_isV6) {
+		addr_str = inet_ntop(AF_INET6, m_addr.data, addr_str_buf, sizeof(addr_str_buf));
 	}
 	else {
-		addr_str = inet_ntop(AF_INET, &reinterpret_cast<const sockaddr_in*>(peer_addr)->sin_addr, addr_str_buf, sizeof(addr_str_buf));
+		addr_str = inet_ntop(AF_INET, m_addr.data + 12, addr_str_buf, sizeof(addr_str_buf));
 	}
 
 	if (addr_str) {
@@ -1001,11 +1108,11 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::init_addr_string(bool is_
 		}
 
 		log::Stream s(m_addrString);
-		if (is_v6) {
-			s << '[' << log::const_buf(addr_str, n) << "]:" << ntohs(reinterpret_cast<const sockaddr_in6*>(peer_addr)->sin6_port) << '\0';
+		if (m_isV6) {
+			s << '[' << log::const_buf(addr_str, n) << "]:" << m_port << '\0';
 		}
 		else {
-			s << log::const_buf(addr_str, n) << ':' << ntohs(reinterpret_cast<const sockaddr_in*>(peer_addr)->sin_port) << '\0';
+			s << log::const_buf(addr_str, n) << ':' << m_port << '\0';
 		}
 	}
 }

@@ -24,18 +24,19 @@ namespace p2pool {
 
 class ZMQReader {
 public:
-	ZMQReader(const char* address, uint32_t zmq_port, MinerCallbackHandler* handler);
+	ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler);
 	~ZMQReader();
 
 private:
 	static void run_wrapper(void* arg);
 	void run();
-	bool connect(const char* address);
+	bool connect(const std::string& address);
 
 	void parse(char* data, size_t size);
 
-	const char* m_address;
+	std::string m_address;
 	uint32_t m_zmqPort;
+	std::string m_proxy;
 	MinerCallbackHandler* m_handler;
 
 	uv_thread_t m_worker{};

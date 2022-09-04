@@ -432,6 +432,57 @@ NOINLINE uint64_t bsr_reference(uint64_t x)
 	return bsr8_table.data[y >> 24] - n0 - n1 - n2;
 }
 
+bool str_to_ip(bool is_v6, const char* ip, raw_ip& result)
+{
+	sockaddr_storage addr;
+
+	if (is_v6) {
+		sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
+		const int err = uv_ip6_addr(ip, 0, addr6);
+		if (err) {
+			LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
+			return false;
+		}
+		memcpy(result.data, &addr6->sin6_addr, sizeof(in6_addr));
+	}
+	else {
+		sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
+		const int err = uv_ip4_addr(ip, 0, addr4);
+		if (err) {
+			LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
+			return false;
+		}
+		result = {};
+		result.data[10] = 0xFF;
+		result.data[11] = 0xFF;
+		memcpy(result.data + 12, &addr4->sin_addr, sizeof(in_addr));
+	}
+
+	return true;
+}
+
+bool is_localhost(const std::string& host)
+{
+	if (host.empty()) {
+		return false;
+	}
+
+	if (host.compare("localhost") == 0) {
+		return true;
+	}
+
+	if (host.find_first_not_of("0123456789.:") != std::string::npos) {
+		return false;
+	}
+
+	raw_ip addr;
+	if (!str_to_ip(host.find(':') != std::string::npos, host.c_str(), addr)) {
+		return false;
+	}
+
+	return addr.is_localhost();
+}
+
 UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
 {
 	UV_LoopUserData* data = reinterpret_cast<UV_LoopUserData*>(loop->data);

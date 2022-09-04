@@ -68,6 +68,19 @@ P2PServer::P2PServer(p2pool* pool)
 
 	const Params& params = pool->params();
 
+	if (!params.m_socks5Proxy.empty()) {
+		parse_address_list(params.m_socks5Proxy,
+			[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
+			{
+				if (!str_to_ip(is_v6, ip.c_str(), m_socks5ProxyIP)) {
+					panic();
+				}
+				m_socks5ProxyV6 = is_v6;
+				m_socks5ProxyPort = port;
+			});
+		m_socks5Proxy = params.m_socks5Proxy;
+	}
+
 	set_max_outgoing_peers(params.m_maxOutgoingPeers);
 	set_max_incoming_peers(params.m_maxIncomingPeers);
 
@@ -77,6 +90,7 @@ P2PServer::P2PServer(p2pool* pool)
 	uv_mutex_init_checked(&m_broadcastLock);
 	uv_mutex_init_checked(&m_missingBlockRequestsLock);
 	uv_rwlock_init_checked(&m_cachedBlocksLock);
+	uv_mutex_init_checked(&m_connectToPeersLock);
 
 	int err = uv_async_init(&m_loop, &m_broadcastAsync, on_broadcast);
 	if (err) {
@@ -85,6 +99,20 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 	m_broadcastAsync.data = this;
 	m_broadcastQueue.reserve(2);
+
+	err = uv_async_init(&m_loop, &m_connectToPeersAsync, on_connect_to_peers);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_connectToPeersAsync.data = this;
+
+	err = uv_async_init(&m_loop, &m_showPeersAsync, on_show_peers);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+	m_showPeersAsync.data = this;
 
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
@@ -114,6 +142,8 @@ P2PServer::~P2PServer()
 	uv_timer_stop(&m_timer);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
 
 	shutdown_tcp();
 
@@ -125,6 +155,8 @@ P2PServer::~P2PServer()
 
 	clear_cached_blocks();
 	uv_rwlock_destroy(&m_cachedBlocksLock);
+
+	uv_mutex_destroy(&m_connectToPeersLock);
 
 	delete m_block;
 	delete m_cache;
@@ -179,12 +211,42 @@ void P2PServer::store_in_cache(const PoolBlock& block)
 	}
 }
 
+void P2PServer::connect_to_peers_async(const char* peer_list)
+{
+	{
+		MutexLock lock(m_connectToPeersLock);
+		if (!m_connectToPeersData.empty()) {
+			m_connectToPeersData.append(1, ',');
+		}
+		m_connectToPeersData.append(peer_list);
+	}
+
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync))) {
+		uv_async_send(&m_connectToPeersAsync);
+	}
+}
+
+void P2PServer::on_connect_to_peers(uv_async_t* handle)
+{
+	P2PServer* server = reinterpret_cast<P2PServer*>(handle->data);
+
+	std::string peer_list;
+	{
+		MutexLock lock(server->m_connectToPeersLock);
+		peer_list = std::move(server->m_connectToPeersData);
+	}
+
+	if (!peer_list.empty()) {
+		server->connect_to_peers(peer_list);
+	}
+}
+
 void P2PServer::connect_to_peers(const std::string& peer_list)
 {
 	parse_address_list(peer_list,
 		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
-			if (resolve_host(ip, is_v6)) {
+			if (!m_socks5Proxy.empty() || resolve_host(ip, is_v6)) {
 				connect_to_peer(is_v6, ip.c_str(), port);
 			}
 		});
@@ -219,7 +281,7 @@ void P2PServer::update_peer_connections()
 		connected_clients.reserve(m_numConnections);
 		for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			const int timeout = client->m_handshakeComplete ? 300 : 10;
-			if (cur_time >= client->m_lastAlive + timeout) {
+			if ((cur_time >= client->m_lastAlive + timeout) && (client->m_socks5ProxyState == Client::Socks5ProxyState::Default)) {
 				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
 				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
 				client->close();
@@ -507,29 +569,10 @@ void P2PServer::load_peer_list()
 		[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
 		{
 			Peer p;
-			if (is_v6) {
-				sockaddr_in6 addr6;
-				const int err = uv_ip6_addr(ip.c_str(), port, &addr6);
-				if (err) {
-					LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
-					return;
-				}
-				p.m_isV6 = true;
-				memcpy(p.m_addr.data, &addr6.sin6_addr, sizeof(in6_addr));
+			if (!str_to_ip(is_v6, ip.c_str(), p.m_addr)) {
+				return;
 			}
-			else {
-				sockaddr_in addr4;
-				const int err = uv_ip4_addr(ip.c_str(), port, &addr4);
-				if (err) {
-					LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
-					return;
-				}
-				p.m_isV6 = false;
-				p.m_addr = {};
-				p.m_addr.data[10] = 0xFF;
-				p.m_addr.data[11] = 0xFF;
-				memcpy(p.m_addr.data + 12, &addr4.sin_addr, sizeof(in_addr));
-			}
+			p.m_isV6 = is_v6;
 
 			bool already_added = false;
 			for (const Peer& peer : m_peerList) {
@@ -555,7 +598,7 @@ void P2PServer::load_monerod_peer_list()
 {
 	const Params& params = m_pool->params();
 
-	JSONRPCRequest::call(params.m_host, params.m_rpcPort, "/get_peer_list", params.m_rpcLogin,
+	JSONRPCRequest::call(params.m_host, params.m_rpcPort, "/get_peer_list", params.m_rpcLogin, m_socks5Proxy,
 		[this](const char* data, size_t size)
 		{
 #define ERR_STR "/get_peer_list RPC request returned invalid JSON "
@@ -604,27 +647,10 @@ void P2PServer::load_monerod_peer_list()
 
 				Peer p;
 				p.m_lastSeen = last_seen;
+				p.m_isV6 = (strchr(ip, ':') != 0);
 
-				if (strchr(ip, ':')) {
-					sockaddr_in6 addr6;
-					const int err = uv_ip6_addr(ip, port, &addr6);
-					if (err) {
-						continue;
-					}
-					p.m_isV6 = true;
-					memcpy(p.m_addr.data, &addr6.sin6_addr, sizeof(in6_addr));
-				}
-				else {
-					sockaddr_in addr4;
-					const int err = uv_ip4_addr(ip, port, &addr4);
-					if (err) {
-						continue;
-					}
-					p.m_isV6 = false;
-					p.m_addr = {};
-					p.m_addr.data[10] = 0xFF;
-					p.m_addr.data[11] = 0xFF;
-					memcpy(p.m_addr.data + 12, &addr4.sin_addr, sizeof(in_addr));
+				if (!str_to_ip(p.m_isV6, ip, p.m_addr)) {
+					continue;
 				}
 
 				p.m_port = port;
@@ -635,8 +661,8 @@ void P2PServer::load_monerod_peer_list()
 				}
 			}
 
-			// Put recently active peers first in the list
-			std::sort(m_peerListMonero.begin(), m_peerListMonero.end(), [](const Peer& a, const Peer& b) { return a.m_lastSeen > b.m_lastSeen; });
+			// Put recently active peers last in the list (it will be scanned backwards)
+			std::sort(m_peerListMonero.begin(), m_peerListMonero.end(), [](const Peer& a, const Peer& b) { return a.m_lastSeen < b.m_lastSeen; });
 
 			LOGINFO(4, "monerod peer list loaded (" << m_peerListMonero.size() << " peers)");
 		},
@@ -793,7 +819,7 @@ void P2PServer::on_broadcast()
 	MutexLock lock(m_clientsListLock);
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-		if (!client->m_handshakeComplete || !client->m_handshakeSolutionSent) {
+		if (!client->is_good()) {
 			continue;
 		}
 
@@ -873,6 +899,13 @@ void P2PServer::print_status()
 		"\nPeer list size = " << m_peerList.size() <<
 		"\nUptime         = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
 	);
+}
+
+void P2PServer::show_peers_async()
+{
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync))) {
+		uv_async_send(&m_showPeersAsync);
+	}
 }
 
 void P2PServer::show_peers()
@@ -1133,12 +1166,14 @@ bool P2PServer::P2PClient::on_connect()
 		return false;
 	}
 
-	// Don't allow multiple connections to/from the same IP
+	// Don't allow multiple connections to/from the same IP (except localhost)
 	// server->m_clientsListLock is already locked here
-	for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-		if ((client != this) && (client->m_addr == m_addr)) {
-			LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " is already connected as " << static_cast<char*>(client->m_addrString));
-			return false;
+	if (!m_addr.is_localhost()) {
+		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+			if ((client != this) && (client->m_addr == m_addr)) {
+				LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " is already connected as " << static_cast<char*>(client->m_addrString));
+				return false;
+			}
 		}
 	}
 
@@ -1891,7 +1926,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		uint32_t n = 0;
 
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			if ((client->m_listenPort < 0) || (client->m_addr == m_addr)) {
+			if (!client->is_good() || (client->m_addr == m_addr)) {
 				continue;
 			}
 

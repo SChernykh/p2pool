@@ -142,7 +142,7 @@ private:
 	void get_miner_data();
 	void parse_get_miner_data_rpc(const char* data, size_t size);
 
-	bool parse_block_header(const char* data, size_t size, ChainMain& result);
+	bool parse_block_header(const char* data, size_t size, ChainMain& c);
 	uint32_t parse_block_headers_range(const char* data, size_t size);
 
 	void api_update_network_stats();
