@@ -313,6 +313,11 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 		return false;
 	}
 
+	if (!m_pendingConnections.insert(client->m_addr).second) {
+		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
+		return false;
+	}
+
 	int err = uv_tcp_init(&m_loop, &client->m_socket);
 	if (err) {
 		LOGERR(1, "failed to create tcp client handle, error " << uv_err_name(err));
@@ -328,11 +333,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 		return false;
 	}
 
-	if (!m_pendingConnections.insert(client->m_addr).second) {
-		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
-		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
-		return false;
-	}
+	static_assert(sizeof(client->m_readBuf) >= sizeof(uv_connect_t), "READ_BUF_SIZE must be large enough");
 
 	uv_connect_t* connect_request = reinterpret_cast<uv_connect_t*>(client->m_readBuf);
 	memset(connect_request, 0, sizeof(uv_connect_t));
@@ -495,17 +496,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_bans()
 	using namespace std::chrono;
 	const auto cur_time = steady_clock::now();
 
-	std::vector<std::pair<raw_ip, std::chrono::steady_clock::time_point>> bans;
-	{
-		MutexLock lock(m_bansLock);
+	MutexLock lock(m_bansLock);
 
-		bans.reserve(m_bans.size());
-		for (const auto& b : m_bans) {
-			bans.emplace_back(std::make_pair(b.first, b.second));
-		}
-	}
-
-	for (const auto& b : bans) {
+	for (const auto& b : m_bans) {
 		if (cur_time < b.second) {
 			const uint64_t t = duration_cast<seconds>(b.second - cur_time).count();
 			LOGINFO(0, b.first << " is banned (" << t << " seconds left)");
@@ -862,6 +855,8 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_port = -1;
 	m_addrString[0] = '\0';
 	m_socks5ProxyState = Socks5ProxyState::Default;
+	m_readBuf[0] = '\0';
+	m_readBuf[READ_BUF_SIZE - 1] = '\0';
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
@@ -947,7 +942,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_proxy_handshake(char* 
 			const bool result = m_owner->send(this,
 				[this](void* buf, size_t buf_size) -> size_t
 				{
-					if (buf_size < 20) {
+					if (buf_size < 22) {
 						return 0;
 					}
 
@@ -1010,6 +1005,9 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_proxy_handshake(char* 
 					n = 22;
 				}
 				break;
+			default:
+				LOGWARN(5, "SOCKS5 proxy returned an invalid reply to CONNECT (invalid address type " << p[3] << ')');
+				return false;
 			}
 		}
 		break;
