@@ -779,7 +779,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 		return;
 	}
 
-	if (owner->m_socks5Proxy.empty()) {
+	if (client->m_isIncoming || owner->m_socks5Proxy.empty()) {
 		if (!client->on_connect()) {
 			client->close();
 			return;
