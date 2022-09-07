@@ -439,7 +439,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		return true;
 	}
 
-	LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a share with invalid job id");
+	LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a share with invalid job id " << job_id << " (latest job sent has id " << client->m_perConnectionJobId << ')');
 
 	const bool result = send(client,
 		[id](void* buf, size_t buf_size)
