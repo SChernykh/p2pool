@@ -36,7 +36,7 @@ public:
 
 	bool connect_to_peer(bool is_v6, const char* ip, int port);
 
-	void drop_connections_async() { uv_async_send(&m_dropConnectionsAsync); }
+	void drop_connections_async() { if (m_finished.load() == 0) { uv_async_send(&m_dropConnectionsAsync); } }
 	void shutdown_tcp();
 	virtual void print_status();
 

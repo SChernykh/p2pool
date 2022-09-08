@@ -190,7 +190,6 @@ p2pool::~p2pool()
 	delete m_blockTemplate;
 	delete m_mempool;
 	delete m_params;
-	delete m_consoleCommands;
 }
 
 bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result)
@@ -470,6 +469,8 @@ bool init_signals(p2pool* pool, bool init);
 void p2pool::on_stop(uv_async_t* async)
 {
 	p2pool* pool = reinterpret_cast<p2pool*>(async->data);
+
+	delete pool->m_consoleCommands;
 
 	if (pool->m_api) {
 		pool->m_api->on_stop();
