@@ -289,9 +289,19 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 void ConsoleCommands::loop(void* data)
 {
 	LOGINFO(1, "event loop started");
+
 	ConsoleCommands* pThis = static_cast<ConsoleCommands*>(data);
-	uv_run(&pThis->m_loop, UV_RUN_DEFAULT);
-	uv_loop_close(&pThis->m_loop);
+
+	int err = uv_run(&pThis->m_loop, UV_RUN_DEFAULT);
+	if (err) {
+		LOGWARN(1, "uv_run returned " << err);
+	}
+
+	err = uv_loop_close(&pThis->m_loop);
+	if (err) {
+		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
+	}
+
 	LOGINFO(1, "event loop stopped");
 }
 

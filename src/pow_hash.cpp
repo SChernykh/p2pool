@@ -413,9 +413,19 @@ RandomX_Hasher_RPC::~RandomX_Hasher_RPC()
 void RandomX_Hasher_RPC::loop(void* data)
 {
 	LOGINFO(1, "event loop started");
+
 	RandomX_Hasher_RPC* hasher = static_cast<RandomX_Hasher_RPC*>(data);
-	uv_run(&hasher->m_loop, UV_RUN_DEFAULT);
-	uv_loop_close(&hasher->m_loop);
+
+	int err = uv_run(&hasher->m_loop, UV_RUN_DEFAULT);
+	if (err) {
+		LOGWARN(1, "uv_run returned " << err);
+	}
+
+	err = uv_loop_close(&hasher->m_loop);
+	if (err) {
+		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
+	}
+
 	LOGINFO(1, "event loop stopped");
 }
 

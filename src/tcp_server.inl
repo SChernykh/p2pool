@@ -576,8 +576,15 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 		server->m_preallocatedClients.emplace_back(server->m_allocateNewClient());
 	}
 
-	uv_run(&server->m_loop, UV_RUN_DEFAULT);
-	uv_loop_close(&server->m_loop);
+	int err = uv_run(&server->m_loop, UV_RUN_DEFAULT);
+	if (err) {
+		LOGWARN(1, "uv_run returned " << err);
+	}
+
+	err = uv_loop_close(&server->m_loop);
+	if (err) {
+		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
+	}
 
 	for (WriteBuf* buf : server->m_writeBuffers) {
 		delete buf;
