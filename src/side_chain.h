@@ -76,6 +76,7 @@ public:
 	bool is_mini() const;
 
 	const PoolBlock* chainTip() const { return m_chainTip; }
+	bool precalcFinished() const { return m_precalcFinished.load(); }
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
