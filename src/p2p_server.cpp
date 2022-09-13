@@ -1431,6 +1431,8 @@ void P2PServer::P2PClient::on_disconnected()
 		server->m_fastestPeer = nullptr;
 	}
 
+	m_pingTime = -1;
+
 	if (!m_handshakeComplete) {
 		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " disconnected before finishing handshake");
 
