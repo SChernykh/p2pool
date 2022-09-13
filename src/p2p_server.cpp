@@ -387,9 +387,9 @@ void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 	client->m_nextOutgoingPeerListRequest = cur_time + (60 + (get_random64() % 61));
 
 	const bool result = send(client,
-		[](void* buf, size_t buf_size)
+		[client](void* buf, size_t buf_size)
 		{
-			LOGINFO(5, "sending PEER_LIST_REQUEST");
+			LOGINFO(5, "sending PEER_LIST_REQUEST to " << static_cast<char*>(client->m_addrString));
 
 			if (buf_size < SEND_BUF_MIN_SIZE) {
 				return 0;
@@ -1060,9 +1060,9 @@ void P2PServer::download_missing_blocks()
 		}
 
 		const bool result = send(client,
-			[&id](void* buf, size_t buf_size) -> size_t
+			[&id, client](void* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
+				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(client->m_addrString));
 
 				if (buf_size < SEND_BUF_MIN_SIZE) {
 					return 0;
@@ -1449,7 +1449,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 	return owner->send(this,
 		[this, owner](void* buf, size_t buf_size) -> size_t
 		{
-			LOGINFO(5, "sending HANDSHAKE_CHALLENGE");
+			LOGINFO(5, "sending HANDSHAKE_CHALLENGE to " << static_cast<char*>(m_addrString));
 
 			if (buf_size < SEND_BUF_MIN_SIZE) {
 				return 0;
@@ -1571,7 +1571,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 			const bool result = work->server->send(work->client,
 				[work](void* buf, size_t buf_size) -> size_t
 				{
-					LOGINFO(5, "sending HANDSHAKE_SOLUTION");
+					LOGINFO(5, "sending HANDSHAKE_SOLUTION to " << static_cast<char*>(work->client->m_addrString));
 
 					if (buf_size < SEND_BUF_MIN_SIZE) {
 						return 0;
@@ -1726,7 +1726,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 		return m_owner->send(this,
 			[this](void* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending LISTEN_PORT and BLOCK_REQUEST for the chain tip");
+				LOGINFO(5, "sending LISTEN_PORT and BLOCK_REQUEST for the chain tip to " << static_cast<char*>(m_addrString));
 
 				if (buf_size < SEND_BUF_MIN_SIZE) {
 					return 0;
@@ -1744,14 +1744,14 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 
 void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 {
-	LOGINFO(5, "sending LISTEN_PORT");
+	LOGINFO(5, "sending LISTEN_PORT to " << static_cast<char*>(m_addrString));
 	*(p++) = static_cast<uint8_t>(MessageId::LISTEN_PORT);
 
 	const int32_t port = m_owner->listen_port();
 	memcpy(p, &port, sizeof(port));
 	p += sizeof(port);
 
-	LOGINFO(5, "sending BLOCK_REQUEST for the chain tip");
+	LOGINFO(5, "sending BLOCK_REQUEST for the chain tip to " << static_cast<char*>(m_addrString));
 	*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
 	hash empty;
@@ -1794,9 +1794,9 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	}
 
 	return server->send(this,
-		[&blob](void* buf, size_t buf_size) -> size_t
+		[this, &blob](void* buf, size_t buf_size) -> size_t
 		{
-			LOGINFO(5, "sending BLOCK_RESPONSE");
+			LOGINFO(5, "sending BLOCK_RESPONSE to " << static_cast<char*>(m_addrString));
 
 			const uint32_t len = static_cast<uint32_t>(blob.size());
 
@@ -1966,9 +1966,9 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	}
 
 	return server->send(this,
-		[&peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
+		[this, &peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
 		{
-			LOGINFO(5, "sending PEER_LIST_RESPONSE");
+			LOGINFO(5, "sending PEER_LIST_RESPONSE to " << static_cast<char*>(m_addrString));
 
 			if (buf_size < SEND_BUF_MIN_SIZE + 2 + num_selected_peers * 19) {
 				return 0;
@@ -2122,6 +2122,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 	// If the initial sync is not finished yet, try to ask the fastest peer too
 	P2PClient* c = server->m_fastestPeer;
 	if (c && (c != this) && !server->m_pool->side_chain().precalcFinished()) {
+		LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it too");
 		c->post_handle_incoming_block(c->m_resetCounter.load(), missing_blocks);
 	}
 
@@ -2138,9 +2139,9 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		}
 
 		const bool result = server->send(this,
-			[&id](void* buf, size_t buf_size) -> size_t
+			[this, &id](void* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id);
+				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
 
 				if (buf_size < SEND_BUF_MIN_SIZE + 1 + HASH_SIZE) {
 					return 0;
