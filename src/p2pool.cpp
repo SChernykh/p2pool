@@ -826,25 +826,26 @@ void p2pool::load_found_blocks()
 		return;
 	}
 
-	while (!f.eof()) {
+	while (f.good()) {
 		time_t timestamp;
 		f >> timestamp;
-		if (f.eof()) break;
+		if (!f.good()) break;
 
 		uint64_t height;
 		f >> height;
-		if (f.eof()) break;
+		if (!f.good()) break;
 
 		hash id;
 		f >> id;
-		if (f.eof()) break;
+		if (!f.good()) break;
 
 		difficulty_type block_difficulty;
 		f >> block_difficulty;
-		if (f.eof()) break;
+		if (!f.good()) break;
 
 		difficulty_type cumulative_difficulty;
 		f >> cumulative_difficulty;
+		if (!f.good() && !f.eof()) break;
 
 		m_foundBlocks.emplace_back(timestamp, height, id, block_difficulty, cumulative_difficulty);
 	}
@@ -1333,6 +1334,8 @@ void p2pool::api_update_block_found(const ChainMain* data)
 		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
 		if (f.is_open()) {
 			f << cur_time << ' ' << data->height << ' ' << data->id << ' ' << diff << ' ' << total_hashes << '\n';
+			f.flush();
+			f.close();
 		}
 	}
 

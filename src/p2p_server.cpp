@@ -477,6 +477,7 @@ void P2PServer::save_peer_list()
 		}
 	}
 
+	f.flush();
 	f.close();
 
 	LOGINFO(5, "peer list saved (" << peer_list.size() << " peers)");
@@ -557,7 +558,7 @@ void P2PServer::load_peer_list()
 	std::ifstream f(saved_peer_list_file_name);
 	if (f.is_open()) {
 		std::string address;
-		while (!f.eof()) {
+		while (f.good()) {
 			std::getline(f, address);
 			if (!address.empty()) {
 				if (!saved_list.empty()) {
