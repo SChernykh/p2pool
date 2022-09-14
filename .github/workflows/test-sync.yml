@@ -88,16 +88,16 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON
-        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=Release p2pool.vcxproj
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=Debug p2pool.vcxproj
 
     - name: Run p2pool
       timeout-minutes: 15
       run: |
-        cd build/Release
+        cd build/Debug
         ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 6
 
     - name: Archive p2pool.log
       uses: actions/upload-artifact@v2
       with:
         name: p2pool_windows.log
-        path: build/Release/p2pool.log
+        path: build/Debug/p2pool.log

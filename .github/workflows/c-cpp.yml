@@ -273,11 +273,11 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "${{ matrix.config.vs }}"
-        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Release p2pool_tests.vcxproj
+        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Debug p2pool_tests.vcxproj
 
     - name: Run tests
       run: |
-        cd tests/build/Release
+        cd tests/build/Debug
         ./p2pool_tests.exe
 
     - name: Archive binary
