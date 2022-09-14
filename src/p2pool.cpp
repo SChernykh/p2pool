@@ -963,14 +963,16 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		return;
 	}
 
-	const uint64_t required = m_params->m_disableRandomX ? 0x30009 : 0x30008;
+	constexpr uint64_t major = 3;
+	constexpr uint64_t minor = 10;
+	constexpr uint64_t required = (major << 16) | minor;
 
 	if (version < required) {
 		const uint64_t version_hi = version >> 16;
 		const uint64_t version_lo = version & 65535;
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
-		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.17.3.0 or newer)");
+		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.18.0.0 or newer)");
 		panic();
 	}
 
