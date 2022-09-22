@@ -744,6 +744,8 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 	client->m_isIncoming = (server != nullptr);
 
 	if (client->m_isIncoming) {
+		++m_numIncomingConnections;
+
 		client->m_isV6 = (std::find(m_listenSockets6.begin(), m_listenSockets6.end(), reinterpret_cast<uv_tcp_t*>(server)) != m_listenSockets6.end());
 
 		sockaddr_storage peer_addr;
@@ -768,7 +770,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 		}
 
 		client->init_addr_string();
-		++m_numIncomingConnections;
 	}
 
 	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
