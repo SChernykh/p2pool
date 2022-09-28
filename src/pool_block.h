@@ -122,8 +122,6 @@ struct PoolBlock
 	hash m_sidechainId;
 
 	// Just temporary stuff, not a part of the block
-	std::vector<uint8_t> m_tmpTxExtra;
-
 	uint64_t m_depth;
 
 	bool m_verified;

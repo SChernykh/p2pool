@@ -63,7 +63,6 @@ PoolBlock::PoolBlock()
 	m_transactions.reserve(256);
 	m_sideChainData.reserve(512);
 	m_uncles.reserve(8);
-	m_tmpTxExtra.reserve(80);
 }
 
 PoolBlock::PoolBlock(const PoolBlock& b)
@@ -109,7 +108,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
 	m_sidechainId = b.m_sidechainId;
-	m_tmpTxExtra = b.m_tmpTxExtra;
 	m_depth = b.m_depth;
 	m_verified = b.m_verified;
 	m_invalid = b.m_invalid;
@@ -169,28 +167,37 @@ void PoolBlock::serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, c
 
 	m_mainChainOutputsBlobSize = static_cast<int>(m_mainChainData.size()) - m_mainChainOutputsOffset;
 
-	m_tmpTxExtra.clear();
+	uint8_t tx_extra[128];
+	uint8_t* p = tx_extra;
 
-	m_tmpTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
-	m_tmpTxExtra.insert(m_tmpTxExtra.end(), m_txkeyPub.h, m_txkeyPub.h + HASH_SIZE);
+	*(p++) = TX_EXTRA_TAG_PUBKEY;
+	memcpy(p, m_txkeyPub.h, HASH_SIZE);
+	p += HASH_SIZE;
 
-	m_tmpTxExtra.push_back(TX_EXTRA_NONCE);
-	writeVarint(m_extraNonceSize, m_tmpTxExtra);
-
-	m_extraNonce = extra_nonce;
-	m_tmpTxExtra.insert(m_tmpTxExtra.end(), reinterpret_cast<uint8_t*>(&m_extraNonce), reinterpret_cast<uint8_t*>(&m_extraNonce) + EXTRA_NONCE_SIZE);
-	if (m_extraNonceSize > EXTRA_NONCE_SIZE) {
-		m_tmpTxExtra.insert(m_tmpTxExtra.end(), m_extraNonceSize - EXTRA_NONCE_SIZE, 0);
+	uint64_t extra_nonce_size = m_extraNonceSize;
+	if (extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
+		LOGERR(1, "extra nonce size is too large (" << extra_nonce_size << "), fix the code!");
+		extra_nonce_size = EXTRA_NONCE_MAX_SIZE;
 	}
 
-	m_tmpTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
-	writeVarint(HASH_SIZE, m_tmpTxExtra);
-	m_tmpTxExtra.insert(m_tmpTxExtra.end(), sidechain_hash.h, sidechain_hash.h + HASH_SIZE);
+	*(p++) = TX_EXTRA_NONCE;
+	*(p++) = static_cast<uint8_t>(extra_nonce_size);
 
-	writeVarint(m_tmpTxExtra.size(), m_mainChainData);
-	m_mainChainData.insert(m_mainChainData.end(), m_tmpTxExtra.begin(), m_tmpTxExtra.end());
+	m_extraNonce = extra_nonce;
+	memcpy(p, &m_extraNonce, EXTRA_NONCE_SIZE);
+	p += EXTRA_NONCE_SIZE;
+	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
+		memset(p, 0, extra_nonce_size - EXTRA_NONCE_SIZE);
+		p += extra_nonce_size - EXTRA_NONCE_SIZE;
+	}
 
-	m_tmpTxExtra.clear();
+	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
+	*(p++) = HASH_SIZE;
+	memcpy(p, sidechain_hash.h, HASH_SIZE);
+	p += HASH_SIZE;
+
+	writeVarint(static_cast<size_t>(p - tx_extra), m_mainChainData);
+	m_mainChainData.insert(m_mainChainData.end(), tx_extra, p);
 
 	m_mainChainData.push_back(0);
 
@@ -234,8 +241,6 @@ void PoolBlock::serialize_sidechain_data()
 void PoolBlock::reset_offchain_data()
 {
 	// Defaults for off-chain variables
-	m_tmpTxExtra.clear();
-
 	m_depth = 0;
 
 	m_verified = false;

@@ -72,7 +72,6 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_difficulty.hi, 0);
 	ASSERT_EQ(b.m_cumulativeDifficulty.lo, 12544665764606ull);
 	ASSERT_EQ(b.m_cumulativeDifficulty.hi, 0);
-	ASSERT_EQ(b.m_tmpTxExtra.size(), 0);
 	ASSERT_EQ(b.m_depth, 0);
 	ASSERT_EQ(b.m_verified, false);
 	ASSERT_EQ(b.m_invalid, false);
