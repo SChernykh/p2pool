@@ -201,8 +201,9 @@ void memory_tracking_stop()
 	uint64_t total_leaks = 0;
 
 	for (uint32_t i = 0; i < N; ++i) {
-		if (allocations[i].allocated_size) {
-			total_leaks += allocations[i].allocated_size;
+		const TrackedAllocation& t = allocations[i];
+		if (t.allocated_size) {
+			total_leaks += t.allocated_size;
 
 			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = {};
 			PSYMBOL_INFO pSymbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
@@ -213,9 +214,9 @@ void memory_tracking_stop()
 			IMAGEHLP_LINE64 line{};
 			line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 
-			printf("Memory leak detected, %u bytes allocated by thread %u at:\n", allocations[i].allocated_size, allocations[i].thread_id);
+			printf("Memory leak detected, %u bytes allocated at %p by thread %u:\n", t.allocated_size, t.p, t.thread_id);
 			for (size_t j = 0; j < MAX_FRAMES; ++j) {
-				const DWORD64 address = reinterpret_cast<DWORD64>(allocations[i].stack_trace[j]);
+				const DWORD64 address = reinterpret_cast<DWORD64>(t.stack_trace[j]);
 				DWORD64 t1 = 0;
 				DWORD t2 = 0;
 				if (SymFromAddr(h, address, &t1, pSymbol) && SymGetLineFromAddr64(h, address, &t2, &line)) {
