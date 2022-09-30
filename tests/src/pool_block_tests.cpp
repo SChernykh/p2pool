@@ -51,11 +51,16 @@ TEST(pool_block, deserialize)
 
 	ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain, nullptr), 0);
 
-	ASSERT_EQ(b.m_mainChainData.size(), 5607);
-	ASSERT_EQ(b.m_mainChainHeaderSize, 43);
-	ASSERT_EQ(b.m_mainChainMinerTxSize, 506);
-	ASSERT_EQ(b.m_mainChainOutputsOffset, 54);
-	ASSERT_EQ(b.m_mainChainOutputsBlobSize, 420);
+	size_t header_size, miner_tx_size;
+	int outputs_offset, outputs_blob_size;
+	const std::vector<uint8_t> mainchain_data = b.serialize_mainchain_data(&header_size, &miner_tx_size, &outputs_offset, &outputs_blob_size);
+
+	ASSERT_EQ(mainchain_data.size(), 5607);
+	ASSERT_EQ(header_size, 43);
+	ASSERT_EQ(miner_tx_size, 506);
+	ASSERT_EQ(outputs_offset, 54);
+	ASSERT_EQ(outputs_blob_size, 420);
+
 	ASSERT_EQ(b.m_majorVersion, 14);
 	ASSERT_EQ(b.m_minorVersion, 14);
 	ASSERT_EQ(b.m_timestamp, 1630934403);

@@ -527,7 +527,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	MinerData miner_data = m_pool->miner_data();
 	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(pow_hash)) {
 		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
-		m_pool->submit_block_async(block.m_mainChainData);
+		m_pool->submit_block_async(block.serialize_mainchain_data());
 	}
 	else {
 		difficulty_type diff;
@@ -536,7 +536,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		}
 		else if (diff.check_pow(pow_hash)) {
 			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
-			m_pool->submit_block_async(block.m_mainChainData);
+			m_pool->submit_block_async(block.serialize_mainchain_data());
 		}
 	}
 
@@ -675,10 +675,9 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 		return false;
 	}
 
-	blob.reserve(block->m_mainChainData.size() + block->m_sideChainData.size());
-
-	blob = block->m_mainChainData;
+	blob = block->serialize_mainchain_data();
 	blob.insert(blob.end(), block->m_sideChainData.begin(), block->m_sideChainData.end());
+
 	return true;
 }
 

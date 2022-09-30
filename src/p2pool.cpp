@@ -440,7 +440,7 @@ void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t e
 	}
 }
 
-void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
+void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 {
 	{
 		MutexLock lock(m_submitBlockDataLock);
@@ -448,7 +448,7 @@ void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
 		m_submitBlockData.template_id = 0;
 		m_submitBlockData.nonce = 0;
 		m_submitBlockData.extra_nonce = 0;
-		m_submitBlockData.blob = blob;
+		m_submitBlockData.blob = std::move(blob);
 	}
 
 	// If p2pool is stopped, m_submitBlockAsync is most likely already closed

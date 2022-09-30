@@ -75,8 +75,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const int nonce_offset = static_cast<int>(data - data_begin);
 		READ_BUF(&m_nonce, NONCE_SIZE);
 
-		m_mainChainHeaderSize = data - data_begin;
-
 		EXPECT_BYTE(TX_VERSION);
 
 		uint64_t unlock_height;
@@ -89,12 +87,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		if (unlock_height != m_txinGenHeight + MINER_REWARD_UNLOCK_TIME) return __LINE__;
 
 		std::vector<uint8_t> outputs_blob;
-		m_mainChainOutputsOffset = static_cast<int>(data - data_begin);
+		const int outputs_offset = static_cast<int>(data - data_begin);
 
 		uint64_t num_outputs;
 		READ_VARINT(num_outputs);
 
 		uint64_t total_reward = 0;
+		int outputs_blob_size;
 
 		if (num_outputs > 0) {
 			// Outputs are in the buffer, just read them
@@ -105,13 +104,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < num_outputs * MIN_OUTPUT_SIZE) return __LINE__;
 
-			m_outputs.clear();
-			m_outputs.reserve(num_outputs);
+			m_outputs.resize(num_outputs);
+			m_outputs.shrink_to_fit();
 
 			const uint8_t expected_tx_type = get_tx_type();
 
 			for (uint64_t i = 0; i < num_outputs; ++i) {
-				TxOutput t;
+				TxOutput& t = m_outputs[i];
 
 				READ_VARINT(t.m_reward);
 				total_reward += t.m_reward;
@@ -124,12 +123,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				if (expected_tx_type == TXOUT_TO_TAGGED_KEY) {
 					READ_BYTE(t.m_viewTag);
 				}
-
-				m_outputs.emplace_back(std::move(t));
 			}
 
-			m_mainChainOutputsBlobSize = static_cast<int>(data - data_begin) - m_mainChainOutputsOffset;
-			outputs_blob.assign(data_begin + m_mainChainOutputsOffset, data);
+			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
+			outputs_blob.assign(data_begin + outputs_offset, data);
 		}
 		else {
 			// Outputs are not in the buffer and must be calculated from sidechain data
@@ -144,7 +141,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				return __LINE__;
 			}
 
-			m_mainChainOutputsBlobSize = static_cast<int>(tmp);
+			outputs_blob_size = static_cast<int>(tmp);
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
@@ -153,13 +150,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		const int outputs_actual_blob_size = static_cast<int>(data - data_begin) - m_mainChainOutputsOffset;
-
-		if (m_mainChainOutputsBlobSize < outputs_actual_blob_size) {
+		const int outputs_actual_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
+		if (outputs_blob_size < outputs_actual_blob_size) {
 			return __LINE__;
 		}
 
-		const int outputs_blob_size_diff = m_mainChainOutputsBlobSize - outputs_actual_blob_size;
+		const int outputs_blob_size_diff = outputs_blob_size - outputs_actual_blob_size;
 
 		uint64_t tx_extra_size;
 		READ_VARINT(tx_extra_size);
@@ -191,8 +187,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		EXPECT_BYTE(0);
 
-		m_mainChainMinerTxSize = (data - data_begin) + outputs_blob_size_diff - m_mainChainHeaderSize;
-
 		uint64_t num_transactions;
 		READ_VARINT(num_transactions);
 
@@ -208,10 +202,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			m_transactions.emplace_back(std::move(id));
 		}
 
-		m_mainChainData.reserve((data - data_begin) + outputs_blob_size_diff);
-		m_mainChainData.assign(data_begin, data_begin + m_mainChainOutputsOffset);
-		m_mainChainData.insert(m_mainChainData.end(), m_mainChainOutputsBlobSize, 0);
-		m_mainChainData.insert(m_mainChainData.end(), data_begin + m_mainChainOutputsOffset + outputs_actual_blob_size, data);
+#if POOL_BLOCK_DEBUG
+		m_mainChainDataDebug.reserve((data - data_begin) + outputs_blob_size_diff);
+		m_mainChainDataDebug.assign(data_begin, data_begin + outputs_offset);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), outputs_blob_size, 0);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data);
+#endif
 
 		const uint8_t* sidechain_data_begin = data;
 
@@ -276,16 +272,18 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		if (static_cast<int>(outputs_blob.size()) != m_mainChainOutputsBlobSize) {
+		if (static_cast<int>(outputs_blob.size()) != outputs_blob_size) {
 			return __LINE__;
 		}
 
-		memcpy(m_mainChainData.data() + m_mainChainOutputsOffset, outputs_blob.data(), m_mainChainOutputsBlobSize);
+#if POOL_BLOCK_DEBUG
+		memcpy(m_mainChainDataDebug.data() + outputs_offset, outputs_blob.data(), outputs_blob_size);
+#endif
 
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 		keccak_custom(
-			[this, nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_end, &consensus_id, &outputs_blob, outputs_blob_size_diff](int offset) -> uint8_t
+			[nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_end, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size](int offset) -> uint8_t
 			{
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
@@ -304,11 +302,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff);
 				if (offset < data_size) {
-					if (offset < m_mainChainOutputsOffset) {
+					if (offset < outputs_offset) {
 						return data_begin[offset];
 					}
-					else if (offset < m_mainChainOutputsOffset + m_mainChainOutputsBlobSize) {
-						const int tmp = offset - m_mainChainOutputsOffset;
+					else if (offset < outputs_offset + outputs_blob_size) {
+						const int tmp = offset - outputs_offset;
 						return outputs_blob[tmp];
 					}
 					else {

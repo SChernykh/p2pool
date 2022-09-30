@@ -528,15 +528,15 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
 	memcpy(m_minerTx.data() + sidechain_hash_offset - m_minerTxOffsetInTemplate, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
 
-	m_poolBlockTemplate->serialize_mainchain_data(0, 0, m_poolBlockTemplate->m_sidechainId);
-
 #if POOL_BLOCK_DEBUG
-	if (m_poolBlockTemplate->m_mainChainData != m_blockTemplateBlob) {
+	const std::vector<uint8_t> mainchain_data = m_poolBlockTemplate->serialize_mainchain_data();
+
+	if (mainchain_data != m_blockTemplateBlob) {
 		LOGERR(1, "serialize_mainchain_data() has a bug, fix it! ");
-		LOGERR(1, "m_poolBlockTemplate->m_mainChainData.size() = " << m_poolBlockTemplate->m_mainChainData.size());
+		LOGERR(1, "m_poolBlockTemplate->m_mainChainData.size() = " << mainchain_data.size());
 		LOGERR(1, "m_blockTemplateBlob.size()         = " << m_blockTemplateBlob.size());
-		for (size_t i = 0, n = std::min(m_poolBlockTemplate->m_mainChainData.size(), m_blockTemplateBlob.size()); i < n; ++i) {
-			if (m_poolBlockTemplate->m_mainChainData[i] != m_blockTemplateBlob[i]) {
+		for (size_t i = 0, n = std::min(mainchain_data.size(), m_blockTemplateBlob.size()); i < n; ++i) {
+			if (mainchain_data[i] != m_blockTemplateBlob[i]) {
 				LOGERR(1, "m_poolBlockTemplate->m_mainChainData is different at offset " << i);
 				break;
 			}
@@ -1067,14 +1067,16 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 	if (template_id == m_templateId) {
 		m_poolBlockTemplate->m_nonce = nonce;
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
-		memcpy(m_poolBlockTemplate->m_mainChainData.data() + m_nonceOffset, &nonce, NONCE_SIZE);
-		memcpy(m_poolBlockTemplate->m_mainChainData.data() + m_extraNonceOffsetInTemplate, &extra_nonce, EXTRA_NONCE_SIZE);
 
 		SideChain& side_chain = m_pool->side_chain();
 
 #if POOL_BLOCK_DEBUG
 		{
-			std::vector<uint8_t> buf = m_poolBlockTemplate->m_mainChainData;
+			std::vector<uint8_t> buf = m_poolBlockTemplate->serialize_mainchain_data();
+
+			memcpy(buf.data() + m_nonceOffset, &nonce, NONCE_SIZE);
+			memcpy(buf.data() + m_extraNonceOffsetInTemplate, &extra_nonce, EXTRA_NONCE_SIZE);
+
 			buf.insert(buf.end(), m_poolBlockTemplate->m_sideChainData.begin(), m_poolBlockTemplate->m_sideChainData.end());
 
 			PoolBlock check;

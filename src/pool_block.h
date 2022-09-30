@@ -63,13 +63,11 @@ struct PoolBlock
 
 	mutable uv_mutex_t m_lock;
 
-	// Monero block template
-	std::vector<uint8_t> m_mainChainData;
-	size_t m_mainChainHeaderSize;
-	size_t m_mainChainMinerTxSize;
-	int m_mainChainOutputsOffset;
-	int m_mainChainOutputsBlobSize;
+#if POOL_BLOCK_DEBUG
+	std::vector<uint8_t> m_mainChainDataDebug;
+#endif
 
+	// Monero block template
 	uint8_t m_majorVersion;
 	uint8_t m_minorVersion;
 	uint64_t m_timestamp;
@@ -134,7 +132,8 @@ struct PoolBlock
 
 	uint64_t m_localTimestamp;
 
-	void serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash);
+	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr) const;
+	std::vector<uint8_t> serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const;
 	void serialize_sidechain_data();
 
 	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop);
