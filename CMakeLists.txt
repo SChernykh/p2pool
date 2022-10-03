@@ -88,7 +88,7 @@ if (NOT STATIC_BINARY AND NOT STATIC_LIBS)
 endif()
 
 if (CURL_INCLUDE_DIRS)
-	include_directories(CURL_INCLUDE_DIRS)
+	include_directories(${CURL_INCLUDE_DIRS})
 else()
 	include_directories(external/src/curl/include)
 endif()
