@@ -170,7 +170,10 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	// Use between 1 and 8 threads
 	if (numThreads < 1) numThreads = 1;
+
+#ifndef _DEBUG
 	if (numThreads > 8) numThreads = 8;
+#endif
 
 	LOGINFO(4, "running " << numThreads << " pre-calculation workers");
 
@@ -2127,6 +2130,9 @@ void SideChain::finish_precalc()
 	{
 		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
+
+	// Also clear cache because it has data from all old blocks now
+	clear_crypto_cache();
 
 #ifdef DEV_TEST_SYNC
 	if (m_pool) {
