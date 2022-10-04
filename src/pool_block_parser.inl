@@ -207,9 +207,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		m_mainChainDataDebug.assign(data_begin, data_begin + outputs_offset);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), outputs_blob_size, 0);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data);
-#endif
 
 		const uint8_t* sidechain_data_begin = data;
+#endif
 
 		hash spend_pub_key;
 		hash view_pub_key;
@@ -323,7 +323,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		m_sideChainData.assign(sidechain_data_begin, data_end);
+#if POOL_BLOCK_DEBUG
+		m_sideChainDataDebug.assign(sidechain_data_begin, data_end);
+#endif
 	}
 	catch (std::exception& e) {
 		const char* msg = e.what();

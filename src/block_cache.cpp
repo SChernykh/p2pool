@@ -166,9 +166,10 @@ BlockCache::~BlockCache()
 void BlockCache::store(const PoolBlock& block)
 {
 	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data();
+	const std::vector<uint8_t> sidechain_data = block.serialize_sidechain_data();
 
 	const size_t n1 = mainchain_data.size();
-	const size_t n2 = block.m_sideChainData.size();
+	const size_t n2 = sidechain_data.size();
 
 	if (!m_impl->m_data || (sizeof(uint32_t) + n1 + n2 > BLOCK_SIZE)) {
 		return;
@@ -178,7 +179,7 @@ void BlockCache::store(const PoolBlock& block)
 
 	*reinterpret_cast<uint32_t*>(data) = static_cast<uint32_t>(n1 + n2);
 	memcpy(data + sizeof(uint32_t), mainchain_data.data(), n1);
-	memcpy(data + sizeof(uint32_t) + n1, block.m_sideChainData.data(), n2);
+	memcpy(data + sizeof(uint32_t) + n1, sidechain_data.data(), n2);
 }
 
 void BlockCache::load_all(SideChain& side_chain, P2PServer& server)

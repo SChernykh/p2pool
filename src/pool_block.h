@@ -65,6 +65,7 @@ struct PoolBlock
 
 #if POOL_BLOCK_DEBUG
 	std::vector<uint8_t> m_mainChainDataDebug;
+	std::vector<uint8_t> m_sideChainDataDebug;
 #endif
 
 	// Monero block template
@@ -96,9 +97,6 @@ struct PoolBlock
 
 	// All block transaction hashes including the miner transaction hash at index 0
 	std::vector<hash> m_transactions;
-
-	// Side-chain data
-	std::vector<uint8_t> m_sideChainData;
 
 	// Miner's wallet
 	Wallet m_minerWallet{ nullptr };
@@ -134,7 +132,7 @@ struct PoolBlock
 
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr) const;
 	std::vector<uint8_t> serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const;
-	void serialize_sidechain_data();
+	std::vector<uint8_t> serialize_sidechain_data() const;
 
 	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop);
 	void reset_offchain_data();

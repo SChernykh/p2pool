@@ -677,7 +677,8 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 	}
 
 	blob = block->serialize_mainchain_data();
-	blob.insert(blob.end(), block->m_sideChainData.begin(), block->m_sideChainData.end());
+	const std::vector<uint8_t> sidechain_data = block->serialize_sidechain_data();
+	blob.insert(blob.end(), sidechain_data.begin(), sidechain_data.end());
 
 	return true;
 }

@@ -56,7 +56,6 @@ PoolBlock::PoolBlock()
 
 	m_outputs.reserve(2048);
 	m_transactions.reserve(256);
-	m_sideChainData.reserve(512);
 	m_uncles.reserve(8);
 }
 
@@ -80,6 +79,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 #if POOL_BLOCK_DEBUG
 	m_mainChainDataDebug = b.m_mainChainDataDebug;
+	m_sideChainDataDebug = b.m_sideChainDataDebug;
 #endif
 
 	m_majorVersion = b.m_majorVersion;
@@ -93,7 +93,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
 	m_transactions = b.m_transactions;
-	m_sideChainData = b.m_sideChainData;
 	m_minerWallet = b.m_minerWallet;
 	m_txkeySec = b.m_txkeySec;
 	m_parent = b.m_parent;
@@ -225,34 +224,44 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	return data;
 }
 
-void PoolBlock::serialize_sidechain_data()
+std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 {
+	std::vector<uint8_t> data;
+
 	MutexLock lock(m_lock);
 
-	m_sideChainData.clear();
-	m_sideChainData.reserve((m_uncles.size() + 4) * HASH_SIZE + 11);
+	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 20);
 
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
 
-	m_sideChainData.insert(m_sideChainData.end(), spend.h, spend.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), view.h, view.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), m_parent.h, m_parent.h + HASH_SIZE);
+	data.insert(data.end(), spend.h, spend.h + HASH_SIZE);
+	data.insert(data.end(), view.h, view.h + HASH_SIZE);
+	data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
-	writeVarint(m_uncles.size(), m_sideChainData);
+	writeVarint(m_uncles.size(), data);
 
 	for (const hash& id : m_uncles) {
-		m_sideChainData.insert(m_sideChainData.end(), id.h, id.h + HASH_SIZE);
+		data.insert(data.end(), id.h, id.h + HASH_SIZE);
 	}
 
-	writeVarint(m_sidechainHeight, m_sideChainData);
+	writeVarint(m_sidechainHeight, data);
 
-	writeVarint(m_difficulty.lo, m_sideChainData);
-	writeVarint(m_difficulty.hi, m_sideChainData);
+	writeVarint(m_difficulty.lo, data);
+	writeVarint(m_difficulty.hi, data);
 
-	writeVarint(m_cumulativeDifficulty.lo, m_sideChainData);
-	writeVarint(m_cumulativeDifficulty.hi, m_sideChainData);
+	writeVarint(m_cumulativeDifficulty.lo, data);
+	writeVarint(m_cumulativeDifficulty.hi, data);
+
+#if POOL_BLOCK_DEBUG
+	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {
+		LOGERR(1, "serialize_sidechain_data() has a bug, fix it!");
+		panic();
+	}
+#endif
+
+	return data;
 }
 
 void PoolBlock::reset_offchain_data()

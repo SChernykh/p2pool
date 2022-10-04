@@ -70,7 +70,6 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_extraNonceSize, 4);
 	ASSERT_EQ(b.m_extraNonce, 28);
 	ASSERT_EQ(b.m_transactions.size(), 159);
-	ASSERT_EQ(b.m_sideChainData.size(), 146);
 	ASSERT_EQ(b.m_uncles.size(), 0);
 	ASSERT_EQ(b.m_sidechainHeight, 53450);
 	ASSERT_EQ(b.m_difficulty.lo, 319296691);
