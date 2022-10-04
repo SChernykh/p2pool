@@ -301,6 +301,9 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\n---------------------------------------------------------------------------------------------------------------"
 	);
 
+	// Tx secret keys from all miners change every block, so cache can be cleared here
+	clear_crypto_cache();
+
 	if (!is_main_thread()) {
 		update_block_template_async();
 	}
@@ -1322,8 +1325,6 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 
 void p2pool::api_update_block_found(const ChainMain* data)
 {
-	clear_crypto_cache();
-
 	if (!m_api) {
 		return;
 	}

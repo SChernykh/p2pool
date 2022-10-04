@@ -32,6 +32,7 @@
 #include "stratum_server.h"
 #include "params.h"
 #include "json_parsers.h"
+#include "crypto.h"
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <fstream>
@@ -1621,6 +1622,8 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 					if (s) {
 						s->reset_share_counters();
 					}
+					// Also clear cache because it has data from all old blocks now
+					clear_crypto_cache();
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
 				}
 			}
