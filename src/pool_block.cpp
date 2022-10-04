@@ -53,10 +53,6 @@ PoolBlock::PoolBlock()
 	, m_localTimestamp(seconds_since_epoch())
 {
 	uv_mutex_init_checked(&m_lock);
-
-	m_outputs.reserve(2048);
-	m_transactions.reserve(256);
-	m_uncles.reserve(8);
 }
 
 PoolBlock::PoolBlock(const PoolBlock& b)
@@ -159,13 +155,15 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 
 	writeVarint(m_outputs.size(), data);
 
+	const uint8_t tx_type = get_tx_type();
+
 	for (const TxOutput& output : m_outputs) {
 		writeVarint(output.m_reward, data);
-		data.push_back(output.m_txType);
+		data.push_back(tx_type);
 		data.insert(data.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
 
-		if (output.m_txType == TXOUT_TO_TAGGED_KEY) {
-			data.push_back(output.m_viewTag);
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
+			data.push_back(static_cast<uint8_t>(output.m_viewTag));
 		}
 	}
 
@@ -358,11 +356,13 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
+	const uint8_t tx_type = get_tx_type();
+
 	for (size_t i = 0, n = m_outputs.size(); i < n; ++i) {
 		const TxOutput& out = m_outputs[i];
 		hash eph_public_key;
 
-		if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
 			if (w.get_eph_public_key_with_view_tag(m_txkeySec, i, eph_public_key, out.m_viewTag) && (eph_public_key == out.m_ephPublicKey)) {
 				return out.m_reward;
 			}

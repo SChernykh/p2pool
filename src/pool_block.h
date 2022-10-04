@@ -80,14 +80,15 @@ struct PoolBlock
 
 	struct TxOutput
 	{
-		FORCEINLINE TxOutput() : m_reward(0), m_ephPublicKey(), m_txType(0), m_viewTag(0) {}
-		FORCEINLINE TxOutput(uint64_t r, const hash& k, uint8_t tx_type, uint8_t view_tag) : m_reward(r), m_ephPublicKey(k), m_txType(tx_type), m_viewTag(view_tag) {}
+		FORCEINLINE TxOutput() : m_ephPublicKey(), m_reward(0), m_viewTag(0) {}
+		FORCEINLINE TxOutput(uint64_t r, const hash& k, uint8_t view_tag) : m_ephPublicKey(k), m_reward(r), m_viewTag(view_tag) {}
 
-		uint64_t m_reward;
 		hash m_ephPublicKey;
-		uint8_t m_txType;
-		uint8_t m_viewTag;
+		uint64_t m_reward : 56;
+		uint64_t m_viewTag : 8;
 	};
+
+	static_assert(sizeof(TxOutput) == sizeof(hash) + sizeof(uint64_t), "TxOutput bit packing didn't work with this compiler, fix the code!");
 
 	std::vector<TxOutput> m_outputs;
 

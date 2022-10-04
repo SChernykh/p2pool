@@ -713,7 +713,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
-			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key, tx_type, view_tag);
+			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key, view_tag);
 		}
 
 		if (tx_type == TXOUT_TO_TAGGED_KEY) {

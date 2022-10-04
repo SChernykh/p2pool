@@ -154,7 +154,7 @@ static FORCEINLINE void derivation_to_scalar(const hash& derivation, size_t outp
 	hash_to_scalar(data, static_cast<int>(p - data), res);
 }
 
-class Cache
+class Cache : public nocopy_nomove
 {
 public:
 	Cache()
