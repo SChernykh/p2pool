@@ -32,6 +32,7 @@
 #include "stratum_server.h"
 #include "params.h"
 #include "json_parsers.h"
+#include "crypto.h"
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <fstream>
@@ -169,7 +170,10 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	// Use between 1 and 8 threads
 	if (numThreads < 1) numThreads = 1;
+
+#ifndef _DEBUG
 	if (numThreads > 8) numThreads = 8;
+#endif
 
 	LOGINFO(4, "running " << numThreads << " pre-calculation workers");
 
@@ -527,7 +531,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	MinerData miner_data = m_pool->miner_data();
 	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(pow_hash)) {
 		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
-		m_pool->submit_block_async(block.m_mainChainData);
+		m_pool->submit_block_async(block.serialize_mainchain_data());
 	}
 	else {
 		difficulty_type diff;
@@ -536,7 +540,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		}
 		else if (diff.check_pow(pow_hash)) {
 			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
-			m_pool->submit_block_async(block.m_mainChainData);
+			m_pool->submit_block_async(block.serialize_mainchain_data());
 		}
 	}
 
@@ -675,10 +679,10 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 		return false;
 	}
 
-	blob.reserve(block->m_mainChainData.size() + block->m_sideChainData.size());
+	blob = block->serialize_mainchain_data();
+	const std::vector<uint8_t> sidechain_data = block->serialize_sidechain_data();
+	blob.insert(blob.end(), sidechain_data.begin(), sidechain_data.end());
 
-	blob = block->m_mainChainData;
-	blob.insert(blob.end(), block->m_sideChainData.begin(), block->m_sideChainData.end());
 	return true;
 }
 
@@ -696,13 +700,15 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		blob.reserve(n * 39 + 64);
 		writeVarint(n, blob);
 
+		const uint8_t tx_type = b->get_tx_type();
+
 		for (const PoolBlock::TxOutput& output : b->m_outputs) {
 			writeVarint(output.m_reward, blob);
-			blob.emplace_back(output.m_txType);
+			blob.emplace_back(tx_type);
 			blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
 
-			if (output.m_txType == TXOUT_TO_TAGGED_KEY) {
-				blob.emplace_back(output.m_viewTag);
+			if (tx_type == TXOUT_TO_TAGGED_KEY) {
+				blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
 			}
 		}
 
@@ -808,8 +814,10 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			blob.emplace_back(view_tag);
 		}
 
-		block->m_outputs.emplace_back(tmpRewards[i], eph_public_key, tx_type, view_tag);
+		block->m_outputs.emplace_back(tmpRewards[i], eph_public_key, view_tag);
 	}
+
+	block->m_outputs.shrink_to_fit();
 
 	if (loop) {
 		// this will cause all helper jobs to finish immediately
@@ -911,12 +919,13 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		}
 
 		const Wallet& w = m_pool->params().m_wallet;
+		const uint8_t tx_type = tip->get_tx_type();
 
 		hash eph_public_key;
 		for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
 			const PoolBlock::TxOutput& out = tip->m_outputs[i];
 			if (!your_reward) {
-				if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+				if (tx_type == TXOUT_TO_TAGGED_KEY) {
 					if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
 						your_reward = out.m_reward;
 					}
@@ -983,11 +992,12 @@ double SideChain::get_reward_share(const Wallet& w) const
 
 		const PoolBlock* tip = m_chainTip;
 		if (tip) {
+			const uint8_t tx_type = tip->get_tx_type();
 			hash eph_public_key;
 			for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
 				const PoolBlock::TxOutput& out = tip->m_outputs[i];
 				if (!reward) {
-					if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+					if (tx_type == TXOUT_TO_TAGGED_KEY) {
 						if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
 							reward = out.m_reward;
 						}
@@ -1538,6 +1548,8 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
+	const uint8_t tx_type = block->get_tx_type();
+
 	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
 		const PoolBlock::TxOutput& out = block->m_outputs[i];
 
@@ -1561,7 +1573,7 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if ((out.m_txType == TXOUT_TO_TAGGED_KEY) && (out.m_viewTag != view_tag)) {
+		if ((tx_type == TXOUT_TO_TAGGED_KEY) && (out.m_viewTag != view_tag)) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
@@ -1622,6 +1634,8 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 					if (s) {
 						s->reset_share_counters();
 					}
+					// Also clear cache because it has data from all old blocks now
+					clear_crypto_cache();
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
 				}
 			}
@@ -2124,6 +2138,9 @@ void SideChain::finish_precalc()
 	{
 		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
+
+	// Also clear cache because it has data from all old blocks now
+	clear_crypto_cache();
 
 #ifdef DEV_TEST_SYNC
 	if (m_pool) {

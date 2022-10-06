@@ -32,15 +32,48 @@ namespace p2pool {
 
 static bool track_memory = false;
 
-constexpr size_t N = 2097152;
-constexpr size_t MAX_FRAMES = 30;
+constexpr size_t N = 1 << 22;
+constexpr size_t MAX_FRAMES = 29;
 
 struct TrackedAllocation
 {
 	void* p;
 	void* stack_trace[MAX_FRAMES];
+	uint64_t allocated_size;
 	uint32_t thread_id;
-	uint32_t allocated_size;
+
+	FORCEINLINE bool operator<(const TrackedAllocation& rhs) { return memcmp(stack_trace, rhs.stack_trace, sizeof(stack_trace)) < 0; }
+	FORCEINLINE bool operator==(const TrackedAllocation& rhs) { return memcmp(stack_trace, rhs.stack_trace, sizeof(stack_trace)) == 0; }
+
+	void print(HANDLE h) const
+	{
+		char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = {};
+		PSYMBOL_INFO pSymbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
+
+		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		pSymbol->MaxNameLen = MAX_SYM_NAME;
+
+		IMAGEHLP_LINE64 line{};
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+		for (size_t j = 0; j < MAX_FRAMES; ++j) {
+			const DWORD64 address = reinterpret_cast<DWORD64>(stack_trace[j]);
+			DWORD64 t1 = 0;
+			DWORD t2 = 0;
+			if (SymFromAddr(h, address, &t1, pSymbol) && SymGetLineFromAddr64(h, address, &t2, &line)) {
+				const char* s = line.FileName;
+				const char* file_name = nullptr;
+				while (*s) {
+					if ((*s == '\\') || (*s == '/')) {
+						file_name = s + 1;
+					}
+					++s;
+				}
+				printf("%-25s %s (line %lu)\n", file_name ? file_name : line.FileName, pSymbol->Name, line.LineNumber);
+			}
+		}
+		printf("\n");
+	}
 };
 
 static_assert(sizeof(TrackedAllocation) == 256, "");
@@ -51,7 +84,54 @@ uint32_t first[N];
 uint32_t next[N];
 TrackedAllocation allocations[N];
 uint32_t num_allocations = 0;
+uint64_t total_allocated = 0;
 uint32_t cur_allocation_index = 1;
+
+void show_top_10()
+{
+	TrackedAllocation* buf = reinterpret_cast<TrackedAllocation*>(VirtualAlloc(nullptr, sizeof(TrackedAllocation) * N, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+	if (!buf) {
+		return;
+	}
+
+	const HANDLE h = GetCurrentProcess();
+
+	{
+		p2pool::MutexLock lock(allocation_lock);
+
+		TrackedAllocation* end = buf;
+		for (size_t i = 0; i < N; ++i) {
+			if (allocations[i].allocated_size) {
+				*(end++) = allocations[i];
+			}
+		}
+
+		std::sort(buf, end);
+
+		TrackedAllocation* prev = buf;
+		for (TrackedAllocation* p = buf + 1; p < end; ++p) {
+			if (*p == *prev) {
+				prev->allocated_size += p->allocated_size;
+			}
+			else {
+				++prev;
+				*prev = *p;
+			}
+		}
+		end = prev + 1;
+
+		std::sort(buf, end, [](const auto& a, const auto& b) { return a.allocated_size > b.allocated_size; });
+
+		printf("%I64u total bytes allocated\n", total_allocated);
+
+		for (TrackedAllocation* p = buf; (p < buf + 10) && (p < end); ++p) {
+			printf("%I64u bytes allocated at:\n", p->allocated_size);
+			p->print(h);
+		}
+	}
+
+	VirtualFree(buf, 0, MEM_RELEASE);
+}
 
 FORCEINLINE static void add_alocation(void* p, size_t size)
 {
@@ -59,7 +139,7 @@ FORCEINLINE static void add_alocation(void* p, size_t size)
 		return;
 	}
 
-	void* stack_trace[MAX_FRAMES];
+	void* stack_trace[MAX_FRAMES] = {};
 	DWORD hash;
 	CaptureStackBackTrace(1, MAX_FRAMES, stack_trace, &hash);
 
@@ -74,6 +154,7 @@ FORCEINLINE static void add_alocation(void* p, size_t size)
 		// Make N two times bigger if this triggers
 		__debugbreak();
 	}
+	total_allocated += size;
 
 	for (uint64_t i = cur_allocation_index;; i = (i + 1) & (N - 1)) {
 		if (i && !allocations[i].allocated_size) {
@@ -105,6 +186,7 @@ FORCEINLINE static void remove_allocation(void* p)
 
 	for (uint32_t prev = 0, k = first[index]; k != 0; prev = k, k = next[k]) {
 		if (allocations[k].p == p) {
+			total_allocated -= allocations[k].allocated_size;
 			allocations[k].allocated_size = 0;
 			if (prev) {
 				next[prev] = next[k];
@@ -181,6 +263,8 @@ void* calloc_hook(size_t count, size_t size) noexcept
 
 void memory_tracking_start()
 {
+	SymInitialize(GetCurrentProcess(), NULL, TRUE);
+
 	using namespace p2pool;
 
 	uv_replace_allocator(malloc_hook, realloc_hook, calloc_hook, free_hook);
@@ -196,7 +280,6 @@ void memory_tracking_stop()
 	uv_mutex_destroy(&allocation_lock);
 
 	const HANDLE h = GetCurrentProcess();
-	SymInitialize(h, NULL, TRUE);
 
 	uint64_t total_leaks = 0;
 
@@ -205,39 +288,16 @@ void memory_tracking_stop()
 		if (t.allocated_size) {
 			total_leaks += t.allocated_size;
 
-			char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = {};
-			PSYMBOL_INFO pSymbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
-
-			pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
-			pSymbol->MaxNameLen = MAX_SYM_NAME;
-
-			IMAGEHLP_LINE64 line{};
-			line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-
-			printf("Memory leak detected, %u bytes allocated at %p by thread %u:\n", t.allocated_size, t.p, t.thread_id);
-			for (size_t j = 0; j < MAX_FRAMES; ++j) {
-				const DWORD64 address = reinterpret_cast<DWORD64>(t.stack_trace[j]);
-				DWORD64 t1 = 0;
-				DWORD t2 = 0;
-				if (SymFromAddr(h, address, &t1, pSymbol) && SymGetLineFromAddr64(h, address, &t2, &line)) {
-					const char* s = line.FileName;
-					const char* file_name = nullptr;
-					while (*s) {
-						if ((*s == '\\') || (*s == '/')) {
-							file_name = s + 1;
-						}
-						++s;
-					}
-					printf("%-25s %s (line %lu)\n", file_name ? file_name : line.FileName, pSymbol->Name, line.LineNumber);
-				}
-			}
-			printf("\n");
+			printf("Memory leak detected, %I64u bytes allocated at %p by thread %u:\n", t.allocated_size, t.p, t.thread_id);
+			t.print(h);
 		}
 	}
 
 	if (total_leaks > 0) {
 		printf("%I64u bytes leaked\n\n", total_leaks);
 	}
+
+	SymCleanup(h);
 }
 
 NOINLINE void* operator new(size_t n) { return p2pool::allocate(n); }

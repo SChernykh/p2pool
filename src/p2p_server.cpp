@@ -747,12 +747,16 @@ void P2PServer::broadcast(const PoolBlock& block)
 
 	Broadcast* data = new Broadcast();
 
-	data->blob.reserve(block.m_mainChainData.size() + block.m_sideChainData.size());
-	data->blob = block.m_mainChainData;
-	data->blob.insert(data->blob.end(), block.m_sideChainData.begin(), block.m_sideChainData.end());
+	int outputs_offset, outputs_blob_size;
+	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
+	const std::vector<uint8_t> sidechain_data = block.serialize_sidechain_data();
 
-	data->pruned_blob.reserve(block.m_mainChainData.size() + block.m_sideChainData.size() + 16 - block.m_mainChainOutputsBlobSize);
-	data->pruned_blob.assign(block.m_mainChainData.begin(), block.m_mainChainData.begin() + block.m_mainChainOutputsOffset);
+	data->blob.reserve(mainchain_data.size() + sidechain_data.size());
+	data->blob = mainchain_data;
+	data->blob.insert(data->blob.end(), sidechain_data.begin(), sidechain_data.end());
+
+	data->pruned_blob.reserve(mainchain_data.size() + sidechain_data.size() + 16 - outputs_blob_size);
+	data->pruned_blob.assign(mainchain_data.begin(), mainchain_data.begin() + outputs_offset);
 
 	// 0 outputs in the pruned blob
 	data->pruned_blob.push_back(0);
@@ -764,10 +768,10 @@ void P2PServer::broadcast(const PoolBlock& block)
 		});
 
 	writeVarint(total_reward, data->pruned_blob);
-	writeVarint(block.m_mainChainOutputsBlobSize, data->pruned_blob);
+	writeVarint(outputs_blob_size, data->pruned_blob);
 
-	data->pruned_blob.insert(data->pruned_blob.end(), block.m_mainChainData.begin() + block.m_mainChainOutputsOffset + block.m_mainChainOutputsBlobSize, block.m_mainChainData.end());
-	data->pruned_blob.insert(data->pruned_blob.end(), block.m_sideChainData.begin(), block.m_sideChainData.end());
+	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
+	data->pruned_blob.insert(data->pruned_blob.end(), sidechain_data.begin(), sidechain_data.end());
 
 	data->ancestor_hashes.reserve(block.m_uncles.size() + 1);
 	data->ancestor_hashes = block.m_uncles;

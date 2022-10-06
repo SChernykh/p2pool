@@ -301,6 +301,11 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\n---------------------------------------------------------------------------------------------------------------"
 	);
 
+	// Tx secret keys from all miners change every block, so cache can be cleared here
+	if (m_sideChain->precalcFinished()) {
+		clear_crypto_cache();
+	}
+
 	if (!is_main_thread()) {
 		update_block_template_async();
 	}
@@ -440,7 +445,7 @@ void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t e
 	}
 }
 
-void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
+void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 {
 	{
 		MutexLock lock(m_submitBlockDataLock);
@@ -448,7 +453,7 @@ void p2pool::submit_block_async(const std::vector<uint8_t>& blob)
 		m_submitBlockData.template_id = 0;
 		m_submitBlockData.nonce = 0;
 		m_submitBlockData.extra_nonce = 0;
-		m_submitBlockData.blob = blob;
+		m_submitBlockData.blob = std::move(blob);
 	}
 
 	// If p2pool is stopped, m_submitBlockAsync is most likely already closed
@@ -1322,8 +1327,6 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 
 void p2pool::api_update_block_found(const ChainMain* data)
 {
-	clear_crypto_cache();
-
 	if (!m_api) {
 		return;
 	}

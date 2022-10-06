@@ -29,11 +29,7 @@ static constexpr char log_category_prefix[] = "PoolBlock ";
 namespace p2pool {
 
 PoolBlock::PoolBlock()
-	: m_mainChainHeaderSize(0)
-	, m_mainChainMinerTxSize(0)
-	, m_mainChainOutputsOffset(0)
-	, m_mainChainOutputsBlobSize(0)
-	, m_majorVersion(0)
+	: m_majorVersion(0)
 	, m_minorVersion(0)
 	, m_timestamp(0)
 	, m_prevId{}
@@ -57,12 +53,6 @@ PoolBlock::PoolBlock()
 	, m_localTimestamp(seconds_since_epoch())
 {
 	uv_mutex_init_checked(&m_lock);
-
-	m_mainChainData.reserve(48 * 1024);
-	m_outputs.reserve(2048);
-	m_transactions.reserve(256);
-	m_sideChainData.reserve(512);
-	m_uncles.reserve(8);
 }
 
 PoolBlock::PoolBlock(const PoolBlock& b)
@@ -83,11 +73,11 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 		LOGERR(1, "operator= uv_mutex_trylock failed. Fix the code!");
 	}
 
-	m_mainChainData = b.m_mainChainData;
-	m_mainChainHeaderSize = b.m_mainChainHeaderSize;
-	m_mainChainMinerTxSize = b.m_mainChainMinerTxSize;
-	m_mainChainOutputsOffset = b.m_mainChainOutputsOffset;
-	m_mainChainOutputsBlobSize = b.m_mainChainOutputsBlobSize;
+#if POOL_BLOCK_DEBUG
+	m_mainChainDataDebug = b.m_mainChainDataDebug;
+	m_sideChainDataDebug = b.m_sideChainDataDebug;
+#endif
+
 	m_majorVersion = b.m_majorVersion;
 	m_minorVersion = b.m_minorVersion;
 	m_timestamp = b.m_timestamp;
@@ -99,7 +89,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
 	m_transactions = b.m_transactions;
-	m_sideChainData = b.m_sideChainData;
 	m_minerWallet = b.m_minerWallet;
 	m_txkeySec = b.m_txkeySec;
 	m_parent = b.m_parent;
@@ -129,43 +118,58 @@ PoolBlock::~PoolBlock()
 	uv_mutex_destroy(&m_lock);
 }
 
-void PoolBlock::serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, const hash& sidechain_hash)
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
 {
 	MutexLock lock(m_lock);
+	return serialize_mainchain_data_nolock(header_size, miner_tx_size, outputs_offset, outputs_blob_size);
+}
 
-	m_mainChainData.clear();
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
+{
+	std::vector<uint8_t> data;
+	data.reserve(128 + m_outputs.size() * 39 + m_transactions.size() * HASH_SIZE);
 
 	// Header
-	m_mainChainData.push_back(m_majorVersion);
-	m_mainChainData.push_back(m_minorVersion);
-	writeVarint(m_timestamp, m_mainChainData);
-	m_mainChainData.insert(m_mainChainData.end(), m_prevId.h, m_prevId.h + HASH_SIZE);
-	m_mainChainData.insert(m_mainChainData.end(), reinterpret_cast<uint8_t*>(&nonce), reinterpret_cast<uint8_t*>(&nonce) + NONCE_SIZE);
+	data.push_back(m_majorVersion);
+	data.push_back(m_minorVersion);
+	writeVarint(m_timestamp, data);
+	data.insert(data.end(), m_prevId.h, m_prevId.h + HASH_SIZE);
+	data.insert(data.end(), reinterpret_cast<const uint8_t*>(&m_nonce), reinterpret_cast<const uint8_t*>(&m_nonce) + NONCE_SIZE);
 
-	m_mainChainHeaderSize = m_mainChainData.size();
+	const size_t header_size0 = data.size();
+	if (header_size) {
+		*header_size = header_size0;
+	}
 
 	// Miner tx
-	m_mainChainData.push_back(TX_VERSION);
-	writeVarint(m_txinGenHeight + MINER_REWARD_UNLOCK_TIME, m_mainChainData);
-	m_mainChainData.push_back(1);
-	m_mainChainData.push_back(TXIN_GEN);
-	writeVarint(m_txinGenHeight, m_mainChainData);
+	data.push_back(TX_VERSION);
+	writeVarint(m_txinGenHeight + MINER_REWARD_UNLOCK_TIME, data);
+	data.push_back(1);
+	data.push_back(TXIN_GEN);
+	writeVarint(m_txinGenHeight, data);
 
-	m_mainChainOutputsOffset = static_cast<int>(m_mainChainData.size());
+	const int outputs_offset0 = static_cast<int>(data.size());
+	if (outputs_offset) {
+		*outputs_offset = outputs_offset0;
+	}
 
-	writeVarint(m_outputs.size(), m_mainChainData);
+	writeVarint(m_outputs.size(), data);
 
-	for (TxOutput& output : m_outputs) {
-		writeVarint(output.m_reward, m_mainChainData);
-		m_mainChainData.push_back(output.m_txType);
-		m_mainChainData.insert(m_mainChainData.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+	const uint8_t tx_type = get_tx_type();
 
-		if (output.m_txType == TXOUT_TO_TAGGED_KEY) {
-			m_mainChainData.push_back(output.m_viewTag);
+	for (const TxOutput& output : m_outputs) {
+		writeVarint(output.m_reward, data);
+		data.push_back(tx_type);
+		data.insert(data.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
+			data.push_back(static_cast<uint8_t>(output.m_viewTag));
 		}
 	}
 
-	m_mainChainOutputsBlobSize = static_cast<int>(m_mainChainData.size()) - m_mainChainOutputsOffset;
+	if (outputs_blob_size) {
+		*outputs_blob_size = static_cast<int>(data.size()) - outputs_offset0;
+	}
 
 	uint8_t tx_extra[128];
 	uint8_t* p = tx_extra;
@@ -183,7 +187,6 @@ void PoolBlock::serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, c
 	*(p++) = TX_EXTRA_NONCE;
 	*(p++) = static_cast<uint8_t>(extra_nonce_size);
 
-	m_extraNonce = extra_nonce;
 	memcpy(p, &m_extraNonce, EXTRA_NONCE_SIZE);
 	p += EXTRA_NONCE_SIZE;
 	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
@@ -193,49 +196,70 @@ void PoolBlock::serialize_mainchain_data(uint32_t nonce, uint32_t extra_nonce, c
 
 	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
 	*(p++) = HASH_SIZE;
-	memcpy(p, sidechain_hash.h, HASH_SIZE);
+	memcpy(p, m_sidechainId.h, HASH_SIZE);
 	p += HASH_SIZE;
 
-	writeVarint(static_cast<size_t>(p - tx_extra), m_mainChainData);
-	m_mainChainData.insert(m_mainChainData.end(), tx_extra, p);
+	writeVarint(static_cast<size_t>(p - tx_extra), data);
+	data.insert(data.end(), tx_extra, p);
 
-	m_mainChainData.push_back(0);
+	data.push_back(0);
 
-	m_mainChainMinerTxSize = m_mainChainData.size() - m_mainChainHeaderSize;
+	if (miner_tx_size) {
+		*miner_tx_size = data.size() - header_size0;
+	}
 
-	writeVarint(m_transactions.size() - 1, m_mainChainData);
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(m_transactions.data());
-	m_mainChainData.insert(m_mainChainData.end(), data + HASH_SIZE, data + m_transactions.size() * HASH_SIZE);
+	writeVarint(m_transactions.size() - 1, data);
+	const uint8_t* t = reinterpret_cast<const uint8_t*>(m_transactions.data());
+	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
+
+#if POOL_BLOCK_DEBUG
+	if (!m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
+		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
+		panic();
+	}
+#endif
+
+	return data;
 }
 
-void PoolBlock::serialize_sidechain_data()
+std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 {
+	std::vector<uint8_t> data;
+
 	MutexLock lock(m_lock);
 
-	m_sideChainData.clear();
-	m_sideChainData.reserve((m_uncles.size() + 4) * HASH_SIZE + 11);
+	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 20);
 
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
 
-	m_sideChainData.insert(m_sideChainData.end(), spend.h, spend.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), view.h, view.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
-	m_sideChainData.insert(m_sideChainData.end(), m_parent.h, m_parent.h + HASH_SIZE);
+	data.insert(data.end(), spend.h, spend.h + HASH_SIZE);
+	data.insert(data.end(), view.h, view.h + HASH_SIZE);
+	data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
-	writeVarint(m_uncles.size(), m_sideChainData);
+	writeVarint(m_uncles.size(), data);
 
 	for (const hash& id : m_uncles) {
-		m_sideChainData.insert(m_sideChainData.end(), id.h, id.h + HASH_SIZE);
+		data.insert(data.end(), id.h, id.h + HASH_SIZE);
 	}
 
-	writeVarint(m_sidechainHeight, m_sideChainData);
+	writeVarint(m_sidechainHeight, data);
 
-	writeVarint(m_difficulty.lo, m_sideChainData);
-	writeVarint(m_difficulty.hi, m_sideChainData);
+	writeVarint(m_difficulty.lo, data);
+	writeVarint(m_difficulty.hi, data);
 
-	writeVarint(m_cumulativeDifficulty.lo, m_sideChainData);
-	writeVarint(m_cumulativeDifficulty.hi, m_sideChainData);
+	writeVarint(m_cumulativeDifficulty.lo, data);
+	writeVarint(m_cumulativeDifficulty.hi, data);
+
+#if POOL_BLOCK_DEBUG
+	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {
+		LOGERR(1, "serialize_sidechain_data() has a bug, fix it!");
+		panic();
+	}
+#endif
+
+	return data;
 }
 
 void PoolBlock::reset_offchain_data()
@@ -274,16 +298,19 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	{
 		MutexLock lock(m_lock);
 
-		if (!m_mainChainHeaderSize || !m_mainChainMinerTxSize || (m_mainChainData.size() < m_mainChainHeaderSize + m_mainChainMinerTxSize)) {
+		size_t header_size, miner_tx_size;
+		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data_nolock(&header_size, &miner_tx_size, nullptr, nullptr);
+
+		if (!header_size || !miner_tx_size || (mainchain_data.size() < header_size + miner_tx_size)) {
 			LOGERR(1, "tried to calculate PoW of uninitialized block");
 			return false;
 		}
 
-		blob_size = m_mainChainHeaderSize;
-		memcpy(blob, m_mainChainData.data(), blob_size);
+		blob_size = header_size;
+		memcpy(blob, mainchain_data.data(), blob_size);
 
-		uint8_t* miner_tx = m_mainChainData.data() + m_mainChainHeaderSize;
-		keccak(miner_tx, static_cast<int>(m_mainChainMinerTxSize) - 1, reinterpret_cast<uint8_t*>(hashes), HASH_SIZE);
+		const uint8_t* miner_tx = mainchain_data.data() + header_size;
+		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, reinterpret_cast<uint8_t*>(hashes), HASH_SIZE);
 
 		count = m_transactions.size();
 		uint8_t* h = reinterpret_cast<uint8_t*>(m_transactions.data());
@@ -329,11 +356,13 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
+	const uint8_t tx_type = get_tx_type();
+
 	for (size_t i = 0, n = m_outputs.size(); i < n; ++i) {
 		const TxOutput& out = m_outputs[i];
 		hash eph_public_key;
 
-		if (out.m_txType == TXOUT_TO_TAGGED_KEY) {
+		if (tx_type == TXOUT_TO_TAGGED_KEY) {
 			if (w.get_eph_public_key_with_view_tag(m_txkeySec, i, eph_public_key, out.m_viewTag) && (eph_public_key == out.m_ephPublicKey)) {
 				return out.m_reward;
 			}
