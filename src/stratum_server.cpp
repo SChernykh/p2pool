@@ -84,8 +84,6 @@ StratumServer::StratumServer(p2pool* pool)
 
 StratumServer::~StratumServer()
 {
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
-
 	shutdown_tcp();
 
 	uv_mutex_destroy(&m_blobsQueueLock);
@@ -933,6 +931,11 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	else if (bad_share) {
 		server->ban(share->m_clientAddr, DEFAULT_BAN_TIME);
 	}
+}
+
+void StratumServer::on_shutdown()
+{
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
 }
 
 StratumServer::StratumClient::StratumClient()

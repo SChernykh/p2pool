@@ -179,6 +179,8 @@ private:
 
 	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
 	void api_update_local_stats(uint64_t timestamp);
+
+	void on_shutdown() override;
 };
 
 } // namespace p2pool

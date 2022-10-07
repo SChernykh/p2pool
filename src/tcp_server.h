@@ -181,10 +181,13 @@ protected:
 	uv_async_t m_dropConnectionsAsync;
 	static void on_drop_connections(uv_async_t* async) { reinterpret_cast<TCPServer*>(async->data)->close_sockets(false); }
 
+	virtual void on_shutdown() = 0;
+
 	uv_async_t m_shutdownAsync;
 	static void on_shutdown(uv_async_t* async)
 	{
 		TCPServer* server = reinterpret_cast<TCPServer*>(async->data);
+		server->on_shutdown();
 		server->close_sockets(true);
 
 		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_dropConnectionsAsync), nullptr);

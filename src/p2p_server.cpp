@@ -139,12 +139,6 @@ P2PServer::P2PServer(p2pool* pool)
 
 P2PServer::~P2PServer()
 {
-	uv_timer_stop(&m_timer);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
-
 	shutdown_tcp();
 
 	uv_mutex_destroy(&m_rngLock);
@@ -1127,6 +1121,15 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastBlockrequestTimestamp(0)
 	, m_broadcastedHashes{}
 {
+}
+
+void P2PServer::on_shutdown()
+{
+	uv_timer_stop(&m_timer);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
 }
 
 P2PServer::P2PClient::~P2PClient()
