@@ -33,6 +33,7 @@ class Miner;
 class ConsoleCommands;
 class p2pool_api;
 class ZMQReader;
+struct PoolBlock;
 
 class p2pool : public MinerCallbackHandler
 {
@@ -84,7 +85,7 @@ public:
 
 	bool chainmain_get_by_hash(const hash& id, ChainMain& data) const;
 
-	void api_update_block_found(const ChainMain* data);
+	void api_update_block_found(const ChainMain* data, const PoolBlock* block);
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 

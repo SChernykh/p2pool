@@ -409,7 +409,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 			if (payout) {
 				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
 			}
-			api_update_block_found(&data);
+			api_update_block_found(&data, block);
 		}
 		else {
 			side_chain().watch_mainchain_block(data, sidechain_id);
@@ -855,7 +855,7 @@ void p2pool::load_found_blocks()
 		m_foundBlocks.emplace_back(timestamp, height, id, block_difficulty, cumulative_difficulty);
 	}
 
-	api_update_block_found(nullptr);
+	api_update_block_found(nullptr, nullptr);
 }
 
 void p2pool::parse_get_info_rpc(const char* data, size_t size)
@@ -1325,14 +1325,14 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 	}
 }
 
-void p2pool::api_update_block_found(const ChainMain* data)
+void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* block)
 {
 	if (!m_api) {
 		return;
 	}
 
 	const time_t cur_time = time(nullptr);
-	const difficulty_type total_hashes = m_sideChain->total_hashes();
+	const difficulty_type total_hashes = block ? block->m_cumulativeDifficulty : m_sideChain->total_hashes();
 	difficulty_type diff;
 
 	if (data && get_difficulty_at_height(data->height, diff)) {

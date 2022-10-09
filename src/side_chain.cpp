@@ -578,7 +578,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	if (block_found) {
-		m_pool->api_update_block_found(&data);
+		m_pool->api_update_block_found(&data, &block);
 	}
 
 	add_block(block);
