@@ -106,6 +106,10 @@ private:
 	std::vector<int> m_mempoolTxsOrder;
 	std::vector<MinerShare> m_shares;
 
+	std::mt19937_64 m_rng;
+
+	void shuffle_tx_order();
+
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	void fill_optimal_knapsack(const MinerData& data, uint64_t base_reward, uint64_t miner_tx_weight, uint64_t& best_reward, uint64_t& final_fees, uint64_t& final_weight);
 

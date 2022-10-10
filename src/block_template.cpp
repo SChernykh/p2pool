@@ -54,7 +54,11 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	, m_txkeySec{}
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
+	, m_rng(RandomDeviceSeed::instance)
 {
+	// Diffuse the initial state in case it has low quality
+	m_rng.discard(10000);
+
 	uv_rwlock_init_checked(&m_lock);
 
 	m_blockHeader.reserve(64);
@@ -133,6 +137,8 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_mempoolTxsOrder.clear();
 	m_shares.clear();
 
+	m_rng = b.m_rng;
+
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	m_knapsack.clear();
 #endif
@@ -169,6 +175,14 @@ static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t medi
 	uint64_t reward = udiv128(product[1], product[0], median_weight * median_weight, &rem);
 
 	return reward + fees;
+}
+
+void BlockTemplate::shuffle_tx_order()
+{
+	const int64_t n = static_cast<int64_t>(m_mempoolTxsOrder.size());
+	for (int64_t i = n - 1; i > 0; --i) {
+		std::swap(m_mempoolTxsOrder[i], m_mempoolTxsOrder[m_rng() % (i + 1)]);
+	}
 }
 
 void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet* miner_wallet)
@@ -315,16 +329,16 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	// if a block doesn't get into the penalty zone, just pick all transactions
 	if (total_tx_weight + miner_tx_weight <= data.median_weight) {
-		m_numTransactionHashes = 0;
-
 		final_fees = 0;
 		final_weight = miner_tx_weight;
 
-		m_transactionHashes.assign(HASH_SIZE, 0);
-		for (const TxMempoolData& tx : m_mempoolTxs) {
-			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
-			++m_numTransactionHashes;
+		shuffle_tx_order();
 
+		m_numTransactionHashes = m_mempoolTxsOrder.size();
+		m_transactionHashes.assign(HASH_SIZE, 0);
+		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
+			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
 			final_fees += tx.fee;
 			final_weight += tx.weight;
 		}
@@ -397,6 +411,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 		final_fees = 0;
 		final_weight = miner_tx_weight;
+
+		shuffle_tx_order();
 
 		m_numTransactionHashes = m_mempoolTxsOrder.size();
 		m_transactionHashes.assign(HASH_SIZE, 0);
