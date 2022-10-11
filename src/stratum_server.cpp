@@ -45,7 +45,6 @@ StratumServer::StratumServer(p2pool* pool)
 	: TCPServer(StratumClient::allocate)
 	, m_pool(pool)
 	, m_autoDiff(pool->params().m_autoDiff)
-	, m_extraNonce(0)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_cumulativeHashes(0)
 	, m_cumulativeHashesAtLastShare(0)
@@ -59,6 +58,8 @@ StratumServer::StratumServer(p2pool* pool)
 {
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
+
+	m_extraNonce = static_cast<uint32_t>(m_rng());
 
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
@@ -104,9 +105,12 @@ void StratumServer::on_block(const BlockTemplate& block)
 		LOGINFO(4, "no clients connected");
 		return;
 	}
-	m_extraNonce.exchange(num_connections);
+
+	const uint32_t extra_nonce_start = static_cast<uint32_t>(get_random64());
+	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};
+	blobs_data->m_extraNonceStart = extra_nonce_start;
 
 	difficulty_type difficulty;
 	difficulty_type sidechain_difficulty;
@@ -116,7 +120,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	// Even if they do, they'll be added to the beginning of the list and will get their block template in on_login()
 	// We'll iterate through the list backwards so when we get to the beginning and run out of extra_nonce values, it'll be only new clients left
 	blobs_data->m_numClientsExpected = num_connections;
-	blobs_data->m_blobSize = block.get_hashing_blobs(0, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+	blobs_data->m_blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
 
 	// Integrity checks
 	if (blobs_data->m_blobSize < 76) {
@@ -662,9 +666,10 @@ void StratumServer::on_blobs_ready()
 
 	// Only send the latest blob
 	BlobsData* data = blobs_queue.back();
+	const uint32_t extra_nonce_start = data->m_extraNonceStart;
 
 	size_t numClientsProcessed = 0;
-	uint32_t extra_nonce = 0;
+	uint32_t num_sent = 0;
 
 	const uint64_t cur_time = seconds_since_epoch();
 	{
@@ -683,12 +688,12 @@ void StratumServer::on_blobs_ready()
 				continue;
 			}
 
-			if (extra_nonce >= data->m_numClientsExpected) {
+			if (num_sent >= data->m_numClientsExpected) {
 				// We don't have any more extra_nonce values available
 				continue;
 			}
 
-			uint8_t* hashing_blob = data->m_blobs.data() + extra_nonce * data->m_blobSize;
+			uint8_t* hashing_blob = data->m_blobs.data() + num_sent * data->m_blobSize;
 
 			uint64_t target = data->m_target;
 			if (client->m_customDiff.lo) {
@@ -724,7 +729,7 @@ void StratumServer::on_blobs_ready()
 
 				StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
 				saved_job.job_id = job_id;
-				saved_job.extra_nonce = extra_nonce;
+				saved_job.extra_nonce = extra_nonce_start + num_sent;
 				saved_job.template_id = data->m_templateId;
 				saved_job.target = target;
 			}
@@ -750,7 +755,7 @@ void StratumServer::on_blobs_ready()
 				});
 
 			if (result) {
-				++extra_nonce;
+				++num_sent;
 			}
 			else {
 				client->close();
@@ -763,7 +768,7 @@ void StratumServer::on_blobs_ready()
 		}
 	}
 
-	LOGINFO(3, "sent new job to " << extra_nonce << '/' << numClientsProcessed << " clients");
+	LOGINFO(3, "sent new job to " << num_sent << '/' << numClientsProcessed << " clients");
 }
 
 void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
