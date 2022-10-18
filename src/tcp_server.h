@@ -163,7 +163,6 @@ protected:
 	int m_listenPort;
 
 	uv_loop_t m_loop;
-	std::atomic<bool> m_loopStopped;
 
 	uv_mutex_t m_clientsListLock;
 	std::vector<Client*> m_preallocatedClients;
@@ -184,17 +183,12 @@ protected:
 	virtual void on_shutdown() = 0;
 
 	uv_async_t m_shutdownAsync;
-	static void on_shutdown(uv_async_t* async)
-	{
-		TCPServer* server = reinterpret_cast<TCPServer*>(async->data);
-		server->on_shutdown();
-		server->close_sockets(true);
+	uv_prepare_t m_shutdownPrepare;
+	uv_timer_t m_shutdownTimer;
+	uint32_t m_shutdownCountdown;
+	uint32_t m_numHandles;
 
-		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_dropConnectionsAsync), nullptr);
-		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_shutdownAsync), nullptr);
-
-		delete GetLoopUserData(&server->m_loop, false);
-	}
+	static void on_shutdown(uv_async_t* async);
 };
 
 } // namespace p2pool
