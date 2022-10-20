@@ -76,13 +76,13 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 
 ### General Considerations
 
-- In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you do not currently have one configured, you can find instructions to do so [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
-- It is highly recommended that you create a separate restricted user account for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
+- In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the official Monero binaries, start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
+- It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
 - You have to use a primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
-- Starting from P2Pool v1.7, you can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
+- You can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
 - Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same P2Pool node. The more the better!
-- The below steps assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. 
+- The steps below assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. 
 - It is highly recommended to create a new mainnet wallet for P2Pool mining because **wallet addresses are public on P2Pool**.
 
 **Wallet software compatible with P2Pool payouts**
@@ -92,6 +92,10 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 - [Monero.com by Cake Wallet](https://monero.com/)
 - [Feather Wallet v2.1.0 and newer](https://featherwallet.org/)
 - [MyMonero](https://mymonero.com/)
+
+### GUI for P2Pool
+
+- [Gupax](https://github.com/hinto-janaiyo/gupax) project (currently in development) aims to provide an easy to use GUI to configure and run monerod/p2pool/xmrig
 
 ### GNU/Linux
 
@@ -156,21 +160,23 @@ nocreate
 5. Prepare huge pages to work properly (each instance of monerod/P2Pool/XMRig needs them): 
    - On Windows 10 or above, run XMRig at least once as Administrator (right-click Run As Administrator)
    - On earlier versions of Windows, you'll need to run XMRig as Administrator at least once per login.
-6. Open a command prompt and navigate to the folder where you extracted P2Pool.
+6. Create "Monero" folder inside extracted P2Pool folder and copy Monero binaries there.
+7. Open a command prompt and navigate to the folder where you extracted P2Pool.
 
 **Note:** *When running the below commands, Windows Firewall may prompt to allow connections, click "Allow" if prompted.*
 
-7. Start `monerod` with the following command/options: 
+8. Start `monerod` with the following command/options: 
 ```
 .\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist
 ```
 **Note:** The `--zmq-pub` option is required for P2Pool to work properly.
-8. Start P2Pool with the following command/options:
+
+9. Start P2Pool with the following command/options:
 ```
-.\p2pool.exe --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS
+.\p2pool.exe --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS --mini
 ```
-9. Wait until the initial P2Pool sync is finished (shouldn't take more than 5-10 minutes).
-10. Start XMRig with the following command/options:
+10. Wait until the initial P2Pool sync is finished (shouldn't take more than 5-10 minutes).
+11. Start XMRig with the following command/options:
 ```
 .\xmrig.exe -o 127.0.0.1:3333
 ```
@@ -179,17 +185,17 @@ nocreate
      ```
      xmrig.exe -u x+10000 -o 127.0.0.1:3333
      ```
-11. XMRig should connect and start mining!
-12. *(Optional but highly recommended)* You can create a Quickstart by creating a batch (.bat) file with the following contents and placing it in your P2Pool directory along with `xmrig.exe`.
+12. XMRig should connect and start mining!
+13. *(Optional but highly recommended)* You can create a Quickstart by creating a batch (.bat) file with the following contents and placing it in your P2Pool directory along with `xmrig.exe`.
 ```
 @ECHO OFF
 start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist
 ECHO Wait until the Monero daemon shows fully synced before continuing. This can take some time. Type 'status' in other window to check progress.
 PAUSE
-start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS
+start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS --mini
 ECHO Wait until the daemon shows fully synced before continuing. This can take some time.
 PAUSE
-%~dp0\xmrig.exe -u x+30000 -o 127.0.0.1
+%~dp0\xmrig.exe -o 127.0.0.1
 ```
 
 ## Build instructions
