@@ -25,6 +25,7 @@
 --rpc-login          Specify username[:password] required for Monero RPC server
 --socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections
 --no-dns             disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)
+--p2p-external-port  port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections
 ```
 
 ### Example command line

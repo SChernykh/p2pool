@@ -42,7 +42,7 @@ public:
 
 	uv_loop_t* get_loop() { return &m_loop; }
 
-	int listen_port() const { return m_listenPort; }
+	virtual int listen_port() const { return m_listenPort; }
 
 	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}

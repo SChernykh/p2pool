@@ -933,6 +933,12 @@ void P2PServer::show_peers()
 	LOGINFO(0, "Total: " << n << " peers");
 }
 
+int P2PServer::listen_port() const
+{
+	const Params& params = m_pool->params();
+	return params.m_p2pExternalPort ? params.m_p2pExternalPort : m_listenPort;
+}
+
 int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size)
 {
 	int result;

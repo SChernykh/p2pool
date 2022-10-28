@@ -138,6 +138,8 @@ public:
 	void show_peers_async();
 	size_t peer_list_size() const { MutexLock lock(m_peerListLock); return m_peerList.size(); }
 
+	int listen_port() const override;
+
 	uint32_t max_outgoing_peers() const { return m_maxOutgoingPeers; }
 	uint32_t max_incoming_peers() const { return m_maxIncomingPeers; }
 
