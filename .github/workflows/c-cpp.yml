@@ -21,7 +21,7 @@ jobs:
         sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev ${{ matrix.config.c }} ${{ matrix.config.cpp }}
 
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -44,7 +44,7 @@ jobs:
       run: cd tests/build && ./p2pool_tests
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-${{ matrix.config.os }}
         path: build/p2pool
@@ -62,7 +62,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
 
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -108,7 +108,7 @@ jobs:
       run: cd tests/build && ./p2pool_tests
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-ubuntu-static-libs
         path: build/p2pool
@@ -131,7 +131,7 @@ jobs:
         sudo apt install -y git build-essential cmake autoconf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -166,7 +166,7 @@ jobs:
         make -j$(nproc)
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-${{ matrix.config.os }}-aarch64
         path: build/p2pool
@@ -181,7 +181,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: recursive
 
@@ -235,7 +235,7 @@ jobs:
         ./p2pool_tests.exe
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-msys2.exe
         path: build/p2pool.exe
@@ -253,7 +253,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: recursive
 
@@ -281,7 +281,7 @@ jobs:
         ./p2pool_tests.exe
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-msbuild-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}.exe
         path: build/Release/p2pool.exe
@@ -296,7 +296,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: recursive
 
@@ -347,7 +347,7 @@ jobs:
         ./p2pool_tests
 
     - name: Archive binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p2pool-${{ matrix.os }}
         path: build/p2pool
