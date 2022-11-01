@@ -1865,7 +1865,10 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 			return false;
 		}
 
-		server->send_peer_list_request(this, seconds_since_epoch());
+		const uint64_t cur_time = seconds_since_epoch();
+		if (cur_time >= m_nextOutgoingPeerListRequest) {
+			server->send_peer_list_request(this, cur_time);
+		}
 	}
 
 	return handle_incoming_block_async(server->get_block());
