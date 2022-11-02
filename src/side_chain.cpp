@@ -453,13 +453,13 @@ bool SideChain::block_seen(const PoolBlock& block)
 
 	// Check if it was received before
 	MutexLock lock(m_seenBlocksLock);
-	return !m_seenBlocks.insert(block.m_sidechainId).second;
+	return !m_seenBlocks.insert(block.get_full_id()).second;
 }
 
 void SideChain::unsee_block(const PoolBlock& block)
 {
 	MutexLock lock(m_seenBlocksLock);
-	m_seenBlocks.erase(block.m_sidechainId);
+	m_seenBlocks.erase(block.get_full_id());
 }
 
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
@@ -604,10 +604,20 @@ void SideChain::add_block(const PoolBlock& block)
 
 	auto result = m_blocksById.insert({ new_block->m_sidechainId, new_block });
 	if (!result.second) {
-		LOGWARN(3, "add_block: trying to add the same block twice, id = "
-			<< new_block->m_sidechainId << ", sidechain height = "
-			<< new_block->m_sidechainHeight << ", height = "
-			<< new_block->m_txinGenHeight);
+		const PoolBlock* old_block = result.first->second;
+
+		LOGWARN(3, "add_block: trying to add the same block twice:"
+			<< "\nnew block id = " << new_block->m_sidechainId
+			<< ", sidechain height = " << new_block->m_sidechainHeight
+			<< ", height = " << new_block->m_txinGenHeight
+			<< ", nonce = " << new_block->m_nonce
+			<< ", extra_nonce = " << new_block->m_extraNonce
+			<< "\nold block id = " << old_block->m_sidechainId
+			<< ", sidechain height = " << old_block->m_sidechainHeight
+			<< ", height = " << old_block->m_txinGenHeight
+			<< ", nonce = " << old_block->m_nonce
+			<< ", extra_nonce = " << old_block->m_extraNonce
+		);
 
 		delete new_block;
 		return;

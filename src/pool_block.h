@@ -145,6 +145,18 @@ struct PoolBlock
 	// Both tx types are allowed by Monero consensus during v15 because it needs to process pre-fork mempool transactions,
 	// but P2Pool can switch to using only TXOUT_TO_TAGGED_KEY for miner payouts starting from v15
 	FORCEINLINE uint8_t get_tx_type() const { return (m_majorVersion < HARDFORK_VIEW_TAGS_VERSION) ? TXOUT_TO_KEY : TXOUT_TO_TAGGED_KEY; }
+
+	typedef std::array<uint8_t, HASH_SIZE + NONCE_SIZE + EXTRA_NONCE_SIZE> full_id;
+
+	FORCEINLINE full_id get_full_id() const
+	{
+		full_id key;
+		uint8_t* p = key.data();
+		memcpy(p, m_sidechainId.h, HASH_SIZE);
+		memcpy(p + HASH_SIZE, &m_nonce, NONCE_SIZE);
+		memcpy(p + HASH_SIZE + NONCE_SIZE, &m_extraNonce, EXTRA_NONCE_SIZE);
+		return key;
+	}
 };
 
 } // namespace p2pool

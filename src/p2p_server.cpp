@@ -2063,7 +2063,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block)
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	if (server->m_pool->side_chain().block_seen(*block)) {
-		LOGINFO(6, "block " << block->m_sidechainId << " was received before, skipping it");
+		LOGINFO(6, "block " << block->m_sidechainId << " (nonce " << block->m_nonce << ", extra_nonce " << block->m_extraNonce << ") was received before, skipping it");
 		return true;
 	}
 

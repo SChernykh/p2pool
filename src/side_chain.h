@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include "pool_block.h"
 #include <map>
 #include <thread>
 
@@ -25,9 +26,6 @@ namespace p2pool {
 
 class p2pool;
 class P2PServer;
-struct DifficultyData;
-struct PoolBlock;
-class Wallet;
 
 struct MinerShare
 {
@@ -112,7 +110,7 @@ private:
 	uint64_t m_seenWalletsLastPruneTime;
 
 	uv_mutex_t m_seenBlocksLock;
-	unordered_set<hash> m_seenBlocks;
+	unordered_set<PoolBlock::full_id> m_seenBlocks;
 
 	std::vector<DifficultyData> m_difficultyData;
 
