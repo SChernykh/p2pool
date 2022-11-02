@@ -1871,7 +1871,10 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 		}
 	}
 
-	return handle_incoming_block_async(server->get_block());
+	const SideChain& side_chain = server->m_pool->side_chain();
+	const uint64_t max_time_delta = side_chain.precalcFinished() ? (side_chain.block_time() * side_chain.chain_window_size() * 4) : 0;
+
+	return handle_incoming_block_async(server->get_block(), max_time_delta);
 }
 
 bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
@@ -1933,7 +1936,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	m_lastBroadcastTimestamp = seconds_since_epoch();
 
-	return handle_incoming_block_async(block);
+	return handle_incoming_block_async(block, 1800);
 }
 
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
@@ -2058,9 +2061,31 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 	return true;
 }
 
-bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block)
+bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	// Limit system clock difference between connected peers
+	if (max_time_delta) {
+		static uint32_t total_checks = 0;
+		static uint32_t failed_checks = 0;
+
+		++total_checks;
+
+		const uint64_t t = time(nullptr);
+		if ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) {
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
+				<< " sent a block with an invalid timestamp " << block->m_timestamp
+				<< " (your local timestamp is " << t << ")");
+
+			++failed_checks;
+			if ((total_checks > 10) && (failed_checks * 4 > total_checks * 3)) {
+				LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of " << total_checks << " blocks were rejected due to timestamp difference");
+			}
+
+			return true;
+		}
+	}
 
 	if (server->m_pool->side_chain().block_seen(*block)) {
 		LOGINFO(6, "block " << block->m_sidechainId << " (nonce " << block->m_nonce << ", extra_nonce " << block->m_extraNonce << ") was received before, skipping it");
