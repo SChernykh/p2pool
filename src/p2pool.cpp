@@ -677,14 +677,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 					}
 				}
 				else {
-					LOGERR(1, "fatal error: couldn't download block header for height " << height);
+					LOGERR(1, "fatal error: couldn't download block header for seed height " << height);
 					panic();
 				}
 			},
 			[height](const char* data, size_t size)
 			{
 				if (size > 0) {
-					LOGERR(1, "fatal error: couldn't download block header for height " << height << ", error " << log::const_buf(data, size));
+					LOGERR(1, "fatal error: couldn't download block header for seed height " << height << ", error " << log::const_buf(data, size));
 					panic();
 				}
 			});
@@ -720,15 +720,15 @@ void p2pool::download_block_headers(uint64_t current_height)
 				}
 			}
 			else {
-				LOGERR(1, "fatal error: couldn't download block headers for heights " << start_height << " - " << current_height - 1);
-				panic();
+				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1);
+				download_block_headers(current_height);
 			}
 		},
-		[start_height, current_height](const char* data, size_t size)
+		[this, start_height, current_height](const char* data, size_t size)
 		{
 			if (size > 0) {
-				LOGERR(1, "fatal error: couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
-				panic();
+				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
+				download_block_headers(current_height);
 			}
 		});
 }
