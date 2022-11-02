@@ -120,7 +120,6 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-18.04}
           - {os: ubuntu-20.04}
           - {os: ubuntu-22.04}
 
