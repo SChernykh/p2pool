@@ -2067,23 +2067,24 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 	SideChain& side_chain = server->m_pool->side_chain();
 
 	// Limit system clock difference between connected peers
-	if (max_time_delta) {
+	// Check only new blocks (not added to side_chain yet)
+	if (max_time_delta && !side_chain.find_block(block->m_sidechainId)) {
 		static hash prev_checked_block;
+		const bool is_new = (block->m_sidechainId != prev_checked_block);
+		prev_checked_block = block->m_sidechainId;
 
-		// Check only new blocks (not added to side_chain yet)
-		if ((block->m_sidechainId != prev_checked_block) && !side_chain.find_block(block->m_sidechainId)) {
-			prev_checked_block = block->m_sidechainId;
-			LOGINFO(5, "checking timestamp in block " << block->m_sidechainId << " (max_time_delta = " << max_time_delta << ')');
+		const uint64_t t = time(nullptr);
+		const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
 
-			const uint64_t t = time(nullptr);
-			const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
-
-			static uint32_t failed_history = 0;
+		static uint32_t failed_history = 0;
+		if (is_new) {
 			failed_history = (failed_history << 1) | failed;
+		}
 
-			if (failed) {
+		if (failed) {
+			if (is_new) {
 				LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
-					<< " sent a block (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
+					<< " sent a block " << block->m_sidechainId << " (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
 					<< " (your local timestamp is " << t << ")");
 
 				uint32_t failed_checks = 0;
@@ -2097,9 +2098,8 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 				if (failed_checks > 16) {
 					LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of 32 last blocks were rejected due to timestamp difference");
 				}
-
-				return true;
 			}
+			return true;
 		}
 	}
 
