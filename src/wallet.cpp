@@ -222,7 +222,7 @@ void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 		for (int j = 0; (j < 8) && (i * sizeof(uint64_t) + j < sizeof(data)); ++j) {
 			n = (n << 8) | data[i * sizeof(uint64_t) + j];
 		}
-		for (int j = (((i < num_full_blocks) ? block_sizes.back() : last_block_size)) - 1; j >= 0; --j) {
+		for (int j = ((i < num_full_blocks) ? block_sizes.back() : last_block_size) - 1; j >= 0; --j) {
 			const int digit = n % alphabet_size;
 			n /= alphabet_size;
 			buf[i * block_sizes.back() + j] = alphabet[digit];
