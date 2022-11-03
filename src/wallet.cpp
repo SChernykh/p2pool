@@ -29,16 +29,14 @@ extern "C" {
 
 namespace {
 
-// public keys: 64 bytes -> 88 characters in base58
-// prefix (1 byte) + checksum (4 bytes) -> 7 characters in base58
-// 95 characters in total
-constexpr int ADDRESS_LENGTH = 95;
-
 // Allow only regular addresses (no integrated addresses, no subaddresses)
 // Values taken from cryptonote_config.h (CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX)
 constexpr uint64_t valid_prefixes[] = { 18, 53, 24 };
 
 constexpr std::array<int, 9> block_sizes{ 0, 2, 3, 5, 6, 7, 9, 10, 11 };
+constexpr int num_full_blocks = p2pool::Wallet::ADDRESS_LENGTH / block_sizes.back();
+constexpr int last_block_size = p2pool::Wallet::ADDRESS_LENGTH % block_sizes.back();
+
 constexpr int block_sizes_lookup[11] = { 0, -1, 1, 2, -1, 3, 4, 5, -1, 6, 7 };
 
 constexpr char alphabet[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -112,8 +110,6 @@ bool Wallet::decode(const char* address)
 		return false;
 	}
 
-	constexpr int num_full_blocks = ADDRESS_LENGTH / block_sizes.back();
-	constexpr int last_block_size = ADDRESS_LENGTH % block_sizes.back();
 	constexpr int last_block_size_index = block_sizes_lookup[last_block_size];
 
 	static_assert(last_block_size_index >= 0, "Check ADDRESS_LENGTH");
@@ -150,11 +146,13 @@ bool Wallet::decode(const char* address)
 
 	m_prefix = data[0];
 
-	if (m_prefix == valid_prefixes[0]) m_type = NetworkType::Mainnet;
-	if (m_prefix == valid_prefixes[1]) m_type = NetworkType::Testnet;
-	if (m_prefix == valid_prefixes[2]) m_type = NetworkType::Stagenet;
+	switch (m_prefix)
+	{
+	case valid_prefixes[0]: m_type = NetworkType::Mainnet;  break;
+	case valid_prefixes[1]: m_type = NetworkType::Testnet;  break;
+	case valid_prefixes[2]: m_type = NetworkType::Stagenet; break;
 
-	if (m_type == NetworkType::Invalid) {
+	default:
 		return false;
 	}
 
@@ -184,35 +182,62 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 		return false;
 	}
 
-	m_prefix = 0;
+	switch (type)
+	{
+	case NetworkType::Mainnet:  m_prefix = valid_prefixes[0]; break;
+	case NetworkType::Testnet:  m_prefix = valid_prefixes[1]; break;
+	case NetworkType::Stagenet: m_prefix = valid_prefixes[2]; break;
+	default:                    m_prefix = 0;                 break;
+	}
+
 	m_spendPublicKey = spend_pub_key;
 	m_viewPublicKey = view_pub_key;
-	m_checksum = 0;
+
+	uint8_t data[1 + HASH_SIZE * 2];
+	data[0] = static_cast<uint8_t>(m_prefix);
+	memcpy(data + 1, spend_pub_key.h, HASH_SIZE);
+	memcpy(data + 1 + HASH_SIZE, view_pub_key.h, HASH_SIZE);
+
+	uint8_t md[200];
+	keccak(data, sizeof(data), md);
+
+	memcpy(&m_checksum, md, sizeof(m_checksum));
 
 	m_type = type;
 
 	return true;
 }
 
-bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag) const
+void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
+{
+	uint8_t data[1 + HASH_SIZE * 2 + sizeof(m_checksum)];
+
+	data[0] = static_cast<uint8_t>(m_prefix);
+	memcpy(data + 1, m_spendPublicKey.h, HASH_SIZE);
+	memcpy(data + 1 + HASH_SIZE, m_viewPublicKey.h, HASH_SIZE);
+	memcpy(data + 1 + HASH_SIZE * 2, &m_checksum, sizeof(m_checksum));
+
+	for (int i = 0; i <= num_full_blocks; ++i) {
+		uint64_t n = 0;
+		for (int j = 0; (j < 8) && (i * sizeof(uint64_t) + j < sizeof(data)); ++j) {
+			n = (n << 8) | data[i * sizeof(uint64_t) + j];
+		}
+		for (int j = (((i < num_full_blocks) ? block_sizes.back() : last_block_size)) - 1; j >= 0; --j) {
+			const int digit = n % alphabet_size;
+			n /= alphabet_size;
+			buf[i * block_sizes.back() + j] = alphabet[digit];
+		}
+	}
+}
+
+bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag) const
 {
 	hash derivation;
 	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, output_index, derivation, view_tag)) {
 		return false;
 	}
 
-	if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
-		return false;
-	}
-
-	return true;
-}
-
-bool Wallet::get_eph_public_key_with_view_tag(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t expected_view_tag) const
-{
-	hash derivation;
-	uint8_t view_tag;
-	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, output_index, derivation, view_tag) || (view_tag != expected_view_tag)) {
+	if (expected_view_tag && (view_tag != *expected_view_tag)) {
 		return false;
 	}
 

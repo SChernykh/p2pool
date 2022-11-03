@@ -465,7 +465,7 @@ void SideChain::unsee_block(const PoolBlock& block)
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
 {
 	if (block.m_difficulty < m_minDifficulty) {
-		LOGWARN(3, "add_external_block: block has invalid difficulty " << block.m_difficulty << ", expected >= " << m_minDifficulty);
+		LOGWARN(3, "add_external_block: block mined by " << block.m_minerWallet << " has invalid difficulty " << block.m_difficulty << ", expected >= " << m_minDifficulty);
 		return false;
 	}
 
@@ -498,7 +498,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	LOGINFO(4, "add_external_block: height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId << ", mainchain height = " << block.m_txinGenHeight);
 
 	if (too_low_diff) {
-		LOGWARN(4, "add_external_block: block has too low difficulty " << block.m_difficulty << ", expected >= ~" << expected_diff << ". Ignoring it.");
+		LOGWARN(4, "add_external_block: block mined by " << block.m_minerWallet << " has too low difficulty " << block.m_difficulty << ", expected >= ~" << expected_diff << ". Ignoring it.");
 		return true;
 	}
 
@@ -506,7 +506,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	ChainMain data;
 	if (m_pool->chainmain_get_by_hash(block.m_prevId, data)) {
 		if (data.height + 1 != block.m_txinGenHeight) {
-			LOGWARN(3, "add_external_block: wrong mainchain height " << block.m_txinGenHeight << ", expected " << data.height + 1);
+			LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": wrong mainchain height " << block.m_txinGenHeight << ", expected " << data.height + 1);
 			return false;
 		}
 	}
@@ -516,7 +516,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 	hash seed;
 	if (!m_pool->get_seed(block.m_txinGenHeight, seed)) {
-		LOGWARN(3, "add_external_block: couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
+		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
 		unsee_block(block);
 		return false;
 	}
@@ -546,7 +546,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	if (!block.m_difficulty.check_pow(pow_hash)) {
-		LOGWARN(3, "add_external_block: not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
+		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
 		return false;
 	}
 
@@ -937,7 +937,9 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 			const PoolBlock::TxOutput& out = tip->m_outputs[i];
 			if (!your_reward) {
 				if (tx_type == TXOUT_TO_TAGGED_KEY) {
-					if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
+					uint8_t view_tag;
+					const uint8_t expected_view_tag = out.m_viewTag;
+					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
 						your_reward = out.m_reward;
 					}
 				}
@@ -988,6 +990,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)" <<
+		"\nYour wallet address       = " << m_pool->params().m_wallet <<
 		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)"
 										 << our_blocks_in_window_chart << our_uncles_in_window_chart <<
 		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
@@ -1009,7 +1012,9 @@ double SideChain::get_reward_share(const Wallet& w) const
 				const PoolBlock::TxOutput& out = tip->m_outputs[i];
 				if (!reward) {
 					if (tx_type == TXOUT_TO_TAGGED_KEY) {
-						if (w.get_eph_public_key_with_view_tag(tip->m_txkeySec, i, eph_public_key, out.m_viewTag) && (out.m_ephPublicKey == eph_public_key)) {
+						uint8_t view_tag;
+						const uint8_t expected_view_tag = out.m_viewTag;
+						if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
 							reward = out.m_reward;
 						}
 					}
@@ -1241,7 +1246,7 @@ void SideChain::verify_loop(PoolBlock* block)
 		if (block->m_invalid) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
-				", mainchain height = " << block->m_txinGenHeight << " is invalid");
+				", mainchain height = " << block->m_txinGenHeight << ", mined by " << block->m_minerWallet << "  is invalid");
 		}
 		else {
 			LOGINFO(3, "verified block at height = " << block->m_sidechainHeight <<

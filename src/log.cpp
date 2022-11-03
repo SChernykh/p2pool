@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "uv_util.h"
+#include "wallet.h"
 #include <ctime>
 #include <fstream>
 #include <thread>
@@ -336,7 +337,7 @@ NOINLINE void Stream::writeCurrentTime()
 	m_numberWidth = 1;
 }
 
-NOINLINE void put_rawip(const raw_ip& value, Stream* wrapper)
+NOINLINE void Stream::Entry<raw_ip>::put(const raw_ip& value, Stream* wrapper)
 {
 	const char* addr_str;
 	char addr_str_buf[64];
@@ -357,6 +358,13 @@ NOINLINE void put_rawip(const raw_ip& value, Stream* wrapper)
 	else {
 		*wrapper << "N/A";
 	}
+}
+
+NOINLINE void Stream::Entry<Wallet>::put(const Wallet& w, Stream* wrapper)
+{
+	char buf[Wallet::ADDRESS_LENGTH];
+	w.encode(buf);
+	wrapper->writeBuf(buf, Wallet::ADDRESS_LENGTH);
 }
 
 } // namespace log

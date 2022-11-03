@@ -128,7 +128,7 @@ FORCEINLINE uint64_t udiv128(uint64_t hi, uint64_t lo, uint64_t divisor, uint64_
 }
 #endif
 
-template<typename T> FORCEINLINE T round_up(T a, size_t granularity) { return static_cast<T>(((a + (granularity - static_cast<size_t>(1))) / granularity) * granularity); }
+template<typename T> constexpr FORCEINLINE T round_up(T a, size_t granularity) { return static_cast<T>(((a + (granularity - static_cast<size_t>(1))) / granularity) * granularity); }
 
 struct hash
 {

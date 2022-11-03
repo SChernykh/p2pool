@@ -2067,15 +2067,15 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 
 	// Limit system clock difference between connected peers
 	if (max_time_delta) {
-		static uint32_t total_checks = 0;
-		static uint32_t failed_checks = 0;
+		static uint64_t total_checks = 0;
+		static uint64_t failed_checks = 0;
 
 		++total_checks;
 
 		const uint64_t t = time(nullptr);
 		if ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) {
 			LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
-				<< " sent a block with an invalid timestamp " << block->m_timestamp
+				<< " sent a block (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
 				<< " (your local timestamp is " << t << ")");
 
 			++failed_checks;

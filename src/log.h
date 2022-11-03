@@ -19,6 +19,8 @@
 
 namespace p2pool {
 
+class Wallet;
+
 namespace log {
 
 extern int GLOBAL_LOG_LEVEL;
@@ -451,12 +453,8 @@ struct log::Stream::Entry<PadRight<T>>
 	}
 };
 
-void put_rawip(const raw_ip& value, Stream* wrapper);
-
-template<> struct log::Stream::Entry<raw_ip>
-{
-	static FORCEINLINE void put(const raw_ip& value, Stream* wrapper) { put_rawip(value, wrapper); }
-};
+template<> struct log::Stream::Entry<raw_ip> { static NOINLINE void put(const raw_ip& value, Stream* wrapper); };
+template<> struct log::Stream::Entry<Wallet> { static NOINLINE void put(const Wallet& w, Stream* wrapper); };
 
 namespace {
 	template<log::Severity severity> void apply_severity(log::Stream&);

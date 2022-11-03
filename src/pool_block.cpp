@@ -363,7 +363,9 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 		hash eph_public_key;
 
 		if (tx_type == TXOUT_TO_TAGGED_KEY) {
-			if (w.get_eph_public_key_with_view_tag(m_txkeySec, i, eph_public_key, out.m_viewTag) && (eph_public_key == out.m_ephPublicKey)) {
+			uint8_t view_tag;
+			const uint8_t expected_view_tag = out.m_viewTag;
+			if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (eph_public_key == out.m_ephPublicKey)) {
 				return out.m_reward;
 			}
 		}
