@@ -2064,12 +2064,16 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	SideChain& side_chain = server->m_pool->side_chain();
 
 	// Limit system clock difference between connected peers
 	if (max_time_delta) {
 		static hash prev_checked_block;
-		if (block->m_sidechainId != prev_checked_block) {
+
+		// Check only new blocks (not added to side_chain yet)
+		if ((block->m_sidechainId != prev_checked_block) && !side_chain.find_block(block->m_sidechainId)) {
 			prev_checked_block = block->m_sidechainId;
+			LOGINFO(5, "checking timestamp in block " << block->m_sidechainId << " (max_time_delta = " << max_time_delta << ')');
 
 			const uint64_t t = time(nullptr);
 			const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
@@ -2099,7 +2103,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		}
 	}
 
-	if (server->m_pool->side_chain().block_seen(*block)) {
+	if (side_chain.block_seen(*block)) {
 		LOGINFO(6, "block " << block->m_sidechainId << " (nonce " << block->m_nonce << ", extra_nonce " << block->m_extraNonce << ") was received before, skipping it");
 		return true;
 	}
