@@ -382,8 +382,8 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	// Init loop user data before running it
 	GetLoopUserData(&m_loop);
 
-	uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
-	uv_async_init(&m_loop, &m_kickTheLoopAsync, nullptr);
+	uv_async_init_checked(&m_loop, &m_shutdownAsync, on_shutdown);
+	uv_async_init_checked(&m_loop, &m_kickTheLoopAsync, nullptr);
 	m_shutdownAsync.data = this;
 
 	uv_mutex_init_checked(&m_requestMutex);

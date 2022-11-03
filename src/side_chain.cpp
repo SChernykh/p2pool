@@ -775,7 +775,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 					int index;
 					while ((index = work->counter.fetch_sub(1)) >= 0) {
 						uint8_t view_tag;
-						work->tmpShares[index].m_wallet->get_eph_public_key(work->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag);
+						if (!work->tmpShares[index].m_wallet->get_eph_public_key(work->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag)) {
+							LOGWARN(6, "get_eph_public_key failed at index " << index);
+						}
 					}
 
 					++work->num_helper_jobs_finished;

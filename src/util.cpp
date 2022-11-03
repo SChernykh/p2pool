@@ -232,6 +232,15 @@ void uv_rwlock_init_checked(uv_rwlock_t* lock)
 	}
 }
 
+void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async_cb)
+{
+	const int err = uv_async_init(loop, async, async_cb);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		panic();
+	}
+}
+
 uv_loop_t* uv_default_loop_checked()
 {
 	if (!is_main_thread()) {

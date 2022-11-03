@@ -60,6 +60,7 @@ typedef RWLock<true> WriteLock;
 void uv_cond_init_checked(uv_cond_t* cond);
 void uv_mutex_init_checked(uv_mutex_t* mutex);
 void uv_rwlock_init_checked(uv_rwlock_t* lock);
+void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async_cb);
 uv_loop_t* uv_default_loop_checked();
 
 struct UV_LoopCallbackBase
@@ -96,7 +97,7 @@ struct UV_LoopUserData
 		, m_callbacks{}
 		, m_callbacksToRun{}
 	{
-		uv_async_init(m_loop, m_async, async_cb);
+		uv_async_init_checked(m_loop, m_async, async_cb);
 		m_async->data = this;
 
 		uv_mutex_init_checked(&m_callbacksLock);
