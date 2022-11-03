@@ -7,6 +7,8 @@ Pool status and monitoring pages can be found at https://p2pool.io/, https://p2p
 ### Build Status
 
 ![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)
+![test-sync](https://github.com/SChernykh/p2pool/actions/workflows/test-sync.yml/badge.svg)
+
 ![CodeQL](https://github.com/SChernykh/p2pool/actions/workflows/codeql-analysis.yml/badge.svg)
 ![msvc-analysis](https://github.com/SChernykh/p2pool/actions/workflows/msvc-analysis.yml/badge.svg)
 ![cppcheck](https://github.com/SChernykh/p2pool/actions/workflows/cppcheck.yml/badge.svg)
