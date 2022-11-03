@@ -2067,23 +2067,35 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 
 	// Limit system clock difference between connected peers
 	if (max_time_delta) {
-		static uint64_t total_checks = 0;
-		static uint64_t failed_checks = 0;
+		static hash prev_checked_block;
+		if (block->m_sidechainId != prev_checked_block) {
+			prev_checked_block = block->m_sidechainId;
 
-		++total_checks;
+			const uint64_t t = time(nullptr);
+			const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
 
-		const uint64_t t = time(nullptr);
-		if ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) {
-			LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
-				<< " sent a block (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
-				<< " (your local timestamp is " << t << ")");
+			static uint32_t failed_history = 0;
+			failed_history = (failed_history << 1) | failed;
 
-			++failed_checks;
-			if ((total_checks > 10) && (failed_checks * 4 > total_checks * 3)) {
-				LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of " << total_checks << " blocks were rejected due to timestamp difference");
+			if (failed) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
+					<< " sent a block (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
+					<< " (your local timestamp is " << t << ")");
+
+				uint32_t failed_checks = 0;
+
+				for (uint32_t k = 1; k != 0; k <<= 1) {
+					if (failed_history & k) {
+						++failed_checks;
+					}
+				}
+
+				if (failed_checks > 16) {
+					LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of 32 last blocks were rejected due to timestamp difference");
+				}
+
+				return true;
 			}
-
-			return true;
 		}
 	}
 
