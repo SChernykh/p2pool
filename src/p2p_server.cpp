@@ -420,13 +420,13 @@ void P2PServer::save_peer_list_async()
 	const int err = uv_queue_work(&m_loop, &work->req,
 		[](uv_work_t* req)
 		{
-			bkg_jobs_tracker.start("P2PServer::save_peer_list_async");
+			BACKGROUND_JOB_START(P2PServer::save_peer_list_async);
 			reinterpret_cast<Work*>(req->data)->server->save_peer_list();
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
 			delete reinterpret_cast<Work*>(req->data);
-			bkg_jobs_tracker.stop("P2PServer::save_peer_list_async");
+			BACKGROUND_JOB_STOP(P2PServer::save_peer_list_async);
 		});
 
 	if (err) {
@@ -995,13 +995,13 @@ void P2PServer::flush_cache()
 	const int err = uv_queue_work(&m_loop, &work->req,
 		[](uv_work_t* req)
 		{
-			bkg_jobs_tracker.start("P2PServer::flush_cache");
+			BACKGROUND_JOB_START(P2PServer::flush_cache);
 			reinterpret_cast<Work*>(req->data)->cache->flush();
 		},
 		[](uv_work_t* req, int)
 		{
 			delete reinterpret_cast<Work*>(req->data);
-			bkg_jobs_tracker.stop("P2PServer::flush_cache");
+			BACKGROUND_JOB_STOP(P2PServer::flush_cache);
 		});
 
 	if (err) {
@@ -1534,7 +1534,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 	const int err = uv_queue_work(&server->m_loop, &work->req,
 		[](uv_work_t* req)
 		{
-			bkg_jobs_tracker.start("P2PServer::send_handshake_solution");
+			BACKGROUND_JOB_START(P2PServer::send_handshake_solution);
 
 			Work* work = reinterpret_cast<Work*>(req->data);
 			const std::vector<uint8_t>& consensus_id = work->server->m_pool->side_chain().consensus_id();
@@ -1591,7 +1591,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 				[work]()
 				{
 					delete work;
-					bkg_jobs_tracker.stop("P2PServer::send_handshake_solution");
+					BACKGROUND_JOB_STOP(P2PServer::send_handshake_solution);
 				});
 
 			// We might've been disconnected while working on the challenge, do nothing in this case
@@ -2146,7 +2146,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 	const int err = uv_queue_work(&server->m_loop, &work->req,
 		[](uv_work_t* req)
 		{
-			bkg_jobs_tracker.start("P2PServer::handle_incoming_block_async");
+			BACKGROUND_JOB_START(P2PServer::handle_incoming_block_async);
 			Work* work = reinterpret_cast<Work*>(req->data);
 			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_ip, work->missing_blocks);
 		},
@@ -2155,7 +2155,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 			Work* work = reinterpret_cast<Work*>(req->data);
 			work->client->post_handle_incoming_block(work->client_reset_counter, work->missing_blocks);
 			delete work;
-			bkg_jobs_tracker.stop("P2PServer::handle_incoming_block_async");
+			BACKGROUND_JOB_STOP(P2PServer::handle_incoming_block_async);
 		});
 
 	if (err != 0) {

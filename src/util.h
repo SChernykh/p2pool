@@ -156,17 +156,24 @@ public:
 	BackgroundJobTracker();
 	~BackgroundJobTracker();
 
-	void start(const char* name);
-	void stop(const char* name);
+	template<size_t N> FORCEINLINE void start(const char (&name)[N]) { start_internal(name); }
+	template<size_t N> FORCEINLINE void stop (const char (&name)[N]) { stop_internal (name); }
+
 	void wait();
 	void print_status();
 
 private:
+	void start_internal(const char* name);
+	void stop_internal(const char* name);
+
 	struct Impl;
 	Impl* m_impl;
 };
 
 extern BackgroundJobTracker bkg_jobs_tracker;
+
+#define BACKGROUND_JOB_START(x) do { bkg_jobs_tracker.start(#x); } while (0)
+#define BACKGROUND_JOB_STOP(x)  do { bkg_jobs_tracker.stop(#x);  } while (0)
 
 void set_main_thread();
 bool is_main_thread();

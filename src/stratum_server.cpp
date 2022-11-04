@@ -806,7 +806,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 {
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
 	if (share->m_highEnoughDifficulty) {
-		bkg_jobs_tracker.start("StratumServer::on_share_found");
+		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
 	StratumClient* client = share->m_client;
@@ -891,7 +891,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	if (share->m_highEnoughDifficulty) {
 		const char* s = client->m_customUser;
 		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
-		bkg_jobs_tracker.stop("StratumServer::on_share_found");
+		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
 	ON_SCOPE_LEAVE([share]() { share->m_server->m_submittedSharesPool.push_back(share); });

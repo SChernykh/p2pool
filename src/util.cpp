@@ -287,21 +287,22 @@ struct BackgroundJobTracker::Impl
 
 	void wait()
 	{
+		uint64_t last_msg_time = 0;
 		do {
-			bool is_empty = true;
 			{
 				MutexLock lock(m_lock);
-				is_empty = m_jobs.empty();
-				for (const auto& job : m_jobs) {
-					LOGINFO(1, "waiting for " << job.second << " \"" << job.first << "\" jobs to finish");
+				if (m_jobs.empty()) {
+					return;
+				}
+				const uint64_t t = seconds_since_epoch();
+				if (t != last_msg_time) {
+					last_msg_time = t;
+					for (const auto& job : m_jobs) {
+						LOGINFO(1, "waiting for " << job.second << " \"" << job.first << "\" jobs to finish");
+					}
 				}
 			}
-
-			if (is_empty) {
-				return;
-			}
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		} while (1);
 	}
 
@@ -323,8 +324,10 @@ struct BackgroundJobTracker::Impl
 		LOGINFO(0, "background jobs running:" << log::const_buf(buf, s.m_pos));
 	}
 
+	struct Compare { FORCEINLINE bool operator()(const char* a, const char* b) const { return strcmp(a, b) < 0; } };
+
 	uv_mutex_t m_lock;
-	std::map<std::string, int32_t> m_jobs;
+	std::map<const char*, int32_t, Compare> m_jobs;
 };
 
 BackgroundJobTracker::BackgroundJobTracker() : m_impl(new Impl())
@@ -336,12 +339,12 @@ BackgroundJobTracker::~BackgroundJobTracker()
 	delete m_impl;
 }
 
-void BackgroundJobTracker::start(const char* name)
+void BackgroundJobTracker::start_internal(const char* name)
 {
 	m_impl->start(name);
 }
 
-void BackgroundJobTracker::stop(const char* name)
+void BackgroundJobTracker::stop_internal(const char* name)
 {
 	m_impl->stop(name);
 }
