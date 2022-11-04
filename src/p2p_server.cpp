@@ -25,6 +25,7 @@
 #include "block_cache.h"
 #include "json_rpc_request.h"
 #include "json_parsers.h"
+#include "block_template.h"
 #include <rapidjson/document.h>
 #include <fstream>
 #include <numeric>
@@ -972,6 +973,7 @@ void P2PServer::on_timer()
 	save_peer_list_async();
 	update_peer_connections();
 	check_zmq();
+	check_block_template();
 }
 
 void P2PServer::flush_cache()
@@ -1103,6 +1105,19 @@ void P2PServer::check_zmq()
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
 		LOGERR(1, "no ZMQ messages received from monerod in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
 		m_pool->restart_zmq();
+	}
+}
+
+void P2PServer::check_block_template()
+{
+	if (!m_pool->side_chain().precalcFinished()) {
+		return;
+	}
+
+	// Force update block template every 30 seconds after the initial sync is done
+	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 30) {
+		LOGINFO(4, "block template is 30 seconds old, updating it");
+		m_pool->update_block_template_async();
 	}
 }
 

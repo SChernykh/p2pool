@@ -39,6 +39,7 @@ namespace p2pool {
 BlockTemplate::BlockTemplate(p2pool* pool)
 	: m_pool(pool)
 	, m_templateId(0)
+	, m_lastUpdated(seconds_since_epoch())
 	, m_blockHeaderSize(0)
 	, m_minerTxOffsetInTemplate(0)
 	, m_minerTxSize(0)
@@ -110,6 +111,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 
 	m_pool = b.m_pool;
 	m_templateId = b.m_templateId;
+	m_lastUpdated = b.m_lastUpdated.load();
 	m_blockTemplateBlob = b.m_blockTemplateBlob;
 	m_merkleTreeMainBranch = b.m_merkleTreeMainBranch;
 	m_blockHeaderSize = b.m_blockHeaderSize;
@@ -203,6 +205,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	}
 
 	++m_templateId;
+	m_lastUpdated = seconds_since_epoch();
 
 	// When block template generation fails for any reason
 	auto use_old_template = [this]() {
