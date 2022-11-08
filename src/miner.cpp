@@ -92,7 +92,7 @@ void Miner::on_block(const BlockTemplate& block)
 	const uint32_t next_index = m_jobIndex ^ 1;
 	Job& j = m_job[next_index];
 	hash seed;
-	j.m_blobSize = block.get_hashing_blob(m_extraNonce, j.m_blob, j.m_height, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
+	j.m_blobSize = block.get_hashing_blob(m_extraNonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
 
 	const uint32_t hash_count = 0 - m_nonce.exchange(0);
 	m_jobIndex = next_index;
@@ -204,12 +204,12 @@ void Miner::run(WorkerData* data)
 		randomx_calculate_hash_next(vm, job[index].m_blob, job[index].m_blobSize, &h);
 
 		if (j.m_diff.check_pow(h)) {
-			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block, submitting it");
+			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block at height " << j.m_height << ", submitting it");
 			m_pool->submit_block_async(j.m_templateId, j.m_nonce, j.m_extraNonce);
 		}
 
 		if (j.m_sidechainDiff.check_pow(h)) {
-			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << j.m_height << ", diff " << j.m_sidechainDiff << ", worker thread " << data->m_index << '/' << data->m_count);
+			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << j.m_height << ", sidechain height " << j.m_sidechainHeight << ", diff " << j.m_sidechainDiff << ", worker thread " << data->m_index << '/' << data->m_count);
 			m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce);
 			++m_sharesFound;
 		}

@@ -141,6 +141,7 @@ private:
 		hash m_resultHash;
 		difficulty_type m_sidechainDifficulty;
 		uint64_t m_mainchainHeight;
+		uint64_t m_sidechainHeight;
 		double m_effort;
 		uint64_t m_timestamp;
 		uint64_t m_hashes;

@@ -931,12 +931,13 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	}
 }
 
-bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& height, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
+bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id == m_templateId) {
 		height = m_height;
+		sidechain_height = m_poolBlockTemplate->m_sidechainHeight;
 		mainchain_difficulty = m_difficulty;
 		sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 		return true;
@@ -945,7 +946,7 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& heigh
 	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		return old->get_difficulties(template_id, height, mainchain_difficulty, sidechain_difficulty);
+		return old->get_difficulties(template_id, height, sidechain_height, mainchain_difficulty, sidechain_difficulty);
 	}
 
 	return false;
@@ -974,11 +975,12 @@ uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t ex
 	return 0;
 }
 
-uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
+uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
 {
 	ReadLock lock(m_lock);
 
 	height = m_height;
+	sidechain_height = m_poolBlockTemplate->m_sidechainHeight;
 	difficulty = m_difficulty;
 	sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 	seed_hash = m_seedHash;

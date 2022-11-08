@@ -242,14 +242,14 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	const uint32_t extra_nonce = m_extraNonce.fetch_add(1);
 
 	uint8_t hashing_blob[128];
-	uint64_t height;
+	uint64_t height, sidechain_height;
 	difficulty_type difficulty;
 	difficulty_type sidechain_difficulty;
 	hash seed_hash;
 	size_t nonce_offset;
 	uint32_t template_id;
 
-	const size_t blob_size = m_pool->block_template().get_hashing_blob(extra_nonce, hashing_blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset, template_id);
+	const size_t blob_size = m_pool->block_template().get_hashing_blob(extra_nonce, hashing_blob, height, sidechain_height, difficulty, sidechain_difficulty, seed_hash, nonce_offset, template_id);
 
 	uint64_t target = std::max(difficulty.target(), sidechain_difficulty.target());
 
@@ -363,10 +363,10 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 	if (found) {
 		BlockTemplate& block = m_pool->block_template();
-		uint64_t height;
+		uint64_t height, sidechain_height;
 		difficulty_type mainchain_diff, sidechain_diff;
 
-		if (!block.get_difficulties(template_id, height, mainchain_diff, sidechain_diff)) {
+		if (!block.get_difficulties(template_id, height, sidechain_height, mainchain_diff, sidechain_diff)) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
 			return send(client,
 				[id](void* buf, size_t buf_size)
@@ -379,7 +379,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 		if (mainchain_diff.check_pow(resultHash)) {
 			const char* s = client->m_customUser;
-			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block, submitting it");
+			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block at height " << height << ", submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
 		}
 
@@ -412,6 +412,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_resultHash = resultHash;
 		share->m_sidechainDifficulty = sidechain_diff;
 		share->m_mainchainHeight = height;
+		share->m_sidechainHeight = sidechain_height;
 		share->m_effort = -1.0;
 		share->m_timestamp = seconds_since_epoch();
 
@@ -890,7 +891,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	if (share->m_highEnoughDifficulty) {
 		const char* s = client->m_customUser;
-		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
+		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
