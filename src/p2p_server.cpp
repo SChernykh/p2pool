@@ -2042,14 +2042,27 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 
 	const uint32_t num_peers = *(buf++);
 	for (uint32_t i = 0; i < num_peers; ++i) {
-		const bool is_v6 = *(buf++) != 0;
+		bool is_v6 = *(buf++) != 0;
 
 		raw_ip ip;
 		memcpy(ip.data, buf, sizeof(ip.data));
 		buf += sizeof(ip.data);
 
-		// Fill in default bytes for IPv4 addresses
+		// Treat IPv4-mapped addresses as regular IPv4 addresses
+		if (is_v6 && ip.is_ipv4_prefix()) {
+			is_v6 = false;
+		}
+
 		if (!is_v6) {
+			const uint32_t b = ip.data[12];
+			if ((b == 0) || (b >= 224)) {
+				// Ignore 0.0.0.0/8 (special-purpose range for "this network") and 224.0.0.0/3 (IP multicast and reserved ranges)
+				// Some values in these ranges will be used to enable future P2Pool binary protocol versions
+				buf += 2;
+				continue;
+			}
+
+			// Fill in default bytes for IPv4 addresses
 			memset(ip.data, 0, 10);
 			ip.data[10] = 0xFF;
 			ip.data[11] = 0xFF;

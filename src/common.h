@@ -333,6 +333,12 @@ struct raw_ip
 
 		return (*this == localhost_ipv4) || (*this == localhost_ipv6);
 	}
+
+	FORCEINLINE bool is_ipv4_prefix() const
+	{
+		alignas(8) static constexpr uint8_t ipv4_prefix[12] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
+		return memcmp(data, ipv4_prefix, sizeof(ipv4_prefix)) == 0;
+	}
 };
 
 static_assert(sizeof(raw_ip) == 16, "struct raw_ip has invalid size");
