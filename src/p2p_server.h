@@ -130,7 +130,7 @@ public:
 		std::atomic<uint32_t> m_broadcastedHashesIndex{ 0 };
 	};
 
-	void broadcast(const PoolBlock& block);
+	void broadcast(const PoolBlock& block, const PoolBlock* parent);
 	uint64_t get_random64();
 	uint64_t get_peerId() const { return m_peerId; }
 
@@ -212,6 +212,7 @@ private:
 	{
 		std::vector<uint8_t> blob;
 		std::vector<uint8_t> pruned_blob;
+		std::vector<uint8_t> compact_blob;
 		std::vector<hash> ancestor_hashes;
 	};
 

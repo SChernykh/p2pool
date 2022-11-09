@@ -726,7 +726,7 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 	}
 }
 
-void P2PServer::broadcast(const PoolBlock& block)
+void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 {
 	MinerData miner_data = m_pool->miner_data();
 
@@ -766,13 +766,48 @@ void P2PServer::broadcast(const PoolBlock& block)
 	writeVarint(outputs_blob_size, data->pruned_blob);
 
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
+
+	const size_t N = block.m_transactions.size();
+	if ((N > 1) && parent) {
+		unordered_map<hash, size_t> parent_transactions;
+		parent_transactions.reserve(parent->m_transactions.size());
+
+		for (size_t i = 1; i < parent->m_transactions.size(); ++i) {
+			parent_transactions.emplace(parent->m_transactions[i], i);
+		}
+
+		// Reserve 1 additional byte per transaction to be ready for the worst case (all transactions are different in the parent block)
+		data->compact_blob.reserve(data->pruned_blob.capacity() + (N - 1));
+
+		// Copy pruned_blob without the transaction list
+		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - (N - 1) * HASH_SIZE);
+
+		// Process transaction hashes one by one
+		size_t num_found = 0;
+		for (size_t i = 1; i < N; ++i) {
+			const hash& tx = block.m_transactions[i];
+			auto it = parent_transactions.find(tx);
+			if (it != parent_transactions.end()) {
+				writeVarint(it->second, data->compact_blob);
+				++num_found;
+			}
+			else {
+				data->compact_blob.push_back(0);
+				data->compact_blob.insert(data->compact_blob.end(), tx.h, tx.h + HASH_SIZE);
+			}
+		}
+		LOGINFO(6, "compact blob: " << num_found << '/' << (N - 1) << " transactions were found in the parent block");
+
+		data->compact_blob.insert(data->compact_blob.end(), sidechain_data.begin(), sidechain_data.end());
+	}
+
 	data->pruned_blob.insert(data->pruned_blob.end(), sidechain_data.begin(), sidechain_data.end());
 
 	data->ancestor_hashes.reserve(block.m_uncles.size() + 1);
 	data->ancestor_hashes = block.m_uncles;
 	data->ancestor_hashes.push_back(block.m_parent);
 
-	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " << data->pruned_blob.size() << '/' << data->blob.size() << " bytes (pruned/full)");
+	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " << data->compact_blob.size() << '/' << data->pruned_blob.size() << '/' << data->blob.size() << " bytes (compact/pruned/full)");
 
 	{
 		MutexLock lock(m_broadcastLock);
