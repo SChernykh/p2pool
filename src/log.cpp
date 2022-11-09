@@ -79,10 +79,9 @@ public:
 		}
 
 #ifdef _WIN32
+		SetConsoleMode(hStdIn, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS);
+
 		DWORD dwConsoleMode;
-		if (GetConsoleMode(hStdIn, &dwConsoleMode)) {
-			SetConsoleMode(hStdIn, dwConsoleMode & ~ENABLE_QUICK_EDIT_MODE);
-		}
 		if (GetConsoleMode(hStdOut, &dwConsoleMode)) {
 			SetConsoleMode(hStdOut, dwConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 		}
