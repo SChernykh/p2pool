@@ -875,6 +875,7 @@ void P2PServer::on_broadcast()
 				uint8_t* p = p0;
 
 				bool send_pruned = true;
+				bool send_compact = (client->m_protocolVersion >= PROTOCOL_VERSION_1_1) && !data->compact_blob.empty() && (data->compact_blob.size() < data->pruned_blob.size());
 
 				const hash* a = client->m_broadcastedHashes;
 				const hash* b = client->m_broadcastedHashes + array_size(&P2PClient::m_broadcastedHashes);
@@ -882,25 +883,27 @@ void P2PServer::on_broadcast()
 				for (const hash& id : data->ancestor_hashes) {
 					if (std::find(a, b, id) == b) {
 						send_pruned = false;
+						send_compact = false;
 						break;
 					}
 				}
 
 				if (send_pruned) {
-					LOGINFO(6, "sending BLOCK_BROADCAST (pruned) to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(6, "sending BLOCK_BROADCAST (" << (send_compact ? "compact" : "pruned") << ") to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					const std::vector<uint8_t>& blob = send_compact ? data->compact_blob : data->pruned_blob;
 
-					const uint32_t len = static_cast<uint32_t>(data->pruned_blob.size());
+					const uint32_t len = static_cast<uint32_t>(blob.size());
 					if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
 						return 0;
 					}
 
-					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
+					*(p++) = static_cast<uint8_t>(send_compact ? MessageId::BLOCK_BROADCAST_COMPACT : MessageId::BLOCK_BROADCAST);
 
 					memcpy(p, &len, sizeof(uint32_t));
 					p += sizeof(uint32_t);
 
 					if (len) {
-						memcpy(p, data->pruned_blob.data(), len);
+						memcpy(p, blob.data(), len);
 						p += len;
 					}
 				}
@@ -1169,6 +1172,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_nextOutgoingPeerListRequest(0)
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
+	, m_protocolVersion(PROTOCOL_VERSION_1_0)
 	, m_pingTime(-1)
 	, m_blockPendingRequests(0)
 	, m_chainTipBlockRequest(false)
@@ -1214,6 +1218,7 @@ void P2PServer::P2PClient::reset()
 	m_nextOutgoingPeerListRequest = 0;
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
+	m_protocolVersion = PROTOCOL_VERSION_1_0;
 	m_pingTime = -1;
 	m_blockPendingRequests = 0;
 	m_chainTipBlockRequest = false;
@@ -1400,16 +1405,20 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::BLOCK_BROADCAST:
-			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_BROADCAST");
+		case MessageId::BLOCK_BROADCAST_COMPACT:
+			{
+				const bool compact = (id == MessageId::BLOCK_BROADCAST_COMPACT);
+				LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent " << (compact ? "BLOCK_BROADCAST_COMPACT" : "BLOCK_BROADCAST"));
 
-			if (bytes_left >= 1 + sizeof(uint32_t)) {
-				const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
-				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
-					bytes_read = 1 + sizeof(uint32_t) + block_size;
-					if (!on_block_broadcast(buf + 1 + sizeof(uint32_t), block_size)) {
-						ban(DEFAULT_BAN_TIME);
-						server->remove_peer_from_list(this);
-						return false;
+				if (bytes_left >= 1 + sizeof(uint32_t)) {
+					const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+					if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
+						bytes_read = 1 + sizeof(uint32_t) + block_size;
+						if (!on_block_broadcast(buf + 1 + sizeof(uint32_t), block_size, compact)) {
+							ban(DEFAULT_BAN_TIME);
+							server->remove_peer_from_list(this);
+							return false;
+						}
 					}
 				}
 			}
@@ -1927,7 +1936,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 	return handle_incoming_block_async(server->get_block(), max_time_delta);
 }
 
-bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
+bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact)
 {
 	if (!size) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " broadcasted an empty block");
@@ -1938,7 +1947,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size, false);
+	const int result = server->deserialize_block(buf, size, compact);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;
@@ -1993,6 +2002,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
+	const bool first = (m_prevIncomingPeerListRequest == 0);
 
 	// Allow peer list requests no more than once every 30 seconds
 	if (cur_time - m_prevIncomingPeerListRequest < 30) {
@@ -2037,6 +2047,24 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		}
 	}
 
+	// Protocol version message:
+	// - IPv4 address = 255.255.255.255
+	// - port = 65535
+	// - first 12 bytes of the 16-byte raw IP address are ignored by older clients if it's IPv4
+	// - use first 4 bytes of the 16-byte raw IP address to send supported protocol version
+	if (first) {
+		LOGINFO(5, "sending protocol version " << (SUPPORTED_PROTOCOL_VERSION >> 16) << '.' << (SUPPORTED_PROTOCOL_VERSION & 0xFFFF) << " to peer " << log::Gray() << static_cast<char*>(m_addrString));
+
+		peers[0] = {};
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 12) = 0xFFFFFFFFU;
+		peers[0].m_port = 0xFFFF;
+
+		if (num_selected_peers == 0) {
+			num_selected_peers = 1;
+		}
+	}
+
 	return server->send(this,
 		[this, &peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
 		{
@@ -2068,7 +2096,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		});
 }
 
-bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
+bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
@@ -2083,6 +2111,10 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 		memcpy(ip.data, buf, sizeof(ip.data));
 		buf += sizeof(ip.data);
 
+		int port = 0;
+		memcpy(&port, buf, 2);
+		buf += 2;
+
 		// Treat IPv4-mapped addresses as regular IPv4 addresses
 		if (is_v6 && ip.is_ipv4_prefix()) {
 			is_v6 = false;
@@ -2092,8 +2124,12 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 			const uint32_t b = ip.data[12];
 			if ((b == 0) || (b >= 224)) {
 				// Ignore 0.0.0.0/8 (special-purpose range for "this network") and 224.0.0.0/3 (IP multicast and reserved ranges)
-				// Some values in these ranges will be used to enable future P2Pool binary protocol versions
-				buf += 2;
+
+				// Check for protocol version message
+				if ((*reinterpret_cast<uint32_t*>(ip.data + 12) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
+					m_protocolVersion = *reinterpret_cast<uint32_t*>(ip.data);
+					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF));
+				}
 				continue;
 			}
 
@@ -2102,10 +2138,6 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf) const
 			ip.data[10] = 0xFF;
 			ip.data[11] = 0xFF;
 		}
-
-		int port = 0;
-		memcpy(&port, buf, 2);
-		buf += 2;
 
 		bool already_added = false;
 		for (Peer& p : server->m_peerList) {
