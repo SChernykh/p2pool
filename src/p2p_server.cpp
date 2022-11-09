@@ -768,7 +768,7 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 
 	const size_t N = block.m_transactions.size();
-	if ((N > 1) && parent) {
+	if ((N > 1) && parent && (parent->m_transactions.size() > 1)) {
 		unordered_map<hash, size_t> parent_transactions;
 		parent_transactions.reserve(parent->m_transactions.size());
 
@@ -975,7 +975,7 @@ int P2PServer::listen_port() const
 	return params.m_p2pExternalPort ? params.m_p2pExternalPort : m_listenPort;
 }
 
-int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size)
+int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact)
 {
 	int result;
 
@@ -984,7 +984,7 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size)
 		result = m_blockDeserializeResult;
 	}
 	else {
-		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop);
+		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact);
 		m_blockDeserializeBuf.assign(buf, buf + size);
 		m_blockDeserializeResult = result;
 		m_lookForMissingBlocks = true;
@@ -1898,7 +1898,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size);
+	const int result = server->deserialize_block(buf, size, false);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;
@@ -1938,7 +1938,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size)
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size);
+	const int result = server->deserialize_block(buf, size, false);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;

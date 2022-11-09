@@ -146,7 +146,7 @@ public:
 	void set_max_outgoing_peers(uint32_t n) { m_maxOutgoingPeers = std::min(std::max(n, 10U), 450U); }
 	void set_max_incoming_peers(uint32_t n) { m_maxIncomingPeers = std::min(std::max(n, 10U), 450U); }
 
-	int deserialize_block(const uint8_t* buf, uint32_t size);
+	int deserialize_block(const uint8_t* buf, uint32_t size, bool compact);
 	const PoolBlock* get_block() const { return m_block; }
 
 private:
