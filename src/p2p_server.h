@@ -125,6 +125,7 @@ public:
 		int m_peerListPendingRequests;
 
 		uint32_t m_protocolVersion;
+		uint32_t m_P2PoolVersion;
 
 		int64_t m_pingTime;
 

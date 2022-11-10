@@ -964,7 +964,18 @@ void P2PServer::show_peers()
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (client->m_listenPort >= 0) {
-			LOGINFO(0, (client->m_isIncoming ? "I " : "O ") << client->m_pingTime << " ms\t" << static_cast<char*>(client->m_addrString));
+			char buf[32];
+			log::Stream s(buf);
+			if (client->m_P2PoolVersion) {
+				s << 'v' << (client->m_P2PoolVersion >> 16) << '.' << (client->m_P2PoolVersion & 0xFFFF) << " \0";
+			}
+			else {
+				s << "<= v2.5 \0";
+			}
+			LOGINFO(0, (client->m_isIncoming ? "I " : "O ")
+				<< log::pad_right(client->m_pingTime, 4) << " ms "
+				<< log::pad_right(static_cast<const char*>(buf), 8)
+				<< static_cast<char*>(client->m_addrString));
 			++n;
 		}
 	}
@@ -1173,6 +1184,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
 	, m_protocolVersion(PROTOCOL_VERSION_1_0)
+	, m_P2PoolVersion(0)
 	, m_pingTime(-1)
 	, m_blockPendingRequests(0)
 	, m_chainTipBlockRequest(false)
@@ -1219,6 +1231,7 @@ void P2PServer::P2PClient::reset()
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
 	m_protocolVersion = PROTOCOL_VERSION_1_0;
+	m_P2PoolVersion = 0;
 	m_pingTime = -1;
 	m_blockPendingRequests = 0;
 	m_chainTipBlockRequest = false;
@@ -2051,12 +2064,15 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	// - IPv4 address = 255.255.255.255
 	// - port = 65535
 	// - first 12 bytes of the 16-byte raw IP address are ignored by older clients if it's IPv4
-	// - use first 4 bytes of the 16-byte raw IP address to send supported protocol version
+	// - use first 8 bytes of the 16-byte raw IP address to send supported protocol version and p2pool version
 	if (first) {
-		LOGINFO(5, "sending protocol version " << (SUPPORTED_PROTOCOL_VERSION >> 16) << '.' << (SUPPORTED_PROTOCOL_VERSION & 0xFFFF) << " to peer " << log::Gray() << static_cast<char*>(m_addrString));
+		LOGINFO(5, "sending protocol version " << (SUPPORTED_PROTOCOL_VERSION >> 16) << '.' << (SUPPORTED_PROTOCOL_VERSION & 0xFFFF)
+			<< ", P2Pool version " << P2POOL_VERSION_MAJOR << '.' << P2POOL_VERSION_MINOR
+			<< " to peer " << log::Gray() << static_cast<char*>(m_addrString));
 
 		peers[0] = {};
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 12) = 0xFFFFFFFFU;
 		peers[0].m_port = 0xFFFF;
 
@@ -2128,7 +2144,11 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 				// Check for protocol version message
 				if ((*reinterpret_cast<uint32_t*>(ip.data + 12) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
 					m_protocolVersion = *reinterpret_cast<uint32_t*>(ip.data);
-					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF));
+					m_P2PoolVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
+					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
+						<< " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF)
+						<< ", runs P2Pool version " << (m_P2PoolVersion >> 16) << '.' << (m_P2PoolVersion & 0xFFFF)
+					);
 				}
 				continue;
 			}

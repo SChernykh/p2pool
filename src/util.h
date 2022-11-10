@@ -34,6 +34,9 @@
 
 namespace p2pool {
 
+#define P2POOL_VERSION_MAJOR 2
+#define P2POOL_VERSION_MINOR 5
+
 extern const char* VERSION;
 
 template<typename T> struct not_implemented { enum { value = 0 }; };

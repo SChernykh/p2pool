@@ -32,7 +32,7 @@ namespace p2pool {
 #define STR2(X) STR(X)
 #define STR(X) #X
 
-const char* VERSION = "v2.5 (built"
+const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) " (built"
 #if defined(__clang__)
 	" with clang/" __clang_version__
 #elif defined(__GNUC__)
