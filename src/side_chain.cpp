@@ -1248,7 +1248,7 @@ void SideChain::verify_loop(PoolBlock* block)
 		if (block->m_invalid) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
-				", mainchain height = " << block->m_txinGenHeight << ", mined by " << block->m_minerWallet << "  is invalid");
+				", mainchain height = " << block->m_txinGenHeight << ", mined by " << block->m_minerWallet << " is invalid");
 		}
 		else {
 			LOGINFO(3, "verified block at height = " << block->m_sidechainHeight <<
@@ -1275,6 +1275,9 @@ void SideChain::verify_loop(PoolBlock* block)
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
 				if (server && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
+					if (m_pool && (block->m_minerWallet == m_pool->params().m_wallet)) {
+						LOGINFO(0, log::Green() << "SHARE ADDED: height = " << block->m_sidechainHeight << ", id = " << block->m_sidechainId << ", mainchain height = " << block->m_txinGenHeight);
+					}
 					server->broadcast(*block, get_parent(block));
 				}
 			}
