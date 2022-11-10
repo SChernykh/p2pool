@@ -967,14 +967,14 @@ void P2PServer::show_peers()
 			char buf[32];
 			log::Stream s(buf);
 			if (client->m_P2PoolVersion) {
-				s << 'v' << (client->m_P2PoolVersion >> 16) << '.' << (client->m_P2PoolVersion & 0xFFFF) << " \0";
+				s << "\tv" << (client->m_P2PoolVersion >> 16) << '.' << (client->m_P2PoolVersion & 0xFFFF) << "\t\0";
 			}
 			else {
-				s << "<= v2.5 \0";
+				s << "\t    \t\0";
 			}
-			LOGINFO(0, (client->m_isIncoming ? "I " : "O ")
-				<< log::pad_right(client->m_pingTime, 4) << " ms "
-				<< log::pad_right(static_cast<const char*>(buf), 8)
+			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")
+				<< log::pad_right(client->m_pingTime, 4) << " ms\t"
+				<< static_cast<const char*>(buf)
 				<< static_cast<char*>(client->m_addrString));
 			++n;
 		}
