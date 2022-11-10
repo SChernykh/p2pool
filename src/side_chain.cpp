@@ -1275,7 +1275,7 @@ void SideChain::verify_loop(PoolBlock* block)
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
 				if (server && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
-					server->broadcast(*block);
+					server->broadcast(*block, get_parent(block));
 				}
 			}
 
@@ -1674,7 +1674,7 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 
 	if (p2pServer() && block->m_wantBroadcast && !block->m_broadcasted) {
 		block->m_broadcasted = true;
-		p2pServer()->broadcast(*block);
+		p2pServer()->broadcast(*block, get_parent(block));
 	}
 }
 

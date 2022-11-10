@@ -23,7 +23,7 @@ namespace p2pool {
 // Since data here can come from external and possibly malicious sources, check everything
 // Only the syntax (i.e. the serialized block binary format) and the keccak hash are checked here
 // Semantics must also be checked elsewhere before accepting the block (PoW, reward split between miners, difficulty calculation and so on)
-int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop)
+int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop, bool compact)
 {
 	try {
 		// Sanity check
@@ -193,23 +193,60 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		uint64_t num_transactions;
 		READ_VARINT(num_transactions);
 
-		if (num_transactions > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
-		if (static_cast<uint64_t>(data_end - data) < num_transactions * HASH_SIZE) return __LINE__;
+		const int transactions_offset = static_cast<int>(data - data_begin);
 
-		m_transactions.resize(1);
-		m_transactions.reserve(num_transactions + 1);
+		std::vector<uint64_t> parent_indices;
+		if (compact) {
+			if (static_cast<uint64_t>(data_end - data) < num_transactions) return __LINE__;
 
-		for (uint64_t i = 0; i < num_transactions; ++i) {
-			hash id;
-			READ_BUF(id.h, HASH_SIZE);
-			m_transactions.emplace_back(std::move(id));
+			m_transactions.resize(1);
+			parent_indices.resize(1);
+
+			// limit reserved memory size because we can't check "num_transactions" properly here
+			const uint64_t k = std::min<uint64_t>(num_transactions + 1, 256);
+			m_transactions.reserve(k);
+			parent_indices.reserve(k);
+
+			for (uint64_t i = 0; i < num_transactions; ++i) {
+				uint64_t parent_index;
+				READ_VARINT(parent_index);
+
+				hash id;
+				if (parent_index == 0) {
+					READ_BUF(id.h, HASH_SIZE);
+				}
+
+				m_transactions.emplace_back(id);
+				parent_indices.emplace_back(parent_index);
+			}
+		}
+		else {
+			if (num_transactions > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
+			if (static_cast<uint64_t>(data_end - data) < num_transactions * HASH_SIZE) return __LINE__;
+
+			m_transactions.resize(1);
+			m_transactions.reserve(num_transactions + 1);
+
+			for (uint64_t i = 0; i < num_transactions; ++i) {
+				hash id;
+				READ_BUF(id.h, HASH_SIZE);
+				m_transactions.emplace_back(id);
+			}
 		}
 
+		const int transactions_actual_blob_size = static_cast<int>(data - data_begin) - transactions_offset;
+		const int transactions_blob_size = static_cast<int>(num_transactions) * HASH_SIZE;
+		const int transactions_blob_size_diff = transactions_blob_size - transactions_actual_blob_size;
+
+		m_transactions.shrink_to_fit();
+
 #if POOL_BLOCK_DEBUG
-		m_mainChainDataDebug.reserve((data - data_begin) + outputs_blob_size_diff);
+		m_mainChainDataDebug.reserve((data - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
 		m_mainChainDataDebug.assign(data_begin, data_begin + outputs_offset);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), outputs_blob_size, 0);
-		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data_begin + transactions_offset);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), transactions_blob_size, 0);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + transactions_offset + transactions_actual_blob_size, data);
 
 		const uint8_t* sidechain_data_begin = data;
 #endif
@@ -239,6 +276,23 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_parent.h, HASH_SIZE);
 
+		if (compact) {
+			const PoolBlock* parent = sidechain.find_block(m_parent);
+			if (!parent) {
+				return __LINE__;
+			}
+
+			for (uint64_t i = 1, n = m_transactions.size(); i < n; ++i) {
+				const uint64_t parent_index = parent_indices[i];
+				if (parent_index) {
+					if (parent_index >= parent->m_transactions.size()) {
+						return __LINE__;
+					}
+					m_transactions[i] = parent->m_transactions[parent_index];
+				}
+			}
+		}
+
 		uint64_t num_uncles;
 		READ_VARINT(num_uncles);
 
@@ -251,7 +305,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		for (uint64_t i = 0; i < num_uncles; ++i) {
 			hash id;
 			READ_BUF(id.h, HASH_SIZE);
-			m_uncles.emplace_back(std::move(id));
+			m_uncles.emplace_back(id);
 		}
 
 		READ_VARINT(m_sidechainHeight);
@@ -279,14 +333,18 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
+		const uint8_t* transactions_blob = reinterpret_cast<uint8_t*>(m_transactions.data() + 1);
+
 #if POOL_BLOCK_DEBUG
 		memcpy(m_mainChainDataDebug.data() + outputs_offset, outputs_blob.data(), outputs_blob_size);
+		memcpy(m_mainChainDataDebug.data() + transactions_offset + outputs_blob_size_diff, transactions_blob, transactions_blob_size);
 #endif
 
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
+		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
 		keccak_custom(
-			[nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_end, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size](int offset) -> uint8_t
+			[nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
 			{
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
@@ -303,24 +361,25 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 					return 0;
 				}
 
-				const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff);
 				if (offset < data_size) {
 					if (offset < outputs_offset) {
 						return data_begin[offset];
 					}
 					else if (offset < outputs_offset + outputs_blob_size) {
-						const int tmp = offset - outputs_offset;
-						return outputs_blob[tmp];
+						return outputs_blob[offset - outputs_offset];
 					}
-					else {
+					else if (offset < transactions_offset + outputs_blob_size_diff) {
 						return data_begin[offset - outputs_blob_size_diff];
 					}
+					else if (offset < transactions_offset + outputs_blob_size_diff + transactions_blob_size) {
+						return transactions_blob[offset - (transactions_offset + outputs_blob_size_diff)];
+					}
+					return data_begin[offset - outputs_blob_size_diff - transactions_blob_size_diff];
 				}
-				offset -= data_size;
 
-				return consensus_id[offset];
+				return consensus_id[offset - data_size];
 			},
-			static_cast<int>(size + outputs_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
+			static_cast<int>(size + outputs_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
 
 		if (check != m_sidechainId) {
 			return __LINE__;
