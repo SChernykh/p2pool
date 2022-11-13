@@ -744,7 +744,17 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	int num_helper_jobs_started = 0;
 
 	if (loop) {
-		constexpr size_t HELPER_JOBS_COUNT = 4;
+		uint32_t HELPER_JOBS_COUNT = std::thread::hardware_concurrency();
+
+		// this thread will also be running, so reduce helper job count by 1
+		if (HELPER_JOBS_COUNT > 0) {
+			--HELPER_JOBS_COUNT;
+		}
+
+		// No more than 8 helper jobs because our UV worker thread pool has 8 threads
+		if (HELPER_JOBS_COUNT > 8) {
+			HELPER_JOBS_COUNT = 8;
+		}
 
 		struct Work
 		{
