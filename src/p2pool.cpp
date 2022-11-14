@@ -1442,29 +1442,6 @@ static void on_signal(uv_signal_t* handle, int signum)
 	pool->stop();
 }
 
-static bool init_uv_threadpool()
-{
-#ifdef _MSC_VER
-#define putenv _putenv
-#endif
-
-	const uint32_t N = std::max(std::min(std::thread::hardware_concurrency(), 4U), 8U);
-	LOGINFO(4, "running " << N << " threads in the UV thread pool");
-
-	char buf[40] = {};
-	log::Stream s(buf);
-	s << "UV_THREADPOOL_SIZE=" << N << '\0';
-
-	int err = putenv(buf);
-	if (err != 0) {
-		err = errno;
-		LOGWARN(1, "Couldn't set UV thread pool size to " << N << " threads, putenv returned error " << err);
-	}
-
-	static uv_work_t dummy;
-	return (uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr) == 0);
-}
-
 bool init_signals(p2pool* pool, bool init)
 {
 #ifdef SIGPIPE
@@ -1546,11 +1523,6 @@ int p2pool::run()
 {
 	if (!m_params->valid()) {
 		LOGERR(1, "Invalid or missing command line. Try \"p2pool --help\".");
-		return 1;
-	}
-
-	if (!init_uv_threadpool()) {
-		LOGERR(1, "failed to start UV thread pool");
 		return 1;
 	}
 

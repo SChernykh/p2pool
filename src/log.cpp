@@ -64,6 +64,7 @@ public:
 
 		// Create default loop here
 		uv_default_loop();
+		init_uv_threadpool();
 
 		uv_cond_init(&m_cond);
 		uv_mutex_init(&m_mutex);
@@ -115,6 +116,10 @@ public:
 		uv_mutex_destroy(&m_mutex);
 		uv_loop_close(uv_default_loop());
 
+#if ((UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 38)))
+		uv_library_shutdown();
+#endif
+
 		m_logFile.close();
 	}
 
@@ -144,6 +149,33 @@ public:
 	}
 
 private:
+	static void init_uv_threadpool()
+	{
+#ifdef _MSC_VER
+#define putenv _putenv
+#endif
+
+		const uint32_t N = std::max(std::min(std::thread::hardware_concurrency(), 4U), 8U);
+		LOGINFO(4, "running " << N << " threads in the UV thread pool");
+
+		char buf[40] = {};
+		log::Stream s(buf);
+		s << "UV_THREADPOOL_SIZE=" << N << '\0';
+
+		int err = putenv(buf);
+		if (err != 0) {
+			err = errno;
+			LOGWARN(1, "Couldn't set UV thread pool size to " << N << " threads, putenv returned error " << err);
+		}
+
+		static uv_work_t dummy;
+		err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
+		if (err) {
+			LOGERR(1, "init_uv_threadpool: uv_queue_work failed, error " << uv_err_name(err));
+		}
+	}
+
+private:
 	static void run_wrapper(void* arg) { reinterpret_cast<Worker*>(arg)->run(); }
 
 	NOINLINE void run()
@@ -153,7 +185,11 @@ private:
 		do {
 			uv_mutex_lock(&m_mutex);
 			if (m_readPos == m_writePos.load()) {
-				// Nothing to do, wait for the signal
+				// Nothing to do, wait for the signal or exit if stopped
+				if (stopped) {
+					uv_mutex_unlock(&m_mutex);
+					return;
+				}
 				uv_cond_wait(&m_cond, &m_mutex);
 			}
 			uv_mutex_unlock(&m_mutex);
@@ -231,7 +267,7 @@ private:
 					m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
 				}
 			}
-		} while (!stopped);
+		} while (1);
 	}
 
 	static FORCEINLINE void strip_colors(char* buf, uint32_t& size)

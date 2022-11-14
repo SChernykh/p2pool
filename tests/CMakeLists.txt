@@ -55,13 +55,30 @@ set(SOURCES
 	../src/zmq_reader.cpp
 )
 
+if (NOT STATIC_BINARY AND NOT STATIC_LIBS)
+	include(FindCURL)
+endif()
+
+if (CURL_INCLUDE_DIRS)
+	include_directories(${CURL_INCLUDE_DIRS})
+else()
+	include_directories(../external/src/curl/include)
+endif()
+
+if ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS)
+	set(UV_INCLUDE_DIR ../external/src/libuv/include)
+	set(ZMQ_INCLUDE_DIR ../external/src/libzmq/include)
+else()
+	find_path(UV_INCLUDE_DIR NAMES uv.h PATH_SUFFIXES "include")
+	find_path(ZMQ_INCLUDE_DIR NAMES zmq.h PATH_SUFFIXES "include")
+endif()
+
 include_directories(../src)
 include_directories(../external/src)
 include_directories(../external/src/cryptonote)
-include_directories(../external/src/curl/include)
-include_directories(../external/src/libuv/include)
+include_directories(${UV_INCLUDE_DIR})
 include_directories(../external/src/cppzmq)
-include_directories(../external/src/libzmq/include)
+include_directories(${ZMQ_INCLUDE_DIR})
 include_directories(../external/src/RandomX/src)
 include_directories(../external/src/rapidjson/include)
 include_directories(../external/src/robin-hood-hashing/src/include)
