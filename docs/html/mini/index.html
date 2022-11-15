@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>P2Pool mini - Decentralized Monero mining pool</title>
+<link rel="shortcut icon" type="image/png" href="favicon-32x32.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=0.5">
+<style>
+a {
+	color: #e09000;
+	-ms-touch-action: none; 
+	touch-action: none;
+}
+
+a:visited {
+	color: #808080;
+	-ms-touch-action: none; 
+	touch-action: none;
+}
+
+body {
+	background-color: #383838;
+	color: #e0e0e0;
+	font-family: Arial, sans-serif;
+	font-size: 1.5rem;
+}
+
+table {
+	color: #c0c0c0;
+	border-spacing:15px 5px;
+	font-size: 1.5rem;
+}
+
+table.menu_page {
+	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+details > summary {
+	padding: 0.25rem;
+	font-size: 2.5rem;
+	-ms-touch-action: none; 
+	touch-action: none;
+}
+
+details > ul > li > span {
+	color: #e09000;
+}
+</style>
+<script>
+function elapsedTimeStr(ts1, ts2, short_form) {
+	let s = ts2 - ts1;
+	if (s < 0) s = 0;
+	let m = Math.floor(s / 60) % 60;
+	let h = Math.floor(s / 3600) % 24;
+	let d = Math.floor(s / 86400);
+	if (short_form) {
+		if (s >= 86400) return d + 'd';
+		if (s >= 3600) return h + 'h';
+		return m + 'm';
+	}
+	else {
+		let result = m + 'm';
+		if (s >= 3600) result = h + 'h ' + result;
+		if (s >= 86400) result = d + 'd ' + h + 'h';
+		return result;
+	}
+}
+
+function set_effort(el, value) {
+	el.innerHTML = value.toFixed(2) + '%';
+	el.style = (value < 100.0) ? "color:#00C000;" : (value < 200.0) ? "color:#E0E000;" : "color:#FF0000;";
+}
+
+async function load_data() {
+	init_menu();
+	window.onresize = init_menu;
+
+	let pool_stats_req = await fetch('api/pool/stats');
+	let pool_blocks_req = await fetch('api/pool/blocks');
+	let network_stats_req = await fetch('api/network/stats');
+	let pool_stats = JSON.parse(await pool_stats_req.text());
+	let pool_blocks = JSON.parse(await pool_blocks_req.text());
+	let network_stats = JSON.parse(await network_stats_req.text());
+
+	let pool_hashrate = pool_stats.pool_statistics.hashRate / 1e6;
+	document.getElementById("pool_hashrate").innerHTML = pool_hashrate.toFixed(3) + ' MH/s';
+	document.getElementById("pool_miners").innerHTML = pool_stats.pool_statistics.miners;
+
+	let ts = Math.floor(Date.now() / 1000);
+
+	let n = pool_stats.pool_statistics.lastBlockFound;
+	document.getElementById("pool_last_block").innerHTML = n ? ('<a href="/explorer/block/' + n + '" target="_blank">' + n + '</a> (' + elapsedTimeStr(pool_stats.pool_statistics.lastBlockFoundTime, ts, 0) + ' ago)') : 'N/A';
+	document.getElementById("pool_total_blocks").innerHTML = pool_stats.pool_statistics.totalBlocksFound;
+
+	let t = document.getElementById('menu_blocks');
+	let cur_effort = (pool_stats.pool_statistics.totalHashes - ((pool_blocks.length > 0) ? pool_blocks[0].totalHashes : 0)) * 100.0 / network_stats.difficulty;
+	set_effort(document.getElementById("current_effort"), (cur_effort >= 0) ? cur_effort : 0);
+	let total_effort = 0.0;
+	let num_blocks_with_effort = 0;
+	for (let i = 0, m = Math.min(pool_blocks.length, 50); i < m; ++i) {
+		if (t.rows.length <= i + 1) t.insertRow(-1);
+		let row = t.rows[i + 1];
+		while (row.cells.length < 3) row.insertCell(-1);
+
+		let height = row.cells[0];
+		let effort = row.cells[1];
+		let age = row.cells[2];
+
+		n = pool_blocks[i].height;
+		height.innerHTML = '<a href="/explorer/block/' + pool_blocks[i].hash + '" target="_blank">' + n + '</a>';
+
+		if ((i + 1 < pool_blocks.length) && (pool_blocks[i + 1].totalHashes > 0)) {
+			let value = (pool_blocks[i].totalHashes - pool_blocks[i + 1].totalHashes) * 100.0 / pool_blocks[i].difficulty;
+			total_effort += value;
+			++num_blocks_with_effort;
+			set_effort(effort, value);
+		}
+		else {
+			effort.innerHTML = "N/A";
+		}
+
+		age.innerHTML = elapsedTimeStr(pool_blocks[i].ts, ts, 1);
+	}
+	if (num_blocks_with_effort > 0) {
+		let average_effort = total_effort / num_blocks_with_effort;
+		set_effort(document.getElementById("average_effort"), average_effort);
+	}
+
+	let network_hashrate = network_stats.difficulty / 120e6;
+	document.getElementById("monero_hashrate").innerHTML = network_hashrate.toFixed(3) + ' MH/s';
+	document.getElementById("monero_last_block").innerHTML = network_stats.height + ' (' + elapsedTimeStr(network_stats.timestamp, ts, 0) + ' ago)';
+}
+
+const menu = ['pool', 'blocks', 'help', 'faq'];
+
+function init_menu()
+{
+	let is_mobile = false;
+
+	if (navigator.userAgentData) {
+		is_mobile = navigator.userAgentData.mobile;
+	}
+	else {
+		const mobile_preg = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i;
+		is_mobile = mobile_preg.test(navigator.userAgent) || mobile_preg.test(navigator.platform);
+	}
+
+	let e = document.getElementById('main_menu');
+
+	if (!is_mobile) {
+		e.style.cursor = "pointer";
+		document.querySelectorAll("details > summary").forEach(el => { el.style.cursor = "pointer"; });
+	}
+
+	e.style.width = (window.innerWidth > 1600) ? "1600px" : "100%";
+
+	menu.forEach(element => {
+		let e2 = document.getElementById('menu_' + element);
+		e2.style.width = e.style.width;
+	});
+}
+
+function toggle_menu(name) {
+	if (!name) {
+		name = 'pool';
+	}
+
+	menu.forEach(element => {
+		let e = document.getElementById('menu_' + element);
+		let b = document.getElementById('button_' + element);
+		if (element == name) {
+			e.style.display = 'block';
+			b.style.backgroundColor = '#646464';
+			window.location.hash = '#' + name;
+		}
+		else {
+			e.style.display = 'none';
+			b.style.backgroundColor = '#404040';
+		}
+	});
+}
+</script>
+</head>
+<body onload="load_data();setInterval(load_data, 2000);toggle_menu(window.location.hash.substr(1));">
+<div style="font-size:3rem;text-align:center;">P2Pool mini</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool</div>
+<br>
+<table id="main_menu" style="width:100%;margin-left:auto;margin-right:auto;table-layout:fixed;text-align:center;-ms-touch-action:none;touch-action:none;"><tr>
+<td onclick="toggle_menu('pool')" id="button_pool">Pool</td>
+<td onclick="toggle_menu('blocks')" id="button_blocks">Blocks</td>
+<td onclick="toggle_menu('help')" id="button_help">Get started</td>
+<td onclick="toggle_menu('faq')" id="button_faq">FAQ</td>
+</tr></table>
+<br>
+<table id="menu_pool" class="menu_page">
+<tr><td></td><td style="width:17rem;">Pool</td><td>Network</td></tr>
+<tr><td style="padding-bottom: 1rem;"></td><td></td><td></td></tr>
+<tr><td>Hashrate</td><td><span id="pool_hashrate">N/A</span></td><td><span id="monero_hashrate">N/A</span></td></tr>
+<tr><td>Miners</td><td><span id="pool_miners">N/A</span></td><td></td></tr>
+<tr><td>Last block</td><td><span id="pool_last_block">N/A</span></td><td><span id="monero_last_block">N/A</span></td></tr>
+<tr><td>Total blocks</td><td><span id="pool_total_blocks">N/A</span></td><td></td></tr>
+<tr><td>Current effort</td><td><span id="current_effort">N/A</span></td><td></td></tr>
+<tr><td>Average effort<br><div style="text-align:center;font-size:0.9rem">last 50 blocks</div></td><td><span id="average_effort">N/A</span></td><td></td></tr>
+<tr><td>&nbsp;</td><td></td><td></td></tr>
+<tr><td>Fee</td><td>0%</td><td></td></tr>
+<tr><td>Min payout</td><td>0.0003 XMR</td><td></td></tr>
+<tr><td>Payout scheme</td><td><a href="https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares" target="_blank">PPLNS</a></td><td></td></tr>
+<tr><td>&nbsp;</td><td></td><td></td></tr>
+<tr><td>Statistics</td><td><a href="https://mini.p2pool.observer/" target="_blank">P2Pool observer</a></td><td></td></tr>
+</table>
+<table id="menu_blocks" class="menu_page">
+<tr><td style="padding-right:5rem;">Height</td><td style="padding-right:5rem;">Effort</td><td>Age</td></tr>
+</table>
+<table id="menu_help" class="menu_page"><tr><td>
+
+<details><summary>P2Pool video guide</summary>
+<ul>
+<li>A detailed <a href="https://www.youtube.com/watch?v=NbxbRu-2GWI" target="_blank">video guide</a> to install P2Pool and start mining
+</ul>
+</details>
+
+<details><summary>Setup Monero wallet</summary>
+Wallets with confirmed P2Pool support<br>
+<span style="font-size:0.9rem;color:#e09000;">You might not see P2Pool payouts in other wallets if they're not updated!</span>
+<ul>
+<li>Official <a href="https://www.getmonero.org/downloads/" target="_blank">Monero CLI and GUI v0.18.1.0</a> and newer
+<li><a href="https://play.google.com/store/apps/details?id=com.m2049r.xmrwallet" target="_blank">Monerujo v3.0.2 "Fluorine Fermi"</a> and newer
+<li><a href="https://play.google.com/store/apps/details?id=com.cakewallet.cake_wallet" target="_blank">Cake Wallet v4.4.5</a> and newer
+<li><a href="https://featherwallet.org/" target="_blank">Feather Wallet v2.1.0</a> and newer
+<li><a href="https://mymonero.com/" target="_blank">MyMonero</a>
+</ul>
+It's highly recommended to create a new wallet for mining because wallet addresses are public on p2pool. You have to use the primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
+</details>
+
+<details><summary>Setup Monero node</summary>
+<ul>
+<li>Download the latest Monero <a href="https://www.getmonero.org/downloads/" target="_blank">release</a>
+<li>[Optional] Open port <span>18080</span> (Monero p2p port) in your firewall to ensure better connectivity
+<li>Run <span>./monerod --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist</span>
+<li>Wait until it's fully synchronized. If you didn't run Monero node before, it can take up to several days to synchronize (5-6 hours on a modern PC with fast SSD and fast Internet connection). You can add <span>--prune-blockchain</span> argument to the command line to run a pruned node (3-4 times less disk usage)
+</ul></details>
+
+<details><summary>Setup P2Pool node</summary>
+<ul>
+<li>Download the latest P2Pool <a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">release</a>
+<li>[Optional] Open port <span>37889</span> (P2Pool port) or <span>37888</span> (P2Pool mini port) in your firewall to ensure better connectivity
+<li>Run <span>./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS --mini</span>
+<li>It should take no more than 5-10 minutes to synchronize
+</ul></details>
+
+<details><summary>Miner software</summary>
+<ul>
+<li><a href="https://xmrig.com/" target="_blank">XMRig</a> is recommended. <a href="https://xmrig.com/proxy" target="_blank">XMRig Proxy</a> is fully supported.
+<li>Once P2Pool sync is complete, XMRig should be able to connect to the stratum server on port <span>3333</span>
+<li>Run <span>./xmrig -o 127.0.0.1:3333</span>. Note that you don't need to specify wallet address for xmrig. Wallet address set in xmrig config will be ignored!
+<li>To set custom fixed difficulty for your miner (for example, <span>10000</span>), run <span>./xmrig -u x+10000 -o 127.0.0.1:3333</span>
+</ul></details>
+
+<details><summary>Checking your progress</summary>
+<ul>
+<li>You can enter your wallet address at <a href="https://p2pool.observer/" target="_blank">P2Pool Observer</a>
+<li>P2Pool Observer for P2Pool mini can be found <a href="https://mini.p2pool.observer/" target="_blank">here</a>
+<li>You will find your wallet's statistics there only after you've mined at least 1 P2Pool share
+</ul>
+</details>
+
+<details><summary>Help and support</summary>
+P2Pool is a decentralized community, there is no dedicated support. You can reach and get help from other miners on:
+<ul>
+<li>IRC channels: <span>#monero-pools</span> and <span>#p2pool-log</span> (<span>#p2pool-mini</span> for P2Pool mini) on <a href="https://libera.chat/" target="_blank">Libera.Chat</a>
+<li>Reddit: <a href="https://reddit.com/r/MoneroMining/" target="_blank">r/MoneroMining</a>
+</ul></details>
+</td></tr></table>
+<table id="menu_faq" class="menu_page"><tr><td>
+<ul>
+<li><span style="font-size:2rem;color:#e09000;">What are system requirements to run P2Pool?</span>
+<ul><li>P2Pool needs 0.5 GB disc space and 2.6 GB RAM to run (0.6 GB RAM in light mode). Add this to monerod requirements if you run both on the same machine. Add <span style="color:#808080;">--light-mode</span> to p2pool command line to reduce the memory usage to 0.6 GB, or <span style="color:#808080;">--no-randomx --no-cache</span> to reduce the memory usage to less than 100 MB.</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">Does P2Pool work with XMRig Proxy?</span>
+<ul><li>Yes, P2Pool fully supports <a href="https://xmrig.com/proxy" target="_blank">XMRig Proxy</a>.</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">Does monerod have to be run on the same machine as P2Pool?</span>
+<ul><li>No, you can run them on different machines and even connect multiple p2pool instances to a single server running monerod</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">Does P2Pool work with pruned Monero node?</span>
+<ul><li>Yes, you can use pruned Monero node to mine on P2Pool</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">Does P2Pool require incoming connections to work properly?</span>
+<ul><li>P2Pool (and Monero) can work with only outgoing connections, but it's recommended to open ports 18080 (Monero) and 37889/37888 (P2Pool/P2Pool mini) for better connectivity with the rest of the network.</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">I have been mining for several hours and still got no rewards?</span>
+<ul><li>P2Pool doesn't work exactly like regular pools - there's no "pending balance" here. You need to find a pool share first and then wait for P2Pool to find a Monero block. You'll get a payout to your XMR wallet as soon as a block is found and you have shares in PPLNS window. It can take several days to a week to find a share if your hashrate is low. Type "status" command in P2Pool console or visit <a href="https://mini.p2pool.observer/" target="_blank">P2Pool observer</a> to check your progress.</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">P2Pool status shows 0 kh/s but I'm mining?</span>
+<ul><li>Default P2Pool difficulty is very high. You need to set custom fixed difficulty on your miner rigs to get more accurate stats on P2Pool (this will not change your mining rewards in any way). To set custom fixed difficulty for your miner (for example, 75000), run <span style="color:#808080;">./xmrig -o 127.0.0.1:3333 -u x+75000</span></ul><br>
+<li><span style="font-size:2rem;color:#e09000;">I get an error "monerod RPC ... is incompatible, update to RPC >= v3.8"</span>
+<ul><li>Use monerod v0.18.0.0 or newer</ul><br>
+<li><span style="font-size:2rem;color:#e09000;">I get warnings "peer ... is ahead on mainchain (height ..., your height ...). Is your monerod stuck or lagging?"</span>
+<ul><li>Make sure you add these arguments to monerod command line: <span style="color:#808080;">--zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist</span></ul><br>
+</ul>
+</td></tr></table>
+<br><br>
+<div style="position:fixed;width:100%;bottom:0;background-color:#383838;font-size:1rem;text-align:center;color:#b0b0b0;">
+<a href="api/" target="_blank">Pool API</a>&nbsp;|&nbsp;<a href="https://github.com/SChernykh/p2pool" target="_blank">Source</a>&nbsp;|&nbsp;<a href="http://yucmgsbw7nknw7oi3bkuwudvc657g2xcqahhbjyewazusyytapqo4xid.onion/mini/" target="_blank">Onion URL</a><br>
+Donate to support the project:<br><a href="monero:44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg?tx_description=Donation%20to%20P2Pool" style="font-size:0.9rem;color:#b0b0b0;">44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg</a><br>
+&nbsp;
+</div>
+</body>
+</html>
