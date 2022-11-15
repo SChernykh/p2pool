@@ -34,9 +34,6 @@ bool CONSOLE_COLORS = true;
 
 #ifndef P2POOL_LOG_DISABLE
 
-static std::atomic<bool> stopped{ false };
-static volatile bool worker_started = false;
-
 #ifdef _WIN32
 static const HANDLE hStdIn  = GetStdHandle(STD_INPUT_HANDLE);
 static const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -55,6 +52,8 @@ public:
 	FORCEINLINE Worker()
 		: m_writePos(0)
 		, m_readPos(0)
+		, m_started{ false }
+		, m_stopped(false)
 	{
 		set_main_thread();
 
@@ -75,7 +74,7 @@ public:
 			abort();
 		}
 
-		while (!worker_started) {
+		while (m_started.load() == false) {
 			std::this_thread::yield();
 		}
 
@@ -106,11 +105,16 @@ public:
 
 	FORCEINLINE void stop()
 	{
-		if (stopped.exchange(true)) {
-			return;
+		{
+			MutexLock lock(m_mutex);
+			if (m_stopped) {
+				return;
+			}
+
+			m_stopped = true;
+			LOGINFO(0, "stopped");
 		}
 
-		LOGINFO(0, "stopped");
 		uv_thread_join(&m_worker);
 		uv_cond_destroy(&m_cond);
 		uv_mutex_destroy(&m_mutex);
@@ -180,13 +184,13 @@ private:
 
 	NOINLINE void run()
 	{
-		worker_started = true;
+		m_started.exchange(true);
 
 		do {
 			uv_mutex_lock(&m_mutex);
 			if (m_readPos == m_writePos.load()) {
 				// Nothing to do, wait for the signal or exit if stopped
-				if (stopped) {
+				if (m_stopped) {
 					uv_mutex_unlock(&m_mutex);
 					return;
 				}
@@ -253,7 +257,7 @@ private:
 					severity = '\0';
 
 					m_readPos += SLOT_SIZE;
-				} while (m_readPos < writePos);
+				} while (m_readPos != writePos);
 			}
 
 			// Flush the log file only after all pending log lines have been written
@@ -304,6 +308,9 @@ private:
 	uv_cond_t m_cond;
 	uv_mutex_t m_mutex;
 	uv_thread_t m_worker;
+
+	std::atomic<bool> m_started;
+	bool m_stopped;
 
 	std::ofstream m_logFile;
 };
