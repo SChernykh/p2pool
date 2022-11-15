@@ -197,6 +197,41 @@ struct difficulty_type
 		return *this;
 	}
 
+	FORCEINLINE difficulty_type& operator-=(const difficulty_type& b)
+	{
+#ifdef _MSC_VER
+		_subborrow_u64(_subborrow_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
+#elif __GNUC__
+		*reinterpret_cast<unsigned __int128*>(this) -= *reinterpret_cast<const unsigned __int128*>(&b);
+#else
+		const uint64_t t = b.lo;
+		const uint64_t carry = (lo < t) ? 1 : 0;
+		lo -= t;
+		hi -= b.hi + carry;
+#endif
+		return *this;
+	}
+
+	FORCEINLINE difficulty_type& operator*=(const uint64_t b)
+	{
+		uint64_t t;
+		lo = umul128(lo, b, &t);
+		hi = t + hi * b;
+
+		return *this;
+	}
+
+	FORCEINLINE difficulty_type& operator/=(const uint64_t b)
+	{
+		const uint64_t t = hi;
+		hi = t / b;
+
+		uint64_t r;
+		lo = udiv128(t % b, lo, b, &r);
+
+		return *this;
+	}
+
 	FORCEINLINE bool operator<(const difficulty_type& other) const
 	{
 		if (hi < other.hi) return true;
@@ -244,7 +279,19 @@ struct difficulty_type
 static_assert(sizeof(difficulty_type) == sizeof(uint64_t) * 2, "struct difficulty_type has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<difficulty_type>::value, "struct difficulty_type is not a POD, check your compiler options");
 
-difficulty_type operator+(const difficulty_type& a, const difficulty_type& b);
+FORCEINLINE difficulty_type operator+(const difficulty_type& a, const difficulty_type& b)
+{
+	difficulty_type result = a;
+	result += b;
+	return result;
+}
+
+FORCEINLINE difficulty_type operator-(const difficulty_type& a, const difficulty_type& b)
+{
+	difficulty_type result = a;
+	result -= b;
+	return result;
+}
 
 struct TxMempoolData
 {

@@ -1209,20 +1209,9 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 		}
 	}
 
-	// This is correct as long as the difference between two 128-bit difficulties is less than 2^64, even if it wraps
-	const uint64_t delta_diff = diff2.lo - diff1.lo;
-
-	uint64_t product[2];
-	product[0] = umul128(delta_diff, m_targetBlockTime, &product[1]);
-
-	if (product[1] >= delta_t) {
-		LOGERR(1, "calculated difficulty is too high for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
-		return false;
-	}
-
-	uint64_t rem;
-	curDifficulty.lo = udiv128(product[1], product[0], delta_t, &rem);
-	curDifficulty.hi = 0;
+	curDifficulty = diff2 - diff1;
+	curDifficulty *= m_targetBlockTime;
+	curDifficulty /= delta_t;
 
 	if (curDifficulty < m_minDifficulty) {
 		curDifficulty = m_minDifficulty;

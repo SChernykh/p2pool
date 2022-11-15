@@ -126,13 +126,6 @@ NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 	return true;
 }
 
-difficulty_type operator+(const difficulty_type& a, const difficulty_type& b)
-{
-	difficulty_type result = a;
-	result += b;
-	return result;
-}
-
 std::ostream& operator<<(std::ostream& s, const difficulty_type& d)
 {
 	char buf[log::Stream::BUF_SIZE + 1];

@@ -74,18 +74,35 @@ TEST(difficulty_type, target)
 	}
 }
 
-TEST(difficulty_type, sum)
+TEST(difficulty_type, add_sub)
 {
+	auto check = [](const difficulty_type& a, const difficulty_type& b, const difficulty_type& sum)
+	{
+		difficulty_type result1 = a + b;
+		difficulty_type result2 = a;
+		result2 += b;
+
+		ASSERT_EQ(result1, sum);
+		ASSERT_EQ(result2, sum);
+
+		ASSERT_EQ(sum - a, b);
+		ASSERT_EQ(sum - b, a);
+
+		result1 -= a;
+		ASSERT_EQ(result1, b);
+
+		result2 -= b;
+		ASSERT_EQ(result2, a);
+	};
+
 	// No carry
 	{
 		difficulty_type diff[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
 
 		for (int i = 0; i <= 3; ++i) {
 			for (int j = 0; j <= 3; ++j) {
-				difficulty_type a = diff[i];
-				a += diff[j];
-				ASSERT_EQ(a.lo, diff[i].lo + diff[j].lo);
-				ASSERT_EQ(a.hi, diff[i].hi + diff[j].hi);
+				difficulty_type sum(diff[i].lo + diff[j].lo, diff[i].hi + diff[j].hi);
+				check(diff[i], diff[j], sum);
 			}
 		}
 	}
@@ -94,19 +111,106 @@ TEST(difficulty_type, sum)
 	{
 		difficulty_type a(11400714819323198485ull, 0);
 		difficulty_type b(15975348984942515101ull, 0);
-		a += b;
-		ASSERT_EQ(a.lo, 8929319730556161970ull);
-		ASSERT_EQ(a.hi, 1);
+		difficulty_type sum(8929319730556161970ull, 1);
+		check(a, b, sum);
 	}
 
 	// Carry (edge case)
 	{
 		difficulty_type a(std::numeric_limits<uint64_t>::max(), 0);
 		difficulty_type b(1, 0);
-		a += b;
-		ASSERT_EQ(a.lo, 0);
-		ASSERT_EQ(a.hi, 1);
+		difficulty_type sum(0, 1);
+		check(a, b, sum);
 	}
+}
+
+TEST(difficulty_type, mul_div)
+{
+	auto check = [](const difficulty_type& a, uint64_t b, const difficulty_type& product)
+	{
+		difficulty_type result = a;
+
+		result *= b;
+		ASSERT_EQ(result, product);
+
+		if (b) {
+			result /= b;
+			ASSERT_EQ(result, a);
+		}
+	};
+
+	const difficulty_type max_diff(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
+
+	// (2^128 - 1) * 0 = 0
+	check(max_diff, 0, difficulty_type(0, 0));
+
+	// (2^128 - 1) * 1 = 2^128 - 1
+	check(max_diff, 1, max_diff);
+
+	// 5057672949897463733145855 * 67280421310721 = 2^128 - 1
+	check(difficulty_type(18446744073709277439ull, 274176ull), 67280421310721ull, max_diff);
+
+	// 10^19 * 10 = 10^20
+	check(difficulty_type(10000000000000000000ull, 0), 10, difficulty_type(7766279631452241920ull, 5));
+
+	// 10^20 * 10 = 10^21
+	check(difficulty_type(7766279631452241920ull, 5), 10, difficulty_type(3875820019684212736ull, 54));
+
+	// 0 * (2^64 - 1) = 0
+	check(difficulty_type(0, 0), std::numeric_limits<uint64_t>::max(), difficulty_type(0, 0));
+
+	// 1 * (2^64 - 1) = 2^64 - 1
+	check(difficulty_type(1, 0), std::numeric_limits<uint64_t>::max(), difficulty_type(std::numeric_limits<uint64_t>::max(), 0));
+
+	// 2^64 * (2^64 - 1) = 2^128 - 2^64
+	check(difficulty_type(0, 1), std::numeric_limits<uint64_t>::max(), difficulty_type(0, std::numeric_limits<uint64_t>::max()));
+
+	// (2^64 + 1) * (2^64 - 1) = 2^128 - 1
+	check(difficulty_type(1, 1), std::numeric_limits<uint64_t>::max(), max_diff);
+
+	// 2753074036095 * 6700417 = 2^64 - 1
+	check(difficulty_type(2753074036095ull, 0), 6700417, difficulty_type(std::numeric_limits<uint64_t>::max(), 0));
+
+	// 2^32 * 2^32 = 2^64
+	check(difficulty_type(4294967296ull, 0), 4294967296ull, difficulty_type(0, 1));
+
+	// 274177 * 67280421310721 = 2^64 + 1
+	check(difficulty_type(274177, 0), 67280421310721ull, difficulty_type(1, 1));
+
+	// Powers of 2
+	{
+		difficulty_type a(1, 0);
+
+		for (int i = 0; i < 64; ++i) {
+			ASSERT_EQ(a.lo, 1ull << i);
+			ASSERT_EQ(a.hi, 0);
+			a *= 2;
+
+			difficulty_type b = a;
+			b /= 2;
+			ASSERT_EQ(b.lo, 1ull << i);
+			ASSERT_EQ(b.hi, 0);
+		}
+
+		for (int i = 0; i < 64; ++i) {
+			ASSERT_EQ(a.lo, 0);
+			ASSERT_EQ(a.hi, 1ull << i);
+			a *= 2;
+
+			if (i < 63) {
+				difficulty_type b = a;
+				b /= 2;
+				ASSERT_EQ(b.lo, 0);
+				ASSERT_EQ(b.hi, 1ull << i);
+			}
+		}
+
+		ASSERT_EQ(a.lo, 0);
+		ASSERT_EQ(a.hi, 0);
+	}
+
+	// No carry
+	check(difficulty_type(123, 456), 789, difficulty_type(97047, 359784));
 }
 
 TEST(difficulty_type, compare)
