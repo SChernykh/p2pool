@@ -75,6 +75,54 @@ void make_thread_background()
 #endif
 }
 
+NOINLINE difficulty_type& difficulty_type::operator/=(difficulty_type b)
+{
+	if (*this < b) {
+		lo = 0;
+		hi = 0;
+		return *this;
+	}
+
+	if (*this - b < b) {
+		lo = 1;
+		hi = 0;
+		return *this;
+	}
+
+	if (b.hi == 0) {
+		return operator/=(b.lo);
+	}
+
+	const uint64_t shift = bsr(b.hi) + 1;
+	const uint64_t divisor = shiftleft128(b.lo, b.hi, 64 - shift);
+
+	uint64_t t;
+	if (hi < divisor) {
+		uint64_t r;
+		t = udiv128(hi, lo, divisor, &r) >> shift;
+	}
+	else {
+		uint64_t r;
+		t = shiftright128(udiv128(hi - divisor, lo, divisor, &r), 1, shift);
+	}
+
+	difficulty_type product;
+	product.lo = umul128(b.lo, t, &product.hi);
+
+	uint64_t t1, t2;
+	t1 = umul128(b.hi, t, &t2);
+	product.hi += t1;
+
+	if (t2 || (product.hi < t1) || (*this < product)) {
+		--t;
+	}
+
+	lo = t;
+	hi = 0;
+
+	return *this;
+}
+
 NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 {
 	const uint64_t* a = reinterpret_cast<const uint64_t*>(pow_hash.h);

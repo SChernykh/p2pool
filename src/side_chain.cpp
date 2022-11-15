@@ -325,7 +325,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	uint64_t block_depth = 0;
 	const PoolBlock* cur = tip;
 	do {
-		MinerShare cur_share{ cur->m_difficulty.lo, &cur->m_minerWallet };
+		MinerShare cur_share{ cur->m_difficulty, &cur->m_minerWallet };
 
 		for (const hash& uncle_id : cur->m_uncles) {
 			auto it = m_blocksById.find(uncle_id);
@@ -343,14 +343,9 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 			}
 
 			// Take some % of uncle's weight into this share
-			uint64_t product[2];
-			product[0] = umul128(uncle->m_difficulty.lo, m_unclePenalty, &product[1]);
-
-			uint64_t rem;
-			const uint64_t uncle_penalty = udiv128(product[1], product[0], 100, &rem);
-
+			const difficulty_type uncle_penalty = uncle->m_difficulty * m_unclePenalty / 100;
 			cur_share.m_weight += uncle_penalty;
-			shares.emplace_back(uncle->m_difficulty.lo - uncle_penalty, &uncle->m_minerWallet);
+			shares.emplace_back(uncle->m_difficulty - uncle_penalty, &uncle->m_minerWallet);
 		}
 
 		shares.push_back(cur_share);
@@ -1092,9 +1087,9 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 {
 	const size_t num_shares = shares.size();
 
-	const uint64_t total_weight = std::accumulate(shares.begin(), shares.end(), 0ULL, [](uint64_t a, const MinerShare& b) { return a + b.m_weight; });
+	const difficulty_type total_weight = std::accumulate(shares.begin(), shares.end(), difficulty_type(), [](const difficulty_type& a, const MinerShare& b) { return a + b.m_weight; });
 
-	if (total_weight == 0) {
+	if (total_weight.empty()) {
 		LOGERR(1, "total_weight is 0. Check the code!");
 		return false;
 	}
@@ -1103,18 +1098,14 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	rewards.reserve(num_shares);
 
 	// Each miner gets a proportional fraction of the block reward
-	uint64_t w = 0;
+	difficulty_type w;
 	uint64_t reward_given = 0;
 	for (uint64_t i = 0; i < num_shares; ++i) {
 		w += shares[i].m_weight;
 
-		uint64_t hi;
-		const uint64_t lo = umul128(w, reward, &hi);
-
-		uint64_t rem;
-		const uint64_t next_value = udiv128(hi, lo, total_weight, &rem);
-		rewards.emplace_back(next_value - reward_given);
-		reward_given = next_value;
+		const difficulty_type next_value = w * reward / total_weight;
+		rewards.emplace_back(next_value.lo - reward_given);
+		reward_given = next_value.lo;
 	}
 
 	// Double check that we gave out the exact amount
@@ -1209,9 +1200,7 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 		}
 	}
 
-	curDifficulty = diff2 - diff1;
-	curDifficulty *= m_targetBlockTime;
-	curDifficulty /= delta_t;
+	curDifficulty = (diff2 - diff1) * m_targetBlockTime / delta_t;
 
 	if (curDifficulty < m_minDifficulty) {
 		curDifficulty = m_minDifficulty;

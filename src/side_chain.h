@@ -29,10 +29,10 @@ class P2PServer;
 
 struct MinerShare
 {
-	FORCEINLINE MinerShare() : m_weight(0), m_wallet(nullptr) {}
-	FORCEINLINE MinerShare(uint64_t w, const Wallet* x) : m_weight(w), m_wallet(x) {}
+	FORCEINLINE MinerShare() : m_weight(), m_wallet(nullptr) {}
+	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
 
-	uint64_t m_weight;
+	difficulty_type m_weight;
 	const Wallet* m_wallet;
 };
 

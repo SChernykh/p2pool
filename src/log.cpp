@@ -63,7 +63,6 @@ public:
 
 		// Create default loop here
 		uv_default_loop();
-		init_uv_threadpool();
 
 		uv_cond_init(&m_cond);
 		uv_mutex_init(&m_mutex);
@@ -92,6 +91,8 @@ public:
 		if (!m_logFile.is_open()) {
 			LOGERR(0, "failed to open " << log_file_name);
 		}
+
+		init_uv_threadpool();
 	}
 
 	~Worker()
@@ -160,7 +161,6 @@ private:
 #endif
 
 		const uint32_t N = std::max(std::min(std::thread::hardware_concurrency(), 4U), 8U);
-		LOGINFO(4, "running " << N << " threads in the UV thread pool");
 
 		char buf[40] = {};
 		log::Stream s(buf);
@@ -169,13 +169,13 @@ private:
 		int err = putenv(buf);
 		if (err != 0) {
 			err = errno;
-			LOGWARN(1, "Couldn't set UV thread pool size to " << N << " threads, putenv returned error " << err);
+			LOGWARN(0, "Couldn't set UV thread pool size to " << N << " threads, putenv returned error " << err);
 		}
 
 		static uv_work_t dummy;
 		err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
 		if (err) {
-			LOGERR(1, "init_uv_threadpool: uv_queue_work failed, error " << uv_err_name(err));
+			LOGERR(0, "init_uv_threadpool: uv_queue_work failed, error " << uv_err_name(err));
 		}
 	}
 

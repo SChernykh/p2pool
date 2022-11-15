@@ -24,6 +24,8 @@
 
 namespace p2pool {
 
+static const difficulty_type max_diff{ std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max() };
+
 TEST(difficulty_type, constructors)
 {
 	difficulty_type diff;
@@ -56,10 +58,7 @@ TEST(difficulty_type, target)
 	}
 
 	// diff = max
-	{
-		difficulty_type d(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
-		ASSERT_EQ(d.target(), 1);
-	}
+	ASSERT_EQ(max_diff.target(), 1);
 
 	// diff = 2^32
 	{
@@ -128,54 +127,60 @@ TEST(difficulty_type, mul_div)
 {
 	auto check = [](const difficulty_type& a, uint64_t b, const difficulty_type& product)
 	{
-		difficulty_type result = a;
+		ASSERT_EQ(a * b, product);
 
+		difficulty_type result = a;
 		result *= b;
 		ASSERT_EQ(result, product);
 
 		if (b) {
-			result /= b;
-			ASSERT_EQ(result, a);
+			ASSERT_EQ(result / b, a);
+
+			difficulty_type tmp = result;
+			tmp /= difficulty_type(b, 0);
+			ASSERT_EQ(tmp, a);
+
+			difficulty_type tmp2 = result;
+			tmp2 /= b;
+			ASSERT_EQ(tmp2, a);
 		}
 	};
 
-	const difficulty_type max_diff(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
-
 	// (2^128 - 1) * 0 = 0
-	check(max_diff, 0, difficulty_type(0, 0));
+	check(max_diff, 0, { 0, 0 });
 
 	// (2^128 - 1) * 1 = 2^128 - 1
 	check(max_diff, 1, max_diff);
 
 	// 5057672949897463733145855 * 67280421310721 = 2^128 - 1
-	check(difficulty_type(18446744073709277439ull, 274176ull), 67280421310721ull, max_diff);
+	check({ 18446744073709277439ull, 274176ull }, 67280421310721ull, max_diff);
 
 	// 10^19 * 10 = 10^20
-	check(difficulty_type(10000000000000000000ull, 0), 10, difficulty_type(7766279631452241920ull, 5));
+	check({ 10000000000000000000ull, 0 }, 10, { 7766279631452241920ull, 5 });
 
 	// 10^20 * 10 = 10^21
-	check(difficulty_type(7766279631452241920ull, 5), 10, difficulty_type(3875820019684212736ull, 54));
+	check({ 7766279631452241920ull, 5 }, 10, { 3875820019684212736ull, 54 });
 
 	// 0 * (2^64 - 1) = 0
-	check(difficulty_type(0, 0), std::numeric_limits<uint64_t>::max(), difficulty_type(0, 0));
+	check({ 0, 0 }, std::numeric_limits<uint64_t>::max(), { 0, 0 });
 
 	// 1 * (2^64 - 1) = 2^64 - 1
-	check(difficulty_type(1, 0), std::numeric_limits<uint64_t>::max(), difficulty_type(std::numeric_limits<uint64_t>::max(), 0));
+	check({ 1, 0 }, std::numeric_limits<uint64_t>::max(), { std::numeric_limits<uint64_t>::max(), 0 });
 
 	// 2^64 * (2^64 - 1) = 2^128 - 2^64
-	check(difficulty_type(0, 1), std::numeric_limits<uint64_t>::max(), difficulty_type(0, std::numeric_limits<uint64_t>::max()));
+	check({ 0, 1 }, std::numeric_limits<uint64_t>::max(), { 0, std::numeric_limits<uint64_t>::max() });
 
 	// (2^64 + 1) * (2^64 - 1) = 2^128 - 1
-	check(difficulty_type(1, 1), std::numeric_limits<uint64_t>::max(), max_diff);
+	check({ 1, 1 }, std::numeric_limits<uint64_t>::max(), max_diff);
 
 	// 2753074036095 * 6700417 = 2^64 - 1
-	check(difficulty_type(2753074036095ull, 0), 6700417, difficulty_type(std::numeric_limits<uint64_t>::max(), 0));
+	check({ 2753074036095ull, 0 }, 6700417, { std::numeric_limits<uint64_t>::max(), 0 });
 
 	// 2^32 * 2^32 = 2^64
-	check(difficulty_type(4294967296ull, 0), 4294967296ull, difficulty_type(0, 1));
+	check({ 4294967296ull, 0 }, 4294967296ull, { 0, 1 });
 
 	// 274177 * 67280421310721 = 2^64 + 1
-	check(difficulty_type(274177, 0), 67280421310721ull, difficulty_type(1, 1));
+	check({ 274177, 0 }, 67280421310721ull, { 1, 1 });
 
 	// Powers of 2
 	{
@@ -210,7 +215,203 @@ TEST(difficulty_type, mul_div)
 	}
 
 	// No carry
-	check(difficulty_type(123, 456), 789, difficulty_type(97047, 359784));
+	check({ 123, 456 }, 789, { 97047, 359784 });
+}
+
+static NOINLINE difficulty_type div128_ref(difficulty_type a, difficulty_type b)
+{
+	difficulty_type result{};
+
+	while (a >= b) {
+		difficulty_type t = b;
+		difficulty_type q{ 1, 0 };
+		while (a - t >= t) {
+			t += t;
+			q += q;
+		}
+		a -= t;
+		result += q;
+	}
+
+	return result;
+}
+
+TEST(difficulty_type, div128)
+{
+	auto check = [](difficulty_type a, difficulty_type b, difficulty_type result)
+	{
+		ASSERT_EQ(div128_ref(a, b), result);
+		ASSERT_EQ(a / b, result);
+		a /= b;
+		ASSERT_EQ(a, result);
+	};
+
+	// (2^128 - 1) / (2^128 - 1) = 1
+	check(max_diff, max_diff, { 1, 0 });
+
+	// (2^128 - 1) / (2^64 - 1) = 2^64 + 1
+	check(max_diff, { std::numeric_limits<uint64_t>::max(), 0 }, { 1, 1 });
+
+	// (2^128 - 1) / 2^64 = 2^64 - 1
+	check(max_diff, { 0, 1 }, { std::numeric_limits<uint64_t>::max(), 0 });
+
+	// (2^128 - 1) / (2^64 + 1) = 2^64 - 1
+	check(max_diff, { 1, 1 }, { std::numeric_limits<uint64_t>::max(), 0 });
+
+	// (2^128 - 1) / 8100430714362380904069067128193 = 42007935
+	check(max_diff, { 439125228929, 439125228929 }, { 42007935, 0 });
+
+	// (2^128 - 2^64) / (2^64 + 1) = 2^64 - 2
+	check({ 0, std::numeric_limits<uint64_t>::max() }, { 1, 1 }, { std::numeric_limits<uint64_t>::max() - 1, 0 });
+
+	// (2^128 - 2^64) / 2^64 = 2^64 - 1
+	check({ 0, std::numeric_limits<uint64_t>::max() }, { 0, 1 }, { std::numeric_limits<uint64_t>::max(), 0 });
+
+	// (2^128 - 2^64) / (2^64 - 1) = 2^64
+	check({ 0, std::numeric_limits<uint64_t>::max() }, { std::numeric_limits<uint64_t>::max(), 0 }, { 0, 1 });
+
+	{
+		difficulty_type a = max_diff - 4;
+
+		// (2^128 - 5) / 2002733033099709041094789607565039 = 169909
+		check(a, { 7565587230673184495, 108568375269759 }, { 169909, 0 });
+
+		// (2^128 - 5) / 2002733033099709041094789607565040 = 169908
+		check(a, { 7565587230673184496, 108568375269759 }, { 169908, 0 });
+
+		a -= 1;
+
+		// (2^128 - 6) / 2002733033099709041094789607565039 = 169908
+		check(a, { 7565587230673184495, 108568375269759 }, { 169908, 0 });
+
+		// (2^128 - 6) / 2002733033099709041094789607565038 = 169909
+		check(a, { 7565587230673184494, 108568375269759 }, { 169909, 0 });
+	}
+
+	// Powers of 2
+	for (difficulty_type i{ 1, 0 }, j = max_diff; !i.empty(); i += i, j /= 2) {
+		check(max_diff, i, j);
+	}
+
+	// Trivial tests
+	check({ 0, 3 }, { 0, 1 }, { 3, 0 });
+	check({ 0, 3 }, { 1, 1 }, { 2, 0 });
+	check({ 123 * 4 - 1, 456 * 4 }, { 123, 456 }, { 3, 0 });
+	check({ 123 * 4, 456 * 4 }, { 123, 456 }, { 4, 0 });
+
+	// Exhaustive tests (top 8 bits of each number)
+	for (uint64_t i = 1; i < 256; ++i) {
+		for (uint64_t j = 1; j < 256; ++j) {
+			const difficulty_type a{ 0, i << 56 };
+			const difficulty_type b{ 0, j << 56 };
+			{
+				difficulty_type t = a;
+				t /= b;
+				ASSERT_EQ(t.lo, i / j);
+				ASSERT_EQ(t.hi, 0);
+			}
+		}
+	}
+
+	// Bit patterns
+	std::vector<difficulty_type> patterns;
+
+	// 2^N-1, 2^N, 2^N+1
+	for (uint64_t i = 0; i < 128; ++i) {
+		difficulty_type t;
+		reinterpret_cast<uint64_t*>(&t)[i / 64] |= 1ull << (i % 64);
+		patterns.emplace_back(t - 1);
+		patterns.emplace_back(t);
+		patterns.emplace_back(t + 1);
+	}
+
+	// 2^N+2^M, 2^N-2^M
+	bool check_bits[128] = {};
+	for (uint64_t i = 64 - 4; i < 64 + 4; ++i) {
+		check_bits[i] = true;
+	}
+	for (uint64_t i = 128 - 8; i < 128; ++i) {
+		check_bits[i] = true;
+	}
+	for (uint64_t i = 0; i < 128; ++i) {
+		if (!check_bits[i]) {
+			continue;
+		}
+		difficulty_type t1;
+		reinterpret_cast<uint64_t*>(&t1)[i / 64] = 1ull << (i % 64);
+		for (uint64_t j = i + 1; j < 128; ++j) {
+			if (!check_bits[j]) {
+				continue;
+			}
+			difficulty_type t2;
+			reinterpret_cast<uint64_t*>(&t2)[j / 64] = 1ull << (j % 64);
+			patterns.emplace_back(t2 + t1);
+			patterns.emplace_back(t2 - t1);
+		}
+	}
+
+	// All previous patterns, but ~X
+	for (size_t i = 0, n = patterns.size(); i < n; ++i) {
+		patterns.emplace_back(~patterns[i].lo, ~patterns[i].hi);
+	}
+
+	std::sort(patterns.begin(), patterns.end());
+	patterns.erase(std::unique(patterns.begin(), patterns.end()), patterns.end());
+
+	// remove 0
+	patterns.erase(patterns.begin());
+
+	for (size_t i = 0, n = patterns.size(); i < n; ++i) {
+		const difficulty_type& a = patterns[i];
+		for (size_t j = i + 1; j < n; ++j) {
+			const difficulty_type& b = patterns[j];
+			ASSERT_EQ(div128_ref(b, a), b / a);
+		}
+	}
+
+	// Random tests with fixed seed
+	std::mt19937_64 r(0);
+
+	for (uint64_t i = 0; i < 10000000; ++i) {
+		// Random number of bits [1, 63]
+		const uint64_t N = (r() % 63) + 1;
+
+		// Random multiplier [1, 2^N - 1]
+		uint64_t k;
+		do {
+			k = r() & ((1ull << N) - 1);
+		} while (k == 0);
+
+		uint64_t t;
+		const uint64_t max_a = udiv128(1, 0, k + 1, &t);
+
+		// Random number [2^64, 2^128 / (k + 1)]
+		difficulty_type a{ r(), 0 };
+		do {
+			a.hi = r() % max_a;
+		} while (a.hi == 0);
+
+		difficulty_type b1 = a * k;
+		difficulty_type b2 = b1 - 1;
+		difficulty_type b3 = b1 + a;
+		difficulty_type b4 = b3 - 1;
+
+		b1 /= a;
+		ASSERT_EQ(b1.lo, k);
+		ASSERT_EQ(b1.hi, 0);
+
+		b2 /= a;
+		ASSERT_EQ(b2.lo, k - 1);
+		ASSERT_EQ(b2.hi, 0);
+
+		b3 /= a;
+		ASSERT_EQ(b3.lo, k + 1);
+		ASSERT_EQ(b3.hi, 0);
+
+		b4 /= a;
+		ASSERT_EQ(b4.lo, k);
+		ASSERT_EQ(b4.hi, 0);
+	}
 }
 
 TEST(difficulty_type, compare)

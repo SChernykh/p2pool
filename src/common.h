@@ -109,6 +109,8 @@ constexpr uint8_t TX_EXTRA_MERGE_MINING_TAG = 3;
 #ifdef _MSC_VER
 #define umul128 _umul128
 #define udiv128 _udiv128
+FORCEINLINE uint64_t shiftleft128(uint64_t lo, uint64_t hi, uint64_t shift) { return __shiftleft128(lo, hi, static_cast<unsigned char>(shift)); }
+FORCEINLINE uint64_t shiftright128(uint64_t lo, uint64_t hi, uint64_t shift) { return __shiftright128(lo, hi, static_cast<unsigned char>(shift)); }
 #else
 FORCEINLINE uint64_t umul128(uint64_t a, uint64_t b, uint64_t* hi)
 {
@@ -126,6 +128,9 @@ FORCEINLINE uint64_t udiv128(uint64_t hi, uint64_t lo, uint64_t divisor, uint64_
 
 	return result;
 }
+
+FORCEINLINE uint64_t shiftleft128(uint64_t lo, uint64_t hi, uint64_t shift) { return (hi << shift) | (lo >> (64 - shift)); }
+FORCEINLINE uint64_t shiftright128(uint64_t lo, uint64_t hi, uint64_t shift) { return (hi << (64 - shift)) | (lo >> shift); }
 #endif
 
 template<typename T> constexpr FORCEINLINE T round_up(T a, size_t granularity) { return static_cast<T>(((a + (granularity - static_cast<size_t>(1))) / granularity) * granularity); }
@@ -197,6 +202,8 @@ struct difficulty_type
 		return *this;
 	}
 
+	FORCEINLINE difficulty_type& operator+=(uint64_t b) { return operator+=(difficulty_type{ b, 0 }); }
+
 	FORCEINLINE difficulty_type& operator-=(const difficulty_type& b)
 	{
 #ifdef _MSC_VER
@@ -211,6 +218,8 @@ struct difficulty_type
 #endif
 		return *this;
 	}
+
+	FORCEINLINE difficulty_type& operator-=(uint64_t b) { return operator-=(difficulty_type{ b, 0 }); }
 
 	FORCEINLINE difficulty_type& operator*=(const uint64_t b)
 	{
@@ -231,6 +240,8 @@ struct difficulty_type
 
 		return *this;
 	}
+
+	difficulty_type& operator/=(difficulty_type b);
 
 	FORCEINLINE bool operator<(const difficulty_type& other) const
 	{
@@ -279,17 +290,34 @@ struct difficulty_type
 static_assert(sizeof(difficulty_type) == sizeof(uint64_t) * 2, "struct difficulty_type has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<difficulty_type>::value, "struct difficulty_type is not a POD, check your compiler options");
 
-FORCEINLINE difficulty_type operator+(const difficulty_type& a, const difficulty_type& b)
+template<typename T>
+FORCEINLINE difficulty_type operator+(const difficulty_type& a, const T& b)
 {
 	difficulty_type result = a;
 	result += b;
 	return result;
 }
 
-FORCEINLINE difficulty_type operator-(const difficulty_type& a, const difficulty_type& b)
+template<typename T>
+FORCEINLINE difficulty_type operator-(const difficulty_type& a, const T& b)
 {
 	difficulty_type result = a;
 	result -= b;
+	return result;
+}
+
+FORCEINLINE difficulty_type operator*(const difficulty_type& a, uint64_t b)
+{
+	difficulty_type result = a;
+	result *= b;
+	return result;
+}
+
+template<typename T>
+FORCEINLINE difficulty_type operator/(const difficulty_type& a, const T& b)
+{
+	difficulty_type result = a;
+	result /= b;
 	return result;
 }
 
