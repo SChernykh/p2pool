@@ -19,7 +19,7 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable : 4005 4061 4365 4464 4625 4626 4668 4710 4711 4804 4820 5039 5045 5220 5246)
+#pragma warning(disable : 4005 4061 4324 4365 4464 4625 4626 4668 4710 4711 4804 4820 5039 5045 5220 5246)
 #define FORCEINLINE __forceinline
 #define NOINLINE __declspec(noinline)
 #define LIKELY(expression) expression
@@ -135,9 +135,9 @@ FORCEINLINE uint64_t shiftright128(uint64_t lo, uint64_t hi, uint64_t shift) { r
 
 template<typename T> constexpr FORCEINLINE T round_up(T a, size_t granularity) { return static_cast<T>(((a + (granularity - static_cast<size_t>(1))) / granularity) * granularity); }
 
-struct hash
+struct alignas(uint64_t) hash
 {
-	alignas(8) uint8_t h[HASH_SIZE];
+	uint8_t h[HASH_SIZE];
 
 	FORCEINLINE hash() : h{} {}
 
@@ -179,7 +179,11 @@ struct hash
 static_assert(sizeof(hash) == HASH_SIZE, "struct hash has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<hash>::value, "struct hash is not a POD, check your compiler options");
 
-struct difficulty_type
+struct
+#ifdef __GNUC__
+	alignas(unsigned __int128)
+#endif
+	difficulty_type
 {
 	FORCEINLINE difficulty_type() : lo(0), hi(0) {}
 	FORCEINLINE difficulty_type(uint64_t a, uint64_t b) : lo(a), hi(b) {}
