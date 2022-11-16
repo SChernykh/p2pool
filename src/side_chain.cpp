@@ -696,37 +696,38 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 {
 	blob.clear();
 
-	ReadLock lock(m_sidechainLock);
-
-	auto it = m_blocksById.find(block->m_sidechainId);
-	if (it != m_blocksById.end()) {
-		PoolBlock* b = it->second;
-		const size_t n = b->m_outputs.size();
-
-		blob.reserve(n * 39 + 64);
-		writeVarint(n, blob);
-
-		const uint8_t tx_type = b->get_tx_type();
-
-		for (const PoolBlock::TxOutput& output : b->m_outputs) {
-			writeVarint(output.m_reward, blob);
-			blob.emplace_back(tx_type);
-			blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
-
-			if (tx_type == TXOUT_TO_TAGGED_KEY) {
-				blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
-			}
-		}
-
-		block->m_outputs = b->m_outputs;
-		return true;
-	}
-
 	std::vector<MinerShare> tmpShares;
 	std::vector<uint64_t> tmpRewards;
+	{
+		ReadLock lock(m_sidechainLock);
 
-	if (!get_shares(block, tmpShares) || !split_reward(total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
-		return false;
+		auto it = m_blocksById.find(block->m_sidechainId);
+		if (it != m_blocksById.end()) {
+			PoolBlock* b = it->second;
+			const size_t n = b->m_outputs.size();
+
+			blob.reserve(n * 39 + 64);
+			writeVarint(n, blob);
+
+			const uint8_t tx_type = b->get_tx_type();
+
+			for (const PoolBlock::TxOutput& output : b->m_outputs) {
+				writeVarint(output.m_reward, blob);
+				blob.emplace_back(tx_type);
+				blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+
+				if (tx_type == TXOUT_TO_TAGGED_KEY) {
+					blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
+				}
+			}
+
+			block->m_outputs = b->m_outputs;
+			return true;
+		}
+
+		if (!get_shares(block, tmpShares) || !split_reward(total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
+			return false;
+		}
 	}
 
 	const size_t n = tmpShares.size();
