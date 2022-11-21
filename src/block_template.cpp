@@ -74,6 +74,7 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	m_merkleTreeMainBranch.reserve(HASH_SIZE * 10);
 	m_mempoolTxs.reserve(1024);
 	m_mempoolTxsOrder.reserve(1024);
+	m_mempoolTxsOrder2.reserve(1024);
 	m_shares.reserve(m_pool->side_chain().chain_window_size() * 2);
 
 	for (size_t i = 0; i < array_size(&BlockTemplate::m_oldTemplates); ++i) {
@@ -140,6 +141,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
+	m_mempoolTxsOrder2.clear();
 	m_shares.clear();
 
 	m_rng = b.m_rng;
@@ -391,7 +393,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		final_fees = 0;
 		final_weight = miner_tx_weight;
 
-		for (int i = 0; i < static_cast<int>(m_mempoolTxsOrder.size());) {
+		m_mempoolTxsOrder2.clear();
+		for (int i = 0; i < static_cast<int>(m_mempoolTxsOrder.size()); ++i) {
 			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
 
 			int k = -1;
@@ -406,8 +409,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			// Try replacing other transactions when we are above the limit
 			if (final_weight + tx.weight > data.median_weight) {
 				// Don't check more than 100 transactions deep because they have higher and higher fee/byte
-				for (int j = i - 1, j1 = std::max<int>(0, i - 100); j >= j1; --j) {
-					const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder[j]];
+				const int n = static_cast<int>(m_mempoolTxsOrder2.size());
+				for (int j = n - 1, j1 = std::max<int>(0, n - 100); j >= j1; --j) {
+					const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[j]];
 					const uint64_t reward2 = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee - prev_tx.fee, final_weight + tx.weight - prev_tx.weight);
 					if (reward2 > final_reward) {
 						// If replacing some other transaction increases the reward even more, remember it
@@ -420,21 +424,19 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 			if (k == i) {
 				// Simply adding this tx improves the reward
+				m_mempoolTxsOrder2.push_back(m_mempoolTxsOrder[i]);
 				final_fees += tx.fee;
 				final_weight += tx.weight;
-				++i;
-				continue;
 			}
-
-			if (k >= 0) {
+			else if (k >= 0) {
 				// Replacing another tx with this tx improves the reward
-				const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder[k]];
+				const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[k]];
+				m_mempoolTxsOrder2[k] = m_mempoolTxsOrder[i];
 				final_fees += tx.fee - prev_tx.fee;
 				final_weight += tx.weight - prev_tx.weight;
 			}
-
-			m_mempoolTxsOrder.erase(m_mempoolTxsOrder.begin() + ((k >= 0) ? k : i));
 		}
+		m_mempoolTxsOrder = m_mempoolTxsOrder2;
 
 		final_fees = 0;
 		final_weight = miner_tx_weight;

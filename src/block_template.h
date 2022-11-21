@@ -106,6 +106,7 @@ private:
 	std::vector<uint64_t> m_rewards;
 	std::vector<TxMempoolData> m_mempoolTxs;
 	std::vector<int> m_mempoolTxsOrder;
+	std::vector<int> m_mempoolTxsOrder2;
 	std::vector<MinerShare> m_shares;
 
 	std::mt19937_64 m_rng;
