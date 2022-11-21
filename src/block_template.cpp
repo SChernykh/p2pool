@@ -34,6 +34,9 @@
 
 static constexpr char log_category_prefix[] = "BlockTemplate ";
 
+// Max P2P message size (128 KB) minus BLOCK_RESPONSE header (5 bytes)
+static constexpr size_t MAX_BLOCK_TEMPLATE_SIZE = 128 * 1024 - (1 + sizeof(uint32_t));
+
 namespace p2pool {
 
 BlockTemplate::BlockTemplate(p2pool* pool)
@@ -220,54 +223,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_difficulty = data.difficulty;
 	m_seedHash = data.seed_hash;
 
-	// Only choose transactions that were received 10 or more seconds ago
-	size_t total_mempool_transactions;
-	{
-		m_mempoolTxs.clear();
-
-		ReadLock mempool_lock(mempool.m_lock);
-
-		total_mempool_transactions = mempool.m_transactions.size();
-
-		const uint64_t cur_time = seconds_since_epoch();
-
-		for (auto& it : mempool.m_transactions) {
-			if (cur_time >= it.second.time_received + 10) {
-				m_mempoolTxs.emplace_back(it.second);
-			}
-		}
-	}
-
-	// Safeguard for busy mempool moments
-	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
-	// Select 1000 transactions with the highest fee per byte
-	if (m_mempoolTxs.size() > 1000) {
-		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + 1000, m_mempoolTxs.end(),
-			[](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
-			{
-				return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
-			});
-		m_mempoolTxs.resize(1000);
-	}
-
-	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
-
-	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
-
-	uint64_t total_tx_fees = 0;
-	uint64_t total_tx_weight = 0;
-	for (const TxMempoolData& tx : m_mempoolTxs) {
-		total_tx_fees += tx.fee;
-		total_tx_weight += tx.weight;
-	}
-
-	const uint64_t max_reward = base_reward + total_tx_fees;
-
-	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
-		", " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
-		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
-		", weight = " << log::Gray() << total_tx_weight);
-
 	m_blockHeader.clear();
 	m_poolBlockTemplate->m_verified = false;
 
@@ -300,6 +255,74 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_blockHeaderSize = m_blockHeader.size();
 
 	m_pool->side_chain().fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
+
+	// Only choose transactions that were received 10 or more seconds ago
+	size_t total_mempool_transactions;
+	{
+		m_mempoolTxs.clear();
+
+		ReadLock mempool_lock(mempool.m_lock);
+
+		total_mempool_transactions = mempool.m_transactions.size();
+
+		const uint64_t cur_time = seconds_since_epoch();
+
+		for (auto& it : mempool.m_transactions) {
+			if (cur_time >= it.second.time_received + 10) {
+				m_mempoolTxs.emplace_back(it.second);
+			}
+		}
+	}
+
+	// Safeguard for busy mempool moments
+	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
+	// Calculate how many transactions we can take
+	{
+		PoolBlock* b = m_poolBlockTemplate;
+		b->m_transactions.clear();
+		b->m_transactions.resize(1);
+		b->m_outputs.clear();
+
+		// Block template size without coinbase outputs and transactions (add 1+1 more bytes for output and tx count if they go above 128)
+		size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() + 2;
+
+		// a rough estimation of outputs' size
+		// all outputs have <= 5 bytes for each output's reward, and up to 18 outputs can have 6 bytes for output's reward
+		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */) + 18;
+
+		const size_t max_transactions = (MAX_BLOCK_TEMPLATE_SIZE > k) ? ((MAX_BLOCK_TEMPLATE_SIZE - k) / HASH_SIZE) : 0;
+
+		if (max_transactions == 0) {
+			m_mempoolTxs.clear();
+		}
+		else if (m_mempoolTxs.size() > max_transactions) {
+			std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end(),
+				[](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
+				{
+					return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
+				});
+			m_mempoolTxs.resize(max_transactions);
+		}
+
+		LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
+	}
+
+	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
+
+	uint64_t total_tx_fees = 0;
+	uint64_t total_tx_weight = 0;
+	for (const TxMempoolData& tx : m_mempoolTxs) {
+		total_tx_fees += tx.fee;
+		total_tx_weight += tx.weight;
+	}
+
+	const uint64_t max_reward = base_reward + total_tx_fees;
+
+	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
+		", " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
+		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
+		", weight = " << log::Gray() << total_tx_weight);
+
 	if (!SideChain::split_reward(max_reward, m_shares, m_rewards)) {
 		use_old_template();
 		return;
@@ -382,7 +405,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 			// Try replacing other transactions when we are above the limit
 			if (final_weight + tx.weight > data.median_weight) {
-				for (int j = 0; j < i; ++j) {
+				// Don't check more than 100 transactions deep because they have higher and higher fee/byte
+				for (int j = i - 1, j1 = std::max<int>(0, i - 100); j >= j1; --j) {
 					const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder[j]];
 					const uint64_t reward2 = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee - prev_tx.fee, final_weight + tx.weight - prev_tx.weight);
 					if (reward2 > final_reward) {
