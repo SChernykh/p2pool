@@ -364,8 +364,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 		m_numTransactionHashes = m_mempoolTxsOrder.size();
 		m_transactionHashes.assign(HASH_SIZE, 0);
+		m_transactionHashesSet.clear();
+		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
 		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
 			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+			if (!m_transactionHashesSet.insert(tx.id).second) {
+				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
+				continue;
+			}
 			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
 			final_fees += tx.fee;
 			final_weight += tx.weight;
@@ -445,8 +451,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 		m_numTransactionHashes = m_mempoolTxsOrder.size();
 		m_transactionHashes.assign(HASH_SIZE, 0);
+		m_transactionHashesSet.clear();
+		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
 		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
 			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+			if (!m_transactionHashesSet.insert(tx.id).second) {
+				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
+				continue;
+			}
 			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
 			final_fees += tx.fee;
 			final_weight += tx.weight;
@@ -620,6 +632,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_blockHeader.clear();
 	m_minerTxExtra.clear();
 	m_transactionHashes.clear();
+	m_transactionHashesSet.clear();
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();

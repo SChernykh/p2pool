@@ -103,6 +103,7 @@ private:
 	std::vector<uint8_t> m_blockHeader;
 	std::vector<uint8_t> m_minerTxExtra;
 	std::vector<uint8_t> m_transactionHashes;
+	unordered_set<hash> m_transactionHashesSet;
 	std::vector<uint64_t> m_rewards;
 	std::vector<TxMempoolData> m_mempoolTxs;
 	std::vector<int> m_mempoolTxsOrder;
