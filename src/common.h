@@ -329,6 +329,23 @@ struct TxMempoolData
 {
 	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0), time_received(0) {}
 
+	FORCEINLINE bool operator<(const TxMempoolData& tx) const
+	{
+		const uint64_t a = fee * tx.weight;
+		const uint64_t b = tx.fee * weight;
+
+		// Prefer transactions with higher fee/byte
+		if (a > b) return true;
+		if (a < b) return false;
+
+		// If fee/byte is the same, prefer smaller transactions (they give smaller penalty when going above the median block size limit)
+		if (weight < tx.weight) return true;
+		if (weight > tx.weight) return false;
+
+		// If two transactions have exactly the same fee and weight, just order them by id
+		return id < tx.id;
+	}
+
 	hash id;
 	uint64_t blob_size;
 	uint64_t weight;

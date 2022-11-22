@@ -298,11 +298,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			m_mempoolTxs.clear();
 		}
 		else if (m_mempoolTxs.size() > max_transactions) {
-			std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end(),
-				[](const TxMempoolData& tx_a, const TxMempoolData& tx_b)
-				{
-					return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
-				});
+			std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end());
 			m_mempoolTxs.resize(max_transactions);
 		}
 
@@ -387,13 +383,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		// Sometimes it even finds the optimal solution
 
 		// Sort all transactions by fee per byte (highest to lowest)
-		std::sort(m_mempoolTxsOrder.begin(), m_mempoolTxsOrder.end(),
-			[this](int a, int b)
-			{
-				const TxMempoolData& tx_a = m_mempoolTxs[a];
-				const TxMempoolData& tx_b = m_mempoolTxs[b];
-				return tx_a.fee * tx_b.weight > tx_b.fee * tx_a.weight;
-			});
+		std::sort(m_mempoolTxsOrder.begin(), m_mempoolTxsOrder.end(), [this](int a, int b) { return m_mempoolTxs[a] < m_mempoolTxs[b]; });
 
 		final_reward = base_reward;
 		final_fees = 0;
