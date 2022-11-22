@@ -189,7 +189,6 @@ private:
 	void remove_peer_from_list(P2PClient* client);
 	void remove_peer_from_list(const raw_ip& ip);
 
-	uv_mutex_t m_rngLock;
 	std::mt19937_64 m_rng;
 
 	uv_mutex_t m_blockLock;

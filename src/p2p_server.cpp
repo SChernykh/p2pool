@@ -86,7 +86,6 @@ P2PServer::P2PServer(p2pool* pool)
 	set_max_outgoing_peers(params.m_maxOutgoingPeers);
 	set_max_incoming_peers(params.m_maxIncomingPeers);
 
-	uv_mutex_init_checked(&m_rngLock);
 	uv_mutex_init_checked(&m_blockLock);
 	uv_mutex_init_checked(&m_peerListLock);
 	uv_mutex_init_checked(&m_broadcastLock);
@@ -142,7 +141,6 @@ P2PServer::~P2PServer()
 {
 	shutdown_tcp();
 
-	uv_mutex_destroy(&m_rngLock);
 	uv_mutex_destroy(&m_blockLock);
 	uv_mutex_destroy(&m_peerListLock);
 	uv_mutex_destroy(&m_broadcastLock);
@@ -365,10 +363,9 @@ void P2PServer::update_peer_connections()
 
 void P2PServer::update_peer_list()
 {
-	const uint64_t cur_time = seconds_since_epoch();
-
 	MutexLock lock(m_clientsListLock);
 
+	const uint64_t cur_time = seconds_since_epoch();
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (client->is_good() && (cur_time >= client->m_nextOutgoingPeerListRequest)) {
 			send_peer_list_request(client, cur_time);
@@ -934,7 +931,9 @@ void P2PServer::on_broadcast()
 
 uint64_t P2PServer::get_random64()
 {
-	MutexLock lock(m_rngLock);
+	if (!server_event_loop_thread) {
+		LOGERR(1, "get_random64() was called from another thread, this is not thread safe");
+	}
 	return m_rng();
 }
 
