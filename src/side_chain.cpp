@@ -1662,10 +1662,6 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 		LOGINFO(4, "possible uncle block: id = " << log::Gray() << block->m_sidechainId << log::NoColor() <<
 			", height = " << log::Gray() << block->m_sidechainHeight);
 		m_pool->update_block_template_async();
-		// Broadcast it if it's at the same height to give it higher chances to be mined
-		if (block->m_sidechainHeight == tip->m_sidechainHeight) {
-			block->m_wantBroadcast = true;
-		}
 	}
 
 	if (p2pServer() && block->m_wantBroadcast && !block->m_broadcasted) {
