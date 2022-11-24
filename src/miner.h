@@ -56,7 +56,7 @@ private:
 
 	std::atomic<uint32_t> m_nonce;
 	std::chrono::high_resolution_clock::time_point m_nonceTimestamp;
-	const uint32_t m_extraNonce;
+	uint32_t m_extraNonce;
 
 	std::atomic<uint64_t> m_totalHashes;
 	std::atomic<uint32_t> m_sharesFound;

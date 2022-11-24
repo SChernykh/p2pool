@@ -41,12 +41,14 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_startTimestamp(high_resolution_clock::now())
 	, m_nonce(0)
 	, m_nonceTimestamp(m_startTimestamp)
-	, m_extraNonce(static_cast<uint32_t>(pool->p2p_server()->get_random64()))
 	, m_totalHashes(0)
 	, m_sharesFound(0)
 	, m_job{}
 	, m_jobIndex{ 0 }
 {
+	std::random_device rd;
+	m_extraNonce = static_cast<uint32_t>(rd());
+
 	on_block(m_pool->block_template());
 
 	m_minerThreads.reserve(threads);
