@@ -162,7 +162,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_hasher = new RandomX_Hasher_RPC(this);
 #endif
 
-	m_blockTemplate = new BlockTemplate(this);
+	m_blockTemplate = new BlockTemplate(m_sideChain, m_hasher);
 	m_mempool = new Mempool();
 
 	try {

@@ -39,8 +39,9 @@ static constexpr size_t MAX_BLOCK_TEMPLATE_SIZE = 128 * 1024 - (1 + sizeof(uint3
 
 namespace p2pool {
 
-BlockTemplate::BlockTemplate(p2pool* pool)
-	: m_pool(pool)
+BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
+	: m_sidechain(sidechain)
+	, m_hasher(hasher)
 	, m_templateId(0)
 	, m_lastUpdated(seconds_since_epoch())
 	, m_blockHeaderSize(0)
@@ -75,7 +76,7 @@ BlockTemplate::BlockTemplate(p2pool* pool)
 	m_mempoolTxs.reserve(1024);
 	m_mempoolTxsOrder.reserve(1024);
 	m_mempoolTxsOrder2.reserve(1024);
-	m_shares.reserve(m_pool->side_chain().chain_window_size() * 2);
+	m_shares.reserve(m_sidechain->chain_window_size() * 2);
 
 	for (size_t i = 0; i < array_size(&BlockTemplate::m_oldTemplates); ++i) {
 		m_oldTemplates[i] = new BlockTemplate(*this);
@@ -113,7 +114,8 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 
 	WriteLock lock(m_lock);
 
-	m_pool = b.m_pool;
+	m_sidechain = b.m_sidechain;
+	m_hasher = b.m_hasher;
 	m_templateId = b.m_templateId;
 	m_lastUpdated = b.m_lastUpdated.load();
 	m_blockTemplateBlob = b.m_blockTemplateBlob;
@@ -256,7 +258,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_blockHeaderSize = m_blockHeader.size();
 
-	m_pool->side_chain().fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
+	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
 
 	// Only choose transactions that were received 10 or more seconds ago
 	size_t total_mempool_transactions;
@@ -596,7 +598,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		buf.insert(buf.end(), sidechain_data.begin(), sidechain_data.end());
 
 		PoolBlock check;
-		const int result = check.deserialize(buf.data(), buf.size(), m_pool->side_chain(), nullptr, false);
+		const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
@@ -626,6 +628,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
+	m_mempoolTxsOrder2.clear();
 }
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
@@ -832,7 +835,7 @@ hash BlockTemplate::calc_sidechain_hash() const
 	const int sidechain_hash_offset = static_cast<int>(m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize) + 2;
 	const int blob_size = static_cast<int>(m_blockTemplateBlob.size());
 
-	const std::vector<uint8_t>& consensus_id = m_pool->side_chain().consensus_id();
+	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 
 	keccak_custom([this, sidechain_hash_offset, blob_size, consensus_id, &sidechain_data](int offset) -> uint8_t {
@@ -1120,8 +1123,6 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		m_poolBlockTemplate->m_nonce = nonce;
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
 
-		SideChain& side_chain = m_pool->side_chain();
-
 #if POOL_BLOCK_DEBUG
 		{
 			std::vector<uint8_t> buf = m_poolBlockTemplate->serialize_mainchain_data();
@@ -1133,25 +1134,27 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			buf.insert(buf.end(), sidechain_data.begin(), sidechain_data.end());
 
 			PoolBlock check;
-			const int result = check.deserialize(buf.data(), buf.size(), side_chain, nullptr, false);
+			const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false);
 			if (result != 0) {
 				LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 			}
 
-			hash pow_hash;
-			if (!check.get_pow_hash(m_pool->hasher(), check.m_txinGenHeight, m_seedHash, pow_hash)) {
-				LOGERR(1, "PoW check failed for the sidechain block. Fix it! ");
-			}
-			else if (!check.m_difficulty.check_pow(pow_hash)) {
-				LOGERR(1, "Sidechain block has wrong PoW. Fix it! ");
+			if (m_hasher) {
+				hash pow_hash;
+				if (!check.get_pow_hash(m_hasher, check.m_txinGenHeight, m_seedHash, pow_hash)) {
+					LOGERR(1, "PoW check failed for the sidechain block. Fix it! ");
+				}
+				else if (!check.m_difficulty.check_pow(pow_hash)) {
+					LOGERR(1, "Sidechain block has wrong PoW. Fix it! ");
+				}
 			}
 		}
 #endif
 
 		m_poolBlockTemplate->m_verified = true;
-		if (!side_chain.block_seen(*m_poolBlockTemplate)) {
+		if (!m_sidechain->block_seen(*m_poolBlockTemplate)) {
 			m_poolBlockTemplate->m_wantBroadcast = true;
-			side_chain.add_block(*m_poolBlockTemplate);
+			m_sidechain->add_block(*m_poolBlockTemplate);
 		}
 		return;
 	}

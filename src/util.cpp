@@ -238,6 +238,9 @@ std::istream& operator>>(std::istream& s, hash& h)
 			found_number = true;
 			h.h[index >> 1] = (h.h[index >> 1] << 4) | digit;
 			++index;
+			if (index >= HASH_SIZE * 2) {
+				return s;
+			}
 		}
 		else if (found_number) {
 			return s;
