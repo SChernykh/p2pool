@@ -2142,15 +2142,15 @@ void SideChain::finish_precalc()
 		uv_mutex_destroy(&m_precalcJobsMutex);
 		uv_cond_destroy(&m_precalcJobsCond);
 
+		// Also clear cache because it has data from all old blocks now
+		clear_crypto_cache();
+
 		LOGINFO(4, "pre-calculation workers stopped");
 	}
 	catch (const std::exception& e)
 	{
 		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
-
-	// Also clear cache because it has data from all old blocks now
-	clear_crypto_cache();
 
 #ifdef DEV_TEST_SYNC
 	if (m_pool) {
