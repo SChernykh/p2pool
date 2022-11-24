@@ -2156,8 +2156,11 @@ void SideChain::finish_precalc()
 	if (m_pool) {
 		LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
 		print_status(false);
-		if (m_pool->p2p_server()) {
-			m_pool->p2p_server()->print_status();
+		P2PServer* server = m_pool->p2p_server();
+		if (server) {
+			server->print_status();
+			server->print_bans();
+			server->show_peers_async();
 		}
 		m_pool->stop();
 	}

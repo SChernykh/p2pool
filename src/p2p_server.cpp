@@ -2183,9 +2183,12 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 	// Limit system clock difference between connected peers
 	// Check only new blocks (not added to side_chain yet)
 	if (max_time_delta && !side_chain.find_block(block->m_sidechainId)) {
-		static hash prev_checked_block;
-		const bool is_new = (block->m_sidechainId != prev_checked_block);
-		prev_checked_block = block->m_sidechainId;
+		static hash prev_checked_blocks[2];
+		const bool is_new = (block->m_sidechainId != prev_checked_blocks[0]) && (block->m_sidechainId != prev_checked_blocks[1]);
+		if (is_new) {
+			prev_checked_blocks[1] = prev_checked_blocks[0];
+			prev_checked_blocks[0] = block->m_sidechainId;
+		}
 
 		const uint64_t t = time(nullptr);
 		const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
