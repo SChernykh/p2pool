@@ -1980,12 +1980,9 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 			if (our_height - peer_height < 5) {
 				using namespace std::chrono;
 				const int64_t elapsed_ms = duration_cast<milliseconds>(high_resolution_clock::now() - miner_data.time_received).count();
-				if (our_height - peer_height > 1) {
+				if ((our_height - peer_height > 1) || (elapsed_ms > 10000)) {
 					LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (" << elapsed_ms << " ms late, mainchain height " << peer_height << ", expected >= " << our_height << "), ignoring it");
 					return true;
-				}
-				else {
-					LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " broadcasted a stale block (" << elapsed_ms << " ms late, mainchain height " << peer_height << ", expected >= " << our_height << ")");
 				}
 			}
 			else {
