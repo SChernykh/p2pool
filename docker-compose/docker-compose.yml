@@ -96,6 +96,10 @@ services:
       --zmq-pub tcp://0.0.0.0:18083
       --disable-dns-checkpoints
       --enable-dns-blocklist
+      --out-peers 32
+      --in-peers 16
+      --add-priority-node=nodes.hashvault.pro:18080
+      --add-priority-node=node.supportxmr.com:18080
       --non-interactive
       --p2p-bind-ip=0.0.0.0
       --p2p-bind-port=18080
