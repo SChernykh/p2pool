@@ -963,17 +963,14 @@ void P2PServer::show_peers()
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (client->m_listenPort >= 0) {
-			char buf[32];
+			char buf[32] = {};
 			log::Stream s(buf);
-			if (client->m_P2PoolVersion) {
-				s << "\tv" << (client->m_P2PoolVersion >> 16) << '.' << (client->m_P2PoolVersion & 0xFFFF) << "\t\0";
-			}
-			else {
-				s << "\t    \t\0";
+			if (client->m_SoftwareVersion) {
+				s << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
 			}
 			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")
-				<< log::pad_right(client->m_pingTime, 4) << " ms\t"
-				<< static_cast<const char*>(buf)
+				<< log::pad_right(client->m_pingTime, 4) << " ms\t\t"
+				<< log::pad_right(static_cast<const char*>(buf), 20) << '\t'
 				<< static_cast<char*>(client->m_addrString));
 			++n;
 		}
@@ -1183,7 +1180,8 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
 	, m_protocolVersion(PROTOCOL_VERSION_1_0)
-	, m_P2PoolVersion(0)
+	, m_SoftwareVersion(0)
+	, m_SoftwareID(0)
 	, m_pingTime(-1)
 	, m_blockPendingRequests(0)
 	, m_chainTipBlockRequest(false)
@@ -1230,7 +1228,8 @@ void P2PServer::P2PClient::reset()
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
 	m_protocolVersion = PROTOCOL_VERSION_1_0;
-	m_P2PoolVersion = 0;
+	m_SoftwareVersion = 0;
+	m_SoftwareID = 0;
 	m_pingTime = -1;
 	m_blockPendingRequests = 0;
 	m_chainTipBlockRequest = false;
@@ -2140,10 +2139,11 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 				// Check for protocol version message
 				if ((*reinterpret_cast<uint32_t*>(ip.data + 12) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
 					m_protocolVersion = *reinterpret_cast<uint32_t*>(ip.data);
-					m_P2PoolVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
+					m_SoftwareVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
+					m_SoftwareID = *reinterpret_cast<uint32_t*>(ip.data + 8);
 					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
 						<< " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF)
-						<< ", runs P2Pool version " << (m_P2PoolVersion >> 16) << '.' << (m_P2PoolVersion & 0xFFFF)
+						<< ", runs " << software_name() << " v" << (m_SoftwareVersion >> 16) << '.' << (m_SoftwareVersion & 0xFFFF)
 					);
 				}
 				continue;
@@ -2343,6 +2343,18 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		}
 
 		++m_blockPendingRequests;
+	}
+}
+
+const char* P2PServer::P2PClient::software_name() const
+{
+	switch (m_SoftwareID) {
+	case 0:
+		return "P2Pool";
+	case 0x624F6F47UL:
+		return "GoObserver";
+	default:
+		return "Unknown";
 	}
 }
 

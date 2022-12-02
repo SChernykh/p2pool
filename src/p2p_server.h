@@ -110,6 +110,8 @@ public:
 
 		bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }
 
+		const char* software_name() const;
+
 		uint64_t m_peerId;
 		MessageId m_expectedMessage;
 		uint64_t m_handshakeChallenge;
@@ -125,7 +127,8 @@ public:
 		int m_peerListPendingRequests;
 
 		uint32_t m_protocolVersion;
-		uint32_t m_P2PoolVersion;
+		uint32_t m_SoftwareVersion;
+		uint32_t m_SoftwareID;
 
 		int64_t m_pingTime;
 
