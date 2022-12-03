@@ -105,12 +105,12 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--out-peers") == 0) && (i + 1 < argc)) {
+		if ((!strcmp(argv[i], "--out-peers") || !strcmp(argv[i], "--outpeers")) && (i + 1 < argc)) {
 			m_maxOutgoingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--in-peers") == 0) && (i + 1 < argc)) {
+		if ((!strcmp(argv[i], "--in-peers") || !strcmp(argv[i], "--inpeers")) && (i + 1 < argc)) {
 			m_maxIncomingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
