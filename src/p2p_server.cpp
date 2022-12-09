@@ -381,7 +381,7 @@ void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 	const bool result = send(client,
 		[client](void* buf, size_t buf_size)
 		{
-			LOGINFO(5, "sending PEER_LIST_REQUEST to " << static_cast<char*>(client->m_addrString));
+			LOGINFO(6, "sending PEER_LIST_REQUEST to " << static_cast<char*>(client->m_addrString));
 
 			if (buf_size < SEND_BUF_MIN_SIZE) {
 				return 0;
@@ -959,6 +959,7 @@ void P2PServer::show_peers()
 {
 	MutexLock lock(m_clientsListLock);
 
+	const uint64_t cur_time = seconds_since_epoch();
 	size_t n = 0;
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
@@ -969,8 +970,10 @@ void P2PServer::show_peers()
 				s << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
 			}
 			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")
+				<< log::pad_right(log::Duration(cur_time - client->m_connectedTime), 16) << '\t'
 				<< log::pad_right(client->m_pingTime, 4) << " ms\t\t"
 				<< log::pad_right(static_cast<const char*>(buf), 20) << '\t'
+				<< log::pad_right(client->m_broadcastMaxHeight, 10) << '\t'
 				<< static_cast<char*>(client->m_addrString));
 			++n;
 		}
@@ -1168,6 +1171,8 @@ void P2PServer::check_block_template()
 
 P2PServer::P2PClient::P2PClient()
 	: m_peerId(0)
+	, m_connectedTime(0)
+	, m_broadcastMaxHeight(0)
 	, m_expectedMessage(MessageId::HANDSHAKE_CHALLENGE)
 	, m_handshakeChallenge(0)
 	, m_handshakeSolutionSent(false)
@@ -1216,6 +1221,8 @@ void P2PServer::P2PClient::reset()
 	Client::reset();
 
 	m_peerId = 0;
+	m_connectedTime = 0;
+	m_broadcastMaxHeight = 0;
 	m_expectedMessage = MessageId::HANDSHAKE_CHALLENGE;
 	m_handshakeChallenge = 0;
 	m_handshakeSolutionSent = false;
@@ -1267,7 +1274,9 @@ bool P2PServer::P2PClient::on_connect()
 		}
 	}
 
-	m_lastAlive = seconds_since_epoch();
+	const uint64_t cur_time = seconds_since_epoch();
+	m_connectedTime = cur_time;
+	m_lastAlive = cur_time;
 	return send_handshake_challenge();
 }
 
@@ -1436,7 +1445,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::PEER_LIST_REQUEST:
-			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_REQUEST");
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_REQUEST");
 
 			if (bytes_left >= 1) {
 				bytes_read = 1;
@@ -1456,7 +1465,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 				return false;
 			}
 
-			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_RESPONSE");
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_RESPONSE");
 
 			if (bytes_left >= 2) {
 				const uint32_t num_peers = buf[1];
@@ -1966,6 +1975,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 
 	const PoolBlock* block = server->get_block();
 
+	m_broadcastMaxHeight = std::max(m_broadcastMaxHeight, block->m_sidechainHeight);
 	m_broadcastedHashes[m_broadcastedHashesIndex.fetch_add(1) % array_size(&P2PClient::m_broadcastedHashes)] = block->m_sidechainId;
 
 	MinerData miner_data = server->m_pool->miner_data();
@@ -2079,7 +2089,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	return server->send(this,
 		[this, &peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
 		{
-			LOGINFO(5, "sending PEER_LIST_RESPONSE to " << static_cast<char*>(m_addrString));
+			LOGINFO(6, "sending PEER_LIST_RESPONSE to " << static_cast<char*>(m_addrString));
 
 			if (buf_size < SEND_BUF_MIN_SIZE + 2 + num_selected_peers * 19) {
 				return 0;

@@ -113,6 +113,9 @@ public:
 		const char* software_name() const;
 
 		uint64_t m_peerId;
+		uint64_t m_connectedTime;
+		uint64_t m_broadcastMaxHeight;
+
 		MessageId m_expectedMessage;
 		uint64_t m_handshakeChallenge;
 		bool m_handshakeSolutionSent;
