@@ -18,6 +18,7 @@
 #pragma once
 
 #include "tcp_server.h"
+#include <list>
 
 namespace p2pool {
 
@@ -99,7 +100,7 @@ public:
 		void on_after_handshake(uint8_t* &p);
 		bool on_listen_port(const uint8_t* buf);
 		bool on_block_request(const uint8_t* buf);
-		bool on_block_response(const uint8_t* buf, uint32_t size);
+		bool on_block_response(const uint8_t* buf, uint32_t size, const hash& expected_id);
 		bool on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact);
 		bool on_peer_list_request(const uint8_t* buf);
 		bool on_peer_list_response(const uint8_t* buf);
@@ -135,8 +136,7 @@ public:
 
 		int64_t m_pingTime;
 
-		int m_blockPendingRequests;
-		bool m_chainTipBlockRequest;
+		std::list<hash> m_blockPendingRequests;
 
 		uint64_t m_lastAlive;
 		uint64_t m_lastBroadcastTimestamp;

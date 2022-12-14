@@ -1135,7 +1135,7 @@ void P2PServer::download_missing_blocks()
 			});
 
 		if (result) {
-			++client->m_blockPendingRequests;
+			client->m_blockPendingRequests.push_back(id);
 		}
 	}
 }
@@ -1188,8 +1188,6 @@ P2PServer::P2PClient::P2PClient()
 	, m_SoftwareVersion(0)
 	, m_SoftwareID(0)
 	, m_pingTime(-1)
-	, m_blockPendingRequests(0)
-	, m_chainTipBlockRequest(false)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
@@ -1238,8 +1236,7 @@ void P2PServer::P2PClient::reset()
 	m_SoftwareVersion = 0;
 	m_SoftwareID = 0;
 	m_pingTime = -1;
-	m_blockPendingRequests = 0;
-	m_chainTipBlockRequest = false;
+	m_blockPendingRequests.clear();
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
@@ -1400,7 +1397,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			break;
 
 		case MessageId::BLOCK_RESPONSE:
-			if (m_blockPendingRequests <= 0) {
+			if (m_blockPendingRequests.empty()) {
 				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected BLOCK_RESPONSE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
@@ -1414,8 +1411,10 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
 
-					--m_blockPendingRequests;
-					if (!on_block_response(buf + 1 + sizeof(uint32_t), block_size)) {
+					const hash expected_id = m_blockPendingRequests.front();
+					m_blockPendingRequests.pop_front();
+
+					if (!on_block_response(buf + 1 + sizeof(uint32_t), block_size, expected_id)) {
 						ban(DEFAULT_BAN_TIME);
 						server->remove_peer_from_list(this);
 						return false;
@@ -1853,8 +1852,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	memcpy(p, empty.h, HASH_SIZE);
 	p += HASH_SIZE;
 
-	++m_blockPendingRequests;
-	m_chainTipBlockRequest = true;
+	m_blockPendingRequests.push_back(empty);
 	m_lastBroadcastTimestamp = seconds_since_epoch();
 }
 
@@ -1916,7 +1914,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 		});
 }
 
-bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
+bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, const hash& expected_id)
 {
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
@@ -1933,10 +1931,11 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 		return false;
 	}
 
-	if (m_chainTipBlockRequest) {
-		m_chainTipBlockRequest = false;
+	const PoolBlock* block = server->get_block();
 
-		const uint64_t peer_height = server->get_block()->m_txinGenHeight;
+	// Chain tip request
+	if (expected_id.empty()) {
+		const uint64_t peer_height = block->m_txinGenHeight;
 		const uint64_t our_height = server->m_pool->miner_data().height;
 
 		if (peer_height + 2 < our_height) {
@@ -1949,11 +1948,15 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size)
 			server->send_peer_list_request(this, cur_time);
 		}
 	}
+	else if (block->m_sidechainId != expected_id) {
+		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent a wrong block: expected " << expected_id << ", got " << block->m_sidechainId);
+		return false;
+	}
 
 	const SideChain& side_chain = server->m_pool->side_chain();
 	const uint64_t max_time_delta = side_chain.precalcFinished() ? (side_chain.block_time() * side_chain.chain_window_size() * 4) : 0;
 
-	return handle_incoming_block_async(server->get_block(), max_time_delta);
+	return handle_incoming_block_async(block, max_time_delta);
 }
 
 bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact)
@@ -2352,7 +2355,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 			return;
 		}
 
-		++m_blockPendingRequests;
+		m_blockPendingRequests.push_back(id);
 	}
 }
 
