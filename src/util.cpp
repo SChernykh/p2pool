@@ -21,7 +21,7 @@
 #include <map>
 #include <thread>
 
-#ifndef _WIN32
+#if !defined(_WIN32) && defined(HAVE_SCHED)
 #include <sched.h>
 #endif
 
@@ -66,7 +66,7 @@ void make_thread_background()
 	SetThreadPriorityBoost(GetCurrentThread(), true);
 	SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE);
-#elif !defined(__APPLE__) && !defined(__FreeBSD__)
+#elif defined(HAVE_SCHED)
 	sched_param param;
 	param.sched_priority = 0;
 	if (sched_setscheduler(0, SCHED_IDLE, &param) != 0) {

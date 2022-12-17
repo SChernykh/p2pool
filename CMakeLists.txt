@@ -184,6 +184,7 @@ include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles("int main(){ return __builtin_clzll(1);}" HAVE_BUILTIN_CLZLL)
 check_cxx_source_compiles("#include <intrin.h>\n#pragma intrinsic(_BitScanReverse64)\nint main(){unsigned long r;_BitScanReverse64(&r,1);return r;}" HAVE_BITSCANREVERSE64)
+check_cxx_source_compiles("#include <sched.h>\nint main(){sched_param param;return sched_setscheduler(0, SCHED_IDLE, &param);}" HAVE_SCHED)
 
 if (HAVE_BUILTIN_CLZLL)
 	add_definitions(/DHAVE_BUILTIN_CLZLL)
@@ -191,6 +192,10 @@ endif()
 
 if (HAVE_BITSCANREVERSE64)
 	add_definitions(/DHAVE_BITSCANREVERSE64)
+endif()
+
+if (HAVE_SCHED)
+	add_definitions(/DHAVE_SCHED)
 endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
