@@ -723,6 +723,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 					}
 #endif
 					api_update_network_stats();
+					get_miner_data();
 				}
 			}
 			else {
@@ -992,6 +993,9 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 
 void p2pool::get_miner_data()
 {
+	if (m_getMinerDataPending) {
+		return;
+	}
 	m_getMinerDataPending = true;
 
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", m_params->m_rpcLogin, m_params->m_socks5Proxy,
@@ -1071,7 +1075,9 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	}
 
 	handle_miner_data(minerData);
-	download_block_headers(minerData.height);
+	if (m_serversStarted.load() == 0) {
+		download_block_headers(minerData.height);
+	}
 }
 
 bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
@@ -1509,9 +1515,7 @@ void p2pool::restart_zmq()
 		return;
 	}
 
-	if (!m_getMinerDataPending) {
-		get_miner_data();
-	}
+	get_miner_data();
 
 	delete m_ZMQReader;
 	m_ZMQReader = nullptr;
