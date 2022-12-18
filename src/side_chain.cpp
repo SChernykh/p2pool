@@ -566,9 +566,13 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			data = m_watchBlock;
 			block_found = true;
 
-			const uint64_t payout = block.get_payout(m_pool->params().m_wallet);
+			const Wallet& w = m_pool->params().m_wallet;
+			const uint64_t payout = block.get_payout(w);
 			if (payout) {
-				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
+				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightGreen() << w << log::LightCyan() << " got a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
+			}
+			else {
+				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightYellow() << w << log::LightCyan() << " didn't get a payout in block " << log::LightYellow() << data.height << log::LightCyan() << " because you had no shares in PPLNS window");
 			}
 		}
 	}

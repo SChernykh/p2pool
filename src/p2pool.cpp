@@ -405,10 +405,16 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		PoolBlock* block = side_chain().find_block(sidechain_id);
 		if (block) {
 			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by this p2pool" << BLOCK_FOUND);
-			const uint64_t payout = block->get_payout(params().m_wallet);
+
+			const Wallet& w = params().m_wallet;
+			const uint64_t payout = block->get_payout(w);
 			if (payout) {
-				LOGINFO(0, log::LightCyan() << "You received a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
+				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightGreen() << w << log::LightCyan() << " got a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
 			}
+			else {
+				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightYellow() << w << log::LightCyan() << " didn't get a payout in block " << log::LightYellow() << data.height << log::LightCyan() << " because you had no shares in PPLNS window");
+			}
+
 			api_update_block_found(&data, block);
 		}
 		else {
