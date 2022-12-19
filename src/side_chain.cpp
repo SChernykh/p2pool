@@ -33,6 +33,7 @@
 #include "params.h"
 #include "json_parsers.h"
 #include "crypto.h"
+#include "hardforks/hardforks.h"
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <fstream>
@@ -1042,6 +1043,37 @@ double SideChain::get_reward_share(const Wallet& w) const
 		}
 	}
 	return total_reward ? (static_cast<double>(reward) / static_cast<double>(total_reward)) : 0.0;
+}
+
+uint64_t SideChain::network_major_version(uint64_t height) const
+{
+	const hardfork_t* hard_forks;
+	size_t num_hard_forks;
+
+	switch (m_networkType)
+	{
+	case NetworkType::Mainnet:
+	default:
+		hard_forks = mainnet_hard_forks;
+		num_hard_forks = num_mainnet_hard_forks;
+		break;
+
+	case NetworkType::Testnet:
+		hard_forks = testnet_hard_forks;
+		num_hard_forks = num_testnet_hard_forks;
+		break;
+
+	case NetworkType::Stagenet:
+		hard_forks = stagenet_hard_forks;
+		num_hard_forks = num_stagenet_hard_forks;
+		break;
+	}
+
+	uint64_t result = 1;
+	for (size_t i = 1; (i < num_hard_forks) && (height >= hard_forks[i].height); ++i) {
+		result = hard_forks[i].version;
+	}
+	return result;
 }
 
 difficulty_type SideChain::total_hashes() const

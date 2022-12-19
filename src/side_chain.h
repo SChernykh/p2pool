@@ -65,6 +65,7 @@ public:
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
 	NetworkType network_type() const { return m_networkType; }
+	uint64_t network_major_version(uint64_t height) const;
 	FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }

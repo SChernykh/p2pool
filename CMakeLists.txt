@@ -25,6 +25,7 @@ include(cmake/flags.cmake)
 
 set(HEADERS
 	external/src/cryptonote/crypto-ops.h
+	external/src/hardforks/hardforks.h
 	src/block_cache.h
 	src/block_template.h
 	src/common.h
@@ -55,6 +56,7 @@ set(HEADERS
 set(SOURCES
 	external/src/cryptonote/crypto-ops-data.c
 	external/src/cryptonote/crypto-ops.c
+	external/src/hardforks/hardforks.cpp
 	src/block_cache.cpp
 	src/block_template.cpp
 	src/console_commands.cpp

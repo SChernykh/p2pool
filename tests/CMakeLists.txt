@@ -33,6 +33,7 @@ set(SOURCES
 	src/wallet_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
+	../external/src/hardforks/hardforks.cpp
 	../src/block_cache.cpp
 	../src/block_template.cpp
 	../src/console_commands.cpp
