@@ -38,6 +38,7 @@ private:
 	Impl* m_impl;
 	std::atomic<uint32_t> m_flushRunning;
 	std::atomic<uint32_t> m_storeIndex;
+	std::atomic<uint32_t> m_loadingStarted;
 };
 
 } // namespace p2pool

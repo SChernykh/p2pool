@@ -99,7 +99,7 @@ private:
 	void prune_old_blocks();
 
 	bool load_config(const std::string& filename);
-	bool check_config();
+	bool check_config() const;
 
 	mutable uv_rwlock_t m_sidechainLock;
 	std::atomic<PoolBlock*> m_chainTip;

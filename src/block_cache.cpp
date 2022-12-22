@@ -145,7 +145,7 @@ struct BlockCache::Impl : public nocopy_nomove
 
 #else
 	// Not implemented on other platforms
-	void flush() {}
+	void flush() { m_data = nullptr; }
 #endif
 
 	uint8_t* m_data = nullptr;
@@ -155,6 +155,7 @@ BlockCache::BlockCache()
 	: m_impl(new Impl())
 	, m_flushRunning(0)
 	, m_storeIndex(0)
+	, m_loadingStarted(0)
 {
 }
 
@@ -188,6 +189,11 @@ void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
 		return;
 	}
 
+	// Can be only called once
+	if (m_loadingStarted.exchange(1)) {
+		return;
+	}
+
 	LOGINFO(1, "loading cached blocks");
 
 	PoolBlock block;
@@ -212,7 +218,7 @@ void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
 
 void BlockCache::flush()
 {
-	if (m_flushRunning.exchange(1) == 0) {
+	if (m_flushRunning.exchange(1)) {
 		m_impl->flush();
 		m_flushRunning.store(0);
 	}

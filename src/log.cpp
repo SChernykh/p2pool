@@ -321,6 +321,7 @@ static Worker worker;
 
 NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 {
+	m_stackBuf[BUF_SIZE] = '\0';
 	m_buf[0] = static_cast<char>(severity);
 	m_pos = 3;
 

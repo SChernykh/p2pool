@@ -2024,7 +2024,7 @@ bool SideChain::load_config(const std::string& filename)
 	return true;
 }
 
-bool SideChain::check_config()
+bool SideChain::check_config() const
 {
 	if (m_poolName.empty()) {
 		LOGERR(1, "name can't be empty");

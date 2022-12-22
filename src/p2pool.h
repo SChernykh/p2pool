@@ -35,7 +35,7 @@ class p2pool_api;
 class ZMQReader;
 struct PoolBlock;
 
-class p2pool : public MinerCallbackHandler
+class p2pool : public MinerCallbackHandler, public nocopy_nomove
 {
 public:
 	p2pool(int argc, char* argv[]);
