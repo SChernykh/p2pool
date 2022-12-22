@@ -520,6 +520,8 @@ void StratumServer::show_workers()
 
 void StratumServer::reset_share_counters()
 {
+	WriteLock lock(m_hashrateDataLock);
+
 	m_cumulativeHashes = 0;
 	m_cumulativeHashesAtLastShare = 0;
 	m_cumulativeFoundSharesDiff = 0.0;
@@ -532,6 +534,8 @@ void StratumServer::print_stratum_status() const
 	int64_t dt_15m, dt_1h, dt_24h;
 
 	uint64_t hashes_since_last_share;
+	double average_effort, diff;
+	int shares_found;
 
 	{
 		ReadLock lock(m_hashrateDataLock);
@@ -553,24 +557,26 @@ void StratumServer::print_stratum_status() const
 
 		hashes_24h = head.m_cumulativeHashes - tail_24h.m_cumulativeHashes;
 		dt_24h = static_cast<int64_t>(head.m_timestamp - tail_24h.m_timestamp);
+
+		average_effort = 0.0;
+		diff = m_cumulativeFoundSharesDiff;
+		if (diff > 0.0) {
+			average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
+		}
+
+		shares_found = m_totalFoundShares;
 	}
 
 	const uint64_t hashrate_15m = (dt_15m > 0) ? (hashes_15m / dt_15m) : 0;
 	const uint64_t hashrate_1h  = (dt_1h  > 0) ? (hashes_1h  / dt_1h ) : 0;
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
-	double average_effort = 0.0;
-	const double diff = m_cumulativeFoundSharesDiff;
-	if (diff > 0.0) {
-		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
-	}
-
 	LOGINFO(0, "status" <<
 		"\nHashrate (15m est) = " << log::Hashrate(hashrate_15m) <<
 		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
 		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
 		"\nTotal hashes       = " << total_hashes <<
-		"\nShares found       = " << m_totalFoundShares <<
+		"\nShares found       = " << shares_found <<
 		"\nAverage effort     = " << average_effort << '%' <<
 		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
 		"\nConnections        = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
@@ -864,13 +870,17 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		client->m_score += GOOD_SHARE_POINTS;
 
-		const uint64_t n = server->m_cumulativeHashes + hashes;
 		const double diff = sidechain_difficulty.to_double();
-		share->m_effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
-		server->m_cumulativeHashesAtLastShare = n;
+		{
+			WriteLock lock(server->m_hashrateDataLock);
 
-		server->m_cumulativeFoundSharesDiff += diff;
-		++server->m_totalFoundShares;
+			const uint64_t n = server->m_cumulativeHashes + hashes;
+			share->m_effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
+			server->m_cumulativeHashesAtLastShare = n;
+
+			server->m_cumulativeFoundSharesDiff += diff;
+			++server->m_totalFoundShares;
+		}
 
 		pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce);
 	}
@@ -1192,6 +1202,8 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	int64_t dt_15m, dt_1h, dt_24h;
 
 	uint64_t hashes_since_last_share;
+	double average_effort, diff;
+	int shares_found;
 
 	{
 		ReadLock lock(m_hashrateDataLock);
@@ -1213,19 +1225,19 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 
 		hashes_24h = head.m_cumulativeHashes - tail_24h.m_cumulativeHashes;
 		dt_24h = static_cast<int64_t>(head.m_timestamp - tail_24h.m_timestamp);
+
+		average_effort = 0.0;
+		diff = m_cumulativeFoundSharesDiff;
+		if (diff > 0.0) {
+			average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
+		}
+
+		shares_found = m_totalFoundShares;
 	}
 
 	const uint64_t hashrate_15m = (dt_15m > 0) ? (hashes_15m / dt_15m) : 0;
 	const uint64_t hashrate_1h  = (dt_1h  > 0) ? (hashes_1h  / dt_1h ) : 0;
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
-
-	double average_effort = 0.0;
-	const double diff = m_cumulativeFoundSharesDiff;
-	if (diff > 0.0) {
-		average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
-	}
-
-	int shares_found = m_totalFoundShares;
 
 	double current_effort = static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double();
 
