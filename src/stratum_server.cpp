@@ -420,6 +420,13 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 1;
 		share->m_highEnoughDifficulty = sidechain_diff.check_pow(resultHash);
 
+		// Don't count shares that were found during sync
+		const SideChain& side_chain = m_pool->side_chain();
+		const PoolBlock* tip = side_chain.chainTip();
+		if (tip && (sidechain_height + side_chain.chain_window_size() < tip->m_sidechainHeight)) {
+			share->m_highEnoughDifficulty = false;
+		}
+
 		update_auto_diff(client, share->m_timestamp, share->m_hashes);
 
 		// If this share is below sidechain difficulty, process it in this thread because it'll be quick
