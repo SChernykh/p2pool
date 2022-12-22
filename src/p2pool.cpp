@@ -627,7 +627,9 @@ void p2pool::update_block_template_async(bool is_alternative_block)
 		return;
 	}
 
-	m_isAlternativeBlock = is_alternative_block;
+	if (is_alternative_block) {
+		m_isAlternativeBlock = true;
+	}
 
 	const int err = uv_async_send(&m_blockTemplateAsync);
 	if (err) {
