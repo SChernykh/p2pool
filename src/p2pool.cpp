@@ -575,8 +575,8 @@ void p2pool::submit_block() const
 
 				const char* error_msg = nullptr;
 
-				auto it = doc.FindMember("message");
-				if (it != doc.MemberEnd() && it->value.IsString()) {
+				auto it = err.FindMember("message");
+				if (it != err.MemberEnd() && it->value.IsString()) {
 					error_msg = it->value.GetString();
 				}
 
