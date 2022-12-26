@@ -160,7 +160,7 @@ private:
 #define putenv _putenv
 #endif
 
-		const uint32_t N = std::max(std::min(std::thread::hardware_concurrency(), 4U), 8U);
+		const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), 4U), 8U);
 
 		char buf[40] = {};
 		log::Stream s(buf);
