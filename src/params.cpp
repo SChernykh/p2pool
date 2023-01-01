@@ -19,6 +19,11 @@
 #include "params.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include <stdlib.h>
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+#endif
 
 void p2pool_usage();
 
@@ -26,6 +31,11 @@ namespace p2pool {
 
 Params::Params(int argc, char* argv[])
 {
+	const char* no_color = getenv("NO_COLOR");
+	if (no_color && *no_color) {
+		log::CONSOLE_COLORS = false;
+	}
+
 	for (int i = 1; i < argc; ++i) {
 		bool ok = false;
 
