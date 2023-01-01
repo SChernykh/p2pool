@@ -21,6 +21,11 @@
 #include <ctime>
 #include <fstream>
 #include <thread>
+#include <stdlib.h>
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+#endif
 
 static constexpr char log_category_prefix[] = "Log ";
 static constexpr char log_file_name[] = "p2pool.log";
@@ -85,6 +90,11 @@ public:
 			SetConsoleMode(hStdOut, dwConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 		}
 #endif
+
+		const char* no_color = getenv("NO_COLOR");
+		if (no_color && *no_color) {
+			CONSOLE_COLORS = false;
+		}
 
 		LOGINFO(0, "started");
 
