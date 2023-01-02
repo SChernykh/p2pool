@@ -244,6 +244,11 @@ void p2pool::handle_tx(TxMempoolData& tx)
 		", weight = " << log::Gray() << tx.weight << log::NoColor() <<
 		", fee = " << log::Gray() << static_cast<double>(tx.fee) / 1e6 << " um");
 
+	if (tx.fee >= HIGH_FEE_VALUE) {
+		LOGINFO(4, "high fee tx received: " << log::LightBlue() << tx.id << log::NoColor() << ", " << log::XMRAmount(tx.fee) << " - updating block template");
+		update_block_template_async();
+	}
+
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	m_blockTemplate->update(miner_data(), *m_mempool, &m_params->m_wallet);
 #endif

@@ -21,6 +21,8 @@
 
 namespace p2pool {
 
+constexpr uint64_t HIGH_FEE_VALUE = 6000000000ULL;
+
 class p2pool;
 
 class Mempool : public nocopy_nomove
