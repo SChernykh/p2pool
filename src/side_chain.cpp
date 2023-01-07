@@ -586,7 +586,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	return true;
 }
 
-void SideChain::add_block(const PoolBlock& block)
+bool SideChain::add_block(const PoolBlock& block)
 {
 	LOGINFO(3, "add_block: height = " << block.m_sidechainHeight <<
 		", id = " << block.m_sidechainId <<
@@ -620,7 +620,7 @@ void SideChain::add_block(const PoolBlock& block)
 		);
 
 		delete new_block;
-		return;
+		return false;
 	}
 
 	m_blocksByHeight[new_block->m_sidechainHeight].push_back(new_block);
@@ -643,6 +643,8 @@ void SideChain::add_block(const PoolBlock& block)
 	else {
 		verify_loop(new_block);
 	}
+
+	return true;
 }
 
 PoolBlock* SideChain::find_block(const hash& id) const

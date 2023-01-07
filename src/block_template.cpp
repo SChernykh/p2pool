@@ -1115,7 +1115,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	return m_blockTemplateBlob;
 }
 
-void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
 	WriteLock lock(m_lock);
 
@@ -1154,17 +1154,26 @@ void BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		m_poolBlockTemplate->m_verified = true;
 		if (!m_sidechain->block_seen(*m_poolBlockTemplate)) {
 			m_poolBlockTemplate->m_wantBroadcast = true;
-			m_sidechain->add_block(*m_poolBlockTemplate);
+			const bool result = m_sidechain->add_block(*m_poolBlockTemplate);
+			if (!result) {
+				LOGWARN(3, "failed to submit a share: add_block failed for template id " << template_id);
+			}
+			return result;
 		}
-		return;
+
+		const PoolBlock* b = m_poolBlockTemplate;
+		LOGWARN(3, "failed to submit a share: template id " << template_id << ", block " << b->m_sidechainId << ", nonce = " << b->m_nonce << ", extra_nonce = " << b->m_extraNonce << " was already added before");
+		return false;
 	}
 
 	BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		old->submit_sidechain_block(template_id, nonce, extra_nonce);
-		return;
+		return old->submit_sidechain_block(template_id, nonce, extra_nonce);
 	}
+
+	LOGWARN(3, "failed to submit a share: template id " << template_id << " is too old/out of range, current template id is " << m_templateId);
+	return false;
 }
 
 } // namespace p2pool

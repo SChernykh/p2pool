@@ -176,6 +176,7 @@ private:
 
 	double m_cumulativeFoundSharesDiff;
 	uint32_t m_totalFoundShares;
+	uint32_t m_totalFailedShares;
 
 	uint64_t m_apiLastUpdateTime;
 

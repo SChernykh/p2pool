@@ -619,10 +619,10 @@ void p2pool::submit_block() const
 		});
 }
 
-void p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+bool p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
 	LOGINFO(3, "submit_sidechain_block: template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
-	m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce);
+	return m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce);
 }
 
 void p2pool::update_block_template_async(bool is_alternative_block)

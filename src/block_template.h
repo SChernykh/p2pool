@@ -53,7 +53,7 @@ public:
 	FORCEINLINE uint64_t height() const { return m_height; }
 	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }
 
-	void submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
 	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
