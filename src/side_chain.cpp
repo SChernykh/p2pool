@@ -316,8 +316,10 @@ P2PServer* SideChain::p2pServer() const
 	return m_pool ? m_pool->p2p_server() : nullptr;
 }
 
-bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares) const
+bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, bool quiet) const
 {
+	const int L = quiet ? 6 : 3;
+
 	shares.clear();
 	shares.reserve(m_chainWindowSize * 2);
 
@@ -325,14 +327,34 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 	uint64_t block_depth = 0;
 	const PoolBlock* cur = tip;
+
+	difficulty_type mainchain_diff
+#ifdef P2POOL_UNIT_TESTS
+		= m_testMainChainDiff
+#endif
+	;
+
+	if (m_pool && !tip->m_parent.empty()) {
+		const uint64_t h = p2pool::get_seed_height(tip->m_txinGenHeight);
+		if (!m_pool->get_difficulty_at_height(h, mainchain_diff)) {
+			LOGWARN(L, "get_shares: couldn't get mainchain difficulty for height = " << h);
+			return false;
+		}
+	}
+
+	// Dynamic PPLNS window starting from v2
+	// Limit PPLNS weight to 2x of the Monero difficulty (max 2 blocks per PPLNS window on average)
+	const difficulty_type max_pplns_weight = (tip->get_sidechain_version() > 1) ? (mainchain_diff * 2) : diff_max;
+	difficulty_type pplns_weight;
+
 	do {
 		MinerShare cur_share{ cur->m_difficulty, &cur->m_minerWallet };
 
 		for (const hash& uncle_id : cur->m_uncles) {
 			auto it = m_blocksById.find(uncle_id);
 			if (it == m_blocksById.end()) {
-				LOGWARN(3, "get_shares: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
-				LOGWARN(3, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+				LOGWARN(L, "get_shares: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
+				LOGWARN(L, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 				return false;
 			}
 
@@ -345,11 +367,28 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 			// Take some % of uncle's weight into this share
 			const difficulty_type uncle_penalty = uncle->m_difficulty * m_unclePenalty / 100;
+			const difficulty_type uncle_weight = uncle->m_difficulty - uncle_penalty;
+			const difficulty_type new_pplns_weight = pplns_weight + uncle_weight;
+
+			// Skip uncles that push PPLNS weight above the limit
+			if (new_pplns_weight > max_pplns_weight) {
+				continue;
+			}
+
 			cur_share.m_weight += uncle_penalty;
-			shares.emplace_back(uncle->m_difficulty - uncle_penalty, &uncle->m_minerWallet);
+
+			shares.emplace_back(uncle_weight, &uncle->m_minerWallet);
+			pplns_weight = new_pplns_weight;
 		}
 
+		// Always add non-uncle shares even if PPLNS weight goes above the limit
 		shares.push_back(cur_share);
+		pplns_weight += cur_share.m_weight;
+
+		// One non-uncle share can go above the limit, but it will also guarantee that "shares" is never empty
+		if (pplns_weight > max_pplns_weight) {
+			break;
+		}
 
 		++block_depth;
 		if (block_depth >= m_chainWindowSize) {
@@ -363,8 +402,8 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 		auto it = m_blocksById.find(cur->m_parent);
 		if (it == m_blocksById.end()) {
-			LOGWARN(3, "get_shares: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
-			LOGWARN(3, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+			LOGWARN(L, "get_shares: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
+			LOGWARN(L, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return false;
 		}
 
@@ -390,50 +429,6 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	shares.resize(k + 1);
 
 	LOGINFO(6, "get_shares: " << k + 1 << " unique wallets in PPLNS window");
-	return true;
-}
-
-bool SideChain::get_wallets(const PoolBlock* tip, std::vector<const Wallet*>& wallets) const
-{
-	// Collect wallets from each block in the PPLNS window, starting from the "tip"
-	wallets.clear();
-	wallets.reserve(m_chainWindowSize * 2);
-
-	uint64_t block_depth = 0;
-	const PoolBlock* cur = tip;
-
-	do {
-		wallets.push_back(&cur->m_minerWallet);
-
-		for (const hash& uncle_id : cur->m_uncles) {
-			auto it = m_blocksById.find(uncle_id);
-			if (it == m_blocksById.end()) {
-				return false;
-			}
-
-			// Skip uncles which are already out of PPLNS window
-			if (tip->m_sidechainHeight - it->second->m_sidechainHeight < m_chainWindowSize) {
-				wallets.push_back(&it->second->m_minerWallet);
-			}
-		}
-
-		++block_depth;
-		if ((block_depth >= m_chainWindowSize) || (cur->m_sidechainHeight == 0)) {
-			break;
-		}
-
-		auto it = m_blocksById.find(cur->m_parent);
-		if (it == m_blocksById.end()) {
-			return false;
-		}
-
-		cur = it->second;
-	} while (true);
-
-	// Remove duplicates
-	std::sort(wallets.begin(), wallets.end(), [](const Wallet* a, const Wallet* b) { return *a < *b; });
-	wallets.erase(std::unique(wallets.begin(), wallets.end(), [](const Wallet* a, const Wallet* b) { return *a == *b; }), wallets.end());
-
 	return true;
 }
 
@@ -2090,10 +2085,10 @@ void SideChain::launch_precalc(const PoolBlock* block)
 			if (b->m_precalculated) {
 				continue;
 			}
-			std::vector<const Wallet*> wallets;
-			if (get_wallets(b, wallets)) {
+			std::vector<MinerShare> shares;
+			if (get_shares(b, shares, true)) {
 				b->m_precalculated = true;
-				PrecalcJob* job = new PrecalcJob{ b, std::move(wallets) };
+				PrecalcJob* job = new PrecalcJob{ b, std::move(shares) };
 				{
 					MutexLock lock2(m_precalcJobsMutex);
 					m_precalcJobs.push_back(job);
@@ -2130,20 +2125,20 @@ void SideChain::precalc_worker()
 			uint8_t t[HASH_SIZE * 2 + sizeof(size_t)];
 			memcpy(t, job->b->m_txkeySec.h, HASH_SIZE);
 
-			for (size_t i = 0, n = job->wallets.size(); i < n; ++i) {
-				memcpy(t + HASH_SIZE, job->wallets[i]->view_public_key().h, HASH_SIZE);
+			for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
+				memcpy(t + HASH_SIZE, job->shares[i].m_wallet->view_public_key().h, HASH_SIZE);
 				memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
 				if (!m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
-					job->wallets[i] = nullptr;
+					job->shares[i].m_wallet = nullptr;
 				}
 			}
 		}
 
-		for (size_t i = 0, n = job->wallets.size(); i < n; ++i) {
-			if (job->wallets[i]) {
+		for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
+			if (job->shares[i].m_wallet) {
 				hash eph_public_key;
 				uint8_t view_tag;
-				job->wallets[i]->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
+				job->shares[i].m_wallet->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
 			}
 		}
 		delete job;

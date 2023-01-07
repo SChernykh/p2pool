@@ -16,6 +16,8 @@ add_subdirectory(../external/src/RandomX RandomX)
 set(LIBS ${LIBS} randomx)
 add_definitions(-DWITH_RANDOMX)
 
+add_definitions(-DP2POOL_UNIT_TESTS)
+
 include(cmake/flags.cmake)
 
 set(HEADERS

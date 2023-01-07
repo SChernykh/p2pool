@@ -77,6 +77,10 @@ public:
 	const PoolBlock* chainTip() const { return m_chainTip; }
 	bool precalcFinished() const { return m_precalcFinished.load(); }
 
+#ifdef P2POOL_UNIT_TESTS
+	difficulty_type m_testMainChainDiff;
+#endif
+
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
 private:
@@ -85,9 +89,8 @@ private:
 	NetworkType m_networkType;
 
 private:
-	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares) const;
+	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, bool quiet = false) const;
 	bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
-	bool get_wallets(const PoolBlock* tip, std::vector<const Wallet*>& wallets) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(const PoolBlock* block);
@@ -134,7 +137,7 @@ private:
 	struct PrecalcJob
 	{
 		const PoolBlock* b;
-		std::vector<const Wallet*> wallets;
+		std::vector<MinerShare> shares;
 	};
 
 	uv_cond_t m_precalcJobsCond;

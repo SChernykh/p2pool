@@ -146,6 +146,14 @@ struct PoolBlock
 	// but P2Pool can switch to using only TXOUT_TO_TAGGED_KEY for miner payouts starting from v15
 	FORCEINLINE uint8_t get_tx_type() const { return (m_majorVersion < HARDFORK_VIEW_TAGS_VERSION) ? TXOUT_TO_KEY : TXOUT_TO_TAGGED_KEY; }
 
+	FORCEINLINE uint8_t get_sidechain_version() const
+	{
+		// P2Pool forks to v2 at 2023-03-18 21:00 UTC
+		// Different miners can have different timestamps,
+		// so a temporary mix of v1 and v2 blocks is allowed
+		return (m_timestamp >= 1679173200) ? 2 : 1;
+	}
+
 	typedef std::array<uint8_t, HASH_SIZE + NONCE_SIZE + EXTRA_NONCE_SIZE> full_id;
 
 	FORCEINLINE full_id get_full_id() const
