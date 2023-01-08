@@ -575,7 +575,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
 
-	m_poolBlockTemplate->serialize_sidechain_data();
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash();
 	const int sidechain_hash_offset = static_cast<int>(m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize) + 2;
 

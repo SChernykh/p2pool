@@ -115,6 +115,9 @@ struct PoolBlock
 	difficulty_type m_difficulty;
 	difficulty_type m_cumulativeDifficulty;
 
+	// Arbitrary extra data
+	uint8_t m_sidechainExtraBuf[16];
+
 	// HASH (see diagram in the comment above)
 	hash m_sidechainId;
 
@@ -146,7 +149,7 @@ struct PoolBlock
 	// but P2Pool can switch to using only TXOUT_TO_TAGGED_KEY for miner payouts starting from v15
 	FORCEINLINE uint8_t get_tx_type() const { return (m_majorVersion < HARDFORK_VIEW_TAGS_VERSION) ? TXOUT_TO_KEY : TXOUT_TO_TAGGED_KEY; }
 
-	FORCEINLINE uint8_t get_sidechain_version() const
+	FORCEINLINE int get_sidechain_version() const
 	{
 		// P2Pool forks to v2 at 2023-03-18 21:00 UTC
 		// Different miners can have different timestamps,

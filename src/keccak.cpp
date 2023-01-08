@@ -24,7 +24,7 @@ namespace p2pool {
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 #endif
 
-const uint64_t keccakf_rndc[24] = 
+static const uint64_t keccakf_rndc[24] = 
 {
 	0x0000000000000001, 0x0000000000008082, 0x800000000000808a,
 	0x8000000080008000, 0x000000000000808b, 0x0000000080000001,
@@ -36,7 +36,7 @@ const uint64_t keccakf_rndc[24] =
 	0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 };
 
-NOINLINE void keccakf(uint64_t* st)
+NOINLINE void keccakf(uint64_t (&st)[25])
 {
 	for (int round = 0; round < KeccakParams::ROUNDS; ++round) {
 		uint64_t bc[5];
@@ -148,22 +148,6 @@ NOINLINE void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25])
 	}
 
 	keccakf(st);
-}
-
-NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[32])
-{
-	uint64_t st[25] = {};
-	keccak_step(in, inlen, st);
-	keccak_finish(in, inlen, st);
-	memcpy(md, st, 32);
-}
-
-NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t(&md)[200])
-{
-	uint64_t st[25] = {};
-	keccak_step(in, inlen, st);
-	keccak_finish(in, inlen, st);
-	memcpy(md, st, sizeof(md));
 }
 
 } // namespace p2pool

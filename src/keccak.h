@@ -24,22 +24,28 @@ enum KeccakParams {
 	ROUNDS = 24,
 };
 
-void keccakf(uint64_t* st);
-void keccak(const uint8_t *in, int inlen, uint8_t (&md)[32]);
-void keccak(const uint8_t *in, int inlen, uint8_t (&md)[200]);
-
+void keccakf(uint64_t (&st)[25]);
 void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25]);
 void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25]);
+
+template<size_t N>
+FORCEINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[N])
+{
+	static_assert((N == 32) || (N == 200), "invalid size");
+
+	uint64_t st[25] = {};
+	keccak_step(in, inlen, st);
+	keccak_finish(in, inlen, st);
+	memcpy(md, st, N);
+}
 
 template<typename T>
 FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
 {
-	uint64_t st[25];
+	uint64_t st[25] = {};
 
 	const int rsiz = sizeof(st) == mdlen ? KeccakParams::HASH_DATA_AREA : 200 - 2 * mdlen;
 	const int rsizw = rsiz / 8;
-
-	memset(st, 0, sizeof(st));
 
 	int offset = 0;
 

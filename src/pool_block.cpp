@@ -43,6 +43,7 @@ PoolBlock::PoolBlock()
 	, m_sidechainHeight(0)
 	, m_difficulty{}
 	, m_cumulativeDifficulty{}
+	, m_sidechainExtraBuf{}
 	, m_sidechainId{}
 	, m_depth(0)
 	, m_verified(false)
@@ -96,6 +97,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_sidechainHeight = b.m_sidechainHeight;
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
+	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
 	m_depth = b.m_depth;
 	m_verified = b.m_verified;
@@ -251,6 +253,10 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
+
+	if (get_sidechain_version() > 1) {
+		data.insert(data.end(), m_sidechainExtraBuf, m_sidechainExtraBuf + sizeof(m_sidechainExtraBuf));
+	}
 
 #if POOL_BLOCK_DEBUG
 	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {

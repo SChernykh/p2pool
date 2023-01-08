@@ -317,6 +317,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
 
+		const int sidechain_version = get_sidechain_version();
+		if (sidechain_version > 1) {
+			READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
+		}
+
 #undef READ_BYTE
 #undef EXPECT_BYTE
 #undef READ_VARINT
