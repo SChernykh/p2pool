@@ -134,7 +134,7 @@ bool check_keys(const hash& pub, const hash& sec)
 
 static FORCEINLINE void hash_to_scalar(const uint8_t* data, int length, uint8_t (&res)[HASH_SIZE])
 {
-	keccak(data, length, res, HASH_SIZE);
+	keccak(data, length, res);
 	sc_reduce32(res);
 }
 
@@ -416,7 +416,7 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 	writeVarint(output_index, [&p](uint8_t b) { *(p++) = b; });
 
 	hash view_tag_full;
-	keccak(buf, static_cast<int>(p - buf), view_tag_full.h, HASH_SIZE);
+	keccak(buf, static_cast<int>(p - buf), view_tag_full.h);
 	view_tag = view_tag_full.h[0];
 }
 

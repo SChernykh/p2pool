@@ -910,7 +910,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// Calculate miner transaction hash
 	hash result;
-	keccak(hashes, sizeof(hashes), result.h, HASH_SIZE);
+	keccak(hashes, sizeof(hashes), result.h);
 
 	return result;
 }
@@ -929,7 +929,7 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	}
 	else if (count == 2) {
 		m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), h + HASH_SIZE, h + HASH_SIZE * 2);
-		keccak(h, HASH_SIZE * 2, root_hash.h, HASH_SIZE);
+		keccak(h, HASH_SIZE * 2, root_hash.h);
 	}
 	else {
 		size_t i, j, cnt;
@@ -941,11 +941,14 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 		std::vector<uint8_t> ints(cnt * HASH_SIZE);
 		memcpy(ints.data(), h, (cnt * 2 - count) * HASH_SIZE);
 
+		hash tmp;
+
 		for (i = cnt * 2 - count, j = cnt * 2 - count; j < cnt; i += 2, ++j) {
 			if (i == 0) {
 				m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), h + HASH_SIZE, h + HASH_SIZE * 2);
 			}
-			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, ints.data() + j * HASH_SIZE, HASH_SIZE);
+			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+			memcpy(ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 		}
 
 		while (cnt > 2) {
@@ -954,12 +957,13 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 				if (i == 0) {
 					m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), ints.data() + HASH_SIZE, ints.data() + HASH_SIZE * 2);
 				}
-				keccak(ints.data() + i * HASH_SIZE, HASH_SIZE * 2, ints.data() + j * HASH_SIZE, HASH_SIZE);
+				keccak(ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+				memcpy(ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 			}
 		}
 
 		m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), ints.data() + HASH_SIZE, ints.data() + HASH_SIZE * 2);
-		keccak(ints.data(), HASH_SIZE * 2, root_hash.h, HASH_SIZE);
+		keccak(ints.data(), HASH_SIZE * 2, root_hash.h);
 	}
 }
 
@@ -1039,7 +1043,7 @@ uint32_t BlockTemplate::get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* b
 		memcpy(h, root_hash.h, HASH_SIZE);
 		memcpy(h + HASH_SIZE, m_merkleTreeMainBranch.data() + i, HASH_SIZE);
 
-		keccak(h, HASH_SIZE * 2, root_hash.h, HASH_SIZE);
+		keccak(h, HASH_SIZE * 2, root_hash.h);
 	}
 
 	memcpy(p, root_hash.h, HASH_SIZE);

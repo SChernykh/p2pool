@@ -25,8 +25,11 @@ enum KeccakParams {
 };
 
 void keccakf(uint64_t* st);
-void keccak(const uint8_t *in, int inlen, uint8_t *md, int mdlen);
-void keccak(const uint8_t* in, int inlen, uint8_t (&md)[200]);
+void keccak(const uint8_t *in, int inlen, uint8_t (&md)[32]);
+void keccak(const uint8_t *in, int inlen, uint8_t (&md)[200]);
+
+void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25]);
+void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25]);
 
 template<typename T>
 FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)

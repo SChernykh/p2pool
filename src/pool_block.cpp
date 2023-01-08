@@ -310,18 +310,22 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		memcpy(blob, mainchain_data.data(), blob_size);
 
 		const uint8_t* miner_tx = mainchain_data.data() + header_size;
-		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, reinterpret_cast<uint8_t*>(hashes), HASH_SIZE);
+		hash tmp;
+		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, tmp.h);
+		memcpy(hashes, tmp.h, HASH_SIZE);
 
 		count = m_transactions.size();
 		uint8_t* h = reinterpret_cast<uint8_t*>(m_transactions.data());
 
-		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, h, HASH_SIZE);
+		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
+		memcpy(h, tmp.h, HASH_SIZE);
 
 		if (count == 1) {
 			memcpy(blob + blob_size, h, HASH_SIZE);
 		}
 		else if (count == 2) {
-			keccak(h, HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
+			keccak(h, HASH_SIZE * 2, tmp.h);
+			memcpy(blob + blob_size, tmp.h, HASH_SIZE);
 		}
 		else {
 			size_t i, j, cnt;
@@ -334,17 +338,20 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 			memcpy(tmp_ints.data(), h, (cnt * 2 - count) * HASH_SIZE);
 
 			for (i = cnt * 2 - count, j = cnt * 2 - count; j < cnt; i += 2, ++j) {
-				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
+				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+				memcpy(tmp_ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 			}
 
 			while (cnt > 2) {
 				cnt >>= 1;
 				for (i = 0, j = 0; j < cnt; i += 2, ++j) {
-					keccak(tmp_ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
+					keccak(tmp_ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+					memcpy(tmp_ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 				}
 			}
 
-			keccak(tmp_ints.data(), HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
+			keccak(tmp_ints.data(), HASH_SIZE * 2, tmp.h);
+			memcpy(blob + blob_size, tmp.h, HASH_SIZE);
 		}
 	}
 	blob_size += HASH_SIZE;

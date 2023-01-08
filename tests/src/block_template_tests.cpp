@@ -77,7 +77,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 1);
 
 	hash blobs_hash;
-	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h, HASH_SIZE);
+	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("e9154971a27c412175562d23ab458b0d3cf780a8bcecf62ff3f667fed9d3bc1d"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions

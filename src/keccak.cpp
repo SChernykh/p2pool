@@ -115,14 +115,10 @@ NOINLINE void keccakf(uint64_t* st)
 	}
 }
 
-NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t* md, int mdlen)
+NOINLINE void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25])
 {
-	uint64_t st[25];
-
-	const int rsiz = sizeof(st) == mdlen ? KeccakParams::HASH_DATA_AREA : 200 - 2 * mdlen;
-	const int rsizw = rsiz / 8;
-
-	memset(st, 0, sizeof(st));
+	constexpr int rsiz = KeccakParams::HASH_DATA_AREA;
+	constexpr int rsizw = rsiz / 8;
 
 	for (; inlen >= rsiz; inlen -= rsiz, in += rsiz) {
 		for (int i = 0; i < rsizw; i++) {
@@ -130,6 +126,14 @@ NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t* md, int mdlen)
 		}
 		keccakf(st);
 	}
+}
+
+NOINLINE void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25])
+{
+	constexpr int rsiz = KeccakParams::HASH_DATA_AREA;
+	constexpr int rsizw = rsiz / 8;
+
+	keccak_step(in, inlen, st);
 
 	// last block and padding
 	alignas(8) uint8_t temp[144];
@@ -144,13 +148,22 @@ NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t* md, int mdlen)
 	}
 
 	keccakf(st);
-
-	memcpy(md, st, mdlen);
 }
 
-void keccak(const uint8_t *in, int inlen, uint8_t (&md)[200])
+NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[32])
 {
-	keccak(in, inlen, md, 200);
+	uint64_t st[25] = {};
+	keccak_step(in, inlen, st);
+	keccak_finish(in, inlen, st);
+	memcpy(md, st, 32);
+}
+
+NOINLINE void keccak(const uint8_t* in, int inlen, uint8_t(&md)[200])
+{
+	uint64_t st[25] = {};
+	keccak_step(in, inlen, st);
+	keccak_finish(in, inlen, st);
+	memcpy(md, st, sizeof(md));
 }
 
 } // namespace p2pool

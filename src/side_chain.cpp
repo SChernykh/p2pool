@@ -141,7 +141,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		}
 
 		hash id;
-		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h, HASH_SIZE);
+		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h);
 		randomx_release_cache(cache);
 		m_consensusId.assign(id.h, id.h + HASH_SIZE);
 #else
