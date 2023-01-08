@@ -1653,6 +1653,11 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 
 	const PoolBlock* tip = m_chainTip;
 
+	if (block == tip) {
+		LOGINFO(5, "Trying to update chain tip to the same block again. Ignoring it.");
+		return;
+	}
+
 	bool is_alternative;
 	if (is_longer_chain(tip, block, is_alternative)) {
 		difficulty_type diff;
