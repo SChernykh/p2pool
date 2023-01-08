@@ -111,6 +111,10 @@ private:
 	uint64_t m_minerTxKeccakState[25];
 	size_t m_minerTxKeccakStateInputLength;
 
+	std::vector<uint8_t> m_sidechainHashBlob;
+	uint64_t m_sidechainHashKeccakState[25];
+	size_t m_sidechainHashInputLength;
+
 	std::vector<uint8_t> m_blockHeader;
 	std::vector<uint8_t> m_minerTxExtra;
 	std::vector<uint8_t> m_transactionHashes;
