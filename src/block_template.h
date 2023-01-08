@@ -56,7 +56,11 @@ public:
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
+
+#ifdef P2POOL_UNIT_TESTS
 	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
+	FORCEINLINE std::mt19937_64& rng() { return m_rng; }
+#endif
 
 private:
 	SideChain* m_sidechain;
@@ -64,7 +68,7 @@ private:
 
 private:
 	int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
-	hash calc_sidechain_hash() const;
+	hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
 	hash calc_miner_tx_hash(uint32_t extra_nonce) const;
 	void calc_merkle_tree_main_branch();
 
@@ -76,6 +80,7 @@ private:
 	std::atomic<uint64_t> m_lastUpdated;
 
 	std::vector<uint8_t> m_blockTemplateBlob;
+	std::vector<uint8_t> m_fullDataBlob;
 	std::vector<uint8_t> m_merkleTreeMainBranch;
 
 	size_t m_blockHeaderSize;

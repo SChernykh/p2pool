@@ -387,13 +387,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			},
 			static_cast<int>(size + outputs_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
 
-		if (check != m_sidechainId) {
-			return __LINE__;
-		}
-
 #if POOL_BLOCK_DEBUG
 		m_sideChainDataDebug.assign(sidechain_data_begin, data_end);
 #endif
+
+		if (check != m_sidechainId) {
+			return __LINE__;
+		}
 	}
 	catch (std::exception& e) {
 		const char* msg = e.what();

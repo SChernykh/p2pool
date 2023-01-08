@@ -28,6 +28,8 @@
 
 namespace p2pool {
 
+static FORCEINLINE constexpr int pool_block_debug() { return POOL_BLOCK_DEBUG; }
+
 class RandomX_Hasher_Base;
 class SideChain;
 
@@ -116,7 +118,7 @@ struct PoolBlock
 	difficulty_type m_cumulativeDifficulty;
 
 	// Arbitrary extra data
-	uint8_t m_sidechainExtraBuf[16];
+	uint32_t m_sidechainExtraBuf[4];
 
 	// HASH (see diagram in the comment above)
 	hash m_sidechainId;

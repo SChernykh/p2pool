@@ -255,7 +255,8 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	writeVarint(m_cumulativeDifficulty.hi, data);
 
 	if (get_sidechain_version() > 1) {
-		data.insert(data.end(), m_sidechainExtraBuf, m_sidechainExtraBuf + sizeof(m_sidechainExtraBuf));
+		const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
+		data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));
 	}
 
 #if POOL_BLOCK_DEBUG

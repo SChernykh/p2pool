@@ -32,6 +32,7 @@ TEST(block_template, update)
 
 	SideChain sidechain(nullptr, NetworkType::Mainnet);
 	BlockTemplate tpl(&sidechain, nullptr);
+	tpl.rng().seed(123);
 
 	auto H = [](const char* s)
 	{
@@ -59,7 +60,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, &wallet);
 
 	const PoolBlock* b = tpl.pool_block_template();
-	ASSERT_EQ(b->m_sidechainId, H("ba055380a4be77577504241e0c912e9492ddcf5cc1a52f665d8f04bf3d68ef3d"));
+	ASSERT_EQ(b->m_sidechainId, H("d98c48f1137eac26d31ae1d94cce12625c519fc79d1b153035418a1715f6be61"));
 
 	std::vector<uint8_t> blobs;
 	uint64_t height;
@@ -78,7 +79,7 @@ TEST(block_template, update)
 
 	hash blobs_hash;
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("a3e18f64b6a45c8f559c9c56d318fe4d31ef95fb52e149e6658e5a22810aabae"));
+	ASSERT_EQ(blobs_hash, H("c828b3ef21a28535373aba95ece7429b4abb4c687883722f901eeaf110a9ebaa"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
 	for (uint64_t i = 0; i < 512; ++i) {
