@@ -59,6 +59,8 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	, m_txkeySec{}
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
+	, m_minerTxKeccakState{}
+	, m_minerTxKeccakStateInputLength(0)
 	, m_rng(RandomDeviceSeed::instance)
 {
 	// Diffuse the initial state in case it has low quality
@@ -135,6 +137,9 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_txkeySec = b.m_txkeySec;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
 	m_finalReward = b.m_finalReward;
+
+	memcpy(m_minerTxKeccakState, b.m_minerTxKeccakState, sizeof(m_minerTxKeccakState));
+	m_minerTxKeccakStateInputLength = b.m_minerTxKeccakStateInputLength;
 
 	m_minerTx.clear();
 	m_blockHeader.clear();
@@ -608,6 +613,22 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	}
 #endif
 
+	memset(m_minerTxKeccakState, 0, sizeof(m_minerTxKeccakState));
+
+	const size_t extra_nonce_offset = m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate;
+	if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
+		// Miner transaction is big enough to cache keccak state up to extra_nonce
+		m_minerTxKeccakStateInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;
+
+		const uint8_t* in = m_blockTemplateBlob.data() + m_minerTxOffsetInTemplate;
+		int inlen = static_cast<int>(m_minerTxKeccakStateInputLength);
+
+		keccak_step(in, inlen, m_minerTxKeccakState);
+	}
+	else {
+		m_minerTxKeccakStateInputLength = 0;
+	}
+
 	const hash minerTx_hash = calc_miner_tx_hash(0);
 
 	memcpy(m_transactionHashes.data(), minerTx_hash.h, HASH_SIZE);
@@ -879,7 +900,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	const uint8_t* data = m_blockTemplateBlob.data() + m_minerTxOffsetInTemplate;
 
-	const int extra_nonce_offset = static_cast<int>(m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate);
+	const size_t extra_nonce_offset = m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate;
 	const uint8_t extra_nonce_buf[EXTRA_NONCE_SIZE] = {
 		static_cast<uint8_t>(extra_nonce >> 0),
 		static_cast<uint8_t>(extra_nonce >> 8),
@@ -889,15 +910,43 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
-	keccak_custom([data, extra_nonce_offset, &extra_nonce_buf](int offset)
-		{
-			const uint32_t k = static_cast<uint32_t>(offset - extra_nonce_offset);
+	const size_t tx_size = m_minerTxSize - 1;
+
+	uint8_t tx_buf[288];
+	if ((m_minerTxKeccakStateInputLength <= extra_nonce_offset) && (m_minerTxKeccakStateInputLength < tx_size) && (tx_size - m_minerTxKeccakStateInputLength <= sizeof(tx_buf))) {
+		const int inlen = static_cast<int>(tx_size - m_minerTxKeccakStateInputLength);
+		memcpy(tx_buf, data + m_minerTxKeccakStateInputLength, inlen);
+		memcpy(tx_buf + extra_nonce_offset - m_minerTxKeccakStateInputLength, extra_nonce_buf, EXTRA_NONCE_SIZE);
+
+		uint64_t st[25];
+		memcpy(st, m_minerTxKeccakState, sizeof(st));
+		keccak_finish(tx_buf, inlen, st);
+		memcpy(hashes, st, HASH_SIZE);
+
+#if POOL_BLOCK_DEBUG
+		hash check;
+		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf](int offset) {
+			const uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(extra_nonce_offset));
 			if (k < EXTRA_NONCE_SIZE) {
 				return extra_nonce_buf[k];
 			}
 			return data[offset];
-		},
-		static_cast<int>(m_minerTxSize) - 1, hashes, HASH_SIZE);
+		}, static_cast<int>(tx_size), check.h, HASH_SIZE);
+
+		if (memcmp(hashes, check.h, HASH_SIZE) != 0) {
+			LOGERR(1, "calc_miner_tx_hash fast path is broken. Fix the code!");
+		}
+#endif
+	}
+	else {
+		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf](int offset) {
+			const uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(extra_nonce_offset));
+			if (k < EXTRA_NONCE_SIZE) {
+				return extra_nonce_buf[k];
+			}
+			return data[offset];
+		}, static_cast<int>(tx_size), hashes, HASH_SIZE);
+	}
 
 	// 2. Base RCT, single 0 byte in miner tx
 	static constexpr uint8_t known_second_hash[HASH_SIZE] = {
