@@ -149,6 +149,8 @@ private:
 
 	std::atomic<bool> m_precalcFinished;
 
+	hash m_consensusHash;
+
 	void launch_precalc(const PoolBlock* block);
 	void precalc_worker();
 	void finish_precalc();

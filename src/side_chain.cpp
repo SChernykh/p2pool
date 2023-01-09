@@ -158,6 +158,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	m_consensusIdDisplayStr.assign(buf);
 	LOGINFO(1, "consensus ID = " << log::LightCyan() << m_consensusIdDisplayStr.c_str());
 
+	memcpy(m_consensusHash.h, m_consensusId.data(), HASH_SIZE);
+
 	uv_cond_init_checked(&m_precalcJobsCond);
 	uv_mutex_init_checked(&m_precalcJobsMutex);
 	m_precalcJobs.reserve(16);
@@ -217,7 +219,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_cumulativeDifficulty = m_minDifficulty;
 
 		if (sidechain_version > 1) {
-			block.m_txkeySecSeed = {};
+			block.m_txkeySecSeed = m_consensusHash;
 			get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 		}
 
@@ -327,6 +329,10 @@ P2PServer* SideChain::p2pServer() const
 
 bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, bool quiet) const
 {
+	if (tip->m_txkeySecSeed.empty()) {
+		LOGERR(1, "tx key seed is not set, fix the code!");
+	}
+
 	const int L = quiet ? 6 : 3;
 
 	shares.clear();
@@ -353,7 +359,8 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 	// Dynamic PPLNS window starting from v2
 	// Limit PPLNS weight to 2x of the Monero difficulty (max 2 blocks per PPLNS window on average)
-	const difficulty_type max_pplns_weight = (tip->get_sidechain_version() > 1) ? (mainchain_diff * 2) : diff_max;
+	const int sidechain_version = tip->get_sidechain_version();
+	const difficulty_type max_pplns_weight = (sidechain_version > 1) ? (mainchain_diff * 2) : diff_max;
 	difficulty_type pplns_weight;
 
 	do {
@@ -436,8 +443,17 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	}
 
 	shares.resize(k + 1);
-
 	LOGINFO(6, "get_shares: " << k + 1 << " unique wallets in PPLNS window");
+
+	// Shuffle shares
+	if (sidechain_version > 1) {
+		std::mt19937_64 rng(*reinterpret_cast<const uint64_t*>(tip->m_txkeySecSeed.h));
+
+		for (int64_t i = k; i > 0; --i) {
+			std::swap(shares[i], shares[rng() % (i + 1)]);
+		}
+	}
+
 	return true;
 }
 
@@ -1350,7 +1366,7 @@ void SideChain::verify(PoolBlock* block)
 			!block->m_uncles.empty() ||
 			(block->m_difficulty != m_minDifficulty) ||
 			(block->m_cumulativeDifficulty != m_minDifficulty) ||
-			((sidechain_version > 1) && !block->m_txkeySecSeed.empty()))
+			((sidechain_version > 1) && (block->m_txkeySecSeed != m_consensusHash)))
 		{
 			block->m_invalid = true;
 		}

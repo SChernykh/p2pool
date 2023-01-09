@@ -224,7 +224,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
 
 #if POOL_BLOCK_DEBUG
-	if (!m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
+	if (!nonce && !extra_nonce && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
 		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
 		panic();
 	}
