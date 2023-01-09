@@ -1210,23 +1210,27 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 	return blob_size;
 }
 
-std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, size_t& nonce_offset, size_t& extra_nonce_offset) const
+std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_block_template_blob(template_id, nonce_offset, extra_nonce_offset);
+			return old->get_block_template_blob(template_id, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
 		}
 
 		nonce_offset = 0;
 		extra_nonce_offset = 0;
+		sidechain_id_offset = 0;
+		sidechain_id = {};
 		return std::vector<uint8_t>();
 	}
 
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
+	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2;
+	sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
 	return m_blockTemplateBlob;
 }
 

@@ -517,19 +517,26 @@ void p2pool::submit_block() const
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
+	size_t sidechain_id_offset = 0;
+	hash sidechain_id;
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		LOGINFO(0, "submit_block: height = " << height << ", template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
 
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, nonce_offset, extra_nonce_offset);
+		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
+			<< ", template id = " << submit_data.template_id
+			<< ", nonce = " << submit_data.nonce
+			<< ", extra_nonce = " << submit_data.extra_nonce
+			<< ", id = " << sidechain_id);
+
 		if (submit_data.blob.empty()) {
 			LOGERR(0, "submit_block: couldn't find block template with id " << submit_data.template_id);
 			return;
 		}
 	}
 	else {
-		LOGINFO(0, "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
+		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
 		is_external = true;
 	}
 
@@ -543,26 +550,28 @@ void p2pool::submit_block() const
 	const uint32_t extra_nonce = submit_data.extra_nonce;
 
 	for (size_t i = 0; i < submit_data.blob.size(); ++i) {
-		char buf[16];
-
+		uint8_t b;
 		if (nonce_offset && nonce_offset <= i && i < nonce_offset + sizeof(submit_data.nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.nonce & 255);
+			b = submit_data.nonce & 255;
 			submit_data.nonce >>= 8;
 		}
 		else if (extra_nonce_offset && extra_nonce_offset <= i && i < extra_nonce_offset + sizeof(submit_data.extra_nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.extra_nonce & 255);
+			b = submit_data.extra_nonce & 255;
 			submit_data.extra_nonce >>= 8;
 		}
-		else {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.blob[i]);
+		else if (sidechain_id_offset && sidechain_id_offset <= i && i < sidechain_id_offset + HASH_SIZE) {
+			b = sidechain_id.h[i - sidechain_id_offset];
 		}
-
-		request.append(buf);
+		else {
+			b = submit_data.blob[i];
+		}
+		request.append(1, "0123456789abcdef"[b >> 4]);
+		request.append(1, "0123456789abcdef"[b & 15]);
 	}
 	request.append("\"]}");
 
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request, m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[height, diff, template_id, nonce, extra_nonce, is_external](const char* data, size_t size)
+		[height, diff, template_id, nonce, extra_nonce, &sidechain_id, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
@@ -589,7 +598,7 @@ void p2pool::submit_block() const
 					LOGWARN(3, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
 				}
 				else {
-					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce << ", id = " << sidechain_id);
 				}
 				return;
 			}
