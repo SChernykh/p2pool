@@ -924,7 +924,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	if (share->m_highEnoughDifficulty) {
 		const char* s = client->m_customUser;
-		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
+		LOGINFO(1, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
