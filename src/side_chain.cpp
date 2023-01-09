@@ -203,6 +203,7 @@ SideChain::~SideChain()
 
 void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
 {
+	const int sidechain_version = block.get_sidechain_version();
 	block.m_uncles.clear();
 
 	ReadLock lock(m_sidechainLock);
@@ -215,8 +216,18 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_difficulty = m_minDifficulty;
 		block.m_cumulativeDifficulty = m_minDifficulty;
 
+		if (sidechain_version > 1) {
+			block.m_txkeySecSeed = {};
+			get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
+		}
+
 		get_shares(&block, shares);
 		return;
+	}
+
+	if (sidechain_version > 1) {
+		block.m_txkeySecSeed = (block.m_prevId == tip->m_prevId) ? tip->m_txkeySecSeed : tip->calculate_tx_key_seed();
+		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 	}
 
 	block.m_parent = tip->m_sidechainId;
@@ -1331,12 +1342,15 @@ void SideChain::verify_loop(PoolBlock* block)
 
 void SideChain::verify(PoolBlock* block)
 {
+	const int sidechain_version = block->get_sidechain_version();
+
 	// Genesis block
 	if (block->m_sidechainHeight == 0) {
 		if (!block->m_parent.empty() ||
 			!block->m_uncles.empty() ||
 			(block->m_difficulty != m_minDifficulty) ||
-			(block->m_cumulativeDifficulty != m_minDifficulty))
+			(block->m_cumulativeDifficulty != m_minDifficulty) ||
+			((sidechain_version > 1) && !block->m_txkeySecSeed.empty()))
 		{
 			block->m_invalid = true;
 		}
@@ -1382,12 +1396,24 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
+	if (sidechain_version > 1) {
+		// Check m_txkeySecSeed
+		const hash h = (block->m_prevId == parent->m_prevId) ? parent->m_txkeySecSeed : parent->calculate_tx_key_seed();
+		if (block->m_txkeySecSeed != h) {
+			LOGWARN(3, "block " << block->m_sidechainId << " has invalid tx key seed: expected " << h << ", got " << block->m_txkeySecSeed);
+			block->m_verified = true;
+			block->m_invalid = true;
+			return;
+		}
+	}
+
 	const uint64_t expectedHeight = parent->m_sidechainHeight + 1;
 	if (block->m_sidechainHeight != expectedHeight) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight <<
 			" has wrong height: expected " << expectedHeight);
+		block->m_verified = true;
 		block->m_invalid = true;
 		return;
 	}

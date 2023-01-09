@@ -60,7 +60,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, &wallet);
 
 	const PoolBlock* b = tpl.pool_block_template();
-	ASSERT_EQ(b->m_sidechainId, H("e6fa454c10374439dcc9eee3198f6ba17a7a3764510569c3b963b31510b74780"));
+	ASSERT_EQ(b->m_sidechainId, H("3085dc0425d94fb2752e21e5d5a4fbad42105a189f9678cadabb69cf55a321ee"));
 
 	std::vector<uint8_t> blobs;
 	uint64_t height;
@@ -79,7 +79,7 @@ TEST(block_template, update)
 
 	hash blobs_hash;
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("fd0079d39d1739ded6e710192228276cbaa55eaabde7a26c38f8986709a030e4"));
+	ASSERT_EQ(blobs_hash, H("c1211e083d27ddb81eddb125af4f10b6df16efd418cf684f6d0e8e49a5ffaf3f"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
 	for (uint64_t i = 0; i < 512; ++i) {

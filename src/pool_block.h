@@ -137,8 +137,8 @@ struct PoolBlock
 
 	uint64_t m_localTimestamp;
 
-	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr) const;
-	std::vector<uint8_t> serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const;
+	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
+	std::vector<uint8_t> serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
 	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop, bool compact);
@@ -171,6 +171,8 @@ struct PoolBlock
 		memcpy(p + HASH_SIZE + NONCE_SIZE, &m_extraNonce, EXTRA_NONCE_SIZE);
 		return key;
 	}
+
+	hash calculate_tx_key_seed() const;
 };
 
 } // namespace p2pool

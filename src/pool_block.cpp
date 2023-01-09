@@ -122,13 +122,13 @@ PoolBlock::~PoolBlock()
 	uv_mutex_destroy(&m_lock);
 }
 
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	MutexLock lock(m_lock);
-	return serialize_mainchain_data_nolock(header_size, miner_tx_size, outputs_offset, outputs_blob_size);
+	return serialize_mainchain_data_nolock(header_size, miner_tx_size, outputs_offset, outputs_blob_size, nonce, extra_nonce);
 }
 
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
 	data.reserve(128 + m_outputs.size() * 39 + m_transactions.size() * HASH_SIZE);
@@ -138,7 +138,11 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	data.push_back(m_minorVersion);
 	writeVarint(m_timestamp, data);
 	data.insert(data.end(), m_prevId.h, m_prevId.h + HASH_SIZE);
-	data.insert(data.end(), reinterpret_cast<const uint8_t*>(&m_nonce), reinterpret_cast<const uint8_t*>(&m_nonce) + NONCE_SIZE);
+
+	if (!nonce) {
+		nonce = &m_nonce;
+	}
+	data.insert(data.end(), reinterpret_cast<const uint8_t*>(nonce), reinterpret_cast<const uint8_t*>(nonce) + NONCE_SIZE);
 
 	const size_t header_size0 = data.size();
 	if (header_size) {
@@ -191,7 +195,10 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	*(p++) = TX_EXTRA_NONCE;
 	*(p++) = static_cast<uint8_t>(extra_nonce_size);
 
-	memcpy(p, &m_extraNonce, EXTRA_NONCE_SIZE);
+	if (!extra_nonce) {
+		extra_nonce = &m_extraNonce;
+	}
+	memcpy(p, extra_nonce, EXTRA_NONCE_SIZE);
 	p += EXTRA_NONCE_SIZE;
 	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
 		memset(p, 0, extra_nonce_size - EXTRA_NONCE_SIZE);
@@ -232,7 +239,7 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 
 	MutexLock lock(m_lock);
 
-	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 20);
+	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 36);
 
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
@@ -317,7 +324,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		MutexLock lock(m_lock);
 
 		size_t header_size, miner_tx_size;
-		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data_nolock(&header_size, &miner_tx_size, nullptr, nullptr);
+		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data_nolock(&header_size, &miner_tx_size, nullptr, nullptr, nullptr, nullptr);
 
 		if (!header_size || !miner_tx_size || (mainchain_data.size() < header_size + miner_tx_size)) {
 			LOGERR(1, "tried to calculate PoW of uninitialized block");
@@ -403,6 +410,30 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 	}
 
 	return 0;
+}
+
+hash PoolBlock::calculate_tx_key_seed() const
+{
+	const char domain[] = "tx_key_seed";
+	const uint32_t zero = 0;
+
+	const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(nullptr, nullptr, nullptr, nullptr, &zero, &zero);
+	const std::vector<uint8_t> sidechain_data = serialize_sidechain_data();
+
+	hash result;
+	keccak_custom([&domain, &mainchain_data, &sidechain_data](int offset) -> uint8_t {
+		size_t k = offset;
+
+		if (k < sizeof(domain)) return domain[k];
+		k -= sizeof(domain);
+
+		if (k < mainchain_data.size()) return mainchain_data[k];
+		k -= mainchain_data.size();
+
+		return sidechain_data[k];
+	}, static_cast<int>(sizeof(domain) + mainchain_data.size() + sidechain_data.size()), result.h, HASH_SIZE);
+
+	return result;
 }
 
 } // namespace p2pool
