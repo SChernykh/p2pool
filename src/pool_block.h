@@ -106,6 +106,7 @@ struct PoolBlock
 
 	// Transaction secret key
 	// Required to check that pub keys in the miner transaction pay out to correct miner wallet addresses
+	hash m_txkeySecSeed;
 	hash m_txkeySec;
 
 	// Side-chain parent and uncle blocks

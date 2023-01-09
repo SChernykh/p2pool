@@ -38,6 +38,7 @@ PoolBlock::PoolBlock()
 	, m_txkeyPub{}
 	, m_extraNonceSize(0)
 	, m_extraNonce(0)
+	, m_txkeySecSeed{}
 	, m_txkeySec{}
 	, m_parent{}
 	, m_sidechainHeight(0)
@@ -91,6 +92,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_extraNonce = b.m_extraNonce;
 	m_transactions = b.m_transactions;
 	m_minerWallet = b.m_minerWallet;
+	m_txkeySecSeed = b.m_txkeySecSeed;
 	m_txkeySec = b.m_txkeySec;
 	m_parent = b.m_parent;
 	m_uncles = b.m_uncles;
@@ -235,9 +237,18 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
 
+	const int sidechain_version = get_sidechain_version();
+
 	data.insert(data.end(), spend.h, spend.h + HASH_SIZE);
 	data.insert(data.end(), view.h, view.h + HASH_SIZE);
-	data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+
+	if (sidechain_version > 1) {
+		data.insert(data.end(), m_txkeySecSeed.h, m_txkeySecSeed.h + HASH_SIZE);
+	}
+	else {
+		data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+	}
+
 	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
 	writeVarint(m_uncles.size(), data);
@@ -254,7 +265,7 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
 
-	if (get_sidechain_version() > 1) {
+	if (sidechain_version > 1) {
 		const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
 		data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));
 	}

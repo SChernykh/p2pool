@@ -266,7 +266,22 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_blockHeaderSize = m_blockHeader.size();
 
-	get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
+	const int sidechain_version = m_poolBlockTemplate->get_sidechain_version();
+
+	if (sidechain_version > 1) {
+		static_assert(decltype(m_rng)::word_size == 64, "m_rng must be 64-bit");
+
+		uint64_t* p = reinterpret_cast<uint64_t*>(m_poolBlockTemplate->m_txkeySecSeed.h);
+		for (size_t i = 0; i < HASH_SIZE / sizeof(uint64_t); ++i) {
+			p[i] = m_rng();
+		}
+
+		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, m_poolBlockTemplate->m_txkeySecSeed, data.prev_id);
+	}
+	else {
+		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
+	}
+
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
 
 	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares);
@@ -602,7 +617,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	{
 		memset(m_sidechainHashKeccakState, 0, sizeof(m_sidechainHashKeccakState));
 
-		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - ((m_poolBlockTemplate->get_sidechain_version() > 1) ? EXTRA_NONCE_SIZE : 0);
+		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - ((sidechain_version > 1) ? EXTRA_NONCE_SIZE : 0);
 		if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
 			// Sidechain data is big enough to cache keccak state up to extra_nonce
 			m_sidechainHashInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;

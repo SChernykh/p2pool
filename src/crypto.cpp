@@ -266,10 +266,10 @@ public:
 		return true;
 	}
 
-	void get_tx_keys(hash& pub, hash& sec, const hash& wallet_spend_key, const hash& monero_block_id)
+	void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id)
 	{
 		std::array<uint8_t, HASH_SIZE * 2> index;
-		memcpy(index.data(), wallet_spend_key.h, HASH_SIZE);
+		memcpy(index.data(), seed.h, HASH_SIZE);
 		memcpy(index.data() + HASH_SIZE, monero_block_id.h, HASH_SIZE);
 
 		{
@@ -287,7 +287,7 @@ public:
 		uint8_t entropy[N + HASH_SIZE * 2];
 
 		memcpy(entropy, domain, N);
-		memcpy(entropy + N, wallet_spend_key.h, HASH_SIZE);
+		memcpy(entropy + N, seed.h, HASH_SIZE);
 		memcpy(entropy + N + HASH_SIZE, monero_block_id.h, HASH_SIZE);
 
 		generate_keys_deterministic(pub, sec, entropy, sizeof(entropy));
@@ -399,9 +399,9 @@ bool derive_public_key(const hash& derivation, size_t output_index, const hash& 
 	return cache->get_public_key(derivation, output_index, base, derived_key);
 }
 
-void get_tx_keys(hash& pub, hash& sec, const hash& wallet_spend_key, const hash& monero_block_id)
+void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id)
 {
-	cache->get_tx_keys(pub, sec, wallet_spend_key, monero_block_id);
+	cache->get_tx_keys(pub, sec, seed, monero_block_id);
 }
 
 void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_tag)
