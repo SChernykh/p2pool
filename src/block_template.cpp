@@ -55,8 +55,6 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	, m_difficulty{}
 	, m_seedHash{}
 	, m_timestamp(0)
-	, m_txkeyPub{}
-	, m_txkeySec{}
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
 	, m_minerTxKeccakState{}
@@ -139,8 +137,6 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_difficulty = b.m_difficulty;
 	m_seedHash = b.m_seedHash;
 	m_timestamp = b.m_timestamp;
-	m_txkeyPub = b.m_txkeyPub;
-	m_txkeySec = b.m_txkeySec;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
 	m_finalReward = b.m_finalReward;
 
@@ -235,8 +231,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		*this = *m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)];
 	};
 
-	get_tx_keys(m_txkeyPub, m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
-
 	m_height = data.height;
 	m_difficulty = data.difficulty;
 	m_seedHash = data.seed_hash;
@@ -272,7 +266,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_blockHeaderSize = m_blockHeader.size();
 
-	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
+	get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
+	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
+
+	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares);
 
 	// Only choose transactions that were received 10 or more seconds ago, or high fee (>= 0.006 XMR) transactions
 	size_t total_mempool_transactions;
@@ -822,7 +819,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		}
 		else {
 			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag)) {
+			if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
@@ -845,14 +842,11 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		return -2;
 	}
 
-	m_poolBlockTemplate->m_txkeyPub = m_txkeyPub;
-	m_poolBlockTemplate->m_txkeySec = m_txkeySec;
-
 	// TX_EXTRA begin
 	m_minerTxExtra.clear();
 
 	m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
-	m_minerTxExtra.insert(m_minerTxExtra.end(), m_txkeyPub.h, m_txkeyPub.h + HASH_SIZE);
+	m_minerTxExtra.insert(m_minerTxExtra.end(), m_poolBlockTemplate->m_txkeyPub.h, m_poolBlockTemplate->m_txkeyPub.h + HASH_SIZE);
 
 	m_minerTxExtra.push_back(TX_EXTRA_NONCE);
 

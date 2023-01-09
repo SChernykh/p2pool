@@ -201,13 +201,11 @@ SideChain::~SideChain()
 	}
 }
 
-void SideChain::fill_sidechain_data(PoolBlock& block, const Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const
+void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
 {
-	ReadLock lock(m_sidechainLock);
-
-	block.m_minerWallet = *w;
-	block.m_txkeySec = txkeySec;
 	block.m_uncles.clear();
+
+	ReadLock lock(m_sidechainLock);
 
 	const PoolBlock* tip = m_chainTip;
 

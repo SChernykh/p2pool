@@ -97,9 +97,6 @@ private:
 
 	uint64_t m_timestamp;
 
-	hash m_txkeyPub;
-	hash m_txkeySec;
-
 	PoolBlock* m_poolBlockTemplate;
 
 	BlockTemplate* m_oldTemplates[4] = {};
