@@ -335,9 +335,6 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 	const int L = quiet ? 6 : 3;
 
-	shares.clear();
-	shares.reserve(m_chainWindowSize * 2);
-
 	// Collect shares from each block in the PPLNS window, starting from the "tip"
 
 	uint64_t block_depth = 0;
@@ -363,8 +360,11 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	const difficulty_type max_pplns_weight = (sidechain_version > 1) ? (mainchain_diff * 2) : diff_max;
 	difficulty_type pplns_weight;
 
+	unordered_set<MinerShare> shares_set;
+	shares_set.reserve(m_chainWindowSize * 2);
+
 	do {
-		MinerShare cur_share{ cur->m_difficulty, &cur->m_minerWallet };
+		difficulty_type cur_weight = cur->m_difficulty;
 
 		for (const hash& uncle_id : cur->m_uncles) {
 			auto it = m_blocksById.find(uncle_id);
@@ -391,15 +391,21 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 				continue;
 			}
 
-			cur_share.m_weight += uncle_penalty;
+			cur_weight += uncle_penalty;
 
-			shares.emplace_back(uncle_weight, &uncle->m_minerWallet);
+			auto result = shares_set.emplace(uncle_weight, &uncle->m_minerWallet);
+			if (!result.second) {
+				result.first->m_weight += uncle_weight;
+			}
 			pplns_weight = new_pplns_weight;
 		}
 
 		// Always add non-uncle shares even if PPLNS weight goes above the limit
-		shares.push_back(cur_share);
-		pplns_weight += cur_share.m_weight;
+		auto result = shares_set.emplace(cur_weight, &cur->m_minerWallet);
+		if (!result.second) {
+			result.first->m_weight += cur_weight;
+		}
+		pplns_weight += cur_weight;
 
 		// One non-uncle share can go above the limit, but it will also guarantee that "shares" is never empty
 		if (pplns_weight > max_pplns_weight) {
@@ -426,34 +432,27 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 		cur = it->second;
 	} while (true);
 
-	// Combine shares with the same wallet addresses
+	shares.assign(shares_set.begin(), shares_set.end());
 	std::sort(shares.begin(), shares.end(), [](const auto& a, const auto& b) { return *a.m_wallet < *b.m_wallet; });
 
-	size_t k = 0;
-	for (size_t i = 1, n = shares.size(); i < n; ++i)
-	{
-		if (*shares[i].m_wallet == *shares[k].m_wallet) {
-			shares[k].m_weight += shares[i].m_weight;
-		}
-		else {
-			++k;
-			shares[k].m_weight = shares[i].m_weight;
-			shares[k].m_wallet = shares[i].m_wallet;
-		}
-	}
-
-	shares.resize(k + 1);
-	LOGINFO(6, "get_shares: " << k + 1 << " unique wallets in PPLNS window");
+	const uint64_t n = shares.size();
 
 	// Shuffle shares
-	if (sidechain_version > 1) {
-		std::mt19937_64 rng(*reinterpret_cast<const uint64_t*>(tip->m_txkeySecSeed.h));
+	if ((sidechain_version > 1) && (n > 1)) {
+		hash h;
+		keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);
 
-		for (int64_t i = k; i > 0; --i) {
-			std::swap(shares[i], shares[rng() % (i + 1)]);
+		uint64_t seed = *reinterpret_cast<uint64_t*>(h.h);
+		if (seed == 0) seed = 1;
+
+		for (uint64_t i = 0, k; i < n - 1; ++i) {
+			seed = xorshift64star(seed);
+			umul128(seed, n - i, &k);
+			std::swap(shares[i], shares[i + k]);
 		}
 	}
 
+	LOGINFO(6, "get_shares: " << n << " unique wallets in PPLNS window");
 	return true;
 }
 

@@ -32,6 +32,8 @@ struct MinerShare
 	FORCEINLINE MinerShare() : m_weight(), m_wallet(nullptr) {}
 	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
 
+	FORCEINLINE bool operator==(const MinerShare& s) const { return *m_wallet == *s.m_wallet; }
+
 	difficulty_type m_weight;
 	const Wallet* m_wallet;
 };
@@ -157,3 +159,16 @@ private:
 };
 
 } // namespace p2pool
+
+namespace robin_hood {
+
+	template<>
+	struct hash<p2pool::MinerShare>
+	{
+		FORCEINLINE size_t operator()(const p2pool::MinerShare& value) const noexcept
+		{
+			return hash_bytes(value.m_wallet->spend_public_key().h, p2pool::HASH_SIZE);
+		}
+	};
+
+} // namespace robin_hood
