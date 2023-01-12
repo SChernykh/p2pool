@@ -60,7 +60,7 @@ StratumServer::StratumServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	m_extraNonce = static_cast<uint32_t>(m_rng());
+	m_extraNonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(m_rng()));
 
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
@@ -107,7 +107,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		return;
 	}
 
-	const uint32_t extra_nonce_start = static_cast<uint32_t>(get_random64());
+	const uint32_t extra_nonce_start = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(get_random64()));
 	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};

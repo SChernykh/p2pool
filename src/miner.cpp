@@ -47,7 +47,7 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_jobIndex{ 0 }
 {
 	std::random_device rd;
-	m_extraNonce = static_cast<uint32_t>(rd());
+	m_extraNonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(rd()));
 
 	on_block(m_pool->block_template());
 
