@@ -315,7 +315,7 @@ int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 		return 0;
 	}
 
-	if (timeout_ms == 0) {
+	if ((timeout_ms == 0) && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_async))) {
 		// 0 ms timeout, but we can't just call on_timeout() here - we have to kick the UV loop
 		const int result = uv_async_send(&m_async);
 		if (result < 0) {

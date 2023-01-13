@@ -124,7 +124,9 @@ void p2pool_api::dump_to_file_async_internal(Category category, const char* file
 		m_dumpData[path] = std::move(buf);
 	}
 
-	uv_async_send(&m_dumpToFileAsync);
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync))) {
+		uv_async_send(&m_dumpToFileAsync);
+	}
 }
 
 void p2pool_api::dump_to_file()
