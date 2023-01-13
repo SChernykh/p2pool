@@ -2,7 +2,13 @@
 
 Decentralized pool for Monero mining.
 
-Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/
+Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/, https://mini.p2pool.observer/
+
+# P2Pool hardfork on March 18, 2023
+
+P2Pool (not Monero!) will hardfork to new consensus rules on March 18th at 21:00 UTC (use [this link](https://dateful.com/convert/utc?t=9pm&d=2023-03-18) to convert to your local time). The hardfork is necessary to improve P2Pool scalability and reduce the impact on Monero blockchain. You'll need to update to **P2Pool v3.0** or newer version before this time.
+
+Reddit discussion: https://www.reddit.com/r/MoneroMining/comments/1095730/psa_p2pool_network_upgrade_aka_hardfork_on_march/
 
 ### Build Status
 
