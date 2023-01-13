@@ -91,7 +91,7 @@ private:
 	NetworkType m_networkType;
 
 private:
-	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, bool quiet = false) const;
+	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);

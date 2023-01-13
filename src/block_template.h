@@ -56,6 +56,7 @@ public:
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
+	FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
 
 #ifdef P2POOL_UNIT_TESTS
 	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }

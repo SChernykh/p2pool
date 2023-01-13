@@ -327,7 +327,7 @@ P2PServer* SideChain::p2pServer() const
 	return m_pool ? m_pool->p2p_server() : nullptr;
 }
 
-bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, bool quiet) const
+bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height, bool quiet) const
 {
 	if (tip->m_txkeySecSeed.empty()) {
 		LOGERR(1, "tx key seed is not set, fix the code!");
@@ -431,6 +431,10 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 		cur = it->second;
 	} while (true);
+
+	if (bottom_height) {
+		*bottom_height = cur->m_sidechainHeight;
+	}
 
 	shares.assign(shares_set.begin(), shares_set.end());
 	std::sort(shares.begin(), shares.end(), [](const auto& a, const auto& b) { return *a.m_wallet < *b.m_wallet; });
@@ -878,7 +882,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 void SideChain::print_status(bool obtain_sidechain_lock) const
 {
-	std::vector<hash> blocks_in_window;
+	unordered_set<hash> blocks_in_window;
 	blocks_in_window.reserve(m_chainWindowSize * 9 / 8);
 
 	const difficulty_type diff = difficulty();
@@ -886,51 +890,58 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	if (obtain_sidechain_lock) uv_rwlock_rdlock(&m_sidechainLock);
 	ON_SCOPE_LEAVE([this, obtain_sidechain_lock]() { if (obtain_sidechain_lock) uv_rwlock_rdunlock(&m_sidechainLock); });
 
-	uint64_t rem;
-	uint64_t pool_hashrate = udiv128(diff.hi, diff.lo, m_targetBlockTime, &rem);
+	const uint64_t pool_hashrate = (diff / m_targetBlockTime).lo;
 
-	difficulty_type network_diff = m_pool->miner_data().difficulty;
-	uint64_t network_hashrate = udiv128(network_diff.hi, network_diff.lo, MONERO_BLOCK_TIME, &rem);
+	const difficulty_type network_diff = m_pool->miner_data().difficulty;
+	const uint64_t network_hashrate = (network_diff / MONERO_BLOCK_TIME).lo;
 
 	const PoolBlock* tip = m_chainTip;
+
+	std::vector<MinerShare> shares;
+	uint64_t bottom_height = 0;
+	get_shares(tip, shares, &bottom_height, true);
+
+	const uint64_t window_size = bottom_height ? (tip->m_sidechainHeight - bottom_height + 1U) : m_chainWindowSize;
 
 	uint64_t block_depth = 0;
 	const PoolBlock* cur = tip;
 	const uint64_t tip_height = tip ? tip->m_sidechainHeight : 0;
 
-	uint32_t total_blocks_in_window = 0;
-	uint32_t total_uncles_in_window = 0;
+	uint64_t total_blocks_in_window = 0;
+	uint64_t total_uncles_in_window = 0;
 
-	// each dot corresponds to m_chainWindowSize / 30 shares, with current values, 2160 / 30 = 72
-	std::array<uint32_t, 30> our_blocks_in_window{};
-	std::array<uint32_t, 30> our_uncles_in_window{};
+	// each dot corresponds to window_size / 30 shares, with current values, 2160 / 30 = 72
+	std::array<uint64_t, 30> our_blocks_in_window{};
+	std::array<uint64_t, 30> our_uncles_in_window{};
+
+	const Wallet& w = m_pool->params().m_wallet;
 
 	while (cur) {
-		blocks_in_window.emplace_back(cur->m_sidechainId);
+		blocks_in_window.emplace(cur->m_sidechainId);
 		++total_blocks_in_window;
 
-		if (cur->m_minerWallet == m_pool->params().m_wallet) {
+		if (cur->m_minerWallet == w) {
 			// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
-			const size_t window_index = (total_blocks_in_window - 1) / ((m_chainWindowSize + our_blocks_in_window.size() - 1) / our_blocks_in_window.size());
-			our_blocks_in_window[std::min(window_index, our_blocks_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than m_chainWindowSize
+			const size_t window_index = (total_blocks_in_window - 1) / ((window_size + our_blocks_in_window.size() - 1) / our_blocks_in_window.size());
+			our_blocks_in_window[std::min(window_index, our_blocks_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than window_size
 		}
 
 		++block_depth;
-		if (block_depth >= m_chainWindowSize) {
+		if (block_depth >= window_size) {
 			break;
 		}
 
 		for (const hash& uncle_id : cur->m_uncles) {
-			blocks_in_window.emplace_back(uncle_id);
+			blocks_in_window.emplace(uncle_id);
 			auto it = m_blocksById.find(uncle_id);
 			if (it != m_blocksById.end()) {
 				PoolBlock* uncle = it->second;
-				if (tip_height - uncle->m_sidechainHeight < m_chainWindowSize) {
+				if (tip_height - uncle->m_sidechainHeight < window_size) {
 					++total_uncles_in_window;
-					if (uncle->m_minerWallet == m_pool->params().m_wallet) {
+					if (uncle->m_minerWallet == w) {
 						// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
-						const size_t window_index = (total_blocks_in_window - 1) / ((m_chainWindowSize + our_uncles_in_window.size() - 1) / our_uncles_in_window.size());
-						our_uncles_in_window[std::min(window_index, our_uncles_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than m_chainWindowSize
+						const size_t window_index = (total_blocks_in_window - 1) / ((window_size + our_uncles_in_window.size() - 1) / our_uncles_in_window.size());
+						our_uncles_in_window[std::min(window_index, our_uncles_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than window_size
 					}
 				}
 			}
@@ -942,65 +953,50 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	uint64_t total_orphans = 0;
 	uint64_t our_orphans = 0;
 
-	uint64_t your_reward = 0;
-	uint64_t total_reward = 0;
-
 	if (tip) {
-		std::sort(blocks_in_window.begin(), blocks_in_window.end());
-		for (uint64_t i = 0; (i < m_chainWindowSize) && (i <= tip_height); ++i) {
+		for (uint64_t i = 0; (i < window_size) && (i <= tip_height); ++i) {
 			auto it = m_blocksByHeight.find(tip_height - i);
 			if (it == m_blocksByHeight.end()) {
 				continue;
 			}
 			for (const PoolBlock* block : it->second) {
-				if (!std::binary_search(blocks_in_window.begin(), blocks_in_window.end(), block->m_sidechainId)) {
+				if (blocks_in_window.find(block->m_sidechainId) == blocks_in_window.end()) {
 					LOGINFO(4, "orphan block at height " << log::Gray() << block->m_sidechainHeight << log::NoColor() << ": " << log::Gray() << block->m_sidechainId);
 					++total_orphans;
-					if (block->m_minerWallet == m_pool->params().m_wallet) {
+					if (block->m_minerWallet == w) {
 						++our_orphans;
 					}
 				}
 			}
 		}
-
-		const Wallet& w = m_pool->params().m_wallet;
-		const uint8_t tx_type = tip->get_tx_type();
-
-		hash eph_public_key;
-		for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
-			const PoolBlock::TxOutput& out = tip->m_outputs[i];
-			if (!your_reward) {
-				if (tx_type == TXOUT_TO_TAGGED_KEY) {
-					uint8_t view_tag;
-					const uint8_t expected_view_tag = out.m_viewTag;
-					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
-						your_reward = out.m_reward;
-					}
-				}
-				else {
-					uint8_t view_tag;
-					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag) && (out.m_ephPublicKey == eph_public_key)) {
-						your_reward = out.m_reward;
-					}
-				}
-			}
-			total_reward += out.m_reward;
-		}
 	}
 
-	uint64_t product[2];
-	product[0] = umul128(pool_hashrate, your_reward, &product[1]);
-	const uint64_t hashrate_est = total_reward ? udiv128(product[1], product[0], total_reward, &rem) : 0;
+	difficulty_type your_shares_weight, pplns_weight;
+	for (const MinerShare& s : shares) {
+		if (*s.m_wallet == w) {
+			your_shares_weight = s.m_weight;
+		}
+		pplns_weight += s.m_weight;
+	}
+
+	if (pplns_weight == 0) {
+		pplns_weight = m_minDifficulty;
+	}
+
+	const uint64_t total_reward = m_pool->block_template().get_reward();
+	const uint64_t your_reward = ((your_shares_weight * total_reward) / pplns_weight).lo;
+	const uint64_t hashrate_est = ((your_shares_weight * pool_hashrate) / pplns_weight).lo;
+
 	const double block_share = total_reward ? ((static_cast<double>(your_reward) * 100.0) / static_cast<double>(total_reward)) : 0.0;
 
-	const uint32_t our_blocks_in_window_total = std::accumulate(our_blocks_in_window.begin(), our_blocks_in_window.end(), 0U);
-	const uint32_t our_uncles_in_window_total = std::accumulate(our_uncles_in_window.begin(), our_uncles_in_window.end(), 0U);
+	const uint64_t our_blocks_in_window_total = std::accumulate(our_blocks_in_window.begin(), our_blocks_in_window.end(), 0ULL);
+	const uint64_t our_uncles_in_window_total = std::accumulate(our_uncles_in_window.begin(), our_uncles_in_window.end(), 0ULL);
 
 	std::string our_blocks_in_window_chart;
 	if (our_blocks_in_window_total) {
 		our_blocks_in_window_chart.reserve(our_blocks_in_window.size() + 32);
 		our_blocks_in_window_chart = "\nYour shares position      = [";
-		for (uint32_t p : our_blocks_in_window) {
+		for (uint64_t p : our_blocks_in_window) {
 			our_blocks_in_window_chart += (p ? ((p > 9) ? '+' : static_cast<char>('0' + p)) : '.');
 		}
 		our_blocks_in_window_chart += ']';
@@ -1010,7 +1006,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	if (our_uncles_in_window_total) {
 		our_uncles_in_window_chart.reserve(our_uncles_in_window.size() + 32);
 		our_uncles_in_window_chart = "\nYour uncles position      = [";
-		for (uint32_t p : our_uncles_in_window) {
+		for (uint64_t p : our_uncles_in_window) {
 			our_uncles_in_window_chart += (p ? ((p > 9) ? '+' : static_cast<char>('0' + p)) : '.');
 		}
 		our_uncles_in_window_chart += ']';
@@ -1024,7 +1020,8 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)" <<
-		"\nYour wallet address       = " << m_pool->params().m_wallet <<
+		"\nPPLNS window duration     = " << log::Duration((pplns_weight / pool_hashrate).lo) <<
+		"\nYour wallet address       = " << w <<
 		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)"
 										 << our_blocks_in_window_chart << our_uncles_in_window_chart <<
 		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
@@ -2130,7 +2127,7 @@ void SideChain::launch_precalc(const PoolBlock* block)
 				continue;
 			}
 			std::vector<MinerShare> shares;
-			if (get_shares(b, shares, true)) {
+			if (get_shares(b, shares, nullptr, true)) {
 				b->m_precalculated = true;
 				PrecalcJob* job = new PrecalcJob{ b, std::move(shares) };
 				{
