@@ -38,6 +38,7 @@
 #include "keccak.h"
 #include <thread>
 #include <fstream>
+#include <numeric>
 
 constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -1232,6 +1233,9 @@ void p2pool::api_update_pool_stats()
 	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
+	const auto& s = m_blockTemplate->shares();
+	const difficulty_type pplns_weight = std::accumulate(s.begin(), s.end(), difficulty_type(), [](const auto& a, const auto& b) { return a + b.m_weight; });
+
 	time_t last_block_found_time = 0;
 	uint64_t last_block_found_height = 0;
 	uint64_t total_blocks_found = 0;
@@ -1246,7 +1250,7 @@ void p2pool::api_update_pool_stats()
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "stats",
-		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found](log::Stream& s)
+		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found, &pplns_weight](log::Stream& s)
 		{
 			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
 				<< ",\"miners\":" << miners
@@ -1254,6 +1258,7 @@ void p2pool::api_update_pool_stats()
 				<< ",\"lastBlockFoundTime\":" << last_block_found_time
 				<< ",\"lastBlockFound\":" << last_block_found_height
 				<< ",\"totalBlocksFound\":" << total_blocks_found
+				<< ",\"pplnsWeight\":" << pplns_weight
 				<< "}}";
 		});
 
