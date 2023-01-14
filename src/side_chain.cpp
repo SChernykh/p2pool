@@ -70,11 +70,11 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	LOGINFO(1, log::LightCyan() << "network type  = " << m_networkType);
 
 	if (m_pool && !load_config(m_pool->params().m_config)) {
-		panic();
+		PANIC_STOP();
 	}
 
 	if (!check_config()) {
-		panic();
+		PANIC_STOP();
 	}
 
 	uv_rwlock_init_checked(&m_sidechainLock);
@@ -117,7 +117,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 			cache = randomx_alloc_cache(flags);
 			if (!cache) {
 				LOGERR(1, "couldn't allocate RandomX cache, aborting");
-				panic();
+				PANIC_STOP();
 			}
 		}
 
@@ -146,7 +146,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		m_consensusId.assign(id.h, id.h + HASH_SIZE);
 #else
 		LOGERR(1, "Can't calculate consensus ID without RandomX library");
-		panic();
+		PANIC_STOP();
 #endif
 	}
 

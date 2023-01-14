@@ -41,7 +41,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	int err = uv_loop_init(&m_loop);
 	if (err) {
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	// Init loop user data before running it
@@ -50,14 +50,14 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	err = uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_dropConnectionsAsync.data = this;
 
 	err = uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_shutdownAsync.data = this;
 
@@ -133,7 +133,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 {
 	if (listen_addresses.empty()) {
 		LOGERR(1, "listen address not set");
-		panic();
+		PANIC_STOP();
 	}
 
 	parse_address_list(listen_addresses,
@@ -144,7 +144,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 			}
 			else if (m_listenPort != port) {
 				LOGERR(1, "all sockets must be listening on the same port number, fix the command line");
-				panic();
+				PANIC_STOP();
 			}
 
 			uv_tcp_t* socket = new uv_tcp_t();
@@ -159,14 +159,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 			int err = uv_tcp_init(&m_loop, socket);
 			if (err) {
 				LOGERR(1, "failed to create tcp server handle, error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 			socket->data = this;
 
 			err = uv_tcp_nodelay(socket, 1);
 			if (err) {
 				LOGERR(1, "failed to set tcp_nodelay on tcp server handle, error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 
 			if (is_v6) {
@@ -174,13 +174,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				err = uv_ip6_addr(ip.c_str(), port, &addr6);
 				if (err) {
 					LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr6), UV_TCP_IPV6ONLY);
 				if (err) {
 					LOGERR(1, "failed to bind tcp server IPv6 socket " << address << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 			}
 			else {
@@ -188,20 +188,20 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				err = uv_ip4_addr(ip.c_str(), port, &addr);
 				if (err) {
 					LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr), 0);
 				if (err) {
 					LOGERR(1, "failed to bind tcp server IPv4 socket " << address << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 			}
 
 			err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
 			if (err) {
 				LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 
 			LOGINFO(1, "listening on " << log::Gray() << address);
@@ -210,7 +210,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 	const int err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -509,7 +509,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	if (bytes_written > WRITE_BUF_SIZE) {
 		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << WRITE_BUF_SIZE << " bytes");
-		panic();
+		PANIC_STOP();
 	}
 
 	if (bytes_written == 0) {

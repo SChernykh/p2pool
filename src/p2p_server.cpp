@@ -75,7 +75,7 @@ P2PServer::P2PServer(p2pool* pool)
 			[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
 			{
 				if (!str_to_ip(is_v6, ip.c_str(), m_socks5ProxyIP)) {
-					panic();
+					PANIC_STOP();
 				}
 				m_socks5ProxyV6 = is_v6;
 				m_socks5ProxyPort = port;
@@ -95,7 +95,7 @@ P2PServer::P2PServer(p2pool* pool)
 	int err = uv_async_init(&m_loop, &m_broadcastAsync, on_broadcast);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_broadcastAsync.data = this;
 	m_broadcastQueue.reserve(2);
@@ -103,21 +103,21 @@ P2PServer::P2PServer(p2pool* pool)
 	err = uv_async_init(&m_loop, &m_connectToPeersAsync, on_connect_to_peers);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_connectToPeersAsync.data = this;
 
 	err = uv_async_init(&m_loop, &m_showPeersAsync, on_show_peers);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_showPeersAsync.data = this;
 
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
 		LOGERR(1, "failed to create timer, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	if (m_cache) {
@@ -130,7 +130,7 @@ P2PServer::P2PServer(p2pool* pool)
 	err = uv_timer_start(&m_timer, on_timer, 1000, m_timerInterval * 1000);
 	if (err) {
 		LOGERR(1, "failed to start timer, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	load_peer_list();

@@ -149,7 +149,12 @@ FORCEINLINE T read_unaligned(const T* p)
 template<typename T, size_t N> FORCEINLINE constexpr size_t array_size(T(&)[N]) { return N; }
 template<typename T, typename U, size_t N> FORCEINLINE constexpr size_t array_size(T(U::*)[N]) { return N; }
 
-[[noreturn]] void panic();
+[[noreturn]] void panic_stop(const char* message);
+
+#define STR(X) #X
+#define STR2(X) STR(X)
+
+#define PANIC_STOP(...) panic_stop(__FILE__ ":" STR2(__LINE__))
 
 void make_thread_background();
 

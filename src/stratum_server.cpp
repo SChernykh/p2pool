@@ -76,7 +76,7 @@ StratumServer::StratumServer(p2pool* pool)
 	const int err = uv_async_init(&m_loop, &m_blobsAsync, on_blobs_ready);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_blobsAsync.data = this;
 	m_blobsQueue.reserve(2);

@@ -701,14 +701,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 				}
 				else {
 					LOGERR(1, "fatal error: couldn't download block header for seed height " << height);
-					panic();
+					PANIC_STOP();
 				}
 			},
 			[height](const char* data, size_t size)
 			{
 				if (size > 0) {
 					LOGERR(1, "fatal error: couldn't download block header for seed height " << height << ", error " << log::const_buf(data, size));
-					panic();
+					PANIC_STOP();
 				}
 			});
 	}
@@ -729,7 +729,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 					}
 					catch (const std::exception& e) {
 						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-						panic();
+						PANIC_STOP();
 					}
 
 					m_stratumServer = new StratumServer(this);
@@ -932,7 +932,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 	if (monero_network != sidechain_network) {
 		LOGERR(1, "monerod is on " << monero_network << ", but you're mining to a " << sidechain_network << " sidechain");
-		panic();
+		PANIC_STOP();
 	}
 
 	get_version();
@@ -1002,7 +1002,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
 		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.18.0.0 or newer)");
-		panic();
+		PANIC_STOP();
 	}
 
 	get_miner_data();
@@ -1577,7 +1577,7 @@ int p2pool::run()
 	catch (const std::exception& e) {
 		const char* s = e.what();
 		LOGERR(1, "exception " << s);
-		panic();
+		PANIC_STOP();
 	}
 
 	m_stopped = true;

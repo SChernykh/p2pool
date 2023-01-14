@@ -226,7 +226,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 #if POOL_BLOCK_DEBUG
 	if (!nonce && !extra_nonce && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
 		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
-		panic();
+		PANIC_STOP();
 	}
 #endif
 
@@ -280,7 +280,7 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 #if POOL_BLOCK_DEBUG
 	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {
 		LOGERR(1, "serialize_sidechain_data() has a bug, fix it!");
-		panic();
+		PANIC_STOP();
 	}
 #endif
 

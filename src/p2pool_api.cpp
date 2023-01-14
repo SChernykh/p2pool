@@ -34,7 +34,7 @@ p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats)
 {
 	if (m_apiPath.empty()) {
 		LOGERR(1, "api path is empty");
-		panic();
+		PANIC_STOP();
 	}
 
 	if ((m_apiPath.back() != '/')
@@ -48,13 +48,13 @@ p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats)
 	struct stat buf;
 	if (stat(m_apiPath.c_str(), &buf) != 0) {
 		LOGERR(1, "path " << m_apiPath << " doesn't exist");
-		panic();
+		PANIC_STOP();
 	}
 
 	int result = uv_async_init(uv_default_loop_checked(), &m_dumpToFileAsync, on_dump_to_file);
 	if (result) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(result));
-		panic();
+		PANIC_STOP();
 	}
 	m_dumpToFileAsync.data = this;
 
@@ -93,7 +93,7 @@ void p2pool_api::create_dir(const std::string& path)
 		result = errno;
 		if (result != EEXIST) {
 			LOGERR(1, "mkdir(" << path << ") failed, error " << result);
-			panic();
+			PANIC_STOP();
 		}
 	}
 }
