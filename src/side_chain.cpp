@@ -886,9 +886,11 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 
 	std::vector<MinerShare> shares;
 	uint64_t bottom_height = 0;
-	get_shares(tip, shares, &bottom_height, true);
+	if (tip) {
+		get_shares(tip, shares, &bottom_height, true);
+	}
 
-	const uint64_t window_size = bottom_height ? (tip->m_sidechainHeight - bottom_height + 1U) : m_chainWindowSize;
+	const uint64_t window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + 1U) : m_chainWindowSize;
 
 	uint64_t block_depth = 0;
 	const PoolBlock* cur = tip;
