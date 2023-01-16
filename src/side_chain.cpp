@@ -2018,7 +2018,7 @@ bool SideChain::load_config(const std::string& filename)
 	parseValue(doc, "block_time", m_targetBlockTime);
 
 	uint64_t min_diff;
-	if (parseValue(doc, "min_diff", min_diff)) {
+	if (parseValue(doc, "min_diff", min_diff) && min_diff) {
 		m_minDifficulty = { min_diff, 0 };
 	}
 
@@ -2050,12 +2050,14 @@ bool SideChain::check_config() const
 		return false;
 	}
 
-	const difficulty_type min_diff{ MIN_DIFFICULTY, 0 };
-	const difficulty_type max_diff{ 1000000000, 0 };
+	if (s_networkType == NetworkType::Mainnet) {
+		const difficulty_type min_diff{ MIN_DIFFICULTY, 0 };
+		const difficulty_type max_diff{ 1000000000, 0 };
 
-	if ((m_minDifficulty < min_diff) || (max_diff < m_minDifficulty)) {
-		LOGERR(1, "min_diff is invalid (must be between " << min_diff << " and " << max_diff << ')');
-		return false;
+		if ((m_minDifficulty < min_diff) || (max_diff < m_minDifficulty)) {
+			LOGERR(1, "min_diff is invalid (must be between " << min_diff << " and " << max_diff << ')');
+			return false;
+		}
 	}
 
 	if ((m_chainWindowSize < 60) || (m_chainWindowSize > 2160)) {
