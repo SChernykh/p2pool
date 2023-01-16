@@ -780,52 +780,18 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	// Helper jobs call get_eph_public_key with indices in descending order
 	// Current thread will process indices in ascending order so when they meet, everything will be cached
 	if (loop) {
-		uint32_t HELPER_JOBS_COUNT = std::thread::hardware_concurrency();
+		parallel_run(loop, [data]() {
+			Data* d = data.get();
+			hash eph_public_key;
 
-		// this thread will also be running, so reduce helper job count by 1
-		if (HELPER_JOBS_COUNT > 0) {
-			--HELPER_JOBS_COUNT;
-		}
-
-		// No more than 8 helper jobs because our UV worker thread pool has 8 threads
-		if (HELPER_JOBS_COUNT > 8) {
-			HELPER_JOBS_COUNT = 8;
-		}
-
-		struct Work
-		{
-			uv_work_t req;
-			std::shared_ptr<Data> data;
-		};
-
-		for (size_t i = 0; i < HELPER_JOBS_COUNT; ++i) {
-			Work* w = new Work{ {}, data };
-			w->req.data = w;
-
-			const int err = uv_queue_work(loop, &w->req,
-				[](uv_work_t* req)
-				{
-					Data* d = reinterpret_cast<Work*>(req->data)->data.get();
-					hash eph_public_key;
-
-					int index;
-					while ((index = d->counter.fetch_sub(1)) >= 0) {
-						uint8_t view_tag;
-						if (!d->tmpShares[index].m_wallet->get_eph_public_key(d->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag)) {
-							LOGWARN(6, "get_eph_public_key failed at index " << index);
-						}
-					}
-				},
-				[](uv_work_t* req, int /*status*/)
-				{
-					delete reinterpret_cast<Work*>(req->data);
-				});
-
-			if (err) {
-				LOGERR(1, "get_outputs_blob: uv_queue_work failed, error " << uv_err_name(err));
-				delete w;
+			int index;
+			while ((index = d->counter.fetch_sub(1)) >= 0) {
+				uint8_t view_tag;
+				if (!d->tmpShares[index].m_wallet->get_eph_public_key(d->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag)) {
+					LOGWARN(6, "get_eph_public_key failed at index " << index);
+				}
 			}
-		}
+		});
 	}
 
 	blob.reserve(n * 39 + 64);

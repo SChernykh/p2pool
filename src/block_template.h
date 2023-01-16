@@ -102,7 +102,7 @@ private:
 
 	BlockTemplate* m_oldTemplates[4] = {};
 
-	uint64_t m_finalReward;
+	std::atomic<uint64_t> m_finalReward;
 
 	// Temp vectors, will be cleaned up after use and skipped in copy constructor/assignment operators
 	std::vector<uint8_t> m_minerTx;

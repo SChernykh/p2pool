@@ -138,7 +138,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_seedHash = b.m_seedHash;
 	m_timestamp = b.m_timestamp;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
-	m_finalReward = b.m_finalReward;
+	m_finalReward = b.m_finalReward.load();
 
 	memcpy(m_minerTxKeccakState, b.m_minerTxKeccakState, sizeof(m_minerTxKeccakState));
 	m_minerTxKeccakStateInputLength = b.m_minerTxKeccakStateInputLength;
@@ -276,6 +276,51 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
 
 	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares);
+
+	// Pre-calculate outputs to speed up miner tx generation
+	if (!m_shares.empty()) {
+		struct Precalc
+		{
+			FORCEINLINE Precalc(const std::vector<MinerShare>& s, const hash& k) : txKeySec(k)
+			{
+				const size_t N = s.size();
+				counter = static_cast<int>(N) - 1;
+				shares = reinterpret_cast<std::pair<hash, hash>*>(malloc_hook(sizeof(std::pair<hash, hash>) * N));
+				if (shares) {
+					const MinerShare* src = &s[0];
+					std::pair<hash, hash>* dst = shares;
+					std::pair<hash, hash>* e = shares + N;
+
+					for (; dst < e; ++src, ++dst) {
+						const Wallet* w = src->m_wallet;
+						dst->first = w->view_public_key();
+						dst->second = w->spend_public_key();
+					}
+				}
+			}
+
+			FORCEINLINE Precalc(Precalc&& rhs) noexcept : txKeySec(rhs.txKeySec), counter(rhs.counter.load()), shares(rhs.shares) { rhs.shares = nullptr; }
+			FORCEINLINE ~Precalc() { free_hook(shares); }
+
+			FORCEINLINE void operator()()
+			{
+				if (shares) {
+					hash derivation, eph_public_key;
+					int i;
+					while ((i = counter.fetch_sub(1)) >= 0) {
+						uint8_t view_tag;
+						generate_key_derivation(shares[i].first, txKeySec, i, derivation, view_tag);
+						derive_public_key(derivation, i, shares[i].second, eph_public_key);
+					}
+				}
+			}
+
+			hash txKeySec;
+			std::atomic<int> counter;
+			std::pair<hash, hash>* shares;
+		};
+		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
+	}
 
 	// Only choose transactions that were received 10 or more seconds ago, or high fee (>= 0.006 XMR) transactions
 	size_t total_mempool_transactions;
