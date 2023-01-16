@@ -54,9 +54,10 @@ namespace p2pool {
 static constexpr uint8_t default_consensus_id[HASH_SIZE] = { 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 };
 static constexpr uint8_t mini_consensus_id[HASH_SIZE] = { 57,130,201,26,149,174,199,250,66,80,189,18,108,216,194,220,136,23,63,24,64,113,221,44,219,86,39,163,53,24,126,196 };
 
+NetworkType SideChain::s_networkType = NetworkType::Invalid;
+
 SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	: m_pool(pool)
-	, m_networkType(type)
 	, m_chainTip{ nullptr }
 	, m_seenWalletsLastPruneTime(0)
 	, m_poolName(pool_name ? pool_name : "default")
@@ -67,7 +68,15 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_curDifficulty(m_minDifficulty)
 	, m_precalcFinished(false)
 {
-	LOGINFO(1, log::LightCyan() << "network type  = " << m_networkType);
+	if (s_networkType == NetworkType::Invalid) {
+		s_networkType = type;
+	}
+	else if (s_networkType != type) {
+		LOGERR(1, "can't run both " << s_networkType << " and " << type << " at the same time");
+		PANIC_STOP();
+	}
+
+	LOGINFO(1, log::LightCyan() << "network type  = " << type);
 
 	if (m_pool && !load_config(m_pool->params().m_config)) {
 		PANIC_STOP();
@@ -89,7 +98,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	char buf[log::Stream::BUF_SIZE + 1];
 	log::Stream s(buf);
 
-	s << m_networkType     << '\0'
+	s << s_networkType     << '\0'
 	  << m_poolName        << '\0'
 	  << m_poolPassword    << '\0'
 	  << m_targetBlockTime << '\0'
@@ -201,6 +210,8 @@ SideChain::~SideChain()
 	for (const auto& it : m_blocksById) {
 		delete it.second;
 	}
+
+	s_networkType = NetworkType::Invalid;
 }
 
 void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
@@ -1018,12 +1029,12 @@ double SideChain::get_reward_share(const Wallet& w) const
 	return total_reward ? (static_cast<double>(reward) / static_cast<double>(total_reward)) : 0.0;
 }
 
-uint64_t SideChain::network_major_version(uint64_t height) const
+uint64_t SideChain::network_major_version(uint64_t height)
 {
 	const hardfork_t* hard_forks;
 	size_t num_hard_forks;
 
-	switch (m_networkType)
+	switch (s_networkType)
 	{
 	case NetworkType::Mainnet:
 	default:

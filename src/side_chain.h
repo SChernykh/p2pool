@@ -66,8 +66,8 @@ public:
 	// Consensus ID can therefore be used as a password to create private P2Pools
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
-	NetworkType network_type() const { return m_networkType; }
-	uint64_t network_major_version(uint64_t height) const;
+	static NetworkType network_type() { return s_networkType; }
+	static uint64_t network_major_version(uint64_t height);
 	FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
@@ -88,7 +88,7 @@ public:
 private:
 	p2pool* m_pool;
 	P2PServer* p2pServer() const;
-	NetworkType m_networkType;
+	static NetworkType s_networkType;
 
 private:
 	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
