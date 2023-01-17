@@ -54,12 +54,10 @@ PoolBlock::PoolBlock()
 	, m_precalculated(false)
 	, m_localTimestamp(seconds_since_epoch())
 {
-	uv_mutex_init_checked(&m_lock);
 }
 
 PoolBlock::PoolBlock(const PoolBlock& b)
 {
-	uv_mutex_init_checked(&m_lock);
 	operator=(b);
 }
 
@@ -68,11 +66,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 {
 	if (this == &b) {
 		return *this;
-	}
-
-	const int lock_result = uv_mutex_trylock(&b.m_lock);
-	if (lock_result) {
-		LOGERR(1, "operator= uv_mutex_trylock failed. Fix the code!");
 	}
 
 #if POOL_BLOCK_DEBUG
@@ -110,25 +103,14 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_localTimestamp = seconds_since_epoch();
 
-	if (lock_result == 0) {
-		uv_mutex_unlock(&b.m_lock);
-	}
-
 	return *this;
 }
 
 PoolBlock::~PoolBlock()
 {
-	uv_mutex_destroy(&m_lock);
 }
 
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
-{
-	MutexLock lock(m_lock);
-	return serialize_mainchain_data_nolock(header_size, miner_tx_size, outputs_offset, outputs_blob_size, nonce, extra_nonce);
-}
-
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
 	data.reserve(128 + m_outputs.size() * 39 + m_transactions.size() * HASH_SIZE);
@@ -237,8 +219,6 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 {
 	std::vector<uint8_t> data;
 
-	MutexLock lock(m_lock);
-
 	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 36);
 
 	const hash& spend = m_minerWallet.spend_public_key();
@@ -321,10 +301,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	size_t blob_size = 0;
 
 	{
-		MutexLock lock(m_lock);
-
 		size_t header_size, miner_tx_size;
-		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data_nolock(&header_size, &miner_tx_size, nullptr, nullptr, nullptr, nullptr);
+		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(&header_size, &miner_tx_size, nullptr, nullptr, nullptr, nullptr);
 
 		if (!header_size || !miner_tx_size || (mainchain_data.size() < header_size + miner_tx_size)) {
 			LOGERR(1, "tried to calculate PoW of uninitialized block");

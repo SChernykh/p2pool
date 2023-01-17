@@ -1578,6 +1578,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 		P2PClient* client;
 		P2PServer* server;
 		uint32_t reset_counter;
+		bool is_incoming;
 
 		uint8_t challenge[CHALLENGE_SIZE];
 		uint64_t salt;
@@ -1590,6 +1591,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 	work->client = this;
 	work->server = server;
 	work->reset_counter = m_resetCounter.load();
+	work->is_incoming = m_isIncoming;
 
 	memcpy(work->challenge, challenge, CHALLENGE_SIZE);
 	work->salt = server->get_random64();
@@ -1630,7 +1632,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					return;
 				}
 
-				if (work->client->m_isIncoming) {
+				if (work->is_incoming) {
 					// This is an incoming connection, so it must do PoW, not us
 					return;
 				}

@@ -61,8 +61,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 #define READ_BUF(buf, size) do { if (!read_buf((buf), (size))) return __LINE__; } while(0)
 
-		MutexLock lock(m_lock);
-
 		READ_BYTE(m_majorVersion);
 		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
 
