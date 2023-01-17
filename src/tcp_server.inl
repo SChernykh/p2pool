@@ -810,7 +810,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 	delete GetLoopUserData(&s->m_loop, false);
 
 	s->m_numHandles = 0;
-	uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<size_t*>(n))++; }, &s->m_numHandles);
+	uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<uint32_t*>(n))++; }, &s->m_numHandles);
 
 	uv_prepare_init(&s->m_loop, &s->m_shutdownPrepare);
 	s->m_shutdownPrepare.data = s;
@@ -843,7 +843,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 			TCPServer* s = reinterpret_cast<TCPServer*>(h->data);
 
 			s->m_numHandles = 0;
-			uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<size_t*>(n))++; }, &s->m_numHandles);
+			uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<uint32_t*>(n))++; }, &s->m_numHandles);
 
 			if (s->m_numHandles > 2) {
 				// Don't count m_shutdownTimer and m_shutdownPrepare
