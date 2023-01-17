@@ -60,13 +60,13 @@ StratumServer::StratumServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	m_extraNonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(m_rng()));
-
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
 	uv_mutex_init_checked(&m_blobsQueueLock);
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
+
+	m_extraNonce = PoolBlock::signal_v2_readiness(get_random32());
 
 	m_submittedSharesPool.resize(10);
 	for (size_t i = 0; i < m_submittedSharesPool.size(); ++i) {
@@ -107,7 +107,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		return;
 	}
 
-	const uint32_t extra_nonce_start = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(get_random64()));
+	const uint32_t extra_nonce_start = PoolBlock::signal_v2_readiness(get_random32());
 	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};
@@ -283,7 +283,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf, size_t buf_size)
 		{
 			do {
-				client->m_rpcId = static_cast<uint32_t>(static_cast<StratumServer*>(client->m_owner)->get_random64());
+				client->m_rpcId = static_cast<StratumServer*>(client->m_owner)->get_random32();
 			} while (!client->m_rpcId);
 
 			log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
@@ -463,10 +463,10 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	return result;
 }
 
-uint64_t StratumServer::get_random64()
+uint32_t StratumServer::get_random32()
 {
 	MutexLock lock(m_rngLock);
-	return m_rng();
+	return static_cast<uint32_t>(m_rng() >> 32);
 }
 
 void StratumServer::print_status()

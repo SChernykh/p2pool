@@ -198,9 +198,12 @@ static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t medi
 
 void BlockTemplate::shuffle_tx_order()
 {
-	const int64_t n = static_cast<int64_t>(m_mempoolTxsOrder.size());
-	for (int64_t i = n - 1; i > 0; --i) {
-		std::swap(m_mempoolTxsOrder[i], m_mempoolTxsOrder[m_rng() % (i + 1)]);
+	const uint64_t n = m_mempoolTxsOrder.size();
+	if (n > 1) {
+		for (uint64_t i = 0, k; i < n - 1; ++i) {
+			umul128(m_rng(), n - i, &k);
+			std::swap(m_mempoolTxsOrder[i], m_mempoolTxsOrder[i + k]);
+		}
 	}
 }
 
@@ -636,7 +639,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	uint32_t* sidechain_extra = m_poolBlockTemplate->m_sidechainExtraBuf;
 	sidechain_extra[0] = 0;
 	sidechain_extra[1] = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
-	sidechain_extra[2] = static_cast<uint32_t>(m_rng());
+	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
 	sidechain_extra[3] = 0;
 
 	m_poolBlockTemplate->m_nonce = 0;

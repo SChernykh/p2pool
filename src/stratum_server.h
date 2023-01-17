@@ -84,7 +84,7 @@ public:
 
 	bool on_login(StratumClient* client, uint32_t id, const char* login);
 	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
-	uint64_t get_random64();
+	uint32_t get_random32();
 
 	void print_status() override;
 	void show_workers();
