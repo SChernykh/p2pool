@@ -585,7 +585,7 @@ void StratumServer::print_stratum_status() const
 		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
 		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
 		"\nTotal hashes       = " << total_hashes <<
-		"\nShares found       = " << shares_found << shares_failed_buf <<
+		"\nShares found       = " << shares_found << static_cast<const char*>(shares_failed_buf) <<
 		"\nAverage effort     = " << average_effort << '%' <<
 		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
 		"\nConnections        = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
