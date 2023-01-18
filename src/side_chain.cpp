@@ -65,7 +65,6 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
 	, m_chainWindowSize(2160)
 	, m_unclePenalty(20)
-	, m_curDifficulty(m_minDifficulty)
 	, m_precalcFinished(false)
 {
 	if (s_networkType == NetworkType::Invalid) {
@@ -85,6 +84,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	if (!check_config()) {
 		PANIC_STOP();
 	}
+
+	m_curDifficulty = m_minDifficulty;
 
 	uv_rwlock_init_checked(&m_sidechainLock);
 	uv_mutex_init_checked(&m_seenWalletsLock);
