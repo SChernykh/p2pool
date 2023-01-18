@@ -376,7 +376,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 
 	err = uv_tcp_connect(connect_request, &client->m_socket, reinterpret_cast<sockaddr*>(&addr), on_connect);
 	if (err) {
-		LOGERR(1, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
+		LOGWARN(5, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
