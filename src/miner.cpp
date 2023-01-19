@@ -39,15 +39,16 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_threads(threads)
 	, m_stopped{ false }
 	, m_startTimestamp(high_resolution_clock::now())
-	, m_nonce(0)
+	, m_rng(RandomDeviceSeed::instance)
+	, m_fullNonce(std::numeric_limits<uint64_t>::max())
 	, m_nonceTimestamp(m_startTimestamp)
 	, m_totalHashes(0)
 	, m_sharesFound(0)
 	, m_job{}
 	, m_jobIndex{ 0 }
 {
-	std::random_device rd;
-	m_extraNonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(rd()));
+	// Diffuse the initial state in case it has low quality
+	m_rng.discard(10000);
 
 	on_block(m_pool->block_template());
 
@@ -77,7 +78,7 @@ Miner::~Miner()
 
 void Miner::print_status()
 {
-	const uint32_t hash_count = 0 - m_nonce.load();
+	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.load());
 
 	const double dt = static_cast<double>(duration_cast<nanoseconds>(high_resolution_clock::now() - m_nonceTimestamp).count()) / 1e9;
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
@@ -94,9 +95,12 @@ void Miner::on_block(const BlockTemplate& block)
 	const uint32_t next_index = m_jobIndex ^ 1;
 	Job& j = m_job[next_index];
 	hash seed;
-	j.m_blobSize = block.get_hashing_blob(m_extraNonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
 
-	const uint32_t hash_count = 0 - m_nonce.exchange(0);
+	const uint32_t extra_nonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(m_rng() >> 32));
+	j.m_blobSize = block.get_hashing_blob(extra_nonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
+
+	const uint64_t next_full_nonce = (static_cast<uint64_t>(extra_nonce) << 32) | std::numeric_limits<uint32_t>::max();
+	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.exchange(next_full_nonce));
 	m_jobIndex = next_index;
 
 	const auto cur_ts = high_resolution_clock::now();
@@ -193,14 +197,19 @@ void Miner::run(WorkerData* data)
 		if (first) {
 			first = false;
 			memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
-			job[index].set_nonce(miner->m_nonce.fetch_sub(1), miner->m_extraNonce);
+
+			const uint64_t full_nonce = miner->m_fullNonce.fetch_sub(1);
+			job[index].set_nonce(static_cast<uint32_t>(full_nonce), static_cast<uint32_t>(full_nonce >> 32));
+
 			randomx_calculate_hash_first(vm, job[index].m_blob, job[index].m_blobSize);
 		}
 
 		const Job& j = job[index];
 		index ^= 1;
 		memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
-		job[index].set_nonce(miner->m_nonce.fetch_sub(1), miner->m_extraNonce);
+
+		const uint64_t full_nonce = miner->m_fullNonce.fetch_sub(1);
+		job[index].set_nonce(static_cast<uint32_t>(full_nonce), static_cast<uint32_t>(full_nonce >> 32));
 
 		hash h;
 		randomx_calculate_hash_next(vm, job[index].m_blob, job[index].m_blobSize, &h);
