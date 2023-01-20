@@ -325,7 +325,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
 	}
 
-	// Only choose transactions that were received 10 or more seconds ago, or high fee (>= 0.006 XMR) transactions
+	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
 	size_t total_mempool_transactions;
 	{
 		m_mempoolTxs.clear();
@@ -337,7 +337,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		const uint64_t cur_time = seconds_since_epoch();
 
 		for (auto& it : mempool.m_transactions) {
-			if ((cur_time >= it.second.time_received + 10) || (it.second.fee >= HIGH_FEE_VALUE)) {
+			if ((cur_time > it.second.time_received + 5) || (it.second.fee >= HIGH_FEE_VALUE)) {
 				m_mempoolTxs.emplace_back(it.second);
 			}
 		}

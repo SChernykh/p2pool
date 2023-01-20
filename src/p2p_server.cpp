@@ -1162,9 +1162,9 @@ void P2PServer::check_block_template()
 		return;
 	}
 
-	// Force update block template every 30 seconds after the initial sync is done
-	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 30) {
-		LOGINFO(4, "block template is 30 seconds old, updating it");
+	// Force update block template every 20 seconds after the initial sync is done
+	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 20) {
+		LOGINFO(4, "block template is 20 seconds old, updating it");
 		m_pool->update_block_template_async();
 	}
 }
