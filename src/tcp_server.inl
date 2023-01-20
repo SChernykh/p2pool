@@ -518,13 +518,22 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		return true;
 	}
 
-	buf->m_client = client;
 	buf->m_write.data = buf;
-	buf->m_data.reserve(round_up(bytes_written, 64));
-	buf->m_data.assign(callback_buf, callback_buf + bytes_written);
+	buf->m_client = client;
+
+	if (buf->m_dataCapacity < bytes_written) {
+		buf->m_dataCapacity = round_up(bytes_written, 64);
+		buf->m_data = realloc_hook(buf->m_data, buf->m_dataCapacity);
+		if (!buf->m_data) {
+			LOGERR(0, "failed to allocate " << buf->m_dataCapacity << " bytes to send data");
+			PANIC_STOP();
+		}
+	}
+
+	memcpy(buf->m_data, callback_buf, bytes_written);
 
 	uv_buf_t bufs[1];
-	bufs[0].base = reinterpret_cast<char*>(buf->m_data.data());
+	bufs[0].base = reinterpret_cast<char*>(buf->m_data);
 	bufs[0].len = static_cast<int>(bytes_written);
 
 	const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
@@ -562,6 +571,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	}
 
 	for (WriteBuf* buf : server->m_writeBuffers) {
+		free_hook(buf->m_data);
 		delete buf;
 	}
 	server->m_writeBuffers.clear();
