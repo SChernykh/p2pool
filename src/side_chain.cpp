@@ -878,8 +878,9 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	uint64_t total_uncles_in_window = 0;
 
 	// each dot corresponds to window_size / 30 shares, with current values, 2160 / 30 = 72
-	std::array<uint64_t, 30> our_blocks_in_window{};
-	std::array<uint64_t, 30> our_uncles_in_window{};
+	constexpr size_t N = 30;
+	std::array<uint64_t, N> our_blocks_in_window{};
+	std::array<uint64_t, N> our_uncles_in_window{};
 
 	const Wallet& w = m_pool->params().m_wallet;
 
@@ -887,10 +888,12 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		blocks_in_window.emplace(cur->m_sidechainId);
 		++total_blocks_in_window;
 
+		// "block_depth <= window_size - 1" here (see the check below), so window_index will be <= N - 1
+		// This will map the range [0, window_size - 1] into [0, N - 1]
+		const size_t window_index = block_depth * (N - 1) / (window_size - 1);
+
 		if (cur->m_minerWallet == w) {
-			// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
-			const size_t window_index = (total_blocks_in_window - 1) / ((window_size + our_blocks_in_window.size() - 1) / our_blocks_in_window.size());
-			our_blocks_in_window[std::min(window_index, our_blocks_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than window_size
+			++our_blocks_in_window[window_index];
 		}
 
 		++block_depth;
@@ -906,9 +909,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 				if (tip_height - uncle->m_sidechainHeight < window_size) {
 					++total_uncles_in_window;
 					if (uncle->m_minerWallet == w) {
-						// this produces an integer division with quotient rounded up, avoids non-whole divisions from overflowing on total_blocks_in_window
-						const size_t window_index = (total_blocks_in_window - 1) / ((window_size + our_uncles_in_window.size() - 1) / our_uncles_in_window.size());
-						our_uncles_in_window[std::min(window_index, our_uncles_in_window.size() - 1)]++; // clamp window_index, even if total_blocks_in_window is not larger than window_size
+						++our_uncles_in_window[window_index];
 					}
 				}
 			}
