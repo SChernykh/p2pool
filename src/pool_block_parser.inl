@@ -270,6 +270,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 		}
 		else {
+			// Both values are the same before v2
 			m_txkeySec = m_txkeySecSeed;
 
 			// Enforce deterministic tx keys starting from v15

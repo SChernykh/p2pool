@@ -272,8 +272,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	const int sidechain_version = m_poolBlockTemplate->get_sidechain_version();
 
 	if (sidechain_version <= 1) {
-		m_poolBlockTemplate->m_txkeySecSeed = miner_wallet->spend_public_key();
-		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, m_poolBlockTemplate->m_txkeySecSeed, data.prev_id);
+		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
+		// Both values are the same before v2
+		m_poolBlockTemplate->m_txkeySecSeed = m_poolBlockTemplate->m_txkeySec;
 	}
 
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
