@@ -24,6 +24,7 @@ Pool status and monitoring pages can be found at https://p2pool.io/, https://p2p
 - [Monero version support](#monero-version-support)
 - [How to mine on P2Pool](#how-to-mine-on-p2pool)
   - [General Considerations](#general-considerations)
+  - [GUI for P2Pool](#gui-for-p2pool)
   - [GNU/Linux](#gnulinux)
   - [Windows](#windows)
 - [Build instructions](#build-instructions)
@@ -97,7 +98,7 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 
 ### GUI for P2Pool
 
-- [Gupax](https://github.com/hinto-janaiyo/gupax) project (currently in development) aims to provide an easy to use GUI to configure and run monerod/p2pool/xmrig
+- [Gupax](https://github.com/hinto-janaiyo/gupax) project aims to provide an easy to use cross-platform GUI to configure and run P2Pool & [XMRig](https://github.com/xmrig/xmrig).
 
 ### GNU/Linux
 
