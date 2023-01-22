@@ -83,10 +83,19 @@ void Miner::print_status()
 	const double dt = static_cast<double>(duration_cast<nanoseconds>(high_resolution_clock::now() - m_nonceTimestamp).count()) / 1e9;
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
+	char shares_failed_buf[64] = {};
+	log::Stream s(shares_failed_buf);
+
+	const uint32_t shares_found = m_sharesFound;
+	const uint32_t shares_failed = m_sharesFailed;
+	if (shares_failed) {
+		s << log::Yellow() << "\nShares failed = " << shares_failed << log::NoColor();
+	}
+
 	LOGINFO(0, "status" <<
-		"\nThreads      = " << m_threads <<
-		"\nHashrate     = " << log::Hashrate(hr) <<
-		"\nShares found = " << m_sharesFound.load()
+		"\nThreads       = " << m_threads <<
+		"\nHashrate      = " << log::Hashrate(hr) <<
+		"\nShares found  = " << shares_found << static_cast<const char*>(shares_failed_buf)
 	);
 }
 
@@ -222,7 +231,12 @@ void Miner::run(WorkerData* data)
 		if (j.m_sidechainDiff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << j.m_height << ", sidechain height " << j.m_sidechainHeight << ", diff " << j.m_sidechainDiff << ", worker thread " << data->m_index << '/' << data->m_count);
 			++m_sharesFound;
-			m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce);
+			if (!m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce)) {
+				if (m_sharesFound > 0) {
+					--m_sharesFound;
+				}
+				++m_sharesFailed;
+			}
 		}
 
 		std::this_thread::yield();

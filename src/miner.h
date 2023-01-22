@@ -61,6 +61,7 @@ private:
 
 	std::atomic<uint64_t> m_totalHashes;
 	std::atomic<uint32_t> m_sharesFound;
+	std::atomic<uint32_t> m_sharesFailed;
 
 	struct Job
 	{
