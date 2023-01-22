@@ -391,7 +391,7 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 }
 
 static constexpr uint64_t VERSION2_MAINNET_TIMESTAMP = 1679173200U; // 2023-03-18 21:00 UTC
-static constexpr uint64_t VERSION2_TESTNET_TIMESTAMP = 1674334800U; // 2023-01-21 21:00 UTC
+static constexpr uint64_t VERSION2_TESTNET_TIMESTAMP = 1674507600U; // 2023-01-23 21:00 UTC
 
 uint32_t PoolBlock::signal_v2_readiness(uint32_t extra_nonce)
 {
