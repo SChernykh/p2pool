@@ -132,6 +132,7 @@ void Miner::on_block(const BlockTemplate& block)
 					<< ",\"total_hashes\":" << m_totalHashes.load()
 					<< ",\"time_running\":" << time_running
 					<< ",\"shares_found\":" << m_sharesFound.load()
+					<< ",\"shares_failed\":" << m_sharesFailed.load()
 					<< ",\"block_reward_share_percent\":" << block_reward_share_percent
 					<< ",\"threads\":" << m_threads
 					<< "}";
