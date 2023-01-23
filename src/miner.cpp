@@ -44,6 +44,7 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	, m_nonceTimestamp(m_startTimestamp)
 	, m_totalHashes(0)
 	, m_sharesFound(0)
+	, m_sharesFailed(0)
 	, m_job{}
 	, m_jobIndex{ 0 }
 {
@@ -142,6 +143,7 @@ void Miner::reset_share_counters()
 {
 	m_totalHashes = 0;
 	m_sharesFound = 0;
+	m_sharesFailed = 0;
 }
 
 void Miner::run(void* data)
