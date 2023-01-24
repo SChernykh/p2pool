@@ -572,7 +572,7 @@ void p2pool::submit_block() const
 	request.append("\"]}");
 
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request, m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[height, diff, template_id, nonce, extra_nonce, &sidechain_id, is_external](const char* data, size_t size)
+		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
