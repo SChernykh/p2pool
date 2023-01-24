@@ -267,6 +267,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_blockHeader.insert(m_blockHeader.end(), NONCE_SIZE, 0);
 	m_poolBlockTemplate->m_nonce = 0;
 
+	// Fill in m_txinGenHeight here so get_shares() can use it to calculate the correct PPLNS window
+	m_poolBlockTemplate->m_txinGenHeight = data.height;
+
 	m_blockHeaderSize = m_blockHeader.size();
 
 	const int sidechain_version = m_poolBlockTemplate->get_sidechain_version();
