@@ -397,9 +397,7 @@ uint32_t PoolBlock::signal_v2_readiness(uint32_t extra_nonce)
 {
 	const uint64_t ts = (SideChain::network_type() == NetworkType::Mainnet) ? VERSION2_MAINNET_TIMESTAMP : VERSION2_TESTNET_TIMESTAMP;
 	if (time(nullptr) < static_cast<int64_t>(ts)) {
-		extra_nonce |= 0xFF000000UL;
-		extra_nonce &= ~0x00100000UL;
-		return extra_nonce;
+		return (extra_nonce & 0x007FFFFFUL) | 0xFF000000UL;
 	}
 	return extra_nonce;
 }
