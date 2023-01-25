@@ -152,6 +152,7 @@ private:
 			COULDNT_CHECK_POW,
 			LOW_DIFF,
 			INVALID_POW,
+			BANNED,
 			OK
 		} m_result;
 	};

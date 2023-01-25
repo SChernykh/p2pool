@@ -828,12 +828,19 @@ void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 void StratumServer::on_share_found(uv_work_t* req)
 {
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
+	StratumServer* server = share->m_server;
+
+	if (server->is_banned(share->m_clientAddr)) {
+		share->m_highEnoughDifficulty = false;
+		share->m_result = SubmittedShare::Result::BANNED;
+		return;
+	}
+
 	if (share->m_highEnoughDifficulty) {
 		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
 	StratumClient* client = share->m_client;
-	StratumServer* server = share->m_server;
 	p2pool* pool = server->m_pool;
 
 	const uint64_t target = share->m_target;
@@ -951,6 +958,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 					break;
 				case SubmittedShare::Result::INVALID_POW:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Invalid PoW\"}}\n";
+					break;
+				case SubmittedShare::Result::BANNED:
+					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Banned\"}}\n";
 					break;
 				case SubmittedShare::Result::OK:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":null,\"result\":{\"status\":\"OK\"}}\n";
