@@ -5,7 +5,7 @@ option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.6.0") 
+if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool_tests)
 endif()
 

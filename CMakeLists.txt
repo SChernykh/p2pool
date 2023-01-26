@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 2.8.12)
 project(p2pool)
 
 option(STATIC_BINARY "Build static binary" OFF)
@@ -9,7 +9,9 @@ option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is comp
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+endif()
 
 if (WITH_RANDOMX)
 	add_definitions(-DWITH_RANDOMX)
