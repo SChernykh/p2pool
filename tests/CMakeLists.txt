@@ -96,7 +96,7 @@ if (WIN32)
 	endif()
 	add_definitions(-DCURL_STATICLIB)
 elseif (NOT APPLE)
-	set(LIBS ${LIBS} pthread gss dl)
+	set(LIBS ${LIBS} pthread dl)
 endif()
 
 if (STATIC_LIBS)
