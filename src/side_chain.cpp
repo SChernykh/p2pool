@@ -890,7 +890,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 
 		// "block_depth <= window_size - 1" here (see the check below), so window_index will be <= N - 1
 		// This will map the range [0, window_size - 1] into [0, N - 1]
-		const size_t window_index = block_depth * (N - 1) / (window_size - 1);
+		const size_t window_index = (window_size > 1) ? (block_depth * (N - 1) / (window_size - 1)) : 0;
 
 		if (cur->m_minerWallet == w) {
 			++our_blocks_in_window[window_index];
