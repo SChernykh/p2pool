@@ -124,7 +124,7 @@ if (WIN32)
 elseif (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 	set(LIBS ${LIBS} pthread)
 elseif (NOT APPLE)
-	set(LIBS ${LIBS} pthread dl)
+	set(LIBS ${LIBS} pthread)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
@@ -226,7 +226,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		find_library(SYSTEM_CONFIGURATION_LIB SystemConfiguration)
 		set(STATIC_LIBS ${STATIC_LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 	else()
-		set(STATIC_LIBS ${STATIC_LIBS} pthread dl)
+		set(STATIC_LIBS ${STATIC_LIBS} pthread)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
