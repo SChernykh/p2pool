@@ -79,6 +79,8 @@ public:
 		difficulty_type m_autoDiff;
 		char m_customUser[32];
 
+		uint64_t m_lastJobTarget;
+
 		int32_t m_score;
 	};
 
@@ -87,7 +89,7 @@ public:
 	uint32_t get_random32();
 
 	void print_status() override;
-	void show_workers();
+	void show_workers_async();
 
 	void reset_share_counters();
 
@@ -119,6 +121,11 @@ private:
 
 	static void on_blobs_ready(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->on_blobs_ready(); }
 	void on_blobs_ready();
+
+	uv_async_t m_showWorkersAsync;
+
+	static void on_show_workers(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->show_workers(); }
+	void show_workers();
 
 	std::atomic<uint32_t> m_extraNonce;
 

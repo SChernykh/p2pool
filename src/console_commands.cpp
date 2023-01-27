@@ -182,7 +182,7 @@ static void do_showpeers(p2pool* m_pool, const char* /* args */)
 static void do_showworkers(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->stratum_server()) {
-		m_pool->stratum_server()->show_workers();
+		m_pool->stratum_server()->show_workers_async();
 	}
 }
 

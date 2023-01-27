@@ -73,13 +73,12 @@ StratumServer::StratumServer(p2pool* pool)
 		m_submittedSharesPool[i] = new SubmittedShare{};
 	}
 
-	const int err = uv_async_init(&m_loop, &m_blobsAsync, on_blobs_ready);
-	if (err) {
-		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		PANIC_STOP();
-	}
+	uv_async_init_checked(&m_loop, &m_blobsAsync, on_blobs_ready);
 	m_blobsAsync.data = this;
 	m_blobsQueue.reserve(2);
+
+	uv_async_init_checked(&m_loop, &m_showWorkersAsync, on_show_workers);
+	m_showWorkersAsync.data = this;
 
 	start_listening(pool->params().m_stratumAddresses);
 }
@@ -278,6 +277,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		saved_job.template_id = template_id;
 		saved_job.target = target;
 	}
+	client->m_lastJobTarget = target;
 
 	const bool result = send(client,
 		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf, size_t buf_size)
@@ -475,6 +475,13 @@ void StratumServer::print_status()
 	print_stratum_status();
 }
 
+void StratumServer::show_workers_async()
+{
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync))) {
+		uv_async_send(&m_showWorkersAsync);
+	}
+}
+
 void StratumServer::show_workers()
 {
 	const uint64_t cur_time = seconds_since_epoch();
@@ -497,15 +504,14 @@ void StratumServer::show_workers()
 	);
 
 	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
-		difficulty_type diff;
-		if (c->m_customDiff != 0) {
-			diff = c->m_customDiff;
-		}
-		else if (m_autoDiff && (c->m_autoDiff != 0)) {
-			diff = c->m_autoDiff;
-		}
-		else {
-			diff = pool_diff;
+		difficulty_type diff = pool_diff;
+		if (c->m_lastJobTarget > 1) {
+			uint64_t r;
+			diff.lo = udiv128(1, 0, c->m_lastJobTarget, &r);
+			diff.hi = 0;
+			if (r) {
+				++diff.lo;
+			}
 		}
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
@@ -756,6 +762,7 @@ void StratumServer::on_blobs_ready()
 				saved_job.template_id = data->m_templateId;
 				saved_job.target = target;
 			}
+			client->m_lastJobTarget = target;
 
 			const bool result = send(client,
 				[data, target, hashing_blob, job_id](void* buf, size_t buf_size)
@@ -985,6 +992,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 void StratumServer::on_shutdown()
 {
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync), nullptr);
 }
 
 StratumServer::StratumClient::StratumClient()
@@ -998,6 +1006,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_customDiff{}
 	, m_autoDiff{}
 	, m_customUser{}
+	, m_lastJobTarget(0)
 	, m_score(0)
 {
 }
@@ -1018,6 +1027,8 @@ void StratumServer::StratumClient::reset()
 	m_customDiff = {};
 	m_autoDiff = {};
 	m_customUser[0] = '\0';
+
+	m_lastJobTarget = 0;
 
 	m_score = 0;
 }
