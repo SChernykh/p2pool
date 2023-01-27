@@ -353,7 +353,7 @@ jobs:
 
   build-freebsd:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ${{ matrix.os.host }}
 
     strategy:
@@ -362,7 +362,7 @@ jobs:
           - name: freebsd
             architecture: x86-64
             version: '12.4'
-            host: macos-12
+            host: ubuntu-22.04
 
     steps:
     - name: Checkout repository
@@ -382,27 +382,27 @@ jobs:
           cd external/src/curl
           autoreconf -fi
           ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
-          make -j3
+          make -j2
           cd ../libuv
           mkdir build
           cd build
           cmake .. -DBUILD_TESTING=OFF
-          make -j3
+          make -j2
           cd ../../libzmq
           mkdir build
           cd build
           cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
-          make -j3
+          make -j2
           cd ../../../..
           mkdir build
           cd build
           cmake .. -DSTATIC_BINARY=ON
-          make -j3
+          make -j2
           cd ../tests
           mkdir build
           cd build
           cmake .. -DSTATIC_LIBS=ON
-          make -j3
+          make -j2
           ./p2pool_tests
 
     - name: Archive binary
