@@ -1321,7 +1321,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		{
 		case MessageId::HANDSHAKE_CHALLENGE:
 			if (m_handshakeComplete) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_CHALLENGE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected HANDSHAKE_CHALLENGE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1342,7 +1342,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::HANDSHAKE_SOLUTION:
 			if (m_handshakeComplete) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_SOLUTION");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected HANDSHAKE_SOLUTION");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1383,7 +1383,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		case MessageId::BLOCK_REQUEST:
 			++num_block_requests;
 			if (num_block_requests > 100) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too many BLOCK_REQUEST messages at once");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too many BLOCK_REQUEST messages at once");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1403,7 +1403,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::BLOCK_RESPONSE:
 			if (m_blockPendingRequests.empty()) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected BLOCK_RESPONSE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected BLOCK_RESPONSE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1463,7 +1463,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::PEER_LIST_RESPONSE:
 			if (m_peerListPendingRequests <= 0) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected PEER_LIST_RESPONSE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected PEER_LIST_RESPONSE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1474,7 +1474,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			if (bytes_left >= 2) {
 				const uint32_t num_peers = buf[1];
 				if (num_peers > PEER_LIST_RESPONSE_MAX_PEERS) {
-					LOGWARN(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too long peer list (" << num_peers << ')');
+					LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent too long peer list (" << num_peers << ')');
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
 					return false;

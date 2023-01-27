@@ -65,6 +65,8 @@ p2pool::p2pool(int argc, char* argv[])
 		throw std::exception();
 	}
 
+	m_hostStr = m_params->m_host;
+
 	if (m_params->m_socks5Proxy.empty()) {
 		if (m_params->m_dns) {
 			bool is_v6;
@@ -76,6 +78,16 @@ p2pool::p2pool(int argc, char* argv[])
 		else if (m_params->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
 			LOGERR(1, "Can't resolve hostname " << m_params->m_host << " with DNS disabled");
 			throw std::exception();
+		}
+	}
+
+	{
+		const bool changed = (m_params->m_host != m_hostStr);
+		const std::string rpc_port = ':' + std::to_string(m_params->m_rpcPort);
+		const std::string zmq_port = ":ZMQ:" + std::to_string(m_params->m_zmqPort);
+		m_hostStr += rpc_port + zmq_port;
+		if (changed) {
+			m_hostStr += " (" + m_params->m_host + ')';
 		}
 	}
 
