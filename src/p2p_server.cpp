@@ -497,7 +497,12 @@ void P2PServer::load_peer_list()
 			hints.ai_flags = AI_ADDRCONFIG;
 
 			addrinfo* result;
-			const int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			if (err) {
+				LOGWARN(4, "getaddrinfo failed for " << nodes[i] << ": " << gai_strerror(err) << ", retrying with IPv4 only");
+				hints.ai_family = AF_INET;
+				err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			}
 			if (err == 0) {
 				for (addrinfo* r = result; r != NULL; r = r->ai_next) {
 					const char* addr_str;

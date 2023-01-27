@@ -420,7 +420,12 @@ bool resolve_host(std::string& host, bool& is_v6)
 	hints.ai_flags = AI_ADDRCONFIG;
 
 	addrinfo* r = nullptr;
-	const int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	if (err) {
+		LOGWARN(4, "getaddrinfo failed for " << host << ": " << gai_strerror(err) << ", retrying with IPv4 only");
+		hints.ai_family = AF_INET;
+		err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	}
 	if ((err == 0) && r) {
 		const char* addr_str = nullptr;
 		char addr_str_buf[64];
