@@ -106,10 +106,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	return *this;
 }
 
-PoolBlock::~PoolBlock()
-{
-}
-
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
@@ -206,7 +202,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
 
 #if POOL_BLOCK_DEBUG
-	if (!nonce && !extra_nonce && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
+	if ((nonce == &m_nonce) && (extra_nonce == &m_extraNonce) && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
 		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
 		PANIC_STOP();
 	}

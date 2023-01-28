@@ -309,6 +309,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 			FORCEINLINE Precalc(Precalc&& rhs) noexcept : txKeySec(rhs.txKeySec), counter(rhs.counter.load()), shares(rhs.shares) { rhs.shares = nullptr; }
 			FORCEINLINE ~Precalc() { free_hook(shares); }
 
+			// Disable any other way of copying/moving Precalc
+			Precalc(const Precalc&) = delete;
+			Precalc& operator=(const Precalc&) = delete;
+			Precalc& operator=(Precalc&&) = delete;
+
 			FORCEINLINE void operator()()
 			{
 				if (shares) {

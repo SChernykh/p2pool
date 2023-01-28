@@ -871,7 +871,7 @@ void P2PServer::on_broadcast()
 		}
 
 		for (Broadcast* data : broadcast_queue) {
-			send(client, [client, data](void* buf, size_t buf_size) -> size_t
+			const bool result = send(client, [client, data](void* buf, size_t buf_size) -> size_t
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
@@ -930,6 +930,11 @@ void P2PServer::on_broadcast()
 
 				return p - p0;
 			});
+			if (!result) {
+				LOGWARN(5, "failed to broadcast to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
+				client->close();
+				break;
+			}
 		}
 	}
 }

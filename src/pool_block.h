@@ -58,7 +58,6 @@ struct DifficultyData
 struct PoolBlock
 {
 	PoolBlock();
-	~PoolBlock();
 
 	PoolBlock(const PoolBlock& b);
 	PoolBlock& operator=(const PoolBlock& b);
