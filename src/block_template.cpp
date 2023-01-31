@@ -55,10 +55,12 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	, m_difficulty{}
 	, m_seedHash{}
 	, m_timestamp(0)
-	, m_txkeyPub{}
-	, m_txkeySec{}
 	, m_poolBlockTemplate(new PoolBlock())
 	, m_finalReward(0)
+	, m_minerTxKeccakState{}
+	, m_minerTxKeccakStateInputLength(0)
+	, m_sidechainHashKeccakState{}
+	, m_sidechainHashInputLength(0)
 	, m_rng(RandomDeviceSeed::instance)
 {
 	// Diffuse the initial state in case it has low quality
@@ -72,6 +74,8 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	m_transactionHashes.reserve(8192);
 	m_rewards.reserve(100);
 	m_blockTemplateBlob.reserve(65536);
+	m_fullDataBlob.reserve(65536);
+	m_sidechainHashBlob.reserve(65536);
 	m_merkleTreeMainBranch.reserve(HASH_SIZE * 10);
 	m_mempoolTxs.reserve(1024);
 	m_mempoolTxsOrder.reserve(1024);
@@ -119,6 +123,8 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_templateId = b.m_templateId;
 	m_lastUpdated = b.m_lastUpdated.load();
 	m_blockTemplateBlob = b.m_blockTemplateBlob;
+	m_fullDataBlob = b.m_fullDataBlob;
+	m_sidechainHashBlob = b.m_sidechainHashBlob;
 	m_merkleTreeMainBranch = b.m_merkleTreeMainBranch;
 	m_blockHeaderSize = b.m_blockHeaderSize;
 	m_minerTxOffsetInTemplate = b.m_minerTxOffsetInTemplate;
@@ -131,10 +137,14 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_difficulty = b.m_difficulty;
 	m_seedHash = b.m_seedHash;
 	m_timestamp = b.m_timestamp;
-	m_txkeyPub = b.m_txkeyPub;
-	m_txkeySec = b.m_txkeySec;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
-	m_finalReward = b.m_finalReward;
+	m_finalReward = b.m_finalReward.load();
+
+	memcpy(m_minerTxKeccakState, b.m_minerTxKeccakState, sizeof(m_minerTxKeccakState));
+	m_minerTxKeccakStateInputLength = b.m_minerTxKeccakStateInputLength;
+
+	memcpy(m_sidechainHashKeccakState, b.m_sidechainHashKeccakState, sizeof(m_sidechainHashKeccakState));
+	m_sidechainHashInputLength = b.m_sidechainHashInputLength;
 
 	m_minerTx.clear();
 	m_blockHeader.clear();
@@ -188,9 +198,12 @@ static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t medi
 
 void BlockTemplate::shuffle_tx_order()
 {
-	const int64_t n = static_cast<int64_t>(m_mempoolTxsOrder.size());
-	for (int64_t i = n - 1; i > 0; --i) {
-		std::swap(m_mempoolTxsOrder[i], m_mempoolTxsOrder[m_rng() % (i + 1)]);
+	const uint64_t n = m_mempoolTxsOrder.size();
+	if (n > 1) {
+		for (uint64_t i = 0, k; i < n - 1; ++i) {
+			umul128(m_rng(), n - i, &k);
+			std::swap(m_mempoolTxsOrder[i], m_mempoolTxsOrder[i + k]);
+		}
 	}
 }
 
@@ -220,8 +233,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		LOGWARN(4, "using old block template with ID = " << id);
 		*this = *m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)];
 	};
-
-	get_tx_keys(m_txkeyPub, m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
 
 	m_height = data.height;
 	m_difficulty = data.difficulty;
@@ -256,11 +267,74 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_blockHeader.insert(m_blockHeader.end(), NONCE_SIZE, 0);
 	m_poolBlockTemplate->m_nonce = 0;
 
+	// Fill in m_txinGenHeight here so get_shares() can use it to calculate the correct PPLNS window
+	m_poolBlockTemplate->m_txinGenHeight = data.height;
+
 	m_blockHeaderSize = m_blockHeader.size();
 
-	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, miner_wallet, m_txkeySec, m_shares);
+	const int sidechain_version = m_poolBlockTemplate->get_sidechain_version();
 
-	// Only choose transactions that were received 10 or more seconds ago, or high fee (>= 0.006 XMR) transactions
+	if (sidechain_version <= 1) {
+		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
+		// Both values are the same before v2
+		m_poolBlockTemplate->m_txkeySecSeed = m_poolBlockTemplate->m_txkeySec;
+	}
+
+	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
+
+	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares);
+
+	// Pre-calculate outputs to speed up miner tx generation
+	if (!m_shares.empty()) {
+		struct Precalc
+		{
+			FORCEINLINE Precalc(const std::vector<MinerShare>& s, const hash& k) : txKeySec(k)
+			{
+				const size_t N = s.size();
+				counter = static_cast<int>(N) - 1;
+				shares = reinterpret_cast<std::pair<hash, hash>*>(malloc_hook(sizeof(std::pair<hash, hash>) * N));
+				if (shares) {
+					const MinerShare* src = &s[0];
+					std::pair<hash, hash>* dst = shares;
+					std::pair<hash, hash>* e = shares + N;
+
+					for (; dst < e; ++src, ++dst) {
+						const Wallet* w = src->m_wallet;
+						dst->first = w->view_public_key();
+						dst->second = w->spend_public_key();
+					}
+				}
+			}
+
+			FORCEINLINE Precalc(Precalc&& rhs) noexcept : txKeySec(rhs.txKeySec), counter(rhs.counter.load()), shares(rhs.shares) { rhs.shares = nullptr; }
+			FORCEINLINE ~Precalc() { free_hook(shares); }
+
+			// Disable any other way of copying/moving Precalc
+			Precalc(const Precalc&) = delete;
+			Precalc& operator=(const Precalc&) = delete;
+			Precalc& operator=(Precalc&&) = delete;
+
+			FORCEINLINE void operator()()
+			{
+				if (shares) {
+					hash derivation, eph_public_key;
+					int i;
+					while ((i = counter.fetch_sub(1)) >= 0) {
+						uint8_t view_tag;
+						generate_key_derivation(shares[i].first, txKeySec, i, derivation, view_tag);
+						derive_public_key(derivation, i, shares[i].second, eph_public_key);
+					}
+				}
+			}
+
+			hash txKeySec;
+			std::atomic<int> counter;
+			std::pair<hash, hash>* shares;
+		};
+		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
+	}
+
+	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
 	size_t total_mempool_transactions;
 	{
 		m_mempoolTxs.clear();
@@ -272,7 +346,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 		const uint64_t cur_time = seconds_since_epoch();
 
 		for (auto& it : mempool.m_transactions) {
-			if ((cur_time >= it.second.time_received + 10) || (it.second.fee >= HIGH_FEE_VALUE)) {
+			if ((cur_time > it.second.time_received + 5) || (it.second.fee >= HIGH_FEE_VALUE)) {
 				m_mempoolTxs.emplace_back(it.second);
 			}
 		}
@@ -570,43 +644,91 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
 
-	m_poolBlockTemplate->serialize_sidechain_data();
-	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash();
-	const int sidechain_hash_offset = static_cast<int>(m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize) + 2;
+	// Layout: [software id, version, random number, sidechain extra_nonce]
+	uint32_t* sidechain_extra = m_poolBlockTemplate->m_sidechainExtraBuf;
+	sidechain_extra[0] = 0;
+	sidechain_extra[1] = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
+	sidechain_extra[3] = 0;
 
-	memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
-	memcpy(m_minerTx.data() + sidechain_hash_offset - m_minerTxOffsetInTemplate, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
+	m_poolBlockTemplate->m_nonce = 0;
+	m_poolBlockTemplate->m_extraNonce = 0;
+	m_poolBlockTemplate->m_sidechainId = {};
 
-#if POOL_BLOCK_DEBUG
-	const std::vector<uint8_t> mainchain_data = m_poolBlockTemplate->serialize_mainchain_data();
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
+	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
 
-	if (mainchain_data != m_blockTemplateBlob) {
-		LOGERR(1, "serialize_mainchain_data() has a bug, fix it! ");
-		LOGERR(1, "m_poolBlockTemplate->m_mainChainData.size() = " << mainchain_data.size());
-		LOGERR(1, "m_blockTemplateBlob.size()         = " << m_blockTemplateBlob.size());
-		for (size_t i = 0, n = std::min(mainchain_data.size(), m_blockTemplateBlob.size()); i < n; ++i) {
-			if (mainchain_data[i] != m_blockTemplateBlob[i]) {
-				LOGERR(1, "m_poolBlockTemplate->m_mainChainData is different at offset " << i);
-				break;
-			}
+	m_sidechainHashBlob = m_poolBlockTemplate->serialize_mainchain_data();
+	m_sidechainHashBlob.insert(m_sidechainHashBlob.end(), sidechain_data.begin(), sidechain_data.end());
+	m_sidechainHashBlob.insert(m_sidechainHashBlob.end(), consensus_id.begin(), consensus_id.end());
+
+	{
+		memset(m_sidechainHashKeccakState, 0, sizeof(m_sidechainHashKeccakState));
+
+		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - ((sidechain_version > 1) ? EXTRA_NONCE_SIZE : 0);
+		if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
+			// Sidechain data is big enough to cache keccak state up to extra_nonce
+			m_sidechainHashInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;
+
+			const uint8_t* in = m_sidechainHashBlob.data();
+			int inlen = static_cast<int>(m_sidechainHashInputLength);
+
+			keccak_step(in, inlen, m_sidechainHashKeccakState);
+		}
+		else {
+			m_sidechainHashInputLength = 0;
 		}
 	}
 
-	{
-		std::vector<uint8_t> buf = m_blockTemplateBlob;
-		buf.insert(buf.end(), sidechain_data.begin(), sidechain_data.end());
+	m_fullDataBlob = m_blockTemplateBlob;
+	m_fullDataBlob.insert(m_fullDataBlob.end(), sidechain_data.begin(), sidechain_data.end());
 
+	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
+
+	if (pool_block_debug()) {
+		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2;
+
+		memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
+		memcpy(m_fullDataBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
+		memcpy(m_minerTx.data() + sidechain_hash_offset - m_minerTxOffsetInTemplate, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
+
+		const std::vector<uint8_t> mainchain_data = m_poolBlockTemplate->serialize_mainchain_data();
+		if (mainchain_data != m_blockTemplateBlob) {
+			LOGERR(1, "serialize_mainchain_data() has a bug, fix it! ");
+			LOGERR(1, "mainchain_data.size()      = " << mainchain_data.size());
+			LOGERR(1, "m_blockTemplateBlob.size() = " << m_blockTemplateBlob.size());
+			for (size_t i = 0, n = std::min(mainchain_data.size(), m_blockTemplateBlob.size()); i < n; ++i) {
+				if (mainchain_data[i] != m_blockTemplateBlob[i]) {
+					LOGERR(1, "mainchain_data is different at offset " << i);
+					break;
+				}
+			}
+		}
 		PoolBlock check;
-		const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false);
+		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, nullptr, false);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
 		else {
-			LOGINFO(6, "blob size = " << buf.size());
+			LOGINFO(6, "blob size = " << m_fullDataBlob.size());
 		}
 	}
-#endif
+
+	memset(m_minerTxKeccakState, 0, sizeof(m_minerTxKeccakState));
+
+	const size_t extra_nonce_offset = m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate;
+	if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
+		// Miner transaction is big enough to cache keccak state up to extra_nonce
+		m_minerTxKeccakStateInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;
+
+		const uint8_t* in = m_blockTemplateBlob.data() + m_minerTxOffsetInTemplate;
+		int inlen = static_cast<int>(m_minerTxKeccakStateInputLength);
+
+		keccak_step(in, inlen, m_minerTxKeccakState);
+	}
+	else {
+		m_minerTxKeccakStateInputLength = 0;
+	}
 
 	const hash minerTx_hash = calc_miner_tx_hash(0);
 
@@ -760,7 +882,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		}
 		else {
 			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag)) {
+			if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
@@ -783,14 +905,11 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		return -2;
 	}
 
-	m_poolBlockTemplate->m_txkeyPub = m_txkeyPub;
-	m_poolBlockTemplate->m_txkeySec = m_txkeySec;
-
 	// TX_EXTRA begin
 	m_minerTxExtra.clear();
 
 	m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
-	m_minerTxExtra.insert(m_minerTxExtra.end(), m_txkeyPub.h, m_txkeyPub.h + HASH_SIZE);
+	m_minerTxExtra.insert(m_minerTxExtra.end(), m_poolBlockTemplate->m_txkeyPub.h, m_poolBlockTemplate->m_txkeyPub.h + HASH_SIZE);
 
 	m_minerTxExtra.push_back(TX_EXTRA_NONCE);
 
@@ -828,48 +947,60 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	return 1;
 }
 
-hash BlockTemplate::calc_sidechain_hash() const
+hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 {
 	// Calculate side-chain hash (all block template bytes + all side-chain bytes + consensus ID, replacing NONCE, EXTRA_NONCE and HASH itself with 0's)
-	hash sidechain_hash;
-	const int sidechain_hash_offset = static_cast<int>(m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize) + 2;
-	const int blob_size = static_cast<int>(m_blockTemplateBlob.size());
+	const int v = m_poolBlockTemplate->get_sidechain_version();
+	const size_t size = m_sidechainHashBlob.size();
+	const size_t N = m_sidechainHashInputLength;
 
-	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
-	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
+	const size_t sidechain_extra_nonce_offset = size - HASH_SIZE - ((v > 1) ? EXTRA_NONCE_SIZE : 0);
+	const uint8_t sidechain_extra_nonce_buf[EXTRA_NONCE_SIZE] = {
+		static_cast<uint8_t>(sidechain_extra_nonce >> 0),
+		static_cast<uint8_t>(sidechain_extra_nonce >> 8),
+		static_cast<uint8_t>(sidechain_extra_nonce >> 16),
+		static_cast<uint8_t>(sidechain_extra_nonce >> 24)
+	};
 
-	keccak_custom([this, sidechain_hash_offset, blob_size, consensus_id, &sidechain_data](int offset) -> uint8_t {
-			uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(m_nonceOffset));
-			if (k < NONCE_SIZE) {
-				return 0;
+	hash result;
+	uint8_t buf[288];
+
+	const bool b = N && (N <= sidechain_extra_nonce_offset) && (N < size) && (size - N <= sizeof(buf));
+
+	// Slow path: O(N)
+	if (!b || pool_block_debug()) {
+		keccak_custom([this, v, sidechain_extra_nonce_offset, &sidechain_extra_nonce_buf](int offset) -> uint8_t {
+			if (v > 1) {
+				const uint32_t k = static_cast<uint32_t>(offset - sidechain_extra_nonce_offset);
+				if (k < EXTRA_NONCE_SIZE) {
+					return sidechain_extra_nonce_buf[k];
+				}
 			}
+			return m_sidechainHashBlob[offset];
+		}, static_cast<int>(size), result.h, HASH_SIZE);
+	}
 
-			k = static_cast<uint32_t>(offset - static_cast<int>(m_extraNonceOffsetInTemplate));
-			if (k < EXTRA_NONCE_SIZE) {
-				return 0;
-			}
+	// Fast path: O(1)
+	if (b) {
+		const int inlen = static_cast<int>(size - N);
 
-			k = static_cast<uint32_t>(offset - sidechain_hash_offset);
-			if (k < HASH_SIZE) {
-				return 0;
-			}
+		memcpy(buf, m_sidechainHashBlob.data() + N, size - N);
+		if (v > 1) {
+			memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
+		}
 
-			if (offset < blob_size) {
-				return m_blockTemplateBlob[offset];
-			}
+		uint64_t st[25];
+		memcpy(st, m_sidechainHashKeccakState, sizeof(st));
+		keccak_finish(buf, inlen, st);
 
-			const int side_chain_data_offsset = offset - blob_size;
-			const int side_chain_data_size = static_cast<int>(sidechain_data.size());
-			if (side_chain_data_offsset < side_chain_data_size) {
-				return sidechain_data[side_chain_data_offsset];
-			}
+		if (pool_block_debug() && (memcmp(st, result.h, HASH_SIZE) != 0)) {
+			LOGERR(1, "calc_sidechain_hash fast path is broken. Fix the code!");
+		}
 
-			const int consensus_id_offset = side_chain_data_offsset - side_chain_data_size;
-			return consensus_id[consensus_id_offset];
-		},
-		static_cast<int>(m_blockTemplateBlob.size() + sidechain_data.size() + consensus_id.size()), sidechain_hash.h, HASH_SIZE);
+		memcpy(result.h, st, HASH_SIZE);
+	}
 
-	return sidechain_hash;
+	return result;
 }
 
 hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
@@ -879,7 +1010,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	const uint8_t* data = m_blockTemplateBlob.data() + m_minerTxOffsetInTemplate;
 
-	const int extra_nonce_offset = static_cast<int>(m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate);
+	const size_t extra_nonce_offset = m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate;
 	const uint8_t extra_nonce_buf[EXTRA_NONCE_SIZE] = {
 		static_cast<uint8_t>(extra_nonce >> 0),
 		static_cast<uint8_t>(extra_nonce >> 8),
@@ -887,17 +1018,57 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		static_cast<uint8_t>(extra_nonce >> 24)
 	};
 
+	// Calculate sidechain id with this extra_nonce
+	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
+	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2;
+
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
-	keccak_custom([data, extra_nonce_offset, &extra_nonce_buf](int offset)
-		{
-			const uint32_t k = static_cast<uint32_t>(offset - extra_nonce_offset);
+	const size_t tx_size = m_minerTxSize - 1;
+
+	hash full_hash;
+	uint8_t tx_buf[288];
+
+	const size_t N = m_minerTxKeccakStateInputLength;
+	const bool b = N && (N <= extra_nonce_offset) && (N < tx_size) && (tx_size - N <= sizeof(tx_buf));
+
+	// Slow path: O(N)
+	if (!b || pool_block_debug())
+	{
+		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf, sidechain_hash_offset, &sidechain_id](int offset) {
+			uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(extra_nonce_offset));
 			if (k < EXTRA_NONCE_SIZE) {
 				return extra_nonce_buf[k];
 			}
+
+			k = static_cast<uint32_t>(offset - static_cast<int>(sidechain_hash_offset));
+			if (k < HASH_SIZE) {
+				return sidechain_id.h[k];
+			}
+
 			return data[offset];
-		},
-		static_cast<int>(m_minerTxSize) - 1, hashes, HASH_SIZE);
+		}, static_cast<int>(tx_size), full_hash.h, HASH_SIZE);
+		memcpy(hashes, full_hash.h, HASH_SIZE);
+	}
+
+	// Fast path: O(1)
+	if (b) {
+		const int inlen = static_cast<int>(tx_size - N);
+
+		memcpy(tx_buf, data + N, inlen);
+		memcpy(tx_buf + extra_nonce_offset - N, extra_nonce_buf, EXTRA_NONCE_SIZE);
+		memcpy(tx_buf + sidechain_hash_offset - N, sidechain_id.h, HASH_SIZE);
+
+		uint64_t st[25];
+		memcpy(st, m_minerTxKeccakState, sizeof(st));
+		keccak_finish(tx_buf, inlen, st);
+
+		if (pool_block_debug() && (memcmp(st, full_hash.h, HASH_SIZE) != 0)) {
+			LOGERR(1, "calc_miner_tx_hash fast path is broken. Fix the code!");
+		}
+
+		memcpy(hashes, st, HASH_SIZE);
+	}
 
 	// 2. Base RCT, single 0 byte in miner tx
 	static constexpr uint8_t known_second_hash[HASH_SIZE] = {
@@ -910,7 +1081,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// Calculate miner transaction hash
 	hash result;
-	keccak(hashes, sizeof(hashes), result.h, HASH_SIZE);
+	keccak(hashes, sizeof(hashes), result.h);
 
 	return result;
 }
@@ -920,16 +1091,14 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	m_merkleTreeMainBranch.clear();
 
 	const uint64_t count = m_numTransactionHashes + 1;
+	if (count == 1) {
+		return;
+	}
+
 	const uint8_t* h = m_transactionHashes.data();
 
-	hash root_hash;
-
-	if (count == 1) {
-		memcpy(root_hash.h, h, HASH_SIZE);
-	}
-	else if (count == 2) {
+	if (count == 2) {
 		m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), h + HASH_SIZE, h + HASH_SIZE * 2);
-		keccak(h, HASH_SIZE * 2, root_hash.h, HASH_SIZE);
 	}
 	else {
 		size_t i, j, cnt;
@@ -941,11 +1110,14 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 		std::vector<uint8_t> ints(cnt * HASH_SIZE);
 		memcpy(ints.data(), h, (cnt * 2 - count) * HASH_SIZE);
 
+		hash tmp;
+
 		for (i = cnt * 2 - count, j = cnt * 2 - count; j < cnt; i += 2, ++j) {
 			if (i == 0) {
 				m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), h + HASH_SIZE, h + HASH_SIZE * 2);
 			}
-			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, ints.data() + j * HASH_SIZE, HASH_SIZE);
+			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+			memcpy(ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 		}
 
 		while (cnt > 2) {
@@ -954,12 +1126,12 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 				if (i == 0) {
 					m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), ints.data() + HASH_SIZE, ints.data() + HASH_SIZE * 2);
 				}
-				keccak(ints.data() + i * HASH_SIZE, HASH_SIZE * 2, ints.data() + j * HASH_SIZE, HASH_SIZE);
+				keccak(ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+				memcpy(ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 			}
 		}
 
 		m_merkleTreeMainBranch.insert(m_merkleTreeMainBranch.end(), ints.data() + HASH_SIZE, ints.data() + HASH_SIZE * 2);
-		keccak(ints.data(), HASH_SIZE * 2, root_hash.h, HASH_SIZE);
 	}
 }
 
@@ -1039,7 +1211,7 @@ uint32_t BlockTemplate::get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* b
 		memcpy(h, root_hash.h, HASH_SIZE);
 		memcpy(h + HASH_SIZE, m_merkleTreeMainBranch.data() + i, HASH_SIZE);
 
-		keccak(h, HASH_SIZE * 2, root_hash.h, HASH_SIZE);
+		keccak(h, HASH_SIZE * 2, root_hash.h);
 	}
 
 	memcpy(p, root_hash.h, HASH_SIZE);
@@ -1095,23 +1267,27 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 	return blob_size;
 }
 
-std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, size_t& nonce_offset, size_t& extra_nonce_offset) const
+std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_block_template_blob(template_id, nonce_offset, extra_nonce_offset);
+			return old->get_block_template_blob(template_id, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
 		}
 
 		nonce_offset = 0;
 		extra_nonce_offset = 0;
+		sidechain_id_offset = 0;
+		sidechain_id = {};
 		return std::vector<uint8_t>();
 	}
 
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
+	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2;
+	sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
 	return m_blockTemplateBlob;
 }
 
@@ -1122,9 +1298,10 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 	if (template_id == m_templateId) {
 		m_poolBlockTemplate->m_nonce = nonce;
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
+		m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(extra_nonce);
+		m_poolBlockTemplate->m_sidechainExtraBuf[3] = extra_nonce;
 
-#if POOL_BLOCK_DEBUG
-		{
+		if (pool_block_debug()) {
 			std::vector<uint8_t> buf = m_poolBlockTemplate->serialize_mainchain_data();
 			const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 
@@ -1149,7 +1326,6 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 				}
 			}
 		}
-#endif
 
 		m_poolBlockTemplate->m_verified = true;
 		if (!m_sidechain->block_seen(*m_poolBlockTemplate)) {

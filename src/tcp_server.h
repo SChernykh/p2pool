@@ -102,9 +102,10 @@ public:
 
 	struct WriteBuf
 	{
-		Client* m_client = nullptr;
 		uv_write_t m_write = {};
-		std::vector<uint8_t> m_data;
+		Client* m_client = nullptr;
+		void* m_data = nullptr;
+		size_t m_dataCapacity = 0;
 	};
 
 	std::vector<WriteBuf*> m_writeBuffers;

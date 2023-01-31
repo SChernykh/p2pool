@@ -41,7 +41,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	int err = uv_loop_init(&m_loop);
 	if (err) {
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	// Init loop user data before running it
@@ -50,14 +50,14 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	err = uv_async_init(&m_loop, &m_dropConnectionsAsync, on_drop_connections);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_dropConnectionsAsync.data = this;
 
 	err = uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_shutdownAsync.data = this;
 
@@ -133,7 +133,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 {
 	if (listen_addresses.empty()) {
 		LOGERR(1, "listen address not set");
-		panic();
+		PANIC_STOP();
 	}
 
 	parse_address_list(listen_addresses,
@@ -144,7 +144,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 			}
 			else if (m_listenPort != port) {
 				LOGERR(1, "all sockets must be listening on the same port number, fix the command line");
-				panic();
+				PANIC_STOP();
 			}
 
 			uv_tcp_t* socket = new uv_tcp_t();
@@ -159,14 +159,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 			int err = uv_tcp_init(&m_loop, socket);
 			if (err) {
 				LOGERR(1, "failed to create tcp server handle, error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 			socket->data = this;
 
 			err = uv_tcp_nodelay(socket, 1);
 			if (err) {
 				LOGERR(1, "failed to set tcp_nodelay on tcp server handle, error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 
 			if (is_v6) {
@@ -174,13 +174,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				err = uv_ip6_addr(ip.c_str(), port, &addr6);
 				if (err) {
 					LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr6), UV_TCP_IPV6ONLY);
 				if (err) {
 					LOGERR(1, "failed to bind tcp server IPv6 socket " << address << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 			}
 			else {
@@ -188,20 +188,20 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 				err = uv_ip4_addr(ip.c_str(), port, &addr);
 				if (err) {
 					LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 
 				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr), 0);
 				if (err) {
 					LOGERR(1, "failed to bind tcp server IPv4 socket " << address << ", error " << uv_err_name(err));
-					panic();
+					PANIC_STOP();
 				}
 			}
 
 			err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
 			if (err) {
 				LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
-				panic();
+				PANIC_STOP();
 			}
 
 			LOGINFO(1, "listening on " << log::Gray() << address);
@@ -210,7 +210,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 	const int err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -376,7 +376,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 
 	err = uv_tcp_connect(connect_request, &client->m_socket, reinterpret_cast<sockaddr*>(&addr), on_connect);
 	if (err) {
-		LOGERR(1, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
+		LOGWARN(5, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
 		m_pendingConnections.erase(client->m_addr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
@@ -509,7 +509,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	if (bytes_written > WRITE_BUF_SIZE) {
 		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << WRITE_BUF_SIZE << " bytes");
-		panic();
+		PANIC_STOP();
 	}
 
 	if (bytes_written == 0) {
@@ -518,13 +518,22 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		return true;
 	}
 
-	buf->m_client = client;
 	buf->m_write.data = buf;
-	buf->m_data.reserve(round_up(bytes_written, 64));
-	buf->m_data.assign(callback_buf, callback_buf + bytes_written);
+	buf->m_client = client;
+
+	if (buf->m_dataCapacity < bytes_written) {
+		buf->m_dataCapacity = round_up(bytes_written, 64);
+		buf->m_data = realloc_hook(buf->m_data, buf->m_dataCapacity);
+		if (!buf->m_data) {
+			LOGERR(0, "failed to allocate " << buf->m_dataCapacity << " bytes to send data");
+			PANIC_STOP();
+		}
+	}
+
+	memcpy(buf->m_data, callback_buf, bytes_written);
 
 	uv_buf_t bufs[1];
-	bufs[0].base = reinterpret_cast<char*>(buf->m_data.data());
+	bufs[0].base = reinterpret_cast<char*>(buf->m_data);
 	bufs[0].len = static_cast<int>(bytes_written);
 
 	const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
@@ -562,6 +571,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	}
 
 	for (WriteBuf* buf : server->m_writeBuffers) {
+		free_hook(buf->m_data);
 		delete buf;
 	}
 	server->m_writeBuffers.clear();
@@ -810,7 +820,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 	delete GetLoopUserData(&s->m_loop, false);
 
 	s->m_numHandles = 0;
-	uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<size_t*>(n))++; }, &s->m_numHandles);
+	uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<uint32_t*>(n))++; }, &s->m_numHandles);
 
 	uv_prepare_init(&s->m_loop, &s->m_shutdownPrepare);
 	s->m_shutdownPrepare.data = s;
@@ -843,7 +853,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 			TCPServer* s = reinterpret_cast<TCPServer*>(h->data);
 
 			s->m_numHandles = 0;
-			uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<size_t*>(n))++; }, &s->m_numHandles);
+			uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<uint32_t*>(n))++; }, &s->m_numHandles);
 
 			if (s->m_numHandles > 2) {
 				// Don't count m_shutdownTimer and m_shutdownPrepare

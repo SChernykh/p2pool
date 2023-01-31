@@ -61,8 +61,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 #define READ_BUF(buf, size) do { if (!read_buf((buf), (size))) return __LINE__; } while(0)
 
-		MutexLock lock(m_lock);
-
 		READ_BYTE(m_majorVersion);
 		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
 
@@ -260,19 +258,33 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		READ_BUF(m_txkeySec.h, HASH_SIZE);
+		READ_BUF(m_txkeySecSeed.h, HASH_SIZE);
+
+		const int sidechain_version = get_sidechain_version();
+
+		if (sidechain_version > 1) {
+			hash pub;
+			get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
+			if (pub != m_txkeyPub) {
+				return __LINE__;
+			}
+		}
+		else {
+			// Both values are the same before v2
+			m_txkeySec = m_txkeySecSeed;
+
+			// Enforce deterministic tx keys starting from v15
+			if (m_majorVersion >= HARDFORK_VIEW_TAGS_VERSION) {
+				hash pub, sec;
+				get_tx_keys(pub, sec, spend_pub_key, m_prevId);
+				if ((pub != m_txkeyPub) || (sec != m_txkeySec)) {
+					return __LINE__;
+				}
+			}
+		}
 
 		if (!check_keys(m_txkeyPub, m_txkeySec)) {
 			return __LINE__;
-		}
-
-		// Enforce deterministic tx keys starting from v15
-		if (m_majorVersion >= HARDFORK_VIEW_TAGS_VERSION) {
-			hash pub, sec;
-			get_tx_keys(pub, sec, spend_pub_key, m_prevId);
-			if ((pub != m_txkeyPub) || (sec != m_txkeySec)) {
-				return __LINE__;
-			}
 		}
 
 		READ_BUF(m_parent.h, HASH_SIZE);
@@ -316,6 +328,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
+
+		if (sidechain_version > 1) {
+			READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
+		}
 
 #undef READ_BYTE
 #undef EXPECT_BYTE
@@ -382,13 +398,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			},
 			static_cast<int>(size + outputs_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
 
-		if (check != m_sidechainId) {
-			return __LINE__;
-		}
-
 #if POOL_BLOCK_DEBUG
 		m_sideChainDataDebug.assign(sidechain_data_begin, data_end);
 #endif
+
+		if (check != m_sidechainId) {
+			return __LINE__;
+		}
 	}
 	catch (std::exception& e) {
 		const char* msg = e.what();

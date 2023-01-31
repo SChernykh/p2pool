@@ -29,9 +29,6 @@ static constexpr char log_category_prefix[] = "Util ";
 
 namespace p2pool {
 
-#define STR2(X) STR(X)
-#define STR(X) #X
-
 const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) " (built"
 #if defined(__clang__)
 	" with clang/" __clang_version__
@@ -42,13 +39,12 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 #endif
 " on " __DATE__ ")";
 
-#undef STR2
-#undef STR
-
 MinerCallbackHandler::~MinerCallbackHandler() {}
 
-void panic()
+void panic_stop(const char* message)
 {
+	fprintf(stderr, "P2Pool can't continue execution: panic at %s\n", message);
+
 	p2pool::log::stop();
 	do {
 #ifdef _WIN32
@@ -254,7 +250,7 @@ void uv_cond_init_checked(uv_cond_t* cond)
 	const int result = uv_cond_init(cond);
 	if (result) {
 		LOGERR(1, "failed to create conditional variable, error " << uv_err_name(result));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -263,7 +259,7 @@ void uv_mutex_init_checked(uv_mutex_t* mutex)
 	const int result = uv_mutex_init(mutex);
 	if (result) {
 		LOGERR(1, "failed to create mutex, error " << uv_err_name(result));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -272,7 +268,7 @@ void uv_rwlock_init_checked(uv_rwlock_t* lock)
 	const int result = uv_rwlock_init(lock);
 	if (result) {
 		LOGERR(1, "failed to create rwlock, error " << uv_err_name(result));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -281,7 +277,7 @@ void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async
 	const int err = uv_async_init(loop, async, async_cb);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 }
 
@@ -424,7 +420,12 @@ bool resolve_host(std::string& host, bool& is_v6)
 	hints.ai_flags = AI_ADDRCONFIG;
 
 	addrinfo* r = nullptr;
-	const int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	int err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	if (err) {
+		LOGWARN(4, "getaddrinfo failed for " << host << ": " << gai_strerror(err) << ", retrying with IPv4 only");
+		hints.ai_family = AF_INET;
+		err = getaddrinfo(host.c_str(), nullptr, &hints, &r);
+	}
 	if ((err == 0) && r) {
 		const char* addr_str = nullptr;
 		char addr_str_buf[64];

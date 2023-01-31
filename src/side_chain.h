@@ -32,6 +32,8 @@ struct MinerShare
 	FORCEINLINE MinerShare() : m_weight(), m_wallet(nullptr) {}
 	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
 
+	FORCEINLINE bool operator==(const MinerShare& s) const { return *m_wallet == *s.m_wallet; }
+
 	difficulty_type m_weight;
 	const Wallet* m_wallet;
 };
@@ -42,7 +44,7 @@ public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	void fill_sidechain_data(PoolBlock& block, const Wallet* w, const hash& txkeySec, std::vector<MinerShare>& shares) const;
+	void fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
 
 	bool block_seen(const PoolBlock& block);
 	void unsee_block(const PoolBlock& block);
@@ -64,8 +66,8 @@ public:
 	// Consensus ID can therefore be used as a password to create private P2Pools
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
-	NetworkType network_type() const { return m_networkType; }
-	uint64_t network_major_version(uint64_t height) const;
+	static NetworkType network_type() { return s_networkType; }
+	static uint64_t network_major_version(uint64_t height);
 	FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
 	difficulty_type total_hashes() const;
 	uint64_t block_time() const { return m_targetBlockTime; }
@@ -77,17 +79,20 @@ public:
 	const PoolBlock* chainTip() const { return m_chainTip; }
 	bool precalcFinished() const { return m_precalcFinished.load(); }
 
+#ifdef P2POOL_UNIT_TESTS
+	difficulty_type m_testMainChainDiff;
+#endif
+
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
 private:
 	p2pool* m_pool;
 	P2PServer* p2pServer() const;
-	NetworkType m_networkType;
+	static NetworkType s_networkType;
 
 private:
-	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares) const;
+	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
-	bool get_wallets(const PoolBlock* tip, std::vector<const Wallet*>& wallets) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(const PoolBlock* block);
@@ -134,7 +139,7 @@ private:
 	struct PrecalcJob
 	{
 		const PoolBlock* b;
-		std::vector<const Wallet*> wallets;
+		std::vector<MinerShare> shares;
 	};
 
 	uv_cond_t m_precalcJobsCond;
@@ -146,9 +151,24 @@ private:
 
 	std::atomic<bool> m_precalcFinished;
 
+	hash m_consensusHash;
+
 	void launch_precalc(const PoolBlock* block);
 	void precalc_worker();
 	void finish_precalc();
 };
 
 } // namespace p2pool
+
+namespace robin_hood {
+
+	template<>
+	struct hash<p2pool::MinerShare>
+	{
+		FORCEINLINE size_t operator()(const p2pool::MinerShare& value) const noexcept
+		{
+			return hash_bytes(value.m_wallet->spend_public_key().h, p2pool::HASH_SIZE);
+		}
+	};
+
+} // namespace robin_hood

@@ -54,12 +54,14 @@ private:
 
 	std::chrono::high_resolution_clock::time_point m_startTimestamp;
 
-	std::atomic<uint32_t> m_nonce;
+	std::mt19937_64 m_rng;
+
+	std::atomic<uint64_t> m_fullNonce;
 	std::chrono::high_resolution_clock::time_point m_nonceTimestamp;
-	uint32_t m_extraNonce;
 
 	std::atomic<uint64_t> m_totalHashes;
 	std::atomic<uint32_t> m_sharesFound;
+	std::atomic<uint32_t> m_sharesFailed;
 
 	struct Job
 	{

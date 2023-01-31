@@ -492,7 +492,7 @@ struct DummyStream
 			MSVC_PRAGMA(warning(suppress:26444)) \
 			[=]() { \
 				log::DummyStream x; \
-				x << level << __VA_ARGS__; \
+				x << (level) << __VA_ARGS__; \
 			}; \
 		} \
 	} while (0)
@@ -508,7 +508,7 @@ struct DummyStream
 #define LOG(level, severity, ...) \
 	do { \
 		SIDE_EFFECT_CHECK(level, __VA_ARGS__); \
-		if (level <= log::GLOBAL_LOG_LEVEL) { \
+		if ((level) <= log::GLOBAL_LOG_LEVEL) { \
 			log::Writer CONCAT(log_wrapper_, __LINE__)(severity); \
 			CONCAT(log_wrapper_, __LINE__) << log::Gray() << log_category_prefix; \
 			log::apply_severity<severity>(CONCAT(log_wrapper_, __LINE__)); \

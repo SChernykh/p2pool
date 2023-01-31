@@ -78,6 +78,7 @@ private:
 	static void on_fs_write(uv_fs_t* req);
 	static void on_fs_close(uv_fs_t* req);
 	static void on_fs_rename(uv_fs_t* req);
+	static void on_fs_error_cleanup(uv_fs_t* req);
 
 	std::string m_apiPath;
 	std::string m_networkPath;

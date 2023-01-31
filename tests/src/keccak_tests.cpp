@@ -27,7 +27,7 @@ TEST(keccak, hashing)
 		hash output;
 		const uint8_t* data = reinterpret_cast<const uint8_t*>(input);
 		const int len = static_cast<int>(size);
-		keccak(data, len, output.h, HASH_SIZE);
+		keccak(data, len, output.h);
 
 		char buf[log::Stream::BUF_SIZE + 1];
 		log::Stream s(buf);

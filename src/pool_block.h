@@ -28,6 +28,8 @@
 
 namespace p2pool {
 
+static FORCEINLINE constexpr int pool_block_debug() { return POOL_BLOCK_DEBUG; }
+
 class RandomX_Hasher_Base;
 class SideChain;
 
@@ -56,12 +58,9 @@ struct DifficultyData
 struct PoolBlock
 {
 	PoolBlock();
-	~PoolBlock();
 
 	PoolBlock(const PoolBlock& b);
 	PoolBlock& operator=(const PoolBlock& b);
-
-	mutable uv_mutex_t m_lock;
 
 #if POOL_BLOCK_DEBUG
 	std::vector<uint8_t> m_mainChainDataDebug;
@@ -104,6 +103,7 @@ struct PoolBlock
 
 	// Transaction secret key
 	// Required to check that pub keys in the miner transaction pay out to correct miner wallet addresses
+	hash m_txkeySecSeed;
 	hash m_txkeySec;
 
 	// Side-chain parent and uncle blocks
@@ -114,6 +114,9 @@ struct PoolBlock
 	uint64_t m_sidechainHeight;
 	difficulty_type m_difficulty;
 	difficulty_type m_cumulativeDifficulty;
+
+	// Arbitrary extra data
+	uint32_t m_sidechainExtraBuf[4];
 
 	// HASH (see diagram in the comment above)
 	hash m_sidechainId;
@@ -131,8 +134,7 @@ struct PoolBlock
 
 	uint64_t m_localTimestamp;
 
-	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr) const;
-	std::vector<uint8_t> serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const;
+	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
 	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop, bool compact);
@@ -146,6 +148,12 @@ struct PoolBlock
 	// but P2Pool can switch to using only TXOUT_TO_TAGGED_KEY for miner payouts starting from v15
 	FORCEINLINE uint8_t get_tx_type() const { return (m_majorVersion < HARDFORK_VIEW_TAGS_VERSION) ? TXOUT_TO_KEY : TXOUT_TO_TAGGED_KEY; }
 
+	// Signal hardfork readiness (only before the v2 hardfork)
+	// TODO: remove this code after hardfork
+	static uint32_t signal_v2_readiness(uint32_t extra_nonce);
+
+	int get_sidechain_version() const;
+
 	typedef std::array<uint8_t, HASH_SIZE + NONCE_SIZE + EXTRA_NONCE_SIZE> full_id;
 
 	FORCEINLINE full_id get_full_id() const
@@ -157,6 +165,8 @@ struct PoolBlock
 		memcpy(p + HASH_SIZE + NONCE_SIZE, &m_extraNonce, EXTRA_NONCE_SIZE);
 		return key;
 	}
+
+	hash calculate_tx_key_seed() const;
 };
 
 } // namespace p2pool

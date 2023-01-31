@@ -27,6 +27,8 @@ namespace p2pool {
 
 TEST(pool_block, deserialize)
 {
+	init_crypto_cache();
+
 	PoolBlock b;
 	SideChain sidechain(nullptr, NetworkType::Mainnet, "mainnet test 2");
 
@@ -101,6 +103,8 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(s.str(), "f76d731c61c9c9b6c3f46be2e60c9478930b49b4455feecd41ecb9420d000000");
 
 	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
+
+	destroy_crypto_cache();
 }
 
 TEST(pool_block, verify)

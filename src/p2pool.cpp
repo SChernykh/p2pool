@@ -38,6 +38,7 @@
 #include "keccak.h"
 #include <thread>
 #include <fstream>
+#include <numeric>
 
 constexpr char log_category_prefix[] = "P2Pool ";
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -64,6 +65,8 @@ p2pool::p2pool(int argc, char* argv[])
 		throw std::exception();
 	}
 
+	m_hostStr = m_params->m_host;
+
 	if (m_params->m_socks5Proxy.empty()) {
 		if (m_params->m_dns) {
 			bool is_v6;
@@ -75,6 +78,16 @@ p2pool::p2pool(int argc, char* argv[])
 		else if (m_params->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
 			LOGERR(1, "Can't resolve hostname " << m_params->m_host << " with DNS disabled");
 			throw std::exception();
+		}
+	}
+
+	{
+		const bool changed = (m_params->m_host != m_hostStr);
+		const std::string rpc_port = ':' + std::to_string(m_params->m_rpcPort);
+		const std::string zmq_port = ":ZMQ:" + std::to_string(m_params->m_zmqPort);
+		m_hostStr += rpc_port + zmq_port;
+		if (changed) {
+			m_hostStr += " (" + m_params->m_host + ')';
 		}
 	}
 
@@ -517,19 +530,26 @@ void p2pool::submit_block() const
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
+	size_t sidechain_id_offset = 0;
+	hash sidechain_id;
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		LOGINFO(0, "submit_block: height = " << height << ", template id = " << submit_data.template_id << ", nonce = " << submit_data.nonce << ", extra_nonce = " << submit_data.extra_nonce);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
 
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, nonce_offset, extra_nonce_offset);
+		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
+			<< ", template id = " << submit_data.template_id
+			<< ", nonce = " << submit_data.nonce
+			<< ", extra_nonce = " << submit_data.extra_nonce
+			<< ", id = " << sidechain_id);
+
 		if (submit_data.blob.empty()) {
 			LOGERR(0, "submit_block: couldn't find block template with id " << submit_data.template_id);
 			return;
 		}
 	}
 	else {
-		LOGINFO(0, "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
+		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height << ", external blob (" << submit_data.blob.size() << " bytes)");
 		is_external = true;
 	}
 
@@ -543,26 +563,28 @@ void p2pool::submit_block() const
 	const uint32_t extra_nonce = submit_data.extra_nonce;
 
 	for (size_t i = 0; i < submit_data.blob.size(); ++i) {
-		char buf[16];
-
+		uint8_t b;
 		if (nonce_offset && nonce_offset <= i && i < nonce_offset + sizeof(submit_data.nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.nonce & 255);
+			b = submit_data.nonce & 255;
 			submit_data.nonce >>= 8;
 		}
 		else if (extra_nonce_offset && extra_nonce_offset <= i && i < extra_nonce_offset + sizeof(submit_data.extra_nonce)) {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.extra_nonce & 255);
+			b = submit_data.extra_nonce & 255;
 			submit_data.extra_nonce >>= 8;
 		}
-		else {
-			snprintf(buf, sizeof(buf), "%02x", submit_data.blob[i]);
+		else if (sidechain_id_offset && sidechain_id_offset <= i && i < sidechain_id_offset + HASH_SIZE) {
+			b = sidechain_id.h[i - sidechain_id_offset];
 		}
-
-		request.append(buf);
+		else {
+			b = submit_data.blob[i];
+		}
+		request.append(1, "0123456789abcdef"[b >> 4]);
+		request.append(1, "0123456789abcdef"[b & 15]);
 	}
 	request.append("\"]}");
 
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request, m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[height, diff, template_id, nonce, extra_nonce, is_external](const char* data, size_t size)
+		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
@@ -589,7 +611,7 @@ void p2pool::submit_block() const
 					LOGWARN(3, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
 				}
 				else {
-					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce << ", id = " << sidechain_id);
 				}
 				return;
 			}
@@ -691,14 +713,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 				}
 				else {
 					LOGERR(1, "fatal error: couldn't download block header for seed height " << height);
-					panic();
+					PANIC_STOP();
 				}
 			},
 			[height](const char* data, size_t size)
 			{
 				if (size > 0) {
 					LOGERR(1, "fatal error: couldn't download block header for seed height " << height << ", error " << log::const_buf(data, size));
-					panic();
+					PANIC_STOP();
 				}
 			});
 	}
@@ -719,7 +741,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 					}
 					catch (const std::exception& e) {
 						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-						panic();
+						PANIC_STOP();
 					}
 
 					m_stratumServer = new StratumServer(this);
@@ -922,7 +944,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 	if (monero_network != sidechain_network) {
 		LOGERR(1, "monerod is on " << monero_network << ", but you're mining to a " << sidechain_network << " sidechain");
-		panic();
+		PANIC_STOP();
 	}
 
 	get_version();
@@ -992,7 +1014,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
 		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.18.0.0 or newer)");
-		panic();
+		PANIC_STOP();
 	}
 
 	get_miner_data();
@@ -1032,7 +1054,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	}
 
 	hash h;
-	keccak(reinterpret_cast<const uint8_t*>(data), static_cast<int>(size), h.h, HASH_SIZE);
+	keccak(reinterpret_cast<const uint8_t*>(data), static_cast<int>(size), h.h);
 	if (h == m_getMinerDataHash) {
 		LOGWARN(4, "Received a duplicate get_miner_data RPC response, ignoring it");
 		return;
@@ -1223,6 +1245,9 @@ void p2pool::api_update_pool_stats()
 	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
+	const auto& s = m_blockTemplate->shares();
+	const difficulty_type pplns_weight = std::accumulate(s.begin(), s.end(), difficulty_type(), [](const auto& a, const auto& b) { return a + b.m_weight; });
+
 	time_t last_block_found_time = 0;
 	uint64_t last_block_found_height = 0;
 	uint64_t total_blocks_found = 0;
@@ -1237,7 +1262,7 @@ void p2pool::api_update_pool_stats()
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "stats",
-		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found](log::Stream& s)
+		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found, &pplns_weight](log::Stream& s)
 		{
 			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
 				<< ",\"miners\":" << miners
@@ -1245,6 +1270,7 @@ void p2pool::api_update_pool_stats()
 				<< ",\"lastBlockFoundTime\":" << last_block_found_time
 				<< ",\"lastBlockFound\":" << last_block_found_height
 				<< ",\"totalBlocksFound\":" << total_blocks_found
+				<< ",\"pplnsWeight\":" << pplns_weight
 				<< "}}";
 		});
 
@@ -1563,7 +1589,7 @@ int p2pool::run()
 	catch (const std::exception& e) {
 		const char* s = e.what();
 		LOGERR(1, "exception " << s);
-		panic();
+		PANIC_STOP();
 	}
 
 	m_stopped = true;

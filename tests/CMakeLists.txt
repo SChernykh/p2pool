@@ -5,7 +5,7 @@ option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.6.0") 
+if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool_tests)
 endif()
 
@@ -15,6 +15,8 @@ set(LIBS gtest)
 add_subdirectory(../external/src/RandomX RandomX)
 set(LIBS ${LIBS} randomx)
 add_definitions(-DWITH_RANDOMX)
+
+add_definitions(-DP2POOL_UNIT_TESTS)
 
 include(cmake/flags.cmake)
 
@@ -94,7 +96,7 @@ if (WIN32)
 	endif()
 	add_definitions(-DCURL_STATICLIB)
 elseif (NOT APPLE)
-	set(LIBS ${LIBS} pthread gss dl)
+	set(LIBS ${LIBS} pthread)
 endif()
 
 if (STATIC_LIBS)

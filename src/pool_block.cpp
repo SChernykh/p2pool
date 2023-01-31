@@ -38,11 +38,13 @@ PoolBlock::PoolBlock()
 	, m_txkeyPub{}
 	, m_extraNonceSize(0)
 	, m_extraNonce(0)
+	, m_txkeySecSeed{}
 	, m_txkeySec{}
 	, m_parent{}
 	, m_sidechainHeight(0)
 	, m_difficulty{}
 	, m_cumulativeDifficulty{}
+	, m_sidechainExtraBuf{}
 	, m_sidechainId{}
 	, m_depth(0)
 	, m_verified(false)
@@ -52,12 +54,10 @@ PoolBlock::PoolBlock()
 	, m_precalculated(false)
 	, m_localTimestamp(seconds_since_epoch())
 {
-	uv_mutex_init_checked(&m_lock);
 }
 
 PoolBlock::PoolBlock(const PoolBlock& b)
 {
-	uv_mutex_init_checked(&m_lock);
 	operator=(b);
 }
 
@@ -66,11 +66,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 {
 	if (this == &b) {
 		return *this;
-	}
-
-	const int lock_result = uv_mutex_trylock(&b.m_lock);
-	if (lock_result) {
-		LOGERR(1, "operator= uv_mutex_trylock failed. Fix the code!");
 	}
 
 #if POOL_BLOCK_DEBUG
@@ -90,12 +85,14 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_extraNonce = b.m_extraNonce;
 	m_transactions = b.m_transactions;
 	m_minerWallet = b.m_minerWallet;
+	m_txkeySecSeed = b.m_txkeySecSeed;
 	m_txkeySec = b.m_txkeySec;
 	m_parent = b.m_parent;
 	m_uncles = b.m_uncles;
 	m_sidechainHeight = b.m_sidechainHeight;
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
+	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
 	m_depth = b.m_depth;
 	m_verified = b.m_verified;
@@ -106,25 +103,10 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_localTimestamp = seconds_since_epoch();
 
-	if (lock_result == 0) {
-		uv_mutex_unlock(&b.m_lock);
-	}
-
 	return *this;
 }
 
-PoolBlock::~PoolBlock()
-{
-	uv_mutex_destroy(&m_lock);
-}
-
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
-{
-	MutexLock lock(m_lock);
-	return serialize_mainchain_data_nolock(header_size, miner_tx_size, outputs_offset, outputs_blob_size);
-}
-
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size) const
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
 	data.reserve(128 + m_outputs.size() * 39 + m_transactions.size() * HASH_SIZE);
@@ -134,7 +116,11 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	data.push_back(m_minorVersion);
 	writeVarint(m_timestamp, data);
 	data.insert(data.end(), m_prevId.h, m_prevId.h + HASH_SIZE);
-	data.insert(data.end(), reinterpret_cast<const uint8_t*>(&m_nonce), reinterpret_cast<const uint8_t*>(&m_nonce) + NONCE_SIZE);
+
+	if (!nonce) {
+		nonce = &m_nonce;
+	}
+	data.insert(data.end(), reinterpret_cast<const uint8_t*>(nonce), reinterpret_cast<const uint8_t*>(nonce) + NONCE_SIZE);
 
 	const size_t header_size0 = data.size();
 	if (header_size) {
@@ -187,7 +173,10 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	*(p++) = TX_EXTRA_NONCE;
 	*(p++) = static_cast<uint8_t>(extra_nonce_size);
 
-	memcpy(p, &m_extraNonce, EXTRA_NONCE_SIZE);
+	if (!extra_nonce) {
+		extra_nonce = &m_extraNonce;
+	}
+	memcpy(p, extra_nonce, EXTRA_NONCE_SIZE);
 	p += EXTRA_NONCE_SIZE;
 	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
 		memset(p, 0, extra_nonce_size - EXTRA_NONCE_SIZE);
@@ -213,9 +202,9 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data_nolock(size_t* header_s
 	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
 
 #if POOL_BLOCK_DEBUG
-	if (!m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
+	if ((nonce == &m_nonce) && (extra_nonce == &m_extraNonce) && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
 		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
-		panic();
+		PANIC_STOP();
 	}
 #endif
 
@@ -226,16 +215,23 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 {
 	std::vector<uint8_t> data;
 
-	MutexLock lock(m_lock);
-
-	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 20);
+	data.reserve((m_uncles.size() + 4) * HASH_SIZE + 36);
 
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
 
+	const int sidechain_version = get_sidechain_version();
+
 	data.insert(data.end(), spend.h, spend.h + HASH_SIZE);
 	data.insert(data.end(), view.h, view.h + HASH_SIZE);
-	data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+
+	if (sidechain_version > 1) {
+		data.insert(data.end(), m_txkeySecSeed.h, m_txkeySecSeed.h + HASH_SIZE);
+	}
+	else {
+		data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
+	}
+
 	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
 	writeVarint(m_uncles.size(), data);
@@ -252,10 +248,15 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
 
+	if (sidechain_version > 1) {
+		const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
+		data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));
+	}
+
 #if POOL_BLOCK_DEBUG
 	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {
 		LOGERR(1, "serialize_sidechain_data() has a bug, fix it!");
-		panic();
+		PANIC_STOP();
 	}
 #endif
 
@@ -296,10 +297,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	size_t blob_size = 0;
 
 	{
-		MutexLock lock(m_lock);
-
 		size_t header_size, miner_tx_size;
-		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data_nolock(&header_size, &miner_tx_size, nullptr, nullptr);
+		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(&header_size, &miner_tx_size, nullptr, nullptr, nullptr, nullptr);
 
 		if (!header_size || !miner_tx_size || (mainchain_data.size() < header_size + miner_tx_size)) {
 			LOGERR(1, "tried to calculate PoW of uninitialized block");
@@ -310,18 +309,22 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		memcpy(blob, mainchain_data.data(), blob_size);
 
 		const uint8_t* miner_tx = mainchain_data.data() + header_size;
-		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, reinterpret_cast<uint8_t*>(hashes), HASH_SIZE);
+		hash tmp;
+		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, tmp.h);
+		memcpy(hashes, tmp.h, HASH_SIZE);
 
 		count = m_transactions.size();
 		uint8_t* h = reinterpret_cast<uint8_t*>(m_transactions.data());
 
-		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, h, HASH_SIZE);
+		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
+		memcpy(h, tmp.h, HASH_SIZE);
 
 		if (count == 1) {
 			memcpy(blob + blob_size, h, HASH_SIZE);
 		}
 		else if (count == 2) {
-			keccak(h, HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
+			keccak(h, HASH_SIZE * 2, tmp.h);
+			memcpy(blob + blob_size, tmp.h, HASH_SIZE);
 		}
 		else {
 			size_t i, j, cnt;
@@ -334,17 +337,20 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 			memcpy(tmp_ints.data(), h, (cnt * 2 - count) * HASH_SIZE);
 
 			for (i = cnt * 2 - count, j = cnt * 2 - count; j < cnt; i += 2, ++j) {
-				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
+				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+				memcpy(tmp_ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 			}
 
 			while (cnt > 2) {
 				cnt >>= 1;
 				for (i = 0, j = 0; j < cnt; i += 2, ++j) {
-					keccak(tmp_ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints.data() + j * HASH_SIZE, HASH_SIZE);
+					keccak(tmp_ints.data() + i * HASH_SIZE, HASH_SIZE * 2, tmp.h);
+					memcpy(tmp_ints.data() + j * HASH_SIZE, tmp.h, HASH_SIZE);
 				}
 			}
 
-			keccak(tmp_ints.data(), HASH_SIZE * 2, blob + blob_size, HASH_SIZE);
+			keccak(tmp_ints.data(), HASH_SIZE * 2, tmp.h);
+			memcpy(blob + blob_size, tmp.h, HASH_SIZE);
 		}
 	}
 	blob_size += HASH_SIZE;
@@ -378,6 +384,48 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 	}
 
 	return 0;
+}
+
+static constexpr uint64_t VERSION2_MAINNET_TIMESTAMP = 1679173200U; // 2023-03-18 21:00 UTC
+static constexpr uint64_t VERSION2_TESTNET_TIMESTAMP = 1674507600U; // 2023-01-23 21:00 UTC
+
+uint32_t PoolBlock::signal_v2_readiness(uint32_t extra_nonce)
+{
+	const uint64_t ts = (SideChain::network_type() == NetworkType::Mainnet) ? VERSION2_MAINNET_TIMESTAMP : VERSION2_TESTNET_TIMESTAMP;
+	if (time(nullptr) < static_cast<int64_t>(ts)) {
+		return (extra_nonce & 0x007FFFFFUL) | 0xFF000000UL;
+	}
+	return extra_nonce;
+}
+
+int PoolBlock::get_sidechain_version() const
+{
+	const uint64_t ts = (SideChain::network_type() == NetworkType::Mainnet) ? VERSION2_MAINNET_TIMESTAMP : VERSION2_TESTNET_TIMESTAMP;
+	return (m_timestamp >= ts) ? 2 : 1;
+}
+
+hash PoolBlock::calculate_tx_key_seed() const
+{
+	const char domain[] = "tx_key_seed";
+	const uint32_t zero = 0;
+
+	const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(nullptr, nullptr, nullptr, nullptr, &zero, &zero);
+	const std::vector<uint8_t> sidechain_data = serialize_sidechain_data();
+
+	hash result;
+	keccak_custom([&domain, &mainchain_data, &sidechain_data](int offset) -> uint8_t {
+		size_t k = offset;
+
+		if (k < sizeof(domain)) return domain[k];
+		k -= sizeof(domain);
+
+		if (k < mainchain_data.size()) return mainchain_data[k];
+		k -= mainchain_data.size();
+
+		return sidechain_data[k];
+	}, static_cast<int>(sizeof(domain) + mainchain_data.size() + sidechain_data.size()), result.h, HASH_SIZE);
+
+	return result;
 }
 
 } // namespace p2pool

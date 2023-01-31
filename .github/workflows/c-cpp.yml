@@ -70,7 +70,7 @@ jobs:
       run: |
         cd external/src/curl
         autoreconf -fi
-        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
+        ./configure CFLAGS='-Os' --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
         make -j$(nproc)
 
     - name: Build libuv
@@ -78,7 +78,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DBUILD_TESTING=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DBUILD_TESTING=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -86,7 +86,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -138,7 +138,7 @@ jobs:
       run: |
         cd external/src/curl
         autoreconf -fi
-        ./configure --host=aarch64-linux-gnu --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
+        ./configure --host=aarch64-linux-gnu CFLAGS='-Os' --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
         make -j$(nproc)
 
     - name: Build libuv
@@ -146,7 +146,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DBUILD_TESTING=OFF
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os' -DBUILD_TESTING=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -154,7 +154,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -194,7 +194,7 @@ jobs:
       run: |
         cd external/src/curl
         autoreconf -fi
-        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
+        ./configure CFLAGS='-Os' --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
         make -j$(nproc)
 
     - name: Build libuv
@@ -202,7 +202,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DBUILD_TESTING=OFF
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_FLAGS='-Os' -DBUILD_TESTING=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -210,7 +210,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -306,7 +306,7 @@ jobs:
       run: |
         cd external/src/curl
         autoreconf -fi
-        ./configure --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
+        ./configure CFLAGS='-Os' --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
         make -j3
 
     - name: Build libuv
@@ -314,7 +314,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DBUILD_TESTING=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DBUILD_TESTING=OFF
         make -j3
 
     - name: Build libzmq
@@ -322,7 +322,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
         make -j3
 
     - name: Build p2pool
@@ -349,4 +349,64 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: p2pool-${{ matrix.os }}
+        path: build/p2pool
+
+  build-freebsd:
+
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os.host }}
+
+    strategy:
+      matrix:
+        os:
+          - name: freebsd
+            architecture: x86-64
+            version: '12.4'
+            host: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Build p2pool
+      uses: cross-platform-actions/action@v0.10.0
+      with:
+        operating_system: ${{ matrix.os.name }}
+        architecture: ${{ matrix.os.architecture }}
+        version: ${{ matrix.os.version }}
+        shell: bash
+        run: |
+          sudo pkg install -y cmake autoconf automake libtool
+          cd external/src/curl
+          autoreconf -fi
+          ./configure CFLAGS='-Os' --without-ssl --without-hyper --without-zlib --without-brotli --without-zstd --without-default-ssl-backend --without-ca-bundle --without-ca-path --without-ca-fallback --without-libpsl --without-libgsasl --without-librtmp --without-winidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --without-zsh-functions-dir --without-fish-functions-dir --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-ntlm-wb --disable-tls-srp --disable-unix-sockets --disable-cookies --disable-socketpair --disable-doh --disable-dateparse --disable-netrc --disable-progress-meter --disable-dnsshuffle --disable-hsts --disable-alt-svc --disable-ares
+          make -j2
+          cd ../libuv
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_C_FLAGS='-Os' -DBUILD_TESTING=OFF
+          make -j2
+          cd ../../libzmq
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF
+          make -j2
+          cd ../../../..
+          mkdir build
+          cd build
+          cmake .. -DSTATIC_BINARY=ON
+          make -j2
+          cd ../tests
+          mkdir build
+          cd build
+          cmake .. -DSTATIC_LIBS=ON
+          make -j2
+          ./p2pool_tests
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: p2pool-${{ matrix.os.name }}-${{ matrix.os.version }}
         path: build/p2pool

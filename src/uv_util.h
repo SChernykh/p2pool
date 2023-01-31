@@ -18,6 +18,7 @@
 #pragma once
 
 #include <uv.h>
+#include <thread>
 
 static_assert(sizeof(in6_addr) == 16, "struct in6_addr has invalid size");
 static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
@@ -173,6 +174,66 @@ bool CallOnLoop(uv_loop_t* loop, T&& callback)
 	}
 
 	return false;
+}
+
+template<typename T>
+void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
+{
+	uint32_t THREAD_COUNT = std::thread::hardware_concurrency();
+
+	if (THREAD_COUNT > 0) {
+		--THREAD_COUNT;
+	}
+
+	// No more than 8 threads because our UV worker thread pool has 8 threads
+	if (THREAD_COUNT > 8) {
+		THREAD_COUNT = 8;
+	}
+
+	struct Callback
+	{
+		explicit FORCEINLINE Callback(T&& f) : m_func(std::move(f)) {}
+		Callback& operator=(Callback&&) = delete;
+
+		T m_func;
+	};
+
+	std::shared_ptr<Callback> cb = std::make_shared<Callback>(std::move(callback));
+
+	struct Work
+	{
+		uv_work_t req;
+		std::shared_ptr<Callback> cb;
+	};
+
+	for (size_t i = 0; i < THREAD_COUNT; ++i) {
+		Work* w = new Work{ {}, cb };
+		w->req.data = w;
+
+		const int err = uv_queue_work(loop, &w->req,
+			[](uv_work_t* req)
+			{
+				std::shared_ptr<Callback>& cb = reinterpret_cast<Work*>(req->data)->cb;
+				cb->m_func();
+				cb.reset();
+			},
+			[](uv_work_t* req, int)
+			{
+				delete reinterpret_cast<Work*>(req->data);
+			});
+
+		if (err) {
+			delete w;
+		}
+	}
+
+	if (wait) {
+		cb->m_func();
+
+		while (cb.use_count() > 1) {
+			std::this_thread::yield();
+		}
+	}
 }
 
 } // namespace p2pool

@@ -30,13 +30,16 @@ jobs:
       timeout-minutes: 15
       run: |
         cd build
-        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 6
+        mkdir data
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
 
     - name: Archive p2pool.log
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool_ubuntu.log
-        path: build/p2pool.log
+        name: p2pool_ubuntu_data
+        path: |
+          build/p2pool.log
+          build/data/
 
   sync-test-macos:
 
@@ -62,13 +65,16 @@ jobs:
       timeout-minutes: 15
       run: |
         cd build
-        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 6
+        mkdir data
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
 
     - name: Archive p2pool.log
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool_macos.log
-        path: build/p2pool.log
+        name: p2pool_macos_data
+        path: |
+          build/p2pool.log
+          build/data/
 
   sync-test-windows:
 
@@ -94,10 +100,13 @@ jobs:
       timeout-minutes: 15
       run: |
         cd build/Debug
-        ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --loglevel 6
+        mkdir data
+        ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
 
     - name: Archive p2pool.log
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool_windows.log
-        path: build/Debug/p2pool.log
+        name: p2pool_windows_data
+        path: |
+          build/Debug/p2pool.log
+          build/Debug/data/

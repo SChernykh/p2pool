@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 2.8.12)
 project(p2pool)
 
 option(STATIC_BINARY "Build static binary" OFF)
@@ -9,7 +9,9 @@ option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is comp
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+endif()
 
 if (WITH_RANDOMX)
 	add_definitions(-DWITH_RANDOMX)
@@ -124,7 +126,7 @@ if (WIN32)
 elseif (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 	set(LIBS ${LIBS} pthread)
 elseif (NOT APPLE)
-	set(LIBS ${LIBS} pthread dl)
+	set(LIBS ${LIBS} pthread)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
@@ -226,7 +228,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		find_library(SYSTEM_CONFIGURATION_LIB SystemConfiguration)
 		set(STATIC_LIBS ${STATIC_LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 	else()
-		set(STATIC_LIBS ${STATIC_LIBS} pthread dl)
+		set(STATIC_LIBS ${STATIC_LIBS} pthread)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}

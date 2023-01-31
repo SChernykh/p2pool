@@ -185,8 +185,8 @@ struct
 #endif
 	difficulty_type
 {
-	FORCEINLINE difficulty_type() : lo(0), hi(0) {}
-	FORCEINLINE difficulty_type(uint64_t a, uint64_t b) : lo(a), hi(b) {}
+	FORCEINLINE constexpr difficulty_type() : lo(0), hi(0) {}
+	FORCEINLINE constexpr difficulty_type(uint64_t a, uint64_t b) : lo(a), hi(b) {}
 
 	uint64_t lo;
 	uint64_t hi;
@@ -254,7 +254,10 @@ struct
 		return (lo < other.lo);
 	}
 
+	FORCEINLINE bool operator>(const difficulty_type& other) const { return other.operator<(*this); }
+
 	FORCEINLINE bool operator>=(const difficulty_type& other) const { return !operator<(other); }
+	FORCEINLINE bool operator<=(const difficulty_type& other) const { return !operator>(other); }
 
 	FORCEINLINE bool operator==(const difficulty_type& other) const { return (lo == other.lo) && (hi == other.hi); }
 	FORCEINLINE bool operator!=(const difficulty_type& other) const { return (lo != other.lo) || (hi != other.hi); }
@@ -293,6 +296,8 @@ struct
 
 static_assert(sizeof(difficulty_type) == sizeof(uint64_t) * 2, "struct difficulty_type has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<difficulty_type>::value, "struct difficulty_type is not a POD, check your compiler options");
+
+static constexpr difficulty_type diff_max = { std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max() };
 
 template<typename T>
 FORCEINLINE difficulty_type operator+(const difficulty_type& a, const T& b)

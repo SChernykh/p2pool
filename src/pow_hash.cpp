@@ -68,7 +68,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 			m_cache[i] = randomx_alloc_cache(flags);
 			if (!m_cache[i]) {
 				LOGERR(1, "couldn't allocate RandomX cache, aborting");
-				panic();
+				PANIC_STOP();
 			}
 		}
 		memory_allocated += RANDOMX_ARGON_MEMORY * 1024;
@@ -206,7 +206,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 				m_vm[m_index].vm = randomx_create_vm(flags, m_cache[m_index], nullptr);
 				if (!m_vm[m_index].vm) {
 					LOGERR(1, "couldn't allocate RandomX light VM, aborting");
-					panic();
+					PANIC_STOP();
 				}
 			}
 		}
@@ -308,7 +308,7 @@ void RandomX_Hasher::set_old_seed(const hash& seed)
 				m_vm[old_index].vm = randomx_create_vm(flags, m_cache[old_index], nullptr);
 				if (!m_vm[old_index].vm) {
 					LOGERR(1, "couldn't allocate RandomX light VM, aborting");
-					panic();
+					PANIC_STOP();
 				}
 			}
 		}
@@ -376,7 +376,7 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	int err = uv_loop_init(&m_loop);
 	if (err) {
 		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	// Init loop user data before running it
@@ -394,7 +394,7 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 }
 

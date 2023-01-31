@@ -79,15 +79,17 @@ public:
 		difficulty_type m_autoDiff;
 		char m_customUser[32];
 
+		uint64_t m_lastJobTarget;
+
 		int32_t m_score;
 	};
 
 	bool on_login(StratumClient* client, uint32_t id, const char* login);
 	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
-	uint64_t get_random64();
+	uint32_t get_random32();
 
 	void print_status() override;
-	void show_workers();
+	void show_workers_async();
 
 	void reset_share_counters();
 
@@ -119,6 +121,11 @@ private:
 
 	static void on_blobs_ready(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->on_blobs_ready(); }
 	void on_blobs_ready();
+
+	uv_async_t m_showWorkersAsync;
+
+	static void on_show_workers(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->show_workers(); }
+	void show_workers();
 
 	std::atomic<uint32_t> m_extraNonce;
 
@@ -152,6 +159,7 @@ private:
 			COULDNT_CHECK_POW,
 			LOW_DIFF,
 			INVALID_POW,
+			BANNED,
 			OK
 		} m_result;
 	};

@@ -60,26 +60,25 @@ StratumServer::StratumServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	m_extraNonce = static_cast<uint32_t>(m_rng());
-
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
 	uv_mutex_init_checked(&m_blobsQueueLock);
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
 
+	m_extraNonce = PoolBlock::signal_v2_readiness(get_random32());
+
 	m_submittedSharesPool.resize(10);
 	for (size_t i = 0; i < m_submittedSharesPool.size(); ++i) {
 		m_submittedSharesPool[i] = new SubmittedShare{};
 	}
 
-	const int err = uv_async_init(&m_loop, &m_blobsAsync, on_blobs_ready);
-	if (err) {
-		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
-	}
+	uv_async_init_checked(&m_loop, &m_blobsAsync, on_blobs_ready);
 	m_blobsAsync.data = this;
 	m_blobsQueue.reserve(2);
+
+	uv_async_init_checked(&m_loop, &m_showWorkersAsync, on_show_workers);
+	m_showWorkersAsync.data = this;
 
 	start_listening(pool->params().m_stratumAddresses);
 }
@@ -107,7 +106,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		return;
 	}
 
-	const uint32_t extra_nonce_start = static_cast<uint32_t>(get_random64());
+	const uint32_t extra_nonce_start = PoolBlock::signal_v2_readiness(get_random32());
 	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};
@@ -278,12 +277,13 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		saved_job.template_id = template_id;
 		saved_job.target = target;
 	}
+	client->m_lastJobTarget = target;
 
 	const bool result = send(client,
 		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf, size_t buf_size)
 		{
 			do {
-				client->m_rpcId = static_cast<uint32_t>(static_cast<StratumServer*>(client->m_owner)->get_random64());
+				client->m_rpcId = static_cast<StratumServer*>(client->m_owner)->get_random32();
 			} while (!client->m_rpcId);
 
 			log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
@@ -463,16 +463,23 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	return result;
 }
 
-uint64_t StratumServer::get_random64()
+uint32_t StratumServer::get_random32()
 {
 	MutexLock lock(m_rngLock);
-	return m_rng();
+	return static_cast<uint32_t>(m_rng() >> 32);
 }
 
 void StratumServer::print_status()
 {
 	update_hashrate_data(0, seconds_since_epoch());
 	print_stratum_status();
+}
+
+void StratumServer::show_workers_async()
+{
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync))) {
+		uv_async_send(&m_showWorkersAsync);
+	}
 }
 
 void StratumServer::show_workers()
@@ -497,15 +504,14 @@ void StratumServer::show_workers()
 	);
 
 	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
-		difficulty_type diff;
-		if (c->m_customDiff != 0) {
-			diff = c->m_customDiff;
-		}
-		else if (m_autoDiff && (c->m_autoDiff != 0)) {
-			diff = c->m_autoDiff;
-		}
-		else {
-			diff = pool_diff;
+		difficulty_type diff = pool_diff;
+		if (c->m_lastJobTarget > 1) {
+			uint64_t r;
+			diff.lo = udiv128(1, 0, c->m_lastJobTarget, &r);
+			diff.hi = 0;
+			if (r) {
+				++diff.lo;
+			}
 		}
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
@@ -585,7 +591,7 @@ void StratumServer::print_stratum_status() const
 		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
 		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
 		"\nTotal hashes       = " << total_hashes <<
-		"\nShares found       = " << shares_found << shares_failed_buf <<
+		"\nShares found       = " << shares_found << static_cast<const char*>(shares_failed_buf) <<
 		"\nAverage effort     = " << average_effort << '%' <<
 		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
 		"\nConnections        = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
@@ -756,9 +762,10 @@ void StratumServer::on_blobs_ready()
 				saved_job.template_id = data->m_templateId;
 				saved_job.target = target;
 			}
+			client->m_lastJobTarget = target;
 
 			const bool result = send(client,
-				[data, target, hashing_blob, &job_id](void* buf, size_t buf_size)
+				[data, target, hashing_blob, job_id](void* buf, size_t buf_size)
 				{
 					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 
@@ -828,12 +835,19 @@ void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 void StratumServer::on_share_found(uv_work_t* req)
 {
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
+	StratumServer* server = share->m_server;
+
+	if (server->is_banned(share->m_clientAddr)) {
+		share->m_highEnoughDifficulty = false;
+		share->m_result = SubmittedShare::Result::BANNED;
+		return;
+	}
+
 	if (share->m_highEnoughDifficulty) {
 		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
 	StratumClient* client = share->m_client;
-	StratumServer* server = share->m_server;
 	p2pool* pool = server->m_pool;
 
 	const uint64_t target = share->m_target;
@@ -952,6 +966,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				case SubmittedShare::Result::INVALID_POW:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Invalid PoW\"}}\n";
 					break;
+				case SubmittedShare::Result::BANNED:
+					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Banned\"}}\n";
+					break;
 				case SubmittedShare::Result::OK:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":null,\"result\":{\"status\":\"OK\"}}\n";
 					break;
@@ -975,6 +992,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 void StratumServer::on_shutdown()
 {
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync), nullptr);
 }
 
 StratumServer::StratumClient::StratumClient()
@@ -988,6 +1006,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_customDiff{}
 	, m_autoDiff{}
 	, m_customUser{}
+	, m_lastJobTarget(0)
 	, m_score(0)
 {
 }
@@ -1008,6 +1027,8 @@ void StratumServer::StratumClient::reset()
 	m_customDiff = {};
 	m_autoDiff = {};
 	m_customUser[0] = '\0';
+
+	m_lastJobTarget = 0;
 
 	m_score = 0;
 }

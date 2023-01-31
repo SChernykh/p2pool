@@ -75,7 +75,7 @@ P2PServer::P2PServer(p2pool* pool)
 			[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
 			{
 				if (!str_to_ip(is_v6, ip.c_str(), m_socks5ProxyIP)) {
-					panic();
+					PANIC_STOP();
 				}
 				m_socks5ProxyV6 = is_v6;
 				m_socks5ProxyPort = port;
@@ -95,7 +95,7 @@ P2PServer::P2PServer(p2pool* pool)
 	int err = uv_async_init(&m_loop, &m_broadcastAsync, on_broadcast);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_broadcastAsync.data = this;
 	m_broadcastQueue.reserve(2);
@@ -103,21 +103,21 @@ P2PServer::P2PServer(p2pool* pool)
 	err = uv_async_init(&m_loop, &m_connectToPeersAsync, on_connect_to_peers);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_connectToPeersAsync.data = this;
 
 	err = uv_async_init(&m_loop, &m_showPeersAsync, on_show_peers);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 	m_showPeersAsync.data = this;
 
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
 		LOGERR(1, "failed to create timer, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	if (m_cache) {
@@ -130,7 +130,7 @@ P2PServer::P2PServer(p2pool* pool)
 	err = uv_timer_start(&m_timer, on_timer, 1000, m_timerInterval * 1000);
 	if (err) {
 		LOGERR(1, "failed to start timer, error " << uv_err_name(err));
-		panic();
+		PANIC_STOP();
 	}
 
 	load_peer_list();
@@ -497,7 +497,12 @@ void P2PServer::load_peer_list()
 			hints.ai_flags = AI_ADDRCONFIG;
 
 			addrinfo* result;
-			const int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			if (err) {
+				LOGWARN(4, "getaddrinfo failed for " << nodes[i] << ": " << gai_strerror(err) << ", retrying with IPv4 only");
+				hints.ai_family = AF_INET;
+				err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			}
 			if (err == 0) {
 				for (addrinfo* r = result; r != NULL; r = r->ai_next) {
 					const char* addr_str;
@@ -866,7 +871,7 @@ void P2PServer::on_broadcast()
 		}
 
 		for (Broadcast* data : broadcast_queue) {
-			send(client, [client, data](void* buf, size_t buf_size) -> size_t
+			const bool result = send(client, [client, data](void* buf, size_t buf_size) -> size_t
 			{
 				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
 				uint8_t* p = p0;
@@ -925,6 +930,11 @@ void P2PServer::on_broadcast()
 
 				return p - p0;
 			});
+			if (!result) {
+				LOGWARN(5, "failed to broadcast to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
+				client->close();
+				break;
+			}
 		}
 	}
 }
@@ -1162,9 +1172,9 @@ void P2PServer::check_block_template()
 		return;
 	}
 
-	// Force update block template every 30 seconds after the initial sync is done
-	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 30) {
-		LOGINFO(4, "block template is 30 seconds old, updating it");
+	// Force update block template every 20 seconds after the initial sync is done
+	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 20) {
+		LOGINFO(4, "block template is 20 seconds old, updating it");
 		m_pool->update_block_template_async();
 	}
 }
@@ -1316,7 +1326,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		{
 		case MessageId::HANDSHAKE_CHALLENGE:
 			if (m_handshakeComplete) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_CHALLENGE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected HANDSHAKE_CHALLENGE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1337,7 +1347,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::HANDSHAKE_SOLUTION:
 			if (m_handshakeComplete) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected HANDSHAKE_SOLUTION");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected HANDSHAKE_SOLUTION");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1378,7 +1388,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		case MessageId::BLOCK_REQUEST:
 			++num_block_requests;
 			if (num_block_requests > 100) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too many BLOCK_REQUEST messages at once");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too many BLOCK_REQUEST messages at once");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1398,7 +1408,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::BLOCK_RESPONSE:
 			if (m_blockPendingRequests.empty()) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected BLOCK_RESPONSE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected BLOCK_RESPONSE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1458,7 +1468,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 		case MessageId::PEER_LIST_RESPONSE:
 			if (m_peerListPendingRequests <= 0) {
-				LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an unexpected PEER_LIST_RESPONSE");
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an unexpected PEER_LIST_RESPONSE");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
 				return false;
@@ -1469,7 +1479,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 			if (bytes_left >= 2) {
 				const uint32_t num_peers = buf[1];
 				if (num_peers > PEER_LIST_RESPONSE_MAX_PEERS) {
-					LOGWARN(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent too long peer list (" << num_peers << ')');
+					LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent too long peer list (" << num_peers << ')');
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
 					return false;
@@ -1578,6 +1588,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 		P2PClient* client;
 		P2PServer* server;
 		uint32_t reset_counter;
+		bool is_incoming;
 
 		uint8_t challenge[CHALLENGE_SIZE];
 		uint64_t salt;
@@ -1590,6 +1601,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 	work->client = this;
 	work->server = server;
 	work->reset_counter = m_resetCounter.load();
+	work->is_incoming = m_isIncoming;
 
 	memcpy(work->challenge, challenge, CHALLENGE_SIZE);
 	work->salt = server->get_random64();
@@ -1630,7 +1642,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					return;
 				}
 
-				if (work->client->m_isIncoming) {
+				if (work->is_incoming) {
 					// This is an incoming connection, so it must do PoW, not us
 					return;
 				}

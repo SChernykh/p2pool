@@ -46,6 +46,7 @@ public:
 	bool stopped() const { return m_stopped; }
 	void stop();
 
+	const std::string& host_str() const { return m_hostStr; }
 	const Params& params() const { return *m_params; }
 	BlockTemplate& block_template() { return *m_blockTemplate; }
 	SideChain& side_chain() { return *m_sideChain; }
@@ -111,6 +112,7 @@ private:
 
 	std::atomic<bool> m_stopped;
 
+	std::string m_hostStr;
 	Params* m_params;
 
 	p2pool_api* m_api;

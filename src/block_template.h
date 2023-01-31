@@ -48,7 +48,7 @@ public:
 	uint32_t get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 	uint32_t get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 
-	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, size_t& nonce_offset, size_t& extra_nonce_offset) const;
+	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const;
 
 	FORCEINLINE uint64_t height() const { return m_height; }
 	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }
@@ -56,7 +56,12 @@ public:
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
+	FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
+
+#ifdef P2POOL_UNIT_TESTS
 	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
+	FORCEINLINE std::mt19937_64& rng() { return m_rng; }
+#endif
 
 private:
 	SideChain* m_sidechain;
@@ -64,7 +69,7 @@ private:
 
 private:
 	int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
-	hash calc_sidechain_hash() const;
+	hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
 	hash calc_miner_tx_hash(uint32_t extra_nonce) const;
 	void calc_merkle_tree_main_branch();
 
@@ -76,6 +81,7 @@ private:
 	std::atomic<uint64_t> m_lastUpdated;
 
 	std::vector<uint8_t> m_blockTemplateBlob;
+	std::vector<uint8_t> m_fullDataBlob;
 	std::vector<uint8_t> m_merkleTreeMainBranch;
 
 	size_t m_blockHeaderSize;
@@ -92,17 +98,21 @@ private:
 
 	uint64_t m_timestamp;
 
-	hash m_txkeyPub;
-	hash m_txkeySec;
-
 	PoolBlock* m_poolBlockTemplate;
 
 	BlockTemplate* m_oldTemplates[4] = {};
 
-	uint64_t m_finalReward;
+	std::atomic<uint64_t> m_finalReward;
 
 	// Temp vectors, will be cleaned up after use and skipped in copy constructor/assignment operators
 	std::vector<uint8_t> m_minerTx;
+	uint64_t m_minerTxKeccakState[25];
+	size_t m_minerTxKeccakStateInputLength;
+
+	std::vector<uint8_t> m_sidechainHashBlob;
+	uint64_t m_sidechainHashKeccakState[25];
+	size_t m_sidechainHashInputLength;
+
 	std::vector<uint8_t> m_blockHeader;
 	std::vector<uint8_t> m_minerTxExtra;
 	std::vector<uint8_t> m_transactionHashes;
