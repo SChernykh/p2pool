@@ -10,6 +10,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
 	set(OPTIMIZATION_FLAGS "-Ofast -s -flto -fuse-linker-plugin")
 
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -fno-associative-math")
+	endif()
+
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
 
