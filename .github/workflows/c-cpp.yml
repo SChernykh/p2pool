@@ -353,7 +353,7 @@ jobs:
 
   build-freebsd:
 
-    timeout-minutes: 60
+    timeout-minutes: 75
     runs-on: ${{ matrix.os.host }}
 
     strategy:
