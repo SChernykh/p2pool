@@ -4,6 +4,7 @@ project(p2pool)
 option(STATIC_BINARY "Build static binary" OFF)
 option(STATIC_LIBS "Link libuv and libzmq statically" OFF)
 option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned off, p2pool will rely on monerod for verifying RandomX hashes" ON)
+option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 
