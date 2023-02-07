@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   sync-test-ubuntu:
 
+    timeout-minutes: 30
     runs-on: ubuntu-22.04
 
     steps:
@@ -43,6 +44,7 @@ jobs:
 
   sync-test-macos:
 
+    timeout-minutes: 30
     runs-on: macos-12
 
     steps:
@@ -78,6 +80,7 @@ jobs:
 
   sync-test-windows:
 
+    timeout-minutes: 30
     runs-on: windows-2022
 
     steps:

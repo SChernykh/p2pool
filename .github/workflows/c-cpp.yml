@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   build-ubuntu:
 
+    timeout-minutes: 10
     runs-on: ${{ matrix.config.os }}
 
     strategy:
@@ -51,6 +52,7 @@ jobs:
 
   build-ubuntu-static-libs:
 
+    timeout-minutes: 15
     runs-on: ubuntu-22.04
 
     steps:
@@ -115,6 +117,7 @@ jobs:
 
   build-ubuntu-aarch64:
 
+    timeout-minutes: 10
     runs-on: ${{ matrix.config.os }}
 
     strategy:
@@ -172,6 +175,7 @@ jobs:
 
   build-windows-msys2:
 
+    timeout-minutes: 45
     runs-on: windows-latest
 
     defaults:
@@ -241,6 +245,7 @@ jobs:
 
   build-windows-msbuild:
 
+    timeout-minutes: 20
     runs-on: windows-${{ matrix.config.os }}
 
     strategy:
@@ -287,6 +292,7 @@ jobs:
 
   build-macos:
 
+    timeout-minutes: 15
     runs-on: ${{ matrix.os }}
 
     strategy:

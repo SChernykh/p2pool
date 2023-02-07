@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   cppcheck-ubuntu:
 
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +32,7 @@ jobs:
 
   cppcheck-windows:
 
+    timeout-minutes: 20
     runs-on: windows-latest
 
     steps:
