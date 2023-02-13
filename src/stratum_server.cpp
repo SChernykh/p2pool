@@ -530,7 +530,6 @@ void StratumServer::reset_share_counters()
 	WriteLock lock(m_hashrateDataLock);
 
 	m_cumulativeHashesAtLastShare = m_cumulativeHashes;
-	m_cumulativeFoundSharesDiff = 0.0;
 	m_totalFoundShares = 0;
 	m_totalFailedShares = 0;
 }
