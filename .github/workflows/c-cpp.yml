@@ -416,3 +416,46 @@ jobs:
       with:
         name: p2pool-${{ matrix.os.name }}-${{ matrix.os.version }}
         path: build/p2pool
+
+  build-openbsd:
+
+    timeout-minutes: 75
+    runs-on: ${{ matrix.os.host }}
+
+    strategy:
+      matrix:
+        os:
+          - name: openbsd
+            architecture: x86-64
+            version: '7.2'
+            host: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Build p2pool
+      uses: cross-platform-actions/action@v0.10.0
+      with:
+        operating_system: ${{ matrix.os.name }}
+        architecture: ${{ matrix.os.architecture }}
+        version: ${{ matrix.os.version }}
+        shell: bash
+        run: |
+          sudo pkg_add -I cmake libuv zeromq curl
+          mkdir build && cd build
+          cmake ..
+          make -j2
+          cd ../tests
+          mkdir build && cd build
+          cmake ..
+          make -j2
+          ./p2pool_tests
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: p2pool-${{ matrix.os.name }}-${{ matrix.os.version }}
+        path: build/p2pool

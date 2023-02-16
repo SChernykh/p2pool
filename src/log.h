@@ -176,7 +176,7 @@ INT_ENTRY(uint16_t)
 INT_ENTRY(uint32_t)
 INT_ENTRY(uint64_t)
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__OpenBSD__)
 INT_ENTRY(long)
 INT_ENTRY(unsigned long)
 #endif
