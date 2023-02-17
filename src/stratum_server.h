@@ -42,6 +42,7 @@ public:
 		FORCEINLINE ~StratumClient() {}
 
 		static Client* allocate() { return new StratumClient(); }
+		virtual size_t size() const override { return sizeof(StratumClient); }
 
 		void reset() override;
 		bool on_connect() override;

@@ -68,6 +68,7 @@ public:
 		~P2PClient();
 
 		static Client* allocate() { return new P2PClient(); }
+		virtual size_t size() const override { return sizeof(P2PClient); }
 
 		void reset() override;
 		bool on_connect() override;

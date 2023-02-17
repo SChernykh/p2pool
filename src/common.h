@@ -89,6 +89,16 @@
 #define P2POOL_DEBUGGING 1
 #endif
 
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#define ASAN_POISON_MEMORY_REGION(addr, size) __asan_poison_memory_region((addr), (size))
+#define ASAN_UNPOISON_MEMORY_REGION(addr, size) __asan_unpoison_memory_region((addr), (size))
+extern "C" void __asan_poison_memory_region(void const volatile* addr, size_t size);
+extern "C" void __asan_unpoison_memory_region(void const volatile* addr, size_t size);
+#else
+#define ASAN_POISON_MEMORY_REGION(addr, size)
+#define ASAN_UNPOISON_MEMORY_REGION(addr, size)
+#endif 
+
 namespace p2pool {
 
 constexpr size_t HASH_SIZE = 32;

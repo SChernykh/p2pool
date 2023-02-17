@@ -55,6 +55,8 @@ public:
 		Client();
 		virtual ~Client() {}
 
+		virtual size_t size() const = 0;
+
 		virtual void reset();
 		virtual bool on_connect() = 0;
 		virtual bool on_read(char* data, uint32_t size) = 0;
@@ -109,6 +111,9 @@ public:
 	};
 
 	std::vector<WriteBuf*> m_writeBuffers;
+
+	WriteBuf* get_write_buffer();
+	void return_write_buffer(WriteBuf* buf);
 
 	struct SendCallbackBase
 	{
@@ -167,6 +172,10 @@ protected:
 
 	uv_mutex_t m_clientsListLock;
 	std::vector<Client*> m_preallocatedClients;
+
+	Client* get_client();
+	void return_client(Client* c);
+
 	Client* m_connectedClientsList;
 	std::atomic<uint32_t> m_numConnections;
 	std::atomic<uint32_t> m_numIncomingConnections;
