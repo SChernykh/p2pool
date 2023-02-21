@@ -46,7 +46,7 @@ void p2pool_usage()
 		"--in-peers N         Maximum number of incoming connections for p2p server (any value between 10 and 450)\n"
 		"--start-mining N     Start built-in miner using N threads (any value between 1 and 64)\n"
 		"--mini               Connect to p2pool-mini sidechain. Note that it will also change default p2p port from %d to %d\n"
-		"--no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum\n"
+		"--no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)\n"
 		"--rpc-login          Specify username[:password] required for Monero RPC server\n"
 		"--socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections\n"
 		"--no-dns             disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)\n"
