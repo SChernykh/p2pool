@@ -47,6 +47,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 
 	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Ob1 /Ot /Zi /MT")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Ob1 /Ot /Zi /MT")
+
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	set(GENERAL_FLAGS "-pthread")
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
