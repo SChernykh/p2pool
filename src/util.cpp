@@ -331,6 +331,7 @@ struct BackgroundJobTracker::Impl
 		do {
 			{
 				MutexLock lock(m_lock);
+				// cppcheck-suppress knownConditionTrueFalse
 				if (m_jobs.empty()) {
 					return;
 				}
