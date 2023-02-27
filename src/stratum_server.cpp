@@ -420,6 +420,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		uint64_t rem;
 		share->m_hashes = (target > 1) ? udiv128(1, 0, target, &rem) : 1;
 		share->m_highEnoughDifficulty = sidechain_diff.check_pow(resultHash);
+		share->m_score = 0;
 
 		// Don't count shares that were found during sync
 		const SideChain& side_chain = m_pool->side_chain();
@@ -884,11 +885,11 @@ void StratumServer::on_share_found(uv_work_t* req)
 		if (pow_hash != share->m_resultHash) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " submitted a share with invalid PoW");
 			share->m_result = SubmittedShare::Result::INVALID_POW;
-			client->m_score += BAD_SHARE_POINTS;
+			share->m_score = BAD_SHARE_POINTS;
 			return;
 		}
 
-		client->m_score += GOOD_SHARE_POINTS;
+		share->m_score = GOOD_SHARE_POINTS;
 
 		const double diff = sidechain_difficulty.to_double();
 		{
@@ -924,7 +925,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	else {
 		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a low diff share");
 		share->m_result = SubmittedShare::Result::LOW_DIFF;
-		client->m_score += BAD_SHARE_POINTS;
+		share->m_score = BAD_SHARE_POINTS;
 	}
 }
 
@@ -932,6 +933,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 {
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
 	StratumClient* client = share->m_client;
+	client->m_score += share->m_score;
 
 	if (share->m_highEnoughDifficulty) {
 		const char* s = client->m_customUser;

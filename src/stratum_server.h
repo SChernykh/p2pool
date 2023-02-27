@@ -154,6 +154,7 @@ private:
 		uint64_t m_timestamp;
 		uint64_t m_hashes;
 		bool m_highEnoughDifficulty;
+		int32_t m_score;
 
 		enum class Result {
 			STALE,
