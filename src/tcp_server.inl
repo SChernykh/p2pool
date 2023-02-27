@@ -367,6 +367,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 	return true;
 }
 
+#ifdef P2POOL_DEBUGGING
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::check_event_loop_thread(const char* func)
 {
@@ -374,6 +375,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::check_event_loop_thread(const cha
 		LOGERR(1, func << " called from another thread, this is not thread safe");
 	}
 }
+#endif
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets)

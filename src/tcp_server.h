@@ -170,7 +170,11 @@ protected:
 
 	uv_loop_t m_loop;
 
+#ifdef P2POOL_DEBUGGING
 	static void check_event_loop_thread(const char *func);
+#else
+	static FORCEINLINE void check_event_loop_thread(const char*) {}
+#endif
 
 	std::vector<Client*> m_preallocatedClients;
 
