@@ -61,7 +61,6 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	}
 	m_shutdownAsync.data = this;
 
-	uv_mutex_init_checked(&m_clientsListLock);
 	uv_mutex_init_checked(&m_bansLock);
 
 	m_connectedClientsList = m_allocateNewClient();
@@ -369,11 +368,17 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets)
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::check_event_loop_thread(const char* func)
 {
 	if (!server_event_loop_thread) {
-		LOGERR(1, "closing sockets from another thread, this is not thread safe");
+		LOGERR(1, func << " called from another thread, this is not thread safe");
 	}
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets)
+{
+	check_event_loop_thread(__func__);
 
 	if (listen_sockets) {
 		for (uv_tcp_t* s : m_listenSockets6) {
@@ -391,15 +396,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets
 	}
 
 	size_t numClosed = 0;
-	{
-		MutexLock lock(m_clientsListLock);
 
-		for (Client* c = m_connectedClientsList->m_next; c != m_connectedClientsList; c = c->m_next) {
-			uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&c->m_socket);
-			if (!uv_is_closing(h)) {
-				uv_close(h, on_connection_close);
-				++numClosed;
-			}
+	for (Client* c = m_connectedClientsList->m_next; c != m_connectedClientsList; c = c->m_next) {
+		uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&c->m_socket);
+		if (!uv_is_closing(h)) {
+			uv_close(h, on_connection_close);
+			++numClosed;
 		}
 	}
 
@@ -418,7 +420,6 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 	uv_async_send(&m_shutdownAsync);
 	uv_thread_join(&m_loopThread);
 
-	uv_mutex_destroy(&m_clientsListLock);
 	uv_mutex_destroy(&m_bansLock);
 
 	LOGINFO(1, "stopped");
@@ -464,9 +465,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_bans()
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, SendCallbackBase&& callback)
 {
-	if (!server_event_loop_thread) {
-		LOGERR(1, "sending data from another thread, this is not thread safe");
-	}
+	check_event_loop_thread(__func__);
 
 	if (client->m_isClosing) {
 		LOGWARN(5, "client " << static_cast<const char*>(client->m_addrString) << " is being disconnected, can't send any more data");
@@ -586,14 +585,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_connection(uv_stream_t* se
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* handle)
 {
+	check_event_loop_thread(__func__);
+
 	Client* client = static_cast<Client*>(handle->data);
 	TCPServer* owner = client->m_owner;
 
 	LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " disconnected");
 
 	if (owner) {
-		MutexLock lock(owner->m_clientsListLock);
-
 		Client* prev_in_list = client->m_prev;
 		Client* next_in_list = client->m_next;
 
@@ -688,7 +687,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server, Client* client)
 {
-	MutexLock lock(m_clientsListLock);
+	check_event_loop_thread(__func__);
 
 	client->m_prev = m_connectedClientsList;
 	client->m_next = m_connectedClientsList->m_next;

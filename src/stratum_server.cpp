@@ -484,10 +484,10 @@ void StratumServer::show_workers_async()
 
 void StratumServer::show_workers()
 {
+	check_event_loop_thread(__func__);
+
 	const uint64_t cur_time = seconds_since_epoch();
 	const difficulty_type pool_diff = m_pool->side_chain().difficulty();
-
-	MutexLock lock(m_clientsListLock);
 
 	int addr_len = 0;
 	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
@@ -671,6 +671,8 @@ void StratumServer::update_auto_diff(StratumClient* client, const uint64_t times
 
 void StratumServer::on_blobs_ready()
 {
+	check_event_loop_thread(__func__);
+
 	std::vector<BlobsData*> blobs_queue;
 	blobs_queue.reserve(2);
 
@@ -699,101 +701,98 @@ void StratumServer::on_blobs_ready()
 	uint32_t num_sent = 0;
 
 	const uint64_t cur_time = seconds_since_epoch();
-	{
-		MutexLock lock2(m_clientsListLock);
 
-		for (StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_prev); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_prev)) {
-			++numClientsProcessed;
+	for (StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_prev); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_prev)) {
+		++numClientsProcessed;
 
-			if (!client->m_rpcId) {
-				// Not logged in yet, on_login() will send the job to this client. Also close inactive connections.
-				if (cur_time >= client->m_connectedTime + 10) {
-					LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " didn't send login data");
-					client->ban(DEFAULT_BAN_TIME);
-					client->close();
-				}
-				continue;
-			}
-
-			if (num_sent >= data->m_numClientsExpected) {
-				// We don't have any more extra_nonce values available
-				continue;
-			}
-
-			uint8_t* hashing_blob = data->m_blobs.data() + num_sent * data->m_blobSize;
-
-			uint64_t target = data->m_target;
-			if (client->m_customDiff.lo) {
-				target = std::max(target, client->m_customDiff.target());
-			}
-			else if (m_autoDiff) {
-				// Limit autodiff to 4000000 for maximum compatibility
-				target = std::max(target, TARGET_4_BYTES_LIMIT);
-
-				if (client->m_autoDiff.lo) {
-					const uint32_t k = client->m_autoDiffIndex;
-					const uint16_t elapsed_time = static_cast<uint16_t>(cur_time) - client->m_autoDiffData[(k - 1) % StratumClient::AUTO_DIFF_SIZE].m_timestamp;
-					if (elapsed_time > AUTO_DIFF_TARGET_TIME * 5) {
-						// More than 500% effort, reduce the auto diff by 1/8 every time until the share is found
-						client->m_autoDiff.lo = std::max<uint64_t>(client->m_autoDiff.lo - client->m_autoDiff.lo / 8, MIN_DIFF);
-					}
-					target = std::max(target, client->m_autoDiff.target());
-				}
-				else {
-					// Not enough shares from the client yet, cut diff in half every 16 seconds
-					const uint64_t num_halvings = (cur_time - client->m_connectedTime) / 16;
-					constexpr uint64_t max_target = (std::numeric_limits<uint64_t>::max() / MIN_DIFF) + 1;
-					for (uint64_t i = 0; (i < num_halvings) && (target < max_target); ++i) {
-						target *= 2;
-					}
-					target = std::min<uint64_t>(target, max_target);
-				}
-			}
-
-			uint32_t job_id;
-			{
-				job_id = ++client->m_perConnectionJobId;
-
-				StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
-				saved_job.job_id = job_id;
-				saved_job.extra_nonce = extra_nonce_start + num_sent;
-				saved_job.template_id = data->m_templateId;
-				saved_job.target = target;
-			}
-			client->m_lastJobTarget = target;
-
-			const bool result = send(client,
-				[data, target, hashing_blob, job_id](void* buf, size_t buf_size)
-				{
-					log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
-
-					if (target >= TARGET_4_BYTES_LIMIT) {
-						target_hex.m_data += sizeof(uint32_t);
-						target_hex.m_size -= sizeof(uint32_t);
-					}
-
-					log::Stream s(buf, buf_size);
-					s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
-					s << log::hex_buf(hashing_blob, data->m_blobSize) << "\",\"job_id\":\"";
-					s << log::Hex(job_id) << "\",\"target\":\"";
-					s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
-					s << data->m_height << ",\"seed_hash\":\"";
-					s << data->m_seedHash << "\"}}\n";
-					return s.m_pos;
-				});
-
-			if (result) {
-				++num_sent;
-			}
-			else {
+		if (!client->m_rpcId) {
+			// Not logged in yet, on_login() will send the job to this client. Also close inactive connections.
+			if (cur_time >= client->m_connectedTime + 10) {
+				LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " didn't send login data");
+				client->ban(DEFAULT_BAN_TIME);
 				client->close();
 			}
+			continue;
 		}
 
-		const uint32_t num_connections = m_numConnections;
-		if (numClientsProcessed != num_connections) {
-			LOGWARN(1, "client list is broken, expected " << num_connections << ", got " << numClientsProcessed << " clients");
+		if (num_sent >= data->m_numClientsExpected) {
+			// We don't have any more extra_nonce values available
+			continue;
 		}
+
+		uint8_t* hashing_blob = data->m_blobs.data() + num_sent * data->m_blobSize;
+
+		uint64_t target = data->m_target;
+		if (client->m_customDiff.lo) {
+			target = std::max(target, client->m_customDiff.target());
+		}
+		else if (m_autoDiff) {
+			// Limit autodiff to 4000000 for maximum compatibility
+			target = std::max(target, TARGET_4_BYTES_LIMIT);
+
+			if (client->m_autoDiff.lo) {
+				const uint32_t k = client->m_autoDiffIndex;
+				const uint16_t elapsed_time = static_cast<uint16_t>(cur_time) - client->m_autoDiffData[(k - 1) % StratumClient::AUTO_DIFF_SIZE].m_timestamp;
+				if (elapsed_time > AUTO_DIFF_TARGET_TIME * 5) {
+					// More than 500% effort, reduce the auto diff by 1/8 every time until the share is found
+					client->m_autoDiff.lo = std::max<uint64_t>(client->m_autoDiff.lo - client->m_autoDiff.lo / 8, MIN_DIFF);
+				}
+				target = std::max(target, client->m_autoDiff.target());
+			}
+			else {
+				// Not enough shares from the client yet, cut diff in half every 16 seconds
+				const uint64_t num_halvings = (cur_time - client->m_connectedTime) / 16;
+				constexpr uint64_t max_target = (std::numeric_limits<uint64_t>::max() / MIN_DIFF) + 1;
+				for (uint64_t i = 0; (i < num_halvings) && (target < max_target); ++i) {
+					target *= 2;
+				}
+				target = std::min<uint64_t>(target, max_target);
+			}
+		}
+
+		uint32_t job_id;
+		{
+			job_id = ++client->m_perConnectionJobId;
+
+			StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
+			saved_job.job_id = job_id;
+			saved_job.extra_nonce = extra_nonce_start + num_sent;
+			saved_job.template_id = data->m_templateId;
+			saved_job.target = target;
+		}
+		client->m_lastJobTarget = target;
+
+		const bool result = send(client,
+			[data, target, hashing_blob, job_id](void* buf, size_t buf_size)
+			{
+				log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
+
+				if (target >= TARGET_4_BYTES_LIMIT) {
+					target_hex.m_data += sizeof(uint32_t);
+					target_hex.m_size -= sizeof(uint32_t);
+				}
+
+				log::Stream s(buf, buf_size);
+				s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
+				s << log::hex_buf(hashing_blob, data->m_blobSize) << "\",\"job_id\":\"";
+				s << log::Hex(job_id) << "\",\"target\":\"";
+				s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
+				s << data->m_height << ",\"seed_hash\":\"";
+				s << data->m_seedHash << "\"}}\n";
+				return s.m_pos;
+			});
+
+		if (result) {
+			++num_sent;
+		}
+		else {
+			client->close();
+		}
+	}
+
+	const uint32_t num_connections = m_numConnections;
+	if (numClientsProcessed != num_connections) {
+		LOGWARN(1, "client list is broken, expected " << num_connections << ", got " << numClientsProcessed << " clients");
 	}
 
 	LOGINFO(3, "sent new job to " << num_sent << '/' << numClientsProcessed << " clients");

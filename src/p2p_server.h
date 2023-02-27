@@ -253,7 +253,7 @@ private:
 	uv_async_t m_showPeersAsync;
 
 	static void on_show_peers(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->show_peers(); }
-	void show_peers();
+	void show_peers() const;
 
 	void on_shutdown() override;
 };

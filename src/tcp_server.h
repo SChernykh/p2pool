@@ -170,7 +170,8 @@ protected:
 
 	uv_loop_t m_loop;
 
-	uv_mutex_t m_clientsListLock;
+	static void check_event_loop_thread(const char *func);
+
 	std::vector<Client*> m_preallocatedClients;
 
 	Client* get_client();

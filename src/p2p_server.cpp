@@ -261,6 +261,8 @@ void P2PServer::on_connect_failed(bool is_v6, const raw_ip& ip, int port)
 
 void P2PServer::update_peer_connections()
 {
+	check_event_loop_thread(__func__);
+
 	const uint64_t cur_time = seconds_since_epoch();
 	const uint64_t last_updated = m_pool->side_chain().last_updated();
 
@@ -268,40 +270,37 @@ void P2PServer::update_peer_connections()
 	m_fastestPeer = nullptr;
 
 	unordered_set<raw_ip> connected_clients;
-	{
-		MutexLock lock(m_clientsListLock);
 
-		connected_clients.reserve(m_numConnections);
-		for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			const int timeout = client->m_handshakeComplete ? 300 : 10;
-			if ((cur_time >= client->m_lastAlive + timeout) && (client->m_socks5ProxyState == Client::Socks5ProxyState::Default)) {
-				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
-				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
+	connected_clients.reserve(m_numConnections);
+	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		const int timeout = client->m_handshakeComplete ? 300 : 10;
+		if ((cur_time >= client->m_lastAlive + timeout) && (client->m_socks5ProxyState == Client::Socks5ProxyState::Default)) {
+			const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
+			LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
+			client->close();
+			continue;
+		}
+
+		if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
+			// - Side chain is at least 15 minutes newer (last_updated >= client->m_lastBroadcastTimestamp + 900)
+			// - It's been at least 10 seconds since side chain updated (cur_time >= last_updated + 10)
+			// - It's been at least 10 seconds since the last block request (peer is not syncing)
+			// - Peer should have sent a broadcast by now
+			if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 900)) {
+				const uint64_t dt = last_updated - client->m_lastBroadcastTimestamp;
+				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " is not broadcasting blocks (last update " << dt << " seconds ago)");
+				client->ban(DEFAULT_BAN_TIME);
+				remove_peer_from_list(client);
 				client->close();
 				continue;
 			}
+		}
 
-			if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
-				// - Side chain is at least 15 minutes newer (last_updated >= client->m_lastBroadcastTimestamp + 900)
-				// - It's been at least 10 seconds since side chain updated (cur_time >= last_updated + 10)
-				// - It's been at least 10 seconds since the last block request (peer is not syncing)
-				// - Peer should have sent a broadcast by now
-				if (last_updated && (cur_time >= std::max(last_updated, client->m_lastBlockrequestTimestamp) + 10) && (last_updated >= client->m_lastBroadcastTimestamp + 900)) {
-					const uint64_t dt = last_updated - client->m_lastBroadcastTimestamp;
-					LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " is not broadcasting blocks (last update " << dt << " seconds ago)");
-					client->ban(DEFAULT_BAN_TIME);
-					remove_peer_from_list(client);
-					client->close();
-					continue;
-				}
-			}
-
-			connected_clients.insert(client->m_addr);
-			if (client->is_good()) {
-				has_good_peers = true;
-				if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
-					m_fastestPeer = client;
-				}
+		connected_clients.insert(client->m_addr);
+		if (client->is_good()) {
+			has_good_peers = true;
+			if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
+				m_fastestPeer = client;
 			}
 		}
 	}
@@ -363,7 +362,7 @@ void P2PServer::update_peer_connections()
 
 void P2PServer::update_peer_list()
 {
-	MutexLock lock(m_clientsListLock);
+	check_event_loop_thread(__func__);
 
 	const uint64_t cur_time = seconds_since_epoch();
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
@@ -843,6 +842,8 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 void P2PServer::on_broadcast()
 {
+	check_event_loop_thread(__func__);
+
 	std::vector<Broadcast*> broadcast_queue;
 	broadcast_queue.reserve(2);
 
@@ -862,8 +863,6 @@ void P2PServer::on_broadcast()
 				delete data;
 			}
 		});
-
-	MutexLock lock(m_clientsListLock);
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (!client->is_good()) {
@@ -941,9 +940,7 @@ void P2PServer::on_broadcast()
 
 uint64_t P2PServer::get_random64()
 {
-	if (!server_event_loop_thread) {
-		LOGERR(1, "get_random64() was called from another thread, this is not thread safe");
-	}
+	check_event_loop_thread(__func__);
 	return m_rng();
 }
 
@@ -965,9 +962,9 @@ void P2PServer::show_peers_async()
 	}
 }
 
-void P2PServer::show_peers()
+void P2PServer::show_peers() const
 {
-	MutexLock lock(m_clientsListLock);
+	check_event_loop_thread(__func__);
 
 	const uint64_t cur_time = seconds_since_epoch();
 	size_t n = 0;
@@ -1070,6 +1067,8 @@ void P2PServer::flush_cache()
 
 void P2PServer::download_missing_blocks()
 {
+	check_event_loop_thread(__func__);
+
 	if (!m_lookForMissingBlocks) {
 		return;
 	}
@@ -1082,8 +1081,6 @@ void P2PServer::download_missing_blocks()
 		m_missingBlockRequests.clear();
 		return;
 	}
-
-	MutexLock lock(m_clientsListLock);
 
 	if (m_numConnections == 0) {
 		return;
@@ -1271,7 +1268,6 @@ bool P2PServer::P2PClient::on_connect()
 	}
 
 	// Don't allow multiple connections to/from the same IP (except localhost)
-	// server->m_clientsListLock is already locked here
 	if (!m_addr.is_localhost()) {
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			if ((client != this) && (client->m_addr == m_addr)) {
@@ -1757,6 +1753,8 @@ bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const 
 
 bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 {
+	check_event_loop_thread(__func__);
+
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	uint8_t challenge[CHALLENGE_SIZE];
@@ -1772,21 +1770,12 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 
 	m_peerId = peer_id;
 
-	bool same_peer = false;
-	{
-		MutexLock lock(server->m_clientsListLock);
-		for (const P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			if ((client != this) && (client->m_peerId == peer_id)) {
-				LOGWARN(5, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
-				same_peer = true;
-				break;
-			}
+	for (const P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if ((client != this) && (client->m_peerId == peer_id)) {
+			LOGWARN(5, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
+			close();
+			return true;
 		}
-	}
-
-	if (same_peer) {
-		close();
-		return true;
 	}
 
 	send_handshake_solution(challenge);
@@ -2033,6 +2022,8 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
+	check_event_loop_thread(__func__);
+
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
 	const bool first = (m_prevIncomingPeerListRequest == 0);
@@ -2050,33 +2041,30 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 
 	Peer peers[PEER_LIST_RESPONSE_MAX_PEERS];
 	uint32_t num_selected_peers = 0;
-	{
-		MutexLock lock(server->m_clientsListLock);
 
-		// Send every 4th peer on average, selected at random
-		const uint32_t peers_to_send_target = std::min<uint32_t>(PEER_LIST_RESPONSE_MAX_PEERS, std::max<uint32_t>(1, server->m_numConnections / 4));
-		uint32_t n = 0;
+	// Send every 4th peer on average, selected at random
+	const uint32_t peers_to_send_target = std::min<uint32_t>(PEER_LIST_RESPONSE_MAX_PEERS, std::max<uint32_t>(1, server->m_numConnections / 4));
+	uint32_t n = 0;
 
-		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			if (!client->is_good() || (client->m_addr == m_addr)) {
-				continue;
-			}
+	for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if (!client->is_good() || (client->m_addr == m_addr)) {
+			continue;
+		}
 
-			const Peer p{ client->m_isV6, client->m_addr, client->m_listenPort, 0, 0 };
-			++n;
+		const Peer p{ client->m_isV6, client->m_addr, client->m_listenPort, 0, 0 };
+		++n;
 
-			// Use https://en.wikipedia.org/wiki/Reservoir_sampling algorithm
-			if (num_selected_peers < peers_to_send_target) {
-				peers[num_selected_peers++] = p;
-				continue;
-			}
+		// Use https://en.wikipedia.org/wiki/Reservoir_sampling algorithm
+		if (num_selected_peers < peers_to_send_target) {
+			peers[num_selected_peers++] = p;
+			continue;
+		}
 
-			uint64_t k;
-			umul128(server->get_random64(), n, &k);
+		uint64_t k;
+		umul128(server->get_random64(), n, &k);
 
-			if (k < peers_to_send_target) {
-				peers[k] = p;
-			}
+		if (k < peers_to_send_target) {
+			peers[k] = p;
 		}
 	}
 
