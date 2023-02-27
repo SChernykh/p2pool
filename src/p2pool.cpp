@@ -668,9 +668,8 @@ void p2pool::update_block_template()
 {
 	MinerData data = miner_data();
 
-	if (m_updateSeed) {
+	if (m_updateSeed.exchange(false)) {
 		m_hasher->set_seed_async(data.seed_hash);
-		m_updateSeed = false;
 	}
 	m_blockTemplate->update(data, *m_mempool, &m_params->m_wallet);
 	stratum_on_block();

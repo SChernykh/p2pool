@@ -188,7 +188,7 @@ private:
 	uint32_t m_totalFoundShares;
 	uint32_t m_totalFailedShares;
 
-	uint64_t m_apiLastUpdateTime;
+	std::atomic<uint64_t> m_apiLastUpdateTime;
 
 	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
 	void api_update_local_stats(uint64_t timestamp);

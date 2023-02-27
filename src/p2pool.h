@@ -119,7 +119,7 @@ private:
 	SideChain* m_sideChain;
 	RandomX_Hasher_Base* m_hasher;
 	BlockTemplate* m_blockTemplate;
-	bool m_updateSeed;
+	std::atomic<bool> m_updateSeed;
 	Mempool* m_mempool;
 
 	mutable uv_rwlock_t m_mainchainLock;

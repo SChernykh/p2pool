@@ -1228,11 +1228,14 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	}
 
 	// Rate limit to no more than once in 60 seconds.
-	if (timestamp < m_apiLastUpdateTime + 60) {
+	uint64_t t = m_apiLastUpdateTime.load();
+	if (timestamp < t + 60) {
 		return;
 	}
 
-	m_apiLastUpdateTime = timestamp;
+	if (!m_apiLastUpdateTime.compare_exchange_strong(t, timestamp)) {
+		return;
+	}
 
 	uint64_t hashes_15m, hashes_1h, hashes_24h, total_hashes;
 	int64_t dt_15m, dt_1h, dt_24h;
