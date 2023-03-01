@@ -647,7 +647,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	// Layout: [software id, version, random number, sidechain extra_nonce]
 	uint32_t* sidechain_extra = m_poolBlockTemplate->m_sidechainExtraBuf;
 	sidechain_extra[0] = 0;
+#ifdef P2POOL_SIDECHAIN_EXTRA_1
+	sidechain_extra[1] = P2POOL_SIDECHAIN_EXTRA_1;
+#else
 	sidechain_extra[1] = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+#endif
 	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
 	sidechain_extra[3] = 0;
 

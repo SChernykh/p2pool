@@ -17,6 +17,7 @@ set(LIBS ${LIBS} randomx)
 add_definitions(-DWITH_RANDOMX)
 
 add_definitions(-DP2POOL_UNIT_TESTS)
+add_definitions(-DP2POOL_SIDECHAIN_EXTRA_1=1)
 
 include(cmake/flags.cmake)
 
