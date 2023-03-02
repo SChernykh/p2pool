@@ -937,7 +937,23 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	if (share->m_highEnoughDifficulty) {
 		const char* s = client->m_customUser;
-		LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << ", effort " << share->m_effort << '%');
+		if (share->m_result == SubmittedShare::Result::OK) {
+			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? ", user " : "") << s << ", effort " << share->m_effort << '%');
+		}
+		else {
+			static const char* reason_list[] = {
+				"stale share",
+				"couldn't check PoW",
+				"low difficulty",
+				"invalid PoW",
+				"worker banned",
+			};
+			static_assert(array_size(reason_list) == static_cast<size_t>(SubmittedShare::Result::OK), "Update reason_list to match SubmittedShare::Result enum");
+
+			const size_t k = static_cast<size_t>(share->m_result);
+			const char* reason = (k < array_size(reason_list)) ? reason_list[k] : "unknown";
+			LOGWARN(0, log::Green() << "INVALID SHARE: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? ", user " : "") << s << ", reason: " << reason);
+		}
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
