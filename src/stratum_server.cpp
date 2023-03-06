@@ -70,7 +70,9 @@ StratumServer::StratumServer(p2pool* pool)
 
 	m_submittedSharesPool.resize(10);
 	for (size_t i = 0; i < m_submittedSharesPool.size(); ++i) {
-		m_submittedSharesPool[i] = new SubmittedShare{};
+		SubmittedShare* share = new SubmittedShare{};
+		ASAN_POISON_MEMORY_REGION(share, sizeof(SubmittedShare));
+		m_submittedSharesPool[i] = share;
 	}
 
 	uv_async_init_checked(&m_loop, &m_blobsAsync, on_blobs_ready);
@@ -92,6 +94,7 @@ StratumServer::~StratumServer()
 	uv_rwlock_destroy(&m_hashrateDataLock);
 
 	for (SubmittedShare* share : m_submittedSharesPool) {
+		ASAN_UNPOISON_MEMORY_REGION(share, sizeof(SubmittedShare));
 		delete share;
 	}
 }
@@ -389,6 +392,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		if (!m_submittedSharesPool.empty()) {
 			share = m_submittedSharesPool.back();
 			m_submittedSharesPool.pop_back();
+			ASAN_UNPOISON_MEMORY_REGION(share, sizeof(SubmittedShare));
 		}
 		else {
 			share = new SubmittedShare{};
@@ -957,7 +961,11 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
-	ON_SCOPE_LEAVE([share]() { share->m_server->m_submittedSharesPool.push_back(share); });
+	ON_SCOPE_LEAVE([share]()
+		{
+			ASAN_POISON_MEMORY_REGION(share, sizeof(SubmittedShare));
+			share->m_server->m_submittedSharesPool.push_back(share);
+		});
 
 	StratumServer* server = share->m_server;
 
