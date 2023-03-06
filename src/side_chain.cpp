@@ -1724,7 +1724,7 @@ PoolBlock* SideChain::get_parent(const PoolBlock* block) const
 	return nullptr;
 }
 
-bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative)
+bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative) const
 {
 	is_alternative = false;
 
@@ -1834,7 +1834,11 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 void SideChain::update_depths(PoolBlock* block)
 {
 	for (size_t i = 1; i <= UNCLE_BLOCK_DEPTH; ++i) {
-		for (PoolBlock* child : m_blocksByHeight[block->m_sidechainHeight + i]) {
+		auto it = m_blocksByHeight.find(block->m_sidechainHeight + i);
+		if (it == m_blocksByHeight.end()) {
+			continue;
+		}
+		for (PoolBlock* child : it->second) {
 			if (child->m_parent == block->m_sidechainId) {
 				if (i != 1) {
 					LOGERR(1, "m_blocksByHeight is inconsistent with child->m_parent. Fix the code!");
@@ -1844,8 +1848,7 @@ void SideChain::update_depths(PoolBlock* block)
 				}
 			}
 
-			auto it = std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId);
-			if (it != child->m_uncles.end()) {
+			if (std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId) != child->m_uncles.end()) {
 				block->m_depth = std::max(block->m_depth, child->m_depth + i);
 			}
 		}
