@@ -35,6 +35,8 @@ private:
 	uv_loop_t m_loop;
 	uv_async_t m_shutdownAsync;
 	uv_tty_t m_tty;
+	uv_pipe_t m_stdin_pipe;
+	uv_handle_t* m_stdin_handle;
 	uv_thread_t m_loopThread;
 
 	char m_readBuf[64];
@@ -48,7 +50,7 @@ private:
 	{
 		ConsoleCommands* pThis = reinterpret_cast<ConsoleCommands*>(async->data);
 		uv_close(reinterpret_cast<uv_handle_t*>(&pThis->m_shutdownAsync), nullptr);
-		uv_close(reinterpret_cast<uv_handle_t*>(&pThis->m_tty), nullptr);
+		uv_close(reinterpret_cast<uv_handle_t*>(pThis->m_stdin_handle), nullptr);
 	}
 
 	static void allocCallback(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
