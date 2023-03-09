@@ -26,6 +26,8 @@
             inherit (pkgs) libuv zeromq libsodium gss curl;
           };
 
+          cmakeFlags = ["-DWITH_LTO=OFF"];
+
           installPhase = ''
             mkdir -p $out/bin
             cp -r ./p2pool $out/bin/
