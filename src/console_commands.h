@@ -36,7 +36,7 @@ private:
 	uv_async_t m_shutdownAsync;
 	uv_tty_t m_tty;
 	uv_pipe_t m_stdin_pipe;
-	uv_handle_t* m_stdin_handle;
+	uv_stream_t* m_stdin_handle;
 	uv_thread_t m_loopThread;
 
 	char m_readBuf[64];
