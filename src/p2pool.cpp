@@ -735,14 +735,6 @@ void p2pool::download_block_headers(uint64_t current_height)
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
-					try {
-						m_ZMQReader = new ZMQReader(m_params->m_host, m_params->m_zmqPort, m_params->m_socks5Proxy, this);
-					}
-					catch (const std::exception& e) {
-						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-						PANIC_STOP();
-					}
-
 					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
 #ifdef WITH_RANDOMX
@@ -750,6 +742,13 @@ void p2pool::download_block_headers(uint64_t current_height)
 						start_mining(m_params->m_minerThreads);
 					}
 #endif
+					try {
+						m_ZMQReader = new ZMQReader(m_params->m_host, m_params->m_zmqPort, m_params->m_socks5Proxy, this);
+					}
+					catch (const std::exception& e) {
+						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
+						PANIC_STOP();
+					}
 					api_update_network_stats();
 					get_miner_data();
 				}
@@ -1533,6 +1532,11 @@ void p2pool::stop()
 	if (m_stopped.exchange(true) == false) {
 		uv_async_send(&m_stopAsync);
 	}
+}
+
+bool p2pool::zmq_running() const
+{
+	return m_ZMQReader && m_ZMQReader->is_running();
 }
 
 void p2pool::restart_zmq()

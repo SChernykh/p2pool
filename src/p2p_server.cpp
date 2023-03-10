@@ -1153,6 +1153,12 @@ void P2PServer::check_zmq()
 		return;
 	}
 
+	if (!m_pool->zmq_running()) {
+		LOGERR(1, "ZMQ is not running, restarting it");
+		m_pool->restart_zmq();
+		return;
+	}
+
 	const uint64_t cur_time = seconds_since_epoch();
 	const uint64_t last_active = m_pool->zmq_last_active();
 

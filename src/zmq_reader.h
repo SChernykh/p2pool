@@ -27,6 +27,8 @@ public:
 	ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler);
 	~ZMQReader();
 
+	bool is_running() const { return m_threadRunning.load(); }
+
 private:
 	static void run_wrapper(void* arg);
 	void run();
@@ -44,7 +46,8 @@ private:
 	zmq::socket_t m_publisher{ m_context, ZMQ_PUB };
 	zmq::socket_t m_subscriber{ m_context, ZMQ_SUB };
 	uint16_t m_publisherPort = 37891;
-	std::atomic<int> m_finished{ 0 };
+	std::atomic<bool> m_finished{ false };
+	std::atomic<bool> m_threadRunning{ false };
 
 	TxMempoolData m_tx;
 	MinerData m_minerData;

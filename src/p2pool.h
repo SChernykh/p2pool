@@ -95,6 +95,7 @@ public:
 	void stop_mining();
 #endif
 
+	bool zmq_running() const;
 	uint64_t zmq_last_active() const { return m_zmqLastActive; }
 	uint64_t start_time() const { return m_startTime; }
 	void restart_zmq();

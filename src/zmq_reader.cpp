@@ -58,10 +58,32 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		throw zmq::error_t(EFSM);
 	}
 
+	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
+
+	if (!m_proxy.empty()) {
+		m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer(m_proxy.c_str(), m_proxy.length()));
+	}
+
+	std::string addr = "tcp://" + m_address + ':' + std::to_string(m_zmqPort);
+	if (!connect(addr)) {
+		throw zmq::error_t(EFSM);
+	}
+
+	m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer());
+
+	addr = "tcp://127.0.0.1:" + std::to_string(m_publisherPort);
+	if (!connect(addr)) {
+		throw zmq::error_t(EFSM);
+	}
+
+	m_subscriber.set(zmq::sockopt::subscribe, "json-full-chain_main");
+	m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
+	m_subscriber.set(zmq::sockopt::subscribe, "json-minimal-txpool_add");
+
 	const int err = uv_thread_create(&m_worker, run_wrapper, this);
 	if (err) {
 		LOGERR(1, "failed to start ZMQ thread, error " << uv_err_name(err));
-		throw zmq::error_t(EFSM);
+		throw zmq::error_t(EMTHREAD);
 	}
 }
 
@@ -69,7 +91,7 @@ ZMQReader::~ZMQReader()
 {
 	LOGINFO(1, "stopping");
 
-	m_finished.exchange(1);
+	m_finished.exchange(true);
 
 	try {
 		const char msg[] = "json-minimal-txpool_add:[]";
@@ -89,28 +111,12 @@ void ZMQReader::run_wrapper(void* arg)
 
 void ZMQReader::run()
 {
+	m_threadRunning = true;
+	ON_SCOPE_LEAVE([this]() { m_threadRunning = false; });
+
+	zmq_msg_t message = {};
+
 	try {
-		if (!m_proxy.empty()) {
-			m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer(m_proxy.c_str(), m_proxy.length()));
-		}
-
-		std::string addr = "tcp://" + m_address + ':' + std::to_string(m_zmqPort);
-		if (!connect(addr)) {
-			return;
-		}
-
-		m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer());
-
-		addr = "tcp://127.0.0.1:" + std::to_string(m_publisherPort);
-		if (!connect(addr)) {
-			return;
-		}
-
-		m_subscriber.set(zmq::sockopt::subscribe, "json-full-chain_main");
-		m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
-		m_subscriber.set(zmq::sockopt::subscribe, "json-minimal-txpool_add");
-
-		zmq_msg_t message;
 		int rc = zmq_msg_init(&message);
 		if (rc != 0) {
 			throw zmq::error_t(errno);
@@ -130,12 +136,12 @@ void ZMQReader::run()
 
 			parse(reinterpret_cast<char*>(zmq_msg_data(&message)), zmq_msg_size(&message));
 		} while (true);
-
-		zmq_msg_close(&message);
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "exception " << e.what());
 	}
+
+	zmq_msg_close(&message);
 }
 
 bool ZMQReader::connect(const std::string& address)
@@ -163,21 +169,16 @@ bool ZMQReader::connect(const std::string& address)
 	s << "inproc://p2pool-connect-mon-" << id << '\0';
 	++id;
 
+	using namespace std::chrono;
+	const auto start_time = steady_clock::now();
+
 	monitor.init(m_subscriber, buf);
 	m_subscriber.connect(address);
 
-	using namespace std::chrono;
-	steady_clock::time_point start_time = steady_clock::now();
-
 	while (!monitor.connected && monitor.check_event(-1)) {
-		const steady_clock::time_point cur_time = steady_clock::now();
-		const int64_t elapsed_time = duration_cast<milliseconds>(cur_time - start_time).count();
-		if (elapsed_time >= 3000) {
+		if (duration_cast<milliseconds>(steady_clock::now() - start_time).count() >= 1000) {
 			LOGERR(1, "failed to connect to " << address);
-			if (m_finished.load()) {
-				return false;
-			}
-			start_time = cur_time;
+			return false;
 		}
 	}
 
