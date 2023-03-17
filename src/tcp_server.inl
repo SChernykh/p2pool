@@ -1164,6 +1164,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::close()
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::ban(uint64_t seconds)
 {
+	if (m_addr.is_localhost()) {
+		return;
+	}
+
 	if (m_owner) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << seconds << " seconds");
 		m_owner->ban(m_addr, seconds);
