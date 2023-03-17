@@ -179,16 +179,17 @@ bool CallOnLoop(uv_loop_t* loop, T&& callback)
 template<typename T>
 void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
 {
-	uint32_t THREAD_COUNT = std::thread::hardware_concurrency();
+	const uint32_t THREAD_COUNT = std::thread::hardware_concurrency();
 
-	if (THREAD_COUNT > 0) {
-		--THREAD_COUNT;
+	// Don't start other threads on single CPU systems
+	if (THREAD_COUNT <= 1) {
+		callback();
+		return;
 	}
 
+	// "THREAD_COUNT - 1" because current thread is already running
 	// No more than 8 threads because our UV worker thread pool has 8 threads
-	if (THREAD_COUNT > 8) {
-		THREAD_COUNT = 8;
-	}
+	const uint32_t THREADS_TO_START = std::min<uint32_t>(THREAD_COUNT - 1, 8);
 
 	struct Callback
 	{
@@ -206,7 +207,7 @@ void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
 		std::shared_ptr<Callback> cb;
 	};
 
-	for (size_t i = 0; i < THREAD_COUNT; ++i) {
+	for (size_t i = 0; i < THREADS_TO_START; ++i) {
 		Work* w = new Work{ {}, cb };
 		w->req.data = w;
 
