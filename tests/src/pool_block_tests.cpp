@@ -30,9 +30,9 @@ TEST(pool_block, deserialize)
 	init_crypto_cache();
 
 	PoolBlock b;
-	SideChain sidechain(nullptr, NetworkType::Mainnet, "mainnet test 2");
+	SideChain sidechain(nullptr, NetworkType::Mainnet, "default");
 
-	constexpr uint64_t expeted_consensus_id[HASH_SIZE / sizeof(uint64_t)] = {
+	constexpr uint64_t expected_consensus_id[HASH_SIZE / sizeof(uint64_t)] = {
 		0x92680bb5e77eaf22ull,
 		0x27446c2c6bda99e3ull,
 		0x008e04a9d40451b2ull,
@@ -41,9 +41,9 @@ TEST(pool_block, deserialize)
 
 	const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 	ASSERT_EQ(consensus_id.size(), HASH_SIZE);
-	ASSERT_EQ(memcmp(consensus_id.data(), expeted_consensus_id, HASH_SIZE), 0);
+	ASSERT_EQ(memcmp(consensus_id.data(), expected_consensus_id, HASH_SIZE), 0);
 
-	std::ifstream f("mainnet_test2_block.dat", std::ios::binary | std::ios::ate);
+	std::ifstream f("block.dat", std::ios::binary | std::ios::ate);
 	ASSERT_EQ(f.good() && f.is_open(), true);
 
 	std::vector<uint8_t> buf(f.tellg());
@@ -57,26 +57,26 @@ TEST(pool_block, deserialize)
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = b.serialize_mainchain_data(&header_size, &miner_tx_size, &outputs_offset, &outputs_blob_size);
 
-	ASSERT_EQ(mainchain_data.size(), 5607);
+	ASSERT_EQ(mainchain_data.size(), 1757);
 	ASSERT_EQ(header_size, 43);
-	ASSERT_EQ(miner_tx_size, 506);
+	ASSERT_EQ(miner_tx_size, 1457);
 	ASSERT_EQ(outputs_offset, 54);
-	ASSERT_EQ(outputs_blob_size, 420);
+	ASSERT_EQ(outputs_blob_size, 1371);
 
-	ASSERT_EQ(b.m_majorVersion, 14);
-	ASSERT_EQ(b.m_minorVersion, 14);
-	ASSERT_EQ(b.m_timestamp, 1630934403);
-	ASSERT_EQ(b.m_nonce, 2432795907);
-	ASSERT_EQ(b.m_txinGenHeight, 2443466);
-	ASSERT_EQ(b.m_outputs.size(), 11);
+	ASSERT_EQ(b.m_majorVersion, 16);
+	ASSERT_EQ(b.m_minorVersion, 16);
+	ASSERT_EQ(b.m_timestamp, 1679221824);
+	ASSERT_EQ(b.m_nonce, 1247);
+	ASSERT_EQ(b.m_txinGenHeight, 2845298);
+	ASSERT_EQ(b.m_outputs.size(), 35);
 	ASSERT_EQ(b.m_extraNonceSize, 4);
-	ASSERT_EQ(b.m_extraNonce, 28);
-	ASSERT_EQ(b.m_transactions.size(), 159);
+	ASSERT_EQ(b.m_extraNonce, 1482827308);
+	ASSERT_EQ(b.m_transactions.size(), 9);
 	ASSERT_EQ(b.m_uncles.size(), 0);
-	ASSERT_EQ(b.m_sidechainHeight, 53450);
-	ASSERT_EQ(b.m_difficulty.lo, 319296691);
+	ASSERT_EQ(b.m_sidechainHeight, 4674483);
+	ASSERT_EQ(b.m_difficulty.lo, 1854596983);
 	ASSERT_EQ(b.m_difficulty.hi, 0);
-	ASSERT_EQ(b.m_cumulativeDifficulty.lo, 12544665764606ull);
+	ASSERT_EQ(b.m_cumulativeDifficulty.lo, 7172845253120126ull);
 	ASSERT_EQ(b.m_cumulativeDifficulty.hi, 0);
 	ASSERT_EQ(b.m_depth, 0);
 	ASSERT_EQ(b.m_verified, false);
@@ -89,7 +89,7 @@ TEST(pool_block, deserialize)
 	hash seed;
 	{
 		std::stringstream s;
-		s << "c293f04b0f97cf76008c6ce8b0dbd2ba5be6b734de0aec9d1b758a12d7ec6451";
+		s << "6fc9c4a55eb513eb31955c084d9342e0082987f9e42da042449b7c9001176d3a";
 		s >> seed;
 	}
 
@@ -100,7 +100,7 @@ TEST(pool_block, deserialize)
 
 	std::stringstream s;
 	s << pow_hash;
-	ASSERT_EQ(s.str(), "f76d731c61c9c9b6c3f46be2e60c9478930b49b4455feecd41ecb9420d000000");
+	ASSERT_EQ(s.str(), "aa7a3c4a2d67cb6a728e244288219bf038024f3b511b0da197a19ec601000000");
 
 	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
 
@@ -118,14 +118,17 @@ TEST(pool_block, verify)
 		uint64_t m_txinGenHeight;
 		uint64_t m_sidechainHeight;
 	} tests[2] = {
-		{ "default", "sidechain_dump.dat", 2483901, 522805 },
-		{ "mini", "sidechain_dump_mini.dat", 2696040, 2424349 },
+		{ "default", "sidechain_dump.dat", 2845288, 4674368 },
+		{ "mini", "sidechain_dump_mini.dat", 2845293, 4129185 },
 	};
 
 	for (const STest& t : tests)
 	{
 		PoolBlock b;
 		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
+
+		// Difficulty of block 2844672
+		sidechain.m_testMainChainDiff = difficulty_type(321967641416ULL, 0ULL);
 
 		std::ifstream f(t.m_fileName, std::ios::binary | std::ios::ate);
 		ASSERT_EQ(f.good() && f.is_open(), true);
