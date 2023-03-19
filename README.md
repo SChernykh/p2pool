@@ -104,7 +104,7 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 
 ### GUI for P2Pool
 
-- [Gupax](https://github.com/hinto-janaiyo/gupax) project aims to provide an easy to use cross-platform GUI to configure and run P2Pool & [XMRig](https://github.com/xmrig/xmrig).
+- [Gupax](https://github.com/hinto-janai/gupax) project aims to provide an easy to use cross-platform GUI to configure and run P2Pool & [XMRig](https://github.com/xmrig/xmrig).
 
 ### GNU/Linux
 
