@@ -22,3 +22,6 @@
 [submodule "external/src/curl"]
 	path = external/src/curl
 	url = https://github.com/SChernykh/curl
+[submodule "external/src/miniupnp"]
+	path = external/src/miniupnp
+	url = https://github.com/SChernykh/miniupnp

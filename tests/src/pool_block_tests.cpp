@@ -84,6 +84,7 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_broadcasted, false);
 	ASSERT_EQ(b.m_wantBroadcast, false);
 
+#if !(defined(__FreeBSD__) || defined(__OpenBSD__))
 	RandomX_Hasher hasher(nullptr);
 
 	hash seed;
@@ -103,6 +104,7 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(s.str(), "aa7a3c4a2d67cb6a728e244288219bf038024f3b511b0da197a19ec601000000");
 
 	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
+#endif
 
 	destroy_crypto_cache();
 }
