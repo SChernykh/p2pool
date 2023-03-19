@@ -42,7 +42,7 @@ public:
 
 	uv_loop_t* get_loop() { return &m_loop; }
 
-	virtual int listen_port() const { return m_listenPort; }
+	virtual int external_listen_port() const { return m_listenPort; }
 
 	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
@@ -158,7 +158,7 @@ private:
 	uv_thread_t m_loopThread;
 
 protected:
-	void start_listening(const std::string& listen_addresses);
+	void start_listening(const std::string& listen_addresses, bool upnp);
 
 	std::string m_socks5Proxy;
 	bool m_socks5ProxyV6;

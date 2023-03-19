@@ -134,7 +134,7 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 
 	load_peer_list();
-	start_listening(params.m_p2pAddresses);
+	start_listening(params.m_p2pAddresses, params.m_upnp);
 }
 
 P2PServer::~P2PServer()
@@ -989,7 +989,7 @@ void P2PServer::show_peers() const
 	LOGINFO(0, "Total: " << n << " peers");
 }
 
-int P2PServer::listen_port() const
+int P2PServer::external_listen_port() const
 {
 	const Params& params = m_pool->params();
 	return params.m_p2pExternalPort ? params.m_p2pExternalPort : m_listenPort;
@@ -1848,7 +1848,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	LOGINFO(5, "sending LISTEN_PORT to " << static_cast<char*>(m_addrString));
 	*(p++) = static_cast<uint8_t>(MessageId::LISTEN_PORT);
 
-	const int32_t port = m_owner->listen_port();
+	const int32_t port = m_owner->external_listen_port();
 	memcpy(p, &port, sizeof(port));
 	p += sizeof(port);
 

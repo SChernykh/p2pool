@@ -128,7 +128,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string& listen_addresses)
+void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string& listen_addresses, bool upnp)
 {
 	if (listen_addresses.empty()) {
 		LOGERR(1, "listen address not set");
@@ -205,6 +205,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 
 			LOGINFO(1, "listening on " << log::Gray() << address);
 		});
+
+#ifdef WITH_UPNP
+	if (upnp) {
+		add_portmapping(external_listen_port(), m_listenPort);
+	}
+#else
+	(void)upnp;
+#endif
 
 	const int err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {

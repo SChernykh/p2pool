@@ -49,8 +49,11 @@ void p2pool_usage()
 		"--no-autodiff        Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)\n"
 		"--rpc-login          Specify username[:password] required for Monero RPC server\n"
 		"--socks5             Specify IP:port of a SOCKS5 proxy to use for outgoing connections\n"
-		"--no-dns             disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)\n"
-		"--p2p-external-port  port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections\n"
+		"--no-dns             Disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)\n"
+		"--p2p-external-port  Port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections\n"
+#ifdef WITH_UPNP
+		"--no-upnp            Disable UPnP port forwarding\n"
+#endif
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",

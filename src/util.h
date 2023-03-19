@@ -246,6 +246,10 @@ FORCEINLINE uint64_t bsr(uint64_t x)
 bool str_to_ip(bool is_v6, const char* ip, raw_ip& result);
 bool is_localhost(const std::string& host);
 
+#ifdef WITH_UPNP
+void add_portmapping(int external_port, int internal_port);
+#endif
+
 } // namespace p2pool
 
 void memory_tracking_start();

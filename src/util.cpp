@@ -25,6 +25,11 @@
 #include <sched.h>
 #endif
 
+#ifdef WITH_UPNP
+#include "miniupnpc.h"
+#include "upnpcommands.h"
+#endif
+
 static constexpr char log_category_prefix[] = "Util ";
 
 namespace p2pool {
@@ -559,5 +564,58 @@ UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
 
 	return data;
 }
+
+#ifdef WITH_UPNP
+static struct UPnP_Discover
+{
+	UPnP_Discover() { devlist = upnpDiscover(1000, nullptr, nullptr, UPNP_LOCAL_PORT_ANY, 0, 2, &error); }
+	~UPnP_Discover() { freeUPNPDevlist(devlist); }
+
+	int error;
+	UPNPDev* devlist;
+} upnp_discover;
+
+void add_portmapping(int external_port, int internal_port)
+{
+	LOGINFO(1, "UPnP: trying to map WAN:" << external_port << " to LAN:" << internal_port);
+
+	if (!upnp_discover.devlist) {
+		LOGWARN(1, "upnpDiscover: no UPnP IGD devices found, error " << upnp_discover.error);
+		return;
+	}
+
+	UPNPUrls urls;
+	IGDdatas data;
+	char local_addr[64] = {};
+
+	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr));
+	if (result != 1) {
+		LOGWARN(1, "UPNP_GetValidIGD returned " << result << ", no valid UPnP IGD devices found");
+		return;
+	}
+
+	LOGINFO(1, "UPnP: LAN IP address " << log::Gray() << static_cast<const char*>(local_addr));
+
+	char ext_addr[64] = {};
+	result = UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, ext_addr);
+	if ((result != UPNPCOMMAND_SUCCESS) || !ext_addr[0]) {
+		LOGWARN(1, "UPNP_GetExternalIPAddress: failed to query external IP address, error " << result);
+	}
+	else {
+		LOGINFO(1, "UPnP: WAN IP address " << log::Gray() << static_cast<const char*>(ext_addr));
+	}
+
+	const std::string eport = std::to_string(external_port);
+	const std::string iport = std::to_string(internal_port);
+
+	result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), iport.c_str(), local_addr, "P2Pool", "TCP", nullptr, nullptr);
+	if (result) {
+		LOGWARN(1, "UPNP_AddPortMapping returned error " << result);
+	}
+	else {
+		LOGINFO(1, "UPnP: Mapped " << log::Gray() << static_cast<const char*>(ext_addr) << ':' << external_port << log::NoColor() << " to " << log::Gray() << static_cast<const char*>(local_addr) << ':' << internal_port);
+	}
+}
+#endif
 
 } // namespace p2pool

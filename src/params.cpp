@@ -151,6 +151,11 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+		if (strcmp(argv[i], "--no-upnp") == 0) {
+			m_upnp = false;
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

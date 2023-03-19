@@ -53,6 +53,7 @@ struct Params
 	std::string m_socks5Proxy;
 	bool m_dns = true;
 	uint32_t m_p2pExternalPort = 0;
+	bool m_upnp = true;
 };
 
 } // namespace p2pool
