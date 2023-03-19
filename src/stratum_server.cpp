@@ -66,7 +66,7 @@ StratumServer::StratumServer(p2pool* pool)
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
 
-	m_extraNonce = PoolBlock::signal_v2_readiness(get_random32());
+	m_extraNonce = get_random32();
 
 	m_submittedSharesPool.resize(10);
 	for (size_t i = 0; i < m_submittedSharesPool.size(); ++i) {
@@ -109,7 +109,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		return;
 	}
 
-	const uint32_t extra_nonce_start = PoolBlock::signal_v2_readiness(get_random32());
+	const uint32_t extra_nonce_start = get_random32();
 	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
 	BlobsData* blobs_data = new BlobsData{};

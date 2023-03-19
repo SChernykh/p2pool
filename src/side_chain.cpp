@@ -217,7 +217,6 @@ SideChain::~SideChain()
 
 void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
 {
-	const int sidechain_version = block.get_sidechain_version();
 	block.m_uncles.clear();
 
 	ReadLock lock(m_sidechainLock);
@@ -229,20 +228,15 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_sidechainHeight = 0;
 		block.m_difficulty = m_minDifficulty;
 		block.m_cumulativeDifficulty = m_minDifficulty;
-
-		if (sidechain_version > 1) {
-			block.m_txkeySecSeed = m_consensusHash;
-			get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
-		}
+		block.m_txkeySecSeed = m_consensusHash;
+		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
 		get_shares(&block, shares);
 		return;
 	}
 
-	if (sidechain_version > 1) {
-		block.m_txkeySecSeed = (block.m_prevId == tip->m_prevId) ? tip->m_txkeySecSeed : tip->calculate_tx_key_seed();
-		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
-	}
+	block.m_txkeySecSeed = (block.m_prevId == tip->m_prevId) ? tip->m_txkeySecSeed : tip->calculate_tx_key_seed();
+	get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
 	block.m_parent = tip->m_sidechainId;
 	block.m_sidechainHeight = tip->m_sidechainHeight + 1;
@@ -368,8 +362,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 	// Dynamic PPLNS window starting from v2
 	// Limit PPLNS weight to 2x of the Monero difficulty (max 2 blocks per PPLNS window on average)
-	const int sidechain_version = tip->get_sidechain_version();
-	const difficulty_type max_pplns_weight = (sidechain_version > 1) ? (mainchain_diff * 2) : diff_max;
+	const difficulty_type max_pplns_weight = mainchain_diff * 2;
 	difficulty_type pplns_weight;
 
 	unordered_set<MinerShare> shares_set;
@@ -454,7 +447,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	const uint64_t n = shares.size();
 
 	// Shuffle shares
-	if ((sidechain_version > 1) && (n > 1)) {
+	if (n > 1) {
 		hash h;
 		keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);
 
@@ -1323,15 +1316,13 @@ void SideChain::verify_loop(PoolBlock* block)
 
 void SideChain::verify(PoolBlock* block)
 {
-	const int sidechain_version = block->get_sidechain_version();
-
 	// Genesis block
 	if (block->m_sidechainHeight == 0) {
 		if (!block->m_parent.empty() ||
 			!block->m_uncles.empty() ||
 			(block->m_difficulty != m_minDifficulty) ||
 			(block->m_cumulativeDifficulty != m_minDifficulty) ||
-			((sidechain_version > 1) && (block->m_txkeySecSeed != m_consensusHash)))
+			(block->m_txkeySecSeed != m_consensusHash))
 		{
 			block->m_invalid = true;
 		}
@@ -1377,15 +1368,13 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (sidechain_version > 1) {
-		// Check m_txkeySecSeed
-		const hash h = (block->m_prevId == parent->m_prevId) ? parent->m_txkeySecSeed : parent->calculate_tx_key_seed();
-		if (block->m_txkeySecSeed != h) {
-			LOGWARN(3, "block " << block->m_sidechainId << " has invalid tx key seed: expected " << h << ", got " << block->m_txkeySecSeed);
-			block->m_verified = true;
-			block->m_invalid = true;
-			return;
-		}
+	// Check m_txkeySecSeed
+	const hash h = (block->m_prevId == parent->m_prevId) ? parent->m_txkeySecSeed : parent->calculate_tx_key_seed();
+	if (block->m_txkeySecSeed != h) {
+		LOGWARN(3, "block " << block->m_sidechainId << " has invalid tx key seed: expected " << h << ", got " << block->m_txkeySecSeed);
+		block->m_verified = true;
+		block->m_invalid = true;
+		return;
 	}
 
 	const uint64_t expectedHeight = parent->m_sidechainHeight + 1;

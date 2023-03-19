@@ -39,7 +39,7 @@ public:
 	BlockTemplate(const BlockTemplate& b);
 	BlockTemplate& operator=(const BlockTemplate& b);
 
-	void update(const MinerData& data, const Mempool& mempool, Wallet* miner_wallet);
+	void update(const MinerData& data, const Mempool& mempool, const Wallet* miner_wallet);
 	uint64_t last_updated() const { return m_lastUpdated.load(); }
 
 	bool get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const;

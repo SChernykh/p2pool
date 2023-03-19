@@ -106,7 +106,7 @@ void Miner::on_block(const BlockTemplate& block)
 	Job& j = m_job[next_index];
 	hash seed;
 
-	const uint32_t extra_nonce = PoolBlock::signal_v2_readiness(static_cast<uint32_t>(m_rng() >> 32));
+	const uint32_t extra_nonce = static_cast<uint32_t>(m_rng() >> 32);
 	j.m_blobSize = block.get_hashing_blob(extra_nonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
 
 	const uint64_t next_full_nonce = (static_cast<uint64_t>(extra_nonce) << 32) | std::numeric_limits<uint32_t>::max();

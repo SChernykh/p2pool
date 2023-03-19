@@ -207,7 +207,7 @@ void BlockTemplate::shuffle_tx_order()
 	}
 }
 
-void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet* miner_wallet)
+void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Wallet* miner_wallet)
 {
 	if (data.major_version > HARDFORK_SUPPORTED_VERSION) {
 		LOGERR(1, "got hardfork version " << data.major_version << ", expected <= " << HARDFORK_SUPPORTED_VERSION);
@@ -271,14 +271,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	m_poolBlockTemplate->m_txinGenHeight = data.height;
 
 	m_blockHeaderSize = m_blockHeader.size();
-
-	const int sidechain_version = m_poolBlockTemplate->get_sidechain_version();
-
-	if (sidechain_version <= 1) {
-		get_tx_keys(m_poolBlockTemplate->m_txkeyPub, m_poolBlockTemplate->m_txkeySec, miner_wallet->spend_public_key(), data.prev_id);
-		// Both values are the same before v2
-		m_poolBlockTemplate->m_txkeySecSeed = m_poolBlockTemplate->m_txkeySec;
-	}
 
 	m_poolBlockTemplate->m_minerWallet = *miner_wallet;
 
@@ -669,7 +661,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, Wallet
 	{
 		memset(m_sidechainHashKeccakState, 0, sizeof(m_sidechainHashKeccakState));
 
-		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - ((sidechain_version > 1) ? EXTRA_NONCE_SIZE : 0);
+		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - EXTRA_NONCE_SIZE;
 		if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
 			// Sidechain data is big enough to cache keccak state up to extra_nonce
 			m_sidechainHashInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;
@@ -954,11 +946,10 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 {
 	// Calculate side-chain hash (all block template bytes + all side-chain bytes + consensus ID, replacing NONCE, EXTRA_NONCE and HASH itself with 0's)
-	const int v = m_poolBlockTemplate->get_sidechain_version();
 	const size_t size = m_sidechainHashBlob.size();
 	const size_t N = m_sidechainHashInputLength;
 
-	const size_t sidechain_extra_nonce_offset = size - HASH_SIZE - ((v > 1) ? EXTRA_NONCE_SIZE : 0);
+	const size_t sidechain_extra_nonce_offset = size - HASH_SIZE - EXTRA_NONCE_SIZE;
 	const uint8_t sidechain_extra_nonce_buf[EXTRA_NONCE_SIZE] = {
 		static_cast<uint8_t>(sidechain_extra_nonce >> 0),
 		static_cast<uint8_t>(sidechain_extra_nonce >> 8),
@@ -973,12 +964,10 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 
 	// Slow path: O(N)
 	if (!b || pool_block_debug()) {
-		keccak_custom([this, v, sidechain_extra_nonce_offset, &sidechain_extra_nonce_buf](int offset) -> uint8_t {
-			if (v > 1) {
-				const uint32_t k = static_cast<uint32_t>(offset - sidechain_extra_nonce_offset);
-				if (k < EXTRA_NONCE_SIZE) {
-					return sidechain_extra_nonce_buf[k];
-				}
+		keccak_custom([this, sidechain_extra_nonce_offset, &sidechain_extra_nonce_buf](int offset) -> uint8_t {
+			const uint32_t k = static_cast<uint32_t>(offset - sidechain_extra_nonce_offset);
+			if (k < EXTRA_NONCE_SIZE) {
+				return sidechain_extra_nonce_buf[k];
 			}
 			return m_sidechainHashBlob[offset];
 		}, static_cast<int>(size), result.h, HASH_SIZE);
@@ -989,9 +978,7 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 		const int inlen = static_cast<int>(size - N);
 
 		memcpy(buf, m_sidechainHashBlob.data() + N, size - N);
-		if (v > 1) {
-			memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
-		}
+		memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
 
 		uint64_t st[25];
 		memcpy(st, m_sidechainHashKeccakState, sizeof(st));

@@ -220,18 +220,9 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	const hash& spend = m_minerWallet.spend_public_key();
 	const hash& view = m_minerWallet.view_public_key();
 
-	const int sidechain_version = get_sidechain_version();
-
 	data.insert(data.end(), spend.h, spend.h + HASH_SIZE);
 	data.insert(data.end(), view.h, view.h + HASH_SIZE);
-
-	if (sidechain_version > 1) {
-		data.insert(data.end(), m_txkeySecSeed.h, m_txkeySecSeed.h + HASH_SIZE);
-	}
-	else {
-		data.insert(data.end(), m_txkeySec.h, m_txkeySec.h + HASH_SIZE);
-	}
-
+	data.insert(data.end(), m_txkeySecSeed.h, m_txkeySecSeed.h + HASH_SIZE);
 	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
 	writeVarint(m_uncles.size(), data);
@@ -248,10 +239,8 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
 
-	if (sidechain_version > 1) {
-		const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
-		data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));
-	}
+	const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
+	data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));
 
 #if POOL_BLOCK_DEBUG
 	if (!m_sideChainDataDebug.empty() && (data != m_sideChainDataDebug)) {
@@ -384,24 +373,6 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 	}
 
 	return 0;
-}
-
-static constexpr uint64_t VERSION2_MAINNET_TIMESTAMP = 1679173200U; // 2023-03-18 21:00 UTC
-static constexpr uint64_t VERSION2_TESTNET_TIMESTAMP = 1674507600U; // 2023-01-23 21:00 UTC
-
-uint32_t PoolBlock::signal_v2_readiness(uint32_t extra_nonce)
-{
-	const uint64_t ts = (SideChain::network_type() == NetworkType::Mainnet) ? VERSION2_MAINNET_TIMESTAMP : VERSION2_TESTNET_TIMESTAMP;
-	if (time(nullptr) < static_cast<int64_t>(ts)) {
-		return (extra_nonce & 0x007FFFFFUL) | 0xFF000000UL;
-	}
-	return extra_nonce;
-}
-
-int PoolBlock::get_sidechain_version() const
-{
-	const uint64_t ts = (SideChain::network_type() == NetworkType::Mainnet) ? VERSION2_MAINNET_TIMESTAMP : VERSION2_TESTNET_TIMESTAMP;
-	return (m_timestamp >= ts) ? 2 : 1;
 }
 
 hash PoolBlock::calculate_tx_key_seed() const

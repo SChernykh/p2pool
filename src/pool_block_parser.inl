@@ -260,27 +260,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_txkeySecSeed.h, HASH_SIZE);
 
-		const int sidechain_version = get_sidechain_version();
-
-		if (sidechain_version > 1) {
-			hash pub;
-			get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
-			if (pub != m_txkeyPub) {
-				return __LINE__;
-			}
-		}
-		else {
-			// Both values are the same before v2
-			m_txkeySec = m_txkeySecSeed;
-
-			// Enforce deterministic tx keys starting from v15
-			if (m_majorVersion >= HARDFORK_VIEW_TAGS_VERSION) {
-				hash pub, sec;
-				get_tx_keys(pub, sec, spend_pub_key, m_prevId);
-				if ((pub != m_txkeyPub) || (sec != m_txkeySec)) {
-					return __LINE__;
-				}
-			}
+		hash pub;
+		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
+		if (pub != m_txkeyPub) {
+			return __LINE__;
 		}
 
 		if (!check_keys(m_txkeyPub, m_txkeySec)) {
@@ -329,9 +312,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
 
-		if (sidechain_version > 1) {
-			READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
-		}
+		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 
 #undef READ_BYTE
 #undef EXPECT_BYTE
