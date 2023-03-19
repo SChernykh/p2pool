@@ -226,6 +226,10 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS randomx)
 	endif()
 
+	if (WITH_UPNP)
+		set(STATIC_LIBS ${STATIC_LIBS} libminiupnpc-static)
+	endif()
+
 	if (WIN32)
 		set(STATIC_LIBS ${STATIC_LIBS} ws2_32 iphlpapi userenv psapi wldap32)
 		if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
