@@ -82,7 +82,8 @@ StratumServer::StratumServer(p2pool* pool)
 	uv_async_init_checked(&m_loop, &m_showWorkersAsync, on_show_workers);
 	m_showWorkersAsync.data = this;
 
-	start_listening(pool->params().m_stratumAddresses, pool->params().m_upnp);
+	const Params& params = pool->params();
+	start_listening(params.m_stratumAddresses, params.m_upnp && params.m_upnpStratum);
 }
 
 StratumServer::~StratumServer()

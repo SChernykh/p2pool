@@ -52,7 +52,6 @@ namespace p2pool {
 
 p2pool::p2pool(int argc, char* argv[])
 	: m_stopped(false)
-	, m_params(new Params(argc, argv))
 	, m_updateSeed(true)
 	, m_submitBlockData{}
 	, m_zmqLastActive(0)
@@ -60,40 +59,43 @@ p2pool::p2pool(int argc, char* argv[])
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
+	Params* p = new Params(argc, argv);
+	m_params = p;
+
 #ifdef WITH_UPNP
-	if (m_params->m_upnp) {
+	if (p->m_upnp) {
 		init_upnp();
 	}
 #endif
 
-	if (!m_params->m_wallet.valid()) {
+	if (!p->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
 		throw std::exception();
 	}
 
-	m_hostStr = m_params->m_host;
+	m_hostStr = p->m_host;
 
-	if (m_params->m_socks5Proxy.empty()) {
-		if (m_params->m_dns) {
+	if (p->m_socks5Proxy.empty()) {
+		if (p->m_dns) {
 			bool is_v6;
-			if (!resolve_host(m_params->m_host, is_v6)) {
-				LOGERR(1, "resolve_host failed for " << m_params->m_host);
+			if (!resolve_host(p->m_host, is_v6)) {
+				LOGERR(1, "resolve_host failed for " << p->m_host);
 				throw std::exception();
 			}
 		}
-		else if (m_params->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
-			LOGERR(1, "Can't resolve hostname " << m_params->m_host << " with DNS disabled");
+		else if (p->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
+			LOGERR(1, "Can't resolve hostname " << p->m_host << " with DNS disabled");
 			throw std::exception();
 		}
 	}
 
 	{
-		const bool changed = (m_params->m_host != m_hostStr);
-		const std::string rpc_port = ':' + std::to_string(m_params->m_rpcPort);
-		const std::string zmq_port = ":ZMQ:" + std::to_string(m_params->m_zmqPort);
+		const bool changed = (p->m_host != m_hostStr);
+		const std::string rpc_port = ':' + std::to_string(p->m_rpcPort);
+		const std::string zmq_port = ":ZMQ:" + std::to_string(p->m_zmqPort);
 		m_hostStr += rpc_port + zmq_port;
 		if (changed) {
-			m_hostStr += " (" + m_params->m_host + ')';
+			m_hostStr += " (" + p->m_host + ')';
 		}
 	}
 
@@ -101,12 +103,12 @@ p2pool::p2pool(int argc, char* argv[])
 	generate_keys(pub, sec);
 
 	uint8_t view_tag;
-	if (!m_params->m_wallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
+	if (!p->m_wallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
 		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
 		throw std::exception();
 	}
 
-	const NetworkType type = m_params->m_wallet.type();
+	const NetworkType type = p->m_wallet.type();
 
 	if (type == NetworkType::Testnet) {
 		LOGWARN(1, "Mining to a testnet wallet address");
@@ -151,27 +153,27 @@ p2pool::p2pool(int argc, char* argv[])
 #endif
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 
-	m_api = m_params->m_apiPath.empty() ? nullptr : new p2pool_api(m_params->m_apiPath, m_params->m_localStats);
+	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
 
-	if (m_params->m_localStats && !m_api) {
+	if (p->m_localStats && !m_api) {
 		LOGERR(1, "--local-api and --stratum-api command line parameters can't be used without --data-api");
 		throw std::exception();
 	}
 
-	m_sideChain = new SideChain(this, type, m_params->m_mini ? "mini" : nullptr);
+	m_sideChain = new SideChain(this, type, p->m_mini ? "mini" : nullptr);
 
-	if (m_params->m_p2pAddresses.empty()) {
+	if (p->m_p2pAddresses.empty()) {
 		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
 
-		char buf[log::Stream::BUF_SIZE + 1];
+		char buf[48] = {};
 		log::Stream s(buf);
-		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port << '\0';
+		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port;
 
-		m_params->m_p2pAddresses = buf;
+		p->m_p2pAddresses = buf;
 	}
 
 #ifdef WITH_RANDOMX
-	if (m_params->m_disableRandomX) {
+	if (p->m_disableRandomX) {
 		m_hasher = new RandomX_Hasher_RPC(this);
 	}
 	else {

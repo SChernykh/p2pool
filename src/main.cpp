@@ -55,6 +55,7 @@ void p2pool_usage()
 		"--p2p-external-port  Port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections\n"
 #ifdef WITH_UPNP
 		"--no-upnp            Disable UPnP port forwarding\n"
+		"--upnp-stratum       Port forward Stratum port (it's not forwarded by default)\n"
 #endif
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"

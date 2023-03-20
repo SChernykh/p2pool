@@ -158,6 +158,11 @@ Params::Params(int argc, char* argv[])
 			m_upnp = false;
 			ok = true;
 		}
+
+		if (strcmp(argv[i], "--upnp-stratum") == 0) {
+			m_upnpStratum = true;
+			ok = true;
+		}
 #endif
 
 		if (!ok) {
@@ -170,9 +175,9 @@ Params::Params(int argc, char* argv[])
 	if (m_stratumAddresses.empty()) {
 		const int stratum_port = DEFAULT_STRATUM_PORT;
 
-		char buf[log::Stream::BUF_SIZE + 1];
+		char buf[48] = {};
 		log::Stream s(buf);
-		s << "[::]:" << stratum_port << ",0.0.0.0:" << stratum_port << '\0';
+		s << "[::]:" << stratum_port << ",0.0.0.0:" << stratum_port;
 
 		m_stratumAddresses = buf;
 	}

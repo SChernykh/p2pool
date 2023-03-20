@@ -114,7 +114,7 @@ private:
 	std::atomic<bool> m_stopped;
 
 	std::string m_hostStr;
-	Params* m_params;
+	const Params* m_params;
 
 	p2pool_api* m_api;
 	SideChain* m_sideChain;

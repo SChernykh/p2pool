@@ -55,8 +55,10 @@ struct Params
 	uint32_t m_p2pExternalPort = 0;
 #ifdef WITH_UPNP
 	bool m_upnp = true;
+	bool m_upnpStratum = false;
 #else
 	bool m_upnp = false;
+	bool m_upnpStratum = false;
 #endif
 };
 
