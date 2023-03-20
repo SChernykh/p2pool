@@ -41,7 +41,9 @@ void p2pool_usage()
 		"--stratum-api        An alias for --local-api\n"
 		"--no-cache           Disable p2pool.cache\n"
 		"--no-color           Disable colors in console output\n"
+#ifdef WITH_RANDOMX
 		"--no-randomx         Disable internal RandomX hasher: p2pool will use RPC calls to monerod to check PoW hashes\n"
+#endif
 		"--out-peers N        Maximum number of outgoing connections for p2p server (any value between 10 and 450)\n"
 		"--in-peers N         Maximum number of incoming connections for p2p server (any value between 10 and 450)\n"
 		"--start-mining N     Start built-in miner using N threads (any value between 1 and 64)\n"
