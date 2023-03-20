@@ -247,6 +247,8 @@ bool str_to_ip(bool is_v6, const char* ip, raw_ip& result);
 bool is_localhost(const std::string& host);
 
 #ifdef WITH_UPNP
+void init_upnp();
+void destroy_upnp();
 void add_portmapping(int external_port, int internal_port);
 #endif
 

@@ -60,6 +60,12 @@ p2pool::p2pool(int argc, char* argv[])
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
+#ifdef WITH_UPNP
+	if (m_params->m_upnp) {
+		init_upnp();
+	}
+#endif
+
 	if (!m_params->m_wallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
 		throw std::exception();
@@ -189,6 +195,12 @@ p2pool::p2pool(int argc, char* argv[])
 
 p2pool::~p2pool()
 {
+#ifdef WITH_UPNP
+	if (m_params->m_upnp) {
+		destroy_upnp();
+	}
+#endif
+
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_mutex_destroy(&m_foundBlocksLock);

@@ -568,16 +568,57 @@ UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
 #ifdef WITH_UPNP
 static struct UPnP_Discover
 {
-	UPnP_Discover() { devlist = upnpDiscover(1000, nullptr, nullptr, UPNP_LOCAL_PORT_ANY, 0, 2, &error); }
-	~UPnP_Discover() { freeUPNPDevlist(devlist); }
-
+	uv_mutex_t lock;
 	int error;
 	UPNPDev* devlist;
 } upnp_discover;
 
+void init_upnp()
+{
+	uv_mutex_init_checked(&upnp_discover.lock);
+
+	uv_work_t* req = new uv_work_t{};
+
+	const int err = uv_queue_work(uv_default_loop_checked(), req,
+		[](uv_work_t* /*req*/)
+		{
+			BACKGROUND_JOB_START(init_upnp);
+			LOGINFO(1, "UPnP: Started scanning for UPnP IGD devices");
+			{
+				MutexLock lock(upnp_discover.lock);
+				upnp_discover.devlist = upnpDiscover(1000, nullptr, nullptr, UPNP_LOCAL_PORT_ANY, 0, 2, &upnp_discover.error);
+			}
+			LOGINFO(1, "UPnP: Finished scanning for UPnP IGD devices");
+		},
+		[](uv_work_t* req, int /*status*/)
+		{
+			delete req;
+			BACKGROUND_JOB_STOP(init_upnp);
+		}
+	);
+
+	if (err) {
+		LOGERR(0, "init_upnp: uv_queue_work failed, error " << uv_err_name(err));
+		delete req;
+	}
+}
+
+void destroy_upnp()
+{
+	{
+		MutexLock lock(upnp_discover.lock);
+
+		freeUPNPDevlist(upnp_discover.devlist);
+		upnp_discover.devlist = nullptr;
+	}
+	uv_mutex_destroy(&upnp_discover.lock);
+}
+
 void add_portmapping(int external_port, int internal_port)
 {
 	LOGINFO(1, "UPnP: trying to map WAN:" << external_port << " to LAN:" << internal_port);
+
+	MutexLock lock(upnp_discover.lock);
 
 	if (!upnp_discover.devlist) {
 		LOGWARN(1, "upnpDiscover: no UPnP IGD devices found, error " << upnp_discover.error);

@@ -24,7 +24,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DWITH_UPNP=OFF -DDEV_TEST_SYNC=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+        cmake .. -DDEV_TEST_SYNC=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
         make -j$(nproc)
 
     - name: Run p2pool
@@ -60,7 +60,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DWITH_UPNP=OFF -DDEV_TEST_SYNC=ON
+        cmake .. -DDEV_TEST_SYNC=ON
         make -j3
 
     - name: Run p2pool
@@ -96,7 +96,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -DWITH_UPNP=OFF -DDEV_TEST_SYNC=ON
+        cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON
         & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=Debug p2pool.vcxproj
 
     - name: Run p2pool

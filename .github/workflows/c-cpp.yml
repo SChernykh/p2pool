@@ -251,10 +251,9 @@ jobs:
     strategy:
       matrix:
         config:
-          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "OFF"}
-          #- {vs: Visual Studio 17 2022, os: 2022, msbuild: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\", rx: "ON"}
-          #- {vs: Visual Studio 17 2022, os: 2022, msbuild: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\", rx: "OFF"}
+          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "ON", upnp: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "OFF", upnp: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "OFF", upnp: "OFF"}
 
     steps:
     - name: Checkout repository
@@ -269,7 +268,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }}
+        cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
         & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Build tests
@@ -288,7 +287,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool-msbuild-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}.exe
+        name: p2pool-msbuild-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}.exe
         path: build/Release/p2pool.exe
 
   build-macos:
