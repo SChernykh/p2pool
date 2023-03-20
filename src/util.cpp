@@ -650,6 +650,22 @@ void add_portmapping(int external_port, int internal_port)
 	const std::string iport = std::to_string(internal_port);
 
 	result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), iport.c_str(), local_addr, "P2Pool", "TCP", nullptr, nullptr);
+
+	// ConflictInMappingEntry: try to delete the old record and then add the new one again
+	if (result == 718) {
+		LOGWARN(1, "UPNP_AddPortMapping failed: ConflictInMappingEntry");
+
+		result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), "TCP", nullptr);
+		if (result) {
+			LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
+			return;
+		}
+		else {
+			LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
+			result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), iport.c_str(), local_addr, "P2Pool", "TCP", nullptr, nullptr);
+		}
+	}
+
 	if (result) {
 		LOGWARN(1, "UPNP_AddPortMapping returned error " << result);
 	}
