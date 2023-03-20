@@ -100,10 +100,12 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+#ifdef WITH_RANDOMX
 		if (strcmp(argv[i], "--no-randomx") == 0) {
 			m_disableRandomX = true;
 			ok = true;
 		}
+#endif
 
 		if ((!strcmp(argv[i], "--out-peers") || !strcmp(argv[i], "--outpeers")) && (i + 1 < argc)) {
 			m_maxOutgoingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 450UL);
@@ -151,10 +153,12 @@ Params::Params(int argc, char* argv[])
 			ok = true;
 		}
 
+#ifdef WITH_UPNP
 		if (strcmp(argv[i], "--no-upnp") == 0) {
 			m_upnp = false;
 			ok = true;
 		}
+#endif
 
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
