@@ -92,9 +92,23 @@ TEST(block_template, update)
 
 	tpl.update(data, mempool, &wallet);
 
+	ASSERT_EQ(b->m_transactions.size(), 203);
+
 	for (size_t i = 1; i < b->m_transactions.size(); ++i) {
 		ASSERT_GE(*reinterpret_cast<const uint64_t*>(b->m_transactions[i].h), 256);
 	}
+
+	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+
+	ASSERT_EQ(height, 2762973);
+	ASSERT_EQ(diff, 300346053753ULL);
+	ASSERT_EQ(sidechain_diff, sidechain.difficulty());
+	ASSERT_EQ(seed_hash, data.seed_hash);
+	ASSERT_EQ(nonce_offset, 39);
+	ASSERT_EQ(template_id, 2);
+
+	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
+	ASSERT_EQ(blobs_hash, H("c74d295a9cb7e808030284e2169a6f05b685a11c6c577a774d5eb8fad175d5cd"));
 
 	destroy_crypto_cache();
 }
