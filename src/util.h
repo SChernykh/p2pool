@@ -227,6 +227,12 @@ FORCEINLINE uint64_t seconds_since_epoch()
 	return duration_cast<seconds>(steady_clock::now().time_since_epoch()).count();
 }
 
+FORCEINLINE uint64_t microseconds_since_epoch()
+{
+	using namespace std::chrono;
+	return duration_cast<microseconds>(steady_clock::now().time_since_epoch()).count();
+}
+
 uint64_t bsr_reference(uint64_t x);
 
 #ifdef HAVE_BUILTIN_CLZLL

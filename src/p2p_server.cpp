@@ -741,7 +741,10 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 		return;
 	}
 
-	Broadcast* data = new Broadcast();
+	Broadcast* data = new Broadcast{};
+
+	data->id = block.m_sidechainId;
+	data->received_timestamp = block.m_receivedTimestamp;
 
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
@@ -857,13 +860,6 @@ void P2PServer::on_broadcast()
 		return;
 	}
 
-	ON_SCOPE_LEAVE([&broadcast_queue]()
-		{
-			for (const Broadcast* data : broadcast_queue) {
-				delete data;
-			}
-		});
-
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (!client->is_good()) {
 			continue;
@@ -936,6 +932,12 @@ void P2PServer::on_broadcast()
 			}
 		}
 	}
+
+	for (const Broadcast* data : broadcast_queue) {
+		const double t = static_cast<double>(microseconds_since_epoch() - data->received_timestamp) * 1e-3;
+		LOGINFO(5, "Block " << data->id << " took " << t << " ms to process and relay to other peers");
+		delete data;
+	}
 }
 
 uint64_t P2PServer::get_random64()
@@ -995,7 +997,7 @@ int P2PServer::external_listen_port() const
 	return params.m_p2pExternalPort ? params.m_p2pExternalPort : m_listenPort;
 }
 
-int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact)
+int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact, uint64_t received_timestamp)
 {
 	int result;
 
@@ -1010,6 +1012,7 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 		m_lookForMissingBlocks = true;
 	}
 
+	m_block->m_receivedTimestamp = received_timestamp;
 	return result;
 }
 
@@ -1928,11 +1931,13 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 		return true;
 	}
 
+	const uint64_t received_timestamp = microseconds_since_epoch();
+
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size, false);
+	const int result = server->deserialize_block(buf, size, false, received_timestamp);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;
@@ -1973,11 +1978,13 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 		return false;
 	}
 
+	const uint64_t received_timestamp = microseconds_since_epoch();
+
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size, compact);
+	const int result = server->deserialize_block(buf, size, compact, received_timestamp);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;

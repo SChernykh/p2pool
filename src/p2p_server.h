@@ -163,7 +163,7 @@ public:
 	void set_max_outgoing_peers(uint32_t n) { m_maxOutgoingPeers = std::min(std::max(n, 10U), 450U); }
 	void set_max_incoming_peers(uint32_t n) { m_maxIncomingPeers = std::min(std::max(n, 10U), 450U); }
 
-	int deserialize_block(const uint8_t* buf, uint32_t size, bool compact);
+	int deserialize_block(const uint8_t* buf, uint32_t size, bool compact, uint64_t received_timestamp);
 	const PoolBlock* get_block() const { return m_block; }
 
 private:
@@ -226,6 +226,9 @@ private:
 
 	struct Broadcast
 	{
+		hash id;
+		uint64_t received_timestamp;
+
 		std::vector<uint8_t> blob;
 		std::vector<uint8_t> pruned_blob;
 		std::vector<uint8_t> compact_blob;
