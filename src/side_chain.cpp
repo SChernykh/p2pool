@@ -1532,7 +1532,11 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	difficulty_type diff;
-	if (!get_difficulty(parent, m_difficultyData, diff)) {
+	if (parent == m_chainTip) {
+		LOGINFO(6, "block " << block->m_sidechainId << " is built on top of the current chain tip, using current difficulty for verification");
+		diff = difficulty();
+	}
+	else if (!get_difficulty(parent, m_difficultyData, diff)) {
 		block->m_invalid = true;
 		return;
 	}
