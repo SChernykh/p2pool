@@ -27,6 +27,7 @@
 --no-dns             Disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)
 --p2p-external-port  Port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections
 --no-upnp            Disable UPnP port forwarding
+--no-igd             An alias for --no-upnp
 --upnp-stratum       Port forward Stratum port (it's not forwarded by default)
 ```
 

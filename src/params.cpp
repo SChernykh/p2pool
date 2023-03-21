@@ -154,7 +154,7 @@ Params::Params(int argc, char* argv[])
 		}
 
 #ifdef WITH_UPNP
-		if (strcmp(argv[i], "--no-upnp") == 0) {
+		if ((strcmp(argv[i], "--no-upnp") == 0) || (strcmp(argv[i], "--no-igd") == 0)) {
 			m_upnp = false;
 			ok = true;
 		}
