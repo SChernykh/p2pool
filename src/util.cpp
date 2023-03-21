@@ -614,7 +614,7 @@ void destroy_upnp()
 	uv_mutex_destroy(&upnp_discover.lock);
 }
 
-void add_portmapping(int external_port, int internal_port)
+int add_portmapping(int external_port, int internal_port)
 {
 	LOGINFO(1, "UPnP: trying to map WAN:" << external_port << " to LAN:" << internal_port);
 
@@ -622,7 +622,7 @@ void add_portmapping(int external_port, int internal_port)
 
 	if (!upnp_discover.devlist) {
 		LOGWARN(1, "upnpDiscover: no UPnP IGD devices found, error " << upnp_discover.error);
-		return;
+		return 0;
 	}
 
 	UPNPUrls urls;
@@ -632,7 +632,7 @@ void add_portmapping(int external_port, int internal_port)
 	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr));
 	if (result != 1) {
 		LOGWARN(1, "UPNP_GetValidIGD returned " << result << ", no valid UPnP IGD devices found");
-		return;
+		return 0;
 	}
 
 	LOGINFO(1, "UPnP: LAN IP address " << log::Gray() << static_cast<const char*>(local_addr));
@@ -658,7 +658,7 @@ void add_portmapping(int external_port, int internal_port)
 		result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), "TCP", nullptr);
 		if (result) {
 			LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
-			return;
+			return 0;
 		}
 		else {
 			LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
@@ -668,9 +668,41 @@ void add_portmapping(int external_port, int internal_port)
 
 	if (result) {
 		LOGWARN(1, "UPNP_AddPortMapping returned error " << result);
+		return 0;
+	}
+
+	LOGINFO(1, "UPnP: Mapped " << log::Gray() << static_cast<const char*>(ext_addr) << ':' << external_port << log::NoColor() << " to " << log::Gray() << static_cast<const char*>(local_addr) << ':' << internal_port);
+	return external_port;
+}
+
+void remove_portmapping(int external_port)
+{
+	LOGINFO(1, "UPnP: trying to delete mapping for external port " << external_port);
+
+	MutexLock lock(upnp_discover.lock);
+
+	if (!upnp_discover.devlist) {
+		LOGWARN(1, "upnpDiscover: no UPnP IGD devices found, error " << upnp_discover.error);
+		return;
+	}
+
+	UPNPUrls urls;
+	IGDdatas data;
+	char local_addr[64] = {};
+
+	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr));
+	if (result != 1) {
+		LOGWARN(1, "UPNP_GetValidIGD returned " << result << ", no valid UPnP IGD devices found");
+		return;
+	}
+
+	const std::string eport = std::to_string(external_port);
+	result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), "TCP", nullptr);
+	if (result) {
+		LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
 	}
 	else {
-		LOGINFO(1, "UPnP: Mapped " << log::Gray() << static_cast<const char*>(ext_addr) << ':' << external_port << log::NoColor() << " to " << log::Gray() << static_cast<const char*>(local_addr) << ':' << internal_port);
+		LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
 	}
 }
 #endif

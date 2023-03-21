@@ -25,6 +25,9 @@ template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client)
 	: m_allocateNewClient(allocate_new_client)
 	, m_loopThread{}
+#ifdef WITH_UPNP
+	, m_portMapping(0)
+#endif
 	, m_socks5ProxyV6(false)
 	, m_socks5ProxyIP{}
 	, m_socks5ProxyPort(-1)
@@ -208,7 +211,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 
 #ifdef WITH_UPNP
 	if (upnp) {
-		add_portmapping(external_listen_port(), m_listenPort);
+		m_portMapping = add_portmapping(external_listen_port(), m_listenPort);
 	}
 #else
 	(void)upnp;
@@ -428,6 +431,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 	}
 
 	uv_async_send(&m_shutdownAsync);
+
+#ifdef WITH_UPNP
+	if (m_portMapping) {
+		remove_portmapping(m_portMapping);
+	}
+#endif
+
 	uv_thread_join(&m_loopThread);
 
 	uv_mutex_destroy(&m_bansLock);

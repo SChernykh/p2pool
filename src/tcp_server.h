@@ -160,6 +160,10 @@ private:
 protected:
 	void start_listening(const std::string& listen_addresses, bool upnp);
 
+#ifdef WITH_UPNP
+	int m_portMapping;
+#endif
+
 	std::string m_socks5Proxy;
 	bool m_socks5ProxyV6;
 	raw_ip m_socks5ProxyIP;

@@ -249,7 +249,8 @@ bool is_localhost(const std::string& host);
 #ifdef WITH_UPNP
 void init_upnp();
 void destroy_upnp();
-void add_portmapping(int external_port, int internal_port);
+int add_portmapping(int external_port, int internal_port);
+void remove_portmapping(int external_port);
 #endif
 
 } // namespace p2pool
