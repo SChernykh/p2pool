@@ -1834,7 +1834,8 @@ void SideChain::update_depths(PoolBlock* block)
 		for (PoolBlock* child : it->second) {
 			if (child->m_parent == block->m_sidechainId) {
 				if (i != 1) {
-					LOGERR(1, "m_blocksByHeight is inconsistent with child->m_parent. Fix the code!");
+					LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
+					return;
 				}
 				else {
 					block->m_depth = std::max(block->m_depth, child->m_depth + 1);
@@ -1861,7 +1862,8 @@ void SideChain::update_depths(PoolBlock* block)
 		auto it = m_blocksById.find(block->m_parent);
 		if (it != m_blocksById.end()) {
 			if (it->second->m_sidechainHeight + 1 != block->m_sidechainHeight) {
-				LOGERR(1, "m_sidechainHeight is inconsistent with block->m_parent. Fix the code!");
+				LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with parent's m_sidechainHeight.");
+				return;
 			}
 
 			if (it->second->m_depth < block->m_depth + 1) {
@@ -1877,7 +1879,8 @@ void SideChain::update_depths(PoolBlock* block)
 			}
 
 			if ((it->second->m_sidechainHeight >= block->m_sidechainHeight) || (it->second->m_sidechainHeight + UNCLE_BLOCK_DEPTH < block->m_sidechainHeight)) {
-				LOGERR(1, "m_sidechainHeight is inconsistent with block->m_uncles. Fix the code!");
+				LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with uncle's m_sidechainHeight.");
+				return;
 			}
 
 			const uint64_t d = block->m_sidechainHeight - it->second->m_sidechainHeight;
