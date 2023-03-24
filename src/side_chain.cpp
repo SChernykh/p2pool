@@ -1776,11 +1776,32 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 
 	uint64_t candidate_mainchain_height = 0;
 	uint64_t candidate_mainchain_min_height = 0;
-	hash mainchain_prev_id;
+
+	unordered_set<hash> current_chain_monero_blocks, candidate_chain_monero_blocks;
+	{
+		const uint64_t k = m_chainWindowSize * m_targetBlockTime * 2 / MONERO_BLOCK_TIME;
+		current_chain_monero_blocks.reserve(k);
+		candidate_chain_monero_blocks.reserve(k);
+	}
 
 	for (uint64_t i = 0; (i < m_chainWindowSize) && (old_chain || new_chain); ++i) {
 		if (old_chain) {
 			block_total_diff += old_chain->m_difficulty;
+
+			for (const hash& uncle : old_chain->m_uncles) {
+				auto it = m_blocksById.find(uncle);
+				if (it != m_blocksById.end()) {
+					block_total_diff += it->second->m_difficulty;
+				}
+			}
+
+			ChainMain data;
+			const hash& h = old_chain->m_prevId;
+
+			if ((current_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
+				current_chain_monero_blocks.insert(h);
+			}
+
 			old_chain = get_parent(old_chain);
 		}
 
@@ -1788,9 +1809,18 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 			candidate_mainchain_min_height = candidate_mainchain_min_height ? std::min(candidate_mainchain_min_height, new_chain->m_txinGenHeight) : new_chain->m_txinGenHeight;
 			candidate_total_diff += new_chain->m_difficulty;
 
+			for (const hash& uncle : new_chain->m_uncles) {
+				auto it = m_blocksById.find(uncle);
+				if (it != m_blocksById.end()) {
+					candidate_total_diff += it->second->m_difficulty;
+				}
+			}
+
 			ChainMain data;
-			if ((new_chain->m_prevId != mainchain_prev_id) && m_pool->chainmain_get_by_hash(new_chain->m_prevId, data)) {
-				mainchain_prev_id = new_chain->m_prevId;
+			const hash& h = new_chain->m_prevId;
+
+			if ((candidate_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
+				candidate_chain_monero_blocks.insert(h);
 				candidate_mainchain_height = std::max(candidate_mainchain_height, data.height);
 			}
 
@@ -1802,7 +1832,7 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 		return false;
 	}
 
-	// Final check: candidate chain must be built on top of recent mainchain blocks
+	// Candidate chain must be built on top of recent mainchain blocks
 	MinerData data = m_pool->miner_data();
 	if (candidate_mainchain_height + 10 < data.height) {
 		LOGWARN(3, "received a longer alternative chain but it's stale: height " << candidate_mainchain_height << ", current height " << data.height);
@@ -1812,6 +1842,12 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 	const uint64_t limit = m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME;
 	if (candidate_mainchain_min_height + limit < data.height) {
 		LOGWARN(3, "received a longer alternative chain but it's stale: min height " << candidate_mainchain_min_height << ", must be >= " << (data.height - limit));
+		return false;
+	}
+
+	// Candidate chain must have been mined on top of at least half as many known Monero blocks, compared to the current chain
+	if (candidate_chain_monero_blocks.size() * 2 < current_chain_monero_blocks.size()) {
+		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Monero blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
 		return false;
 	}
 
