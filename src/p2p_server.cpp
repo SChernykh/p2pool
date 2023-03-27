@@ -1545,11 +1545,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 					m_pingTime = std::max<int64_t>(duration_cast<milliseconds>(high_resolution_clock::now() - m_lastPeerListRequestTime).count(), 0);
 
 					--m_peerListPendingRequests;
-					if (!on_peer_list_response(buf + 1)) {
-						ban(DEFAULT_BAN_TIME);
-						server->remove_peer_from_list(this);
-						return false;
-					}
+					on_peer_list_response(buf + 1);
 				}
 			}
 			break;
@@ -2181,7 +2177,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		});
 }
 
-bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
+void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
@@ -2242,8 +2238,6 @@ bool P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 			server->m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
 		}
 	}
-
-	return true;
 }
 
 bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)

@@ -104,7 +104,7 @@ public:
 		bool on_block_response(const uint8_t* buf, uint32_t size, const hash& expected_id);
 		bool on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact);
 		bool on_peer_list_request(const uint8_t* buf);
-		bool on_peer_list_response(const uint8_t* buf);
+		void on_peer_list_response(const uint8_t* buf);
 
 		bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
 		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, const raw_ip& addr, std::vector<hash>& missing_blocks);
