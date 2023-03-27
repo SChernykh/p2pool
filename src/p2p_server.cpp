@@ -26,6 +26,7 @@
 #include "json_rpc_request.h"
 #include "json_parsers.h"
 #include "block_template.h"
+#include "p2pool_api.h"
 #include <rapidjson/document.h>
 #include <fstream>
 #include <numeric>
@@ -1032,6 +1033,7 @@ void P2PServer::on_timer()
 	update_peer_connections();
 	check_zmq();
 	check_block_template();
+	api_update_local_stats();
 }
 
 void P2PServer::flush_cache()
@@ -1218,6 +1220,52 @@ void P2PServer::on_shutdown()
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
+}
+
+void P2PServer::api_update_local_stats()
+{
+	if (!m_pool->api() || !m_pool->params().m_localStats || ((m_timerCounter % 30) != 5)) {
+		return;
+	}
+
+	m_pool->api()->set(p2pool_api::Category::LOCAL, "p2p",
+		[this](log::Stream& s)
+		{
+			const uint64_t cur_time = seconds_since_epoch();
+
+			s << "{\"connections\":" << m_numConnections.load()
+				<< ",\"incoming_connections\":" << m_numIncomingConnections.load()
+				<< ",\"peer_list_size\":" << m_peerList.size()
+				<< ",\"peers\":[";
+
+			bool first = true;
+
+			for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+				if (client->m_listenPort >= 0) {
+					char buf[32] = {};
+					log::Stream s1(buf);
+					if (client->m_SoftwareVersion) {
+						s1 << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
+					}
+
+					if (!first) {
+						s << ',';
+					}
+
+					s << '"'
+						<< (client->m_isIncoming ? "I," : "O,")
+						<< (cur_time - client->m_connectedTime) << ','
+						<< client->m_pingTime << ','
+						<< static_cast<const char*>(buf) << ','
+						<< client->m_broadcastMaxHeight << ','
+						<< static_cast<char*>(client->m_addrString)
+						<< '"';
+					first = false;
+				}
+			}
+
+			s << "],\"uptime\":" << cur_time - m_pool->start_time() << '}';
+		});
 }
 
 P2PServer::P2PClient::~P2PClient()

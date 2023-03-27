@@ -259,6 +259,8 @@ private:
 	void show_peers() const;
 
 	void on_shutdown() override;
+
+	void api_update_local_stats();
 };
 
 } // namespace p2pool

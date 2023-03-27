@@ -1306,10 +1306,10 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 
 	double current_effort = static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double();
 
-	int connections = m_numConnections;
-	int incoming_connections = m_numIncomingConnections;
+	uint32_t connections = m_numConnections;
+	uint32_t incoming_connections = m_numIncomingConnections;
 
-	m_pool->api()->set(p2pool_api::Category::LOCAL, "stats",
+	m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum",
 		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections](log::Stream& s)
 		{
 			s << "{\"hashrate_15m\":" << hashrate_15m
