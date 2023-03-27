@@ -1260,6 +1260,11 @@ void P2PServer::api_update_local_stats()
 						<< client->m_broadcastMaxHeight << ','
 						<< static_cast<char*>(client->m_addrString)
 						<< '"';
+
+					if (s.m_pos + 128 >= s.m_bufSize) {
+						break;
+					}
+
 					first = false;
 				}
 			}
