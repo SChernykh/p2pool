@@ -75,6 +75,7 @@ public:
 	uint64_t last_updated() const;
 	bool is_default() const;
 	bool is_mini() const;
+	uint64_t bottom_height(const PoolBlock* tip) const;
 
 	const PoolBlock* chainTip() const { return m_chainTip; }
 	bool precalcFinished() const { return m_precalcFinished.load(); }

@@ -1251,9 +1251,13 @@ void p2pool::api_update_pool_stats()
 		return;
 	}
 
+	const PoolBlock* tip = m_sideChain->chainTip();
+	const uint64_t bottom_height = m_sideChain->bottom_height(tip);
+	const uint64_t pplns_window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + 1U) : m_sideChain->chain_window_size();
+
 	uint64_t t;
 	const difficulty_type diff = m_sideChain->difficulty();
-	const uint64_t height = m_sideChain->chainTip() ? m_sideChain->chainTip()->m_sidechainHeight : 0;
+	const uint64_t height = tip ? tip->m_sidechainHeight : 0;
 	const uint64_t hashrate = udiv128(diff.hi, diff.lo, m_sideChain->block_time(), &t);
 	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
@@ -1275,7 +1279,7 @@ void p2pool::api_update_pool_stats()
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "stats",
-		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found, &pplns_weight, diff, height](log::Stream& s)
+		[hashrate, miners, &total_hashes, last_block_found_time, last_block_found_height, total_blocks_found, &pplns_weight, pplns_window_size, diff, height](log::Stream& s)
 		{
 			s << "{\"pool_list\":[\"pplns\"],\"pool_statistics\":{\"hashRate\":" << hashrate
 				<< ",\"miners\":" << miners
@@ -1284,6 +1288,7 @@ void p2pool::api_update_pool_stats()
 				<< ",\"lastBlockFound\":" << last_block_found_height
 				<< ",\"totalBlocksFound\":" << total_blocks_found
 				<< ",\"pplnsWeight\":" << pplns_weight
+				<< ",\"pplnsWindowSize\":" << pplns_window_size
 				<< ",\"sidechainDifficulty\":" << diff
 				<< ",\"sidechainHeight\":" << height
 				<< "}}";

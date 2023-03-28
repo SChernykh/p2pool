@@ -869,12 +869,12 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	const PoolBlock* tip = m_chainTip;
 
 	std::vector<MinerShare> shares;
-	uint64_t bottom_height = 0;
+	uint64_t bh = 0;
 	if (tip) {
-		get_shares(tip, shares, &bottom_height, true);
+		get_shares(tip, shares, &bh, true);
 	}
 
-	const uint64_t window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + 1U) : m_chainWindowSize;
+	const uint64_t window_size = (tip && bh) ? (tip->m_sidechainHeight - bh + 1U) : m_chainWindowSize;
 
 	uint64_t block_depth = 0;
 	const PoolBlock* cur = tip;
@@ -1111,6 +1111,22 @@ bool SideChain::is_default() const
 bool SideChain::is_mini() const
 {
 	return (memcmp(m_consensusId.data(), mini_consensus_id, HASH_SIZE) == 0);
+}
+
+uint64_t SideChain::bottom_height(const PoolBlock* tip) const
+{
+	if (!tip) {
+		return 0;
+	}
+
+	uint64_t bottom_height;
+	std::vector<MinerShare> shares;
+
+	if (!get_shares(tip, shares, &bottom_height, true)) {
+		return 0;
+	}
+
+	return bottom_height;
 }
 
 bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
