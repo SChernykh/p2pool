@@ -40,7 +40,7 @@ public:
 	virtual uint32_t seed_counter() const { return 0; }
 	virtual void sync_wait() {}
 
-	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) = 0;
+	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode) = 0;
 };
 
 #ifdef WITH_RANDOMX
@@ -60,7 +60,7 @@ public:
 	uint32_t seed_counter() const override { return m_seedCounter.load(); }
 	void sync_wait() override;
 
-	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result) override;
+	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode) override;
 
 private:
 
@@ -100,7 +100,7 @@ public:
 	explicit RandomX_Hasher_RPC(p2pool* pool);
 	~RandomX_Hasher_RPC();
 
-	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h) override;
+	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool force_light_mode) override;
 
 private:
 	static void loop(void* data);

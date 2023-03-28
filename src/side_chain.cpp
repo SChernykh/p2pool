@@ -570,7 +570,20 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	}
 
 	if (!block.m_difficulty.check_pow(pow_hash)) {
-		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": not enough PoW for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight);
+		LOGWARN(3,
+			"add_external_block mined by " << block.m_minerWallet <<
+			": not enough PoW for height = " << block.m_sidechainHeight <<
+			", id = " << block.m_sidechainId <<
+			", nonce = " << block.m_nonce <<
+			", mainchain height = " << block.m_txinGenHeight
+		);
+
+		// Calculate the same hash second time to check if it's an unstable hardware that caused this
+		hash pow_hash2;
+		if (block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, seed, pow_hash2, true) && (pow_hash2 != pow_hash)) {
+			LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << pow_hash << " != " << pow_hash2 << " (sidechain id = " << block.m_sidechainId << ')');
+		}
+
 		return false;
 	}
 

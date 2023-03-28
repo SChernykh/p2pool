@@ -271,7 +271,7 @@ void PoolBlock::reset_offchain_data()
 	m_receivedTimestamp = 0;
 }
 
-bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash)
+bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)
 {
 	alignas(8) uint8_t hashes[HASH_SIZE * 3];
 
@@ -349,7 +349,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
 
-	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash);
+	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash, force_light_mode);
 }
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const

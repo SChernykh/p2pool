@@ -322,10 +322,10 @@ void RandomX_Hasher::sync_wait()
 	ReadLock lock2(m_cacheLock);
 }
 
-bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result)
+bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result, bool force_light_mode)
 {
 	// First try to use the dataset if it's ready
-	if (uv_rwlock_tryrdlock(&m_datasetLock) == 0) {
+	if (!force_light_mode && (uv_rwlock_tryrdlock(&m_datasetLock) == 0)) {
 		ON_SCOPE_LEAVE([this]() { uv_rwlock_rdunlock(&m_datasetLock); });
 
 		if (m_stopped.load()) {
@@ -340,7 +340,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 		}
 	}
 
-	// If dataset is not ready, use the cache and wait if necessary
+	// If dataset is not ready, or force_light_mode = true, use the cache and wait if necessary
 	ReadLock lock(m_cacheLock);
 
 	if (m_stopped.load()) {
@@ -429,7 +429,7 @@ void RandomX_Hasher_RPC::loop(void* data)
 	LOGINFO(1, "event loop stopped");
 }
 
-bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& /*seed*/, hash& h)
+bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& /*seed*/, hash& h, bool /*force_light_mode*/)
 {
 	MutexLock lock(m_requestMutex);
 

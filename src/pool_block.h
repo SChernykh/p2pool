@@ -141,7 +141,7 @@ struct PoolBlock
 	int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop, bool compact);
 	void reset_offchain_data();
 
-	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash);
+	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode = false);
 
 	uint64_t get_payout(const Wallet& w) const;
 

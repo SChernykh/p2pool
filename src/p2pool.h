@@ -60,7 +60,7 @@ public:
 	p2pool_api* api() const { return m_api; }
 
 	RandomX_Hasher_Base* hasher() const { return m_hasher; }
-	bool calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result);
+	bool calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode);
 	static uint64_t get_seed_height(uint64_t height);
 	bool get_seed(uint64_t height, hash& seed) const;
 

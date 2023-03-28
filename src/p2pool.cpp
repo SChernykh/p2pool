@@ -219,9 +219,9 @@ p2pool::~p2pool()
 	delete m_params;
 }
 
-bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result)
+bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode)
 {
-	return m_hasher->calculate(data, size, height, seed, result);
+	return m_hasher->calculate(data, size, height, seed, result, force_light_mode);
 }
 
 uint64_t p2pool::get_seed_height(uint64_t height)
