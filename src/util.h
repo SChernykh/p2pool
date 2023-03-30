@@ -259,6 +259,22 @@ int add_portmapping(int external_port, int internal_port);
 void remove_portmapping(int external_port);
 #endif
 
+struct PerfTimer
+{
+	FORCEINLINE PerfTimer(int level, const char* name) : m_level(level), m_name(name), m_start(std::chrono::high_resolution_clock::now()) {}
+	~PerfTimer();
+
+	int m_level;
+	const char* m_name;
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+};
+
+#ifdef P2POOL_LOG_DISABLE
+#define PERFLOG(level, name)
+#else
+#define PERFLOG(level, name) PerfTimer CONCAT(perf_timer_, __LINE__)(level, name)
+#endif
+
 } // namespace p2pool
 
 void memory_tracking_start();

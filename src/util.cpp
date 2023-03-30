@@ -707,4 +707,11 @@ void remove_portmapping(int external_port)
 }
 #endif
 
+NOINLINE PerfTimer::~PerfTimer()
+{
+	using namespace std::chrono;
+	const duration<double, std::milli> dt = high_resolution_clock::now() - m_start;
+	LOGINFO(m_level, m_name << " took " << dt.count() << " ms");
+}
+
 } // namespace p2pool
