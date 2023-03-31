@@ -407,6 +407,7 @@ private:
 	struct PublicKeyEntry
 	{
 		hash m_key;
+		// cppcheck-suppress unusedStructMember
 		uint64_t m_timestamp;
 	};
 
@@ -414,6 +415,7 @@ private:
 	{
 		hash m_pub;
 		hash m_sec;
+		// cppcheck-suppress unusedStructMember
 		uint64_t m_timestamp;
 	};
 
