@@ -214,10 +214,11 @@ public:
 
 		derive_view_tag(derivation, output_index, view_tag);
 
+		const uint64_t t = seconds_since_epoch();
 		{
 			WriteLock lock(derivations_lock);
 
-			DerivationEntry& entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {} }).first->second;
+			DerivationEntry& entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, t }).first->second;
 			entry.add_view_tag(static_cast<uint32_t>(output_index << 8) | view_tag);
 		}
 
@@ -235,7 +236,7 @@ public:
 			ReadLock lock(public_keys_lock);
 			auto it = public_keys->find(index);
 			if (it != public_keys->end()) {
-				derived_key = it->second;
+				derived_key = it->second.m_key;
 				return true;
 			}
 		}
@@ -258,9 +259,10 @@ public:
 		ge_p1p1_to_p2(&point5, &point4);
 		ge_tobytes(derived_key.h, &point5);
 
+		const uint64_t t = seconds_since_epoch();
 		{
 			WriteLock lock(public_keys_lock);
-			public_keys->emplace(index, derived_key);
+			public_keys->emplace(index, PublicKeyEntry{ derived_key, t });
 		}
 
 		return true;
@@ -276,8 +278,8 @@ public:
 			ReadLock lock(tx_keys_lock);
 			auto it = tx_keys->find(index);
 			if (it != tx_keys->end()) {
-				pub = it->second.first;
-				sec = it->second.second;
+				pub = it->second.m_pub;
+				sec = it->second.m_sec;
 				return;
 			}
 		}
@@ -292,14 +294,42 @@ public:
 
 		generate_keys_deterministic(pub, sec, entropy, sizeof(entropy));
 
+		const uint64_t t = seconds_since_epoch();
 		{
 			WriteLock lock(tx_keys_lock);
-			tx_keys->emplace(index, std::pair<hash, hash>(pub, sec));
+			tx_keys->emplace(index, TxKeyEntry{ pub, sec, t });
 		}
 	}
 
-	void clear()
+	void clear(uint64_t timestamp)
 	{
+		if (timestamp) {
+			auto clean_old = [timestamp](auto* table) {
+				for (auto it = table->begin(); it != table->end();) {
+					if (it->second.m_timestamp < timestamp) {
+						it = table->erase(it);
+					}
+					else {
+						++it;
+					}
+				}
+			};
+
+			{
+				WriteLock lock(derivations_lock);
+				clean_old(derivations);
+			}
+			{
+				WriteLock lock(public_keys_lock);
+				clean_old(public_keys);
+			}
+			{
+				WriteLock lock(tx_keys_lock);
+				clean_old(tx_keys);
+			}
+			return;
+		}
+
 		{
 			WriteLock lock(derivations_lock);
 			delete derivations;
@@ -326,6 +356,7 @@ private:
 		hash m_derivation;
 		uint32_t m_viewTags1[2] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 		std::vector<uint32_t> m_viewTags2;
+		uint64_t m_timestamp;
 
 		FORCEINLINE bool find_view_tag(size_t output_index, uint8_t& view_tag) const
 		{
@@ -373,9 +404,22 @@ private:
 		}
 	};
 
+	struct PublicKeyEntry
+	{
+		hash m_key;
+		uint64_t m_timestamp;
+	};
+
+	struct TxKeyEntry
+	{
+		hash m_pub;
+		hash m_sec;
+		uint64_t m_timestamp;
+	};
+
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> DerivationsMap;
-	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, hash> PublicKeysMap;
-	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, std::pair<hash, hash>> TxKeysMap;
+	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, PublicKeyEntry> PublicKeysMap;
+	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, TxKeyEntry> TxKeysMap;
 
 	uv_rwlock_t derivations_lock;
 	DerivationsMap* derivations;
@@ -435,10 +479,10 @@ void destroy_crypto_cache()
 	}
 }
 
-void clear_crypto_cache()
+void clear_crypto_cache(uint64_t timestamp)
 {
 	if (cache) {
-		cache->clear();
+		cache->clear(timestamp);
 	}
 }
 

@@ -56,6 +56,7 @@ p2pool::p2pool(int argc, char* argv[])
 	, m_submitBlockData{}
 	, m_zmqLastActive(0)
 	, m_startTime(seconds_since_epoch())
+	, m_lastMinerDataReceived(0)
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
@@ -335,8 +336,11 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	// Tx secret keys from all miners change every block, so cache can be cleared here
 	if (m_sideChain->precalcFinished()) {
-		clear_crypto_cache();
+		// Clear all cache entries older than the previous miner data
+		clear_crypto_cache(m_lastMinerDataReceived);
 	}
+
+	m_lastMinerDataReceived = seconds_since_epoch();
 
 	if (!is_main_thread()) {
 		update_block_template_async();

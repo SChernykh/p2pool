@@ -211,6 +211,8 @@ private:
 
 	hash m_getMinerDataHash;
 	bool m_getMinerDataPending = false;
+
+	std::atomic<uint64_t> m_lastMinerDataReceived;
 };
 
 } // namespace p2pool

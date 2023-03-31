@@ -29,6 +29,6 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 
 void init_crypto_cache();
 void destroy_crypto_cache();
-void clear_crypto_cache();
+void clear_crypto_cache(uint64_t timestamp = 0);
 
 } // namespace p2pool
