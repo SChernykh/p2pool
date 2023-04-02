@@ -4,11 +4,13 @@ Decentralized pool for Monero mining.
 
 Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/, https://mini.p2pool.observer/
 
-# P2Pool hardfork on March 18, 2023
+These are 3rd-party pages. If they are down, it doesn't mean there is a probem with P2Pool itself - it keeps mining always thanks to its decentralized nature.
 
-P2Pool (not Monero!) will hardfork to new consensus rules on March 18th at 21:00 UTC (use [this link](https://dateful.com/convert/utc?t=9pm&d=2023-03-18) to convert to your local time). The hardfork is necessary to improve P2Pool scalability and reduce the impact on Monero blockchain. You'll need to update to **P2Pool v3.0** or newer version before this time.
+# P2Pool hardforked on March 18, 2023
 
-Reddit discussion: https://www.reddit.com/r/MoneroMining/comments/1095730/psa_p2pool_network_upgrade_aka_hardfork_on_march/
+P2Pool (not Monero!) hardforked to new consensus rules on March 18th at 21:00 UTC. The hardfork was necessary to improve P2Pool scalability and reduce the impact on Monero blockchain. You need to update to the latest P2Pool version to continue mining on P2Pool.
+
+Reddit discussions: [original announcement](https://www.reddit.com/r/MoneroMining/comments/1095730/psa_p2pool_network_upgrade_aka_hardfork_on_march/), [final announcement](https://www.reddit.com/r/MoneroMining/comments/11tln6z/psa_p2pool_miners_update_to_the_latest_version/)
 
 ### Build Status
 
@@ -70,7 +72,7 @@ First you need to find a pool share. This share will stay in PPLNS window for 21
 ## Default P2Pool parameters
 
 * Block time: 10 seconds
-* PPLNS window: 2160 blocks (6 hours)
+* PPLNS window: up to 2160 blocks (6 hours), auto adjustable to balance payout sizes and frequency
 * Minimum payout = Monero block reward/2160, ~0.0003 XMR
 
 ## Monero version support
@@ -79,7 +81,7 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
-|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer|v2.2 or newer
+|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.2.2 recommended|v3.0 or newer
 
 ## How to mine on P2Pool
 
