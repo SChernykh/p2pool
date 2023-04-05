@@ -183,7 +183,7 @@ void BlockCache::store(const PoolBlock& block)
 	memcpy(data + sizeof(uint32_t) + n1, sidechain_data.data(), n2);
 }
 
-void BlockCache::load_all(SideChain& side_chain, P2PServer& server)
+void BlockCache::load_all(const SideChain& side_chain, P2PServer& server)
 {
 	if (!m_impl->m_data) {
 		return;

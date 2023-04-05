@@ -30,7 +30,7 @@ public:
 	~BlockCache();
 
 	void store(const PoolBlock& block);
-	void load_all(SideChain& side_chain, P2PServer& server);
+	void load_all(const SideChain& side_chain, P2PServer& server);
 	void flush();
 
 private:
