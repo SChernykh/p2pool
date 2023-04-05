@@ -19,7 +19,8 @@
 #include "util.h"
 #include "uv_util.h"
 #include <map>
-#include <thread>
+#include <istream>
+#include <ostream>
 
 #if !defined(_WIN32) && defined(HAVE_SCHED)
 #include <sched.h>

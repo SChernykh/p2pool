@@ -25,7 +25,6 @@
 #include "miner.h"
 #endif
 #include "side_chain.h"
-#include <iostream>
 
 static constexpr char log_category_prefix[] = "ConsoleCommands ";
 
