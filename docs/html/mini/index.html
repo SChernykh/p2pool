@@ -85,7 +85,10 @@ async function load_data() {
 	let network_stats = JSON.parse(await network_stats_req.text());
 
 	let pool_hashrate = pool_stats.pool_statistics.hashRate / 1e6;
+	let pplns_duration = pool_stats.pool_statistics.pplnsWeight / pool_stats.pool_statistics.hashRate;
+
 	document.getElementById("pool_hashrate").innerHTML = pool_hashrate.toFixed(3) + ' MH/s';
+	document.getElementById("pplns_duration").innerHTML = elapsedTimeStr(0, pplns_duration, 0) + ' ' + Math.floor(pplns_duration % 60) + 's';
 	document.getElementById("pool_miners").innerHTML = pool_stats.pool_statistics.miners;
 
 	let ts = Math.floor(Date.now() / 1000);
@@ -184,7 +187,8 @@ function toggle_menu(name) {
 </script>
 </head>
 <body onload="load_data();setInterval(load_data, 2000);toggle_menu(window.location.hash.substr(1));">
-<div style="font-size:3rem;text-align:center;">P2Pool mini</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool</div>
+<div style="font-size:3rem;text-align:center;">P2Pool mini</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool<br>
+<a href="https://www.reddit.com/r/MoneroMining/comments/11tln6z/psa_p2pool_miners_update_to_the_latest_version/" target="_blank">P2Pool network upgrade (aka hardfork) on March 18th, 2023.</a><br><a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">Update to P2Pool to the latest version</a></div>
 <br>
 <table id="main_menu" style="width:100%;margin-left:auto;margin-right:auto;table-layout:fixed;text-align:center;-ms-touch-action:none;touch-action:none;"><tr>
 <td onclick="toggle_menu('pool')" id="button_pool">Pool</td>
@@ -198,6 +202,7 @@ function toggle_menu(name) {
 <tr><td style="padding-bottom: 1rem;"></td><td></td><td></td></tr>
 <tr><td>Hashrate</td><td><span id="pool_hashrate">N/A</span></td><td><span id="monero_hashrate">N/A</span></td></tr>
 <tr><td>Miners</td><td><span id="pool_miners">N/A</span></td><td></td></tr>
+<tr><td>PPLNS window</td><td><span id="pplns_duration">N/A</span></td><td></td></tr>
 <tr><td>Last block</td><td><span id="pool_last_block">N/A</span></td><td><span id="monero_last_block">N/A</span></td></tr>
 <tr><td>Total blocks</td><td><span id="pool_total_blocks">N/A</span></td><td></td></tr>
 <tr><td>Current effort</td><td><span id="current_effort">N/A</span></td><td></td></tr>
