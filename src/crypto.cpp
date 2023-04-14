@@ -80,7 +80,7 @@ static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 	return false;
 }
 
-// cppcheck-suppress constParameter
+// cppcheck-suppress constParameterReference
 void generate_keys(hash& pub, hash& sec)
 {
 	do {

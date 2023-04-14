@@ -24,7 +24,7 @@ void p2pool_usage();
 
 namespace p2pool {
 
-Params::Params(int argc, char* argv[])
+Params::Params(int argc, char* const argv[])
 {
 	for (int i = 1; i < argc; ++i) {
 		bool ok = false;

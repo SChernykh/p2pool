@@ -23,7 +23,7 @@ namespace p2pool {
 
 struct Params
 {
-	Params(int argc, char* argv[]);
+	Params(int argc, char* const argv[]);
 
 	bool valid() const;
 
