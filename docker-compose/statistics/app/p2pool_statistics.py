@@ -58,7 +58,7 @@ def render():
             pool_stats = json.loads(reader.read())
         with open("/data/network/stats", "r") as reader:
             network_stats = json.loads(reader.read())
-        with open("/data/local/stats", "r") as reader:
+        with open("/data/local/stratum", "r") as reader:
             local_stats = json.loads(reader.read())
         return render_template(
             "index.html",
