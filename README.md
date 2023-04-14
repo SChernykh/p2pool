@@ -229,6 +229,8 @@ PAUSE
 ```
 
 ## Build instructions
+Only 64-bit builds are supported, in particular ARMv7 or older CPUs are not supported. The reason is that RandomX hashing algorithm is too slow in 32-bit mode, and P2Pool needs to check new blocks very fast to keep up with other nodes.
+
 Please see the relevant instructions for your platform:
 
 ### Ubuntu 20.04
