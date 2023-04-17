@@ -280,6 +280,7 @@ struct PerfTimer
 void memory_tracking_start();
 void memory_tracking_stop();
 void p2pool_usage();
+void p2pool_version();
 
 namespace robin_hood {
 

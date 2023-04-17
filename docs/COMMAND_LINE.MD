@@ -29,6 +29,7 @@
 --no-upnp            Disable UPnP port forwarding
 --no-igd             An alias for --no-upnp
 --upnp-stratum       Port forward Stratum port (it's not forwarded by default)
+--version            Print p2pool's version and build details
 ```
 
 ### Example command line

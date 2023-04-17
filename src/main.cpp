@@ -58,6 +58,7 @@ void p2pool_usage()
 		"--no-igd             An alias for --no-upnp\n"
 		"--upnp-stratum       Port forward Stratum port (it's not forwarded by default)\n"
 #endif
+		"--version            Print p2pool's version and build details\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
@@ -75,6 +76,11 @@ void p2pool_usage()
 	);
 }
 
+void p2pool_version()
+{
+	printf("P2Pool %s\n", p2pool::VERSION);
+}
+
 void memory_tracking_start();
 void memory_tracking_stop();
 
@@ -88,6 +94,11 @@ int main(int argc, char* argv[])
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h")) {
 			p2pool_usage();
+			return 0;
+		}
+
+		if (strcmp(argv[i], "--version") || strcmp(argv[i], "/version") || strcmp(argv[i], "-v") || strcmp(argv[i], "/v")) {
+			p2pool_version();
 			return 0;
 		}
 	}
