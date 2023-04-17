@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include <map>
 
 namespace p2pool {
 
@@ -110,9 +111,9 @@ public:
 		size_t m_dataCapacity = 0;
 	};
 
-	std::vector<WriteBuf*> m_writeBuffers;
+	std::multimap<size_t, WriteBuf*> m_writeBuffers;
 
-	WriteBuf* get_write_buffer();
+	WriteBuf* get_write_buffer(size_t size_hint);
 	void return_write_buffer(WriteBuf* buf);
 
 	struct SendCallbackBase

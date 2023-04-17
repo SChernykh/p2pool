@@ -492,8 +492,6 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		return true;
 	}
 
-	WriteBuf* buf = get_write_buffer();
-
 	// callback_buf is used in only 1 thread, so it's safe
 	static uint8_t callback_buf[WRITE_BUF_SIZE];
 	const size_t bytes_written = callback(callback_buf, sizeof(callback_buf));
@@ -505,9 +503,10 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 
 	if (bytes_written == 0) {
 		LOGWARN(1, "send callback wrote 0 bytes, nothing to do");
-		return_write_buffer(buf);
 		return true;
 	}
+
+	WriteBuf* buf = get_write_buffer(bytes_written);
 
 	buf->m_write.data = buf;
 	buf->m_client = client;
@@ -544,14 +543,17 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	server_event_loop_thread = true;
 	TCPServer* server = static_cast<TCPServer*>(data);
 
-	server->m_writeBuffers.resize(DEFAULT_BACKLOG);
 	server->m_preallocatedClients.reserve(DEFAULT_BACKLOG);
 	for (size_t i = 0; i < DEFAULT_BACKLOG; ++i) {
 		WriteBuf* wb = new WriteBuf();
+		const size_t capacity = wb->m_dataCapacity;
+
 		Client* c = server->m_allocateNewClient();
+
 		ASAN_POISON_MEMORY_REGION(wb, sizeof(WriteBuf));
 		ASAN_POISON_MEMORY_REGION(c, c->size());
-		server->m_writeBuffers[i] = wb;
+
+		server->m_writeBuffers.emplace(capacity, wb);
 		server->m_preallocatedClients.emplace_back(c);
 	}
 
@@ -565,7 +567,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
 	}
 
-	for (WriteBuf* buf : server->m_writeBuffers) {
+	for (const auto& it : server->m_writeBuffers) {
+		WriteBuf* buf = it.second;
+
 		ASAN_UNPOISON_MEMORY_REGION(buf, sizeof(WriteBuf));
 		if (buf->m_data) {
 			ASAN_UNPOISON_MEMORY_REGION(buf->m_data, buf->m_dataCapacity);
@@ -861,13 +865,20 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::WriteBuf* TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::get_write_buffer()
+typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::WriteBuf* TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::get_write_buffer(size_t size_hint)
 {
 	WriteBuf* buf;
 
 	if (!m_writeBuffers.empty()) {
-		buf = m_writeBuffers.back();
-		m_writeBuffers.pop_back();
+		// Try to find the smallest buffer that still has enough capacity
+		// If there is no buffer with enough capacity, just take the largest available buffer
+		auto it = m_writeBuffers.lower_bound(size_hint);
+		if (it == m_writeBuffers.end()) {
+			it = std::prev(it);
+		}
+
+		buf = it->second;
+		m_writeBuffers.erase(it);
 
 		ASAN_UNPOISON_MEMORY_REGION(buf, sizeof(WriteBuf));
 		if (buf->m_data) {
@@ -884,12 +895,14 @@ typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::WriteBuf* TCPServer<READ_BUF_
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::return_write_buffer(WriteBuf* buf)
 {
+	const size_t capacity = buf->m_dataCapacity;
+
 	if (buf->m_data) {
-		ASAN_POISON_MEMORY_REGION(buf->m_data, buf->m_dataCapacity);
+		ASAN_POISON_MEMORY_REGION(buf->m_data, capacity);
 	}
 	ASAN_POISON_MEMORY_REGION(buf, sizeof(WriteBuf));
 
-	m_writeBuffers.push_back(buf);
+	m_writeBuffers.emplace(capacity, buf);
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
