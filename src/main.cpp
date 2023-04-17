@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 
-		if (strcmp(argv[i], "--version") || strcmp(argv[i], "/version") || strcmp(argv[i], "-v") || strcmp(argv[i], "/v")) {
+		if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "/version") || !strcmp(argv[i], "-v") || !strcmp(argv[i], "/v")) {
 			p2pool_version();
 			return 0;
 		}
