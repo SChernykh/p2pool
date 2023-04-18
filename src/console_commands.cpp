@@ -25,6 +25,8 @@
 #include "miner.h"
 #endif
 #include "side_chain.h"
+#include "p2pool_api.h"
+#include "params.h"
 
 static constexpr char log_category_prefix[] = "ConsoleCommands ";
 
@@ -98,6 +100,16 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	if (err) {
 		LOGERR(1, "uv_read_start failed, error " << uv_err_name(err));
 		throw std::exception();
+	}
+
+	if (m_pool->api() && m_pool->params().m_localStats) {
+		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
+			[stdin_type, this](log::Stream& s)
+			{
+				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
+					<< ",\"tcp_port\":" << m_listenPort
+					<< "}";
+			});
 	}
 }
 
