@@ -28,38 +28,46 @@
 
 static constexpr char log_category_prefix[] = "ConsoleCommands ";
 
+static constexpr int DEFAULT_BACKLOG = 1;
+
+#include "tcp_server.inl"
+
 namespace p2pool {
 
 ConsoleCommands::ConsoleCommands(p2pool* pool)
-	: m_pool(pool)
-	, m_loop{}
-	, m_shutdownAsync{}
+	: TCPServer(ConsoleClient::allocate)
+	, m_pool(pool)
 	, m_tty{}
 	, m_stdin_pipe{}
 	, m_stdin_handle(nullptr)
-	, m_loopThread{}
 	, m_readBuf{}
 	, m_readBufInUse(false)
 {
+	std::random_device rd;
+
+	for (int i = 0; i < 10; ++i) {
+		if (start_listening(false, "127.0.0.1", 49152 + (rd() % 16384))) {
+			break;
+		}
+	}
+
+	if (m_listenPort < 0) {
+		LOGERR(1, "failed to listen on TCP port");
+		throw std::exception();
+	}
+
+	int err = uv_thread_create(&m_loopThread, loop, this);
+	if (err) {
+		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
+		PANIC_STOP();
+	}
+
 	const uv_handle_type stdin_type = uv_guess_handle(0);
 	LOGINFO(3, "uv_guess_handle returned " << static_cast<int>(stdin_type));
 	if (stdin_type != UV_TTY && stdin_type != UV_NAMED_PIPE) {
 		LOGERR(1, "tty or named pipe is not available");
 		throw std::exception();
 	}
-
-	int err = uv_loop_init(&m_loop);
-	if (err) {
-		LOGERR(1, "failed to create event loop, error " << uv_err_name(err));
-		throw std::exception();
-	}
-
-	err = uv_async_init(&m_loop, &m_shutdownAsync, on_shutdown);
-	if (err) {
-		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		throw std::exception();
-	}
-	m_shutdownAsync.data = this;
 
 	if (stdin_type == UV_TTY) {
 		LOGINFO(3, "processing stdin as UV_TTY");
@@ -91,19 +99,16 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		LOGERR(1, "uv_read_start failed, error " << uv_err_name(err));
 		throw std::exception();
 	}
-
-	err = uv_thread_create(&m_loopThread, loop, this);
-	if (err) {
-		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		throw std::exception();
-	}
 }
 
 ConsoleCommands::~ConsoleCommands()
 {
-	uv_async_send(&m_shutdownAsync);
-	uv_thread_join(&m_loopThread);
-	LOGINFO(1, "stopped");
+	shutdown_tcp();
+}
+
+void ConsoleCommands::on_shutdown()
+{
+	uv_close(reinterpret_cast<uv_handle_t*>(m_stdin_handle), nullptr);
 }
 
 typedef struct strconst {
@@ -273,46 +278,7 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 	ConsoleCommands* pThis = static_cast<ConsoleCommands*>(stream->data);
 
 	if (nread > 0) {
-		std::string& command = pThis->m_command;
-		command.append(buf->base, nread);
-
-		do {
-			size_t k = command.find_first_of("\r\n");
-			if (k == std::string::npos) {
-				break;
-			}
-			command[k] = '\0';
-
-			cmd* c = cmds;
-			for (; c->name.len; ++c) {
-				if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
-					const char* args = (c->name.len + 1 <= k) ? (command.c_str() + c->name.len + 1) : "";
-
-					// Skip spaces
-					while ((args[0] == ' ') || (args[0] == '\t')) {
-						++args;
-					}
-
-					// Check if an argument is required
-					if (strlen(c->arg) && !strlen(args)) {
-						LOGWARN(0, c->name.str << " requires arguments");
-						do_help(nullptr, nullptr);
-						break;
-					}
-
-					c->func(pThis->m_pool, args);
-					break;
-				}
-			}
-
-			if (!c->name.len) {
-				LOGWARN(0, "Unknown command " << command.c_str());
-				do_help(nullptr, nullptr);
-			}
-
-			k = command.find_first_not_of("\r\n", k + 1);
-			command.erase(0, k);
-		} while (true);
+		pThis->process_input(pThis->m_command, buf->base, static_cast<uint32_t>(nread));
 	}
 	else if (nread < 0) {
 		LOGWARN(4, "read error " << uv_err_name(static_cast<int>(nread)));
@@ -321,23 +287,48 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 	pThis->m_readBufInUse = false;
 }
 
-void ConsoleCommands::loop(void* data)
+
+void ConsoleCommands::process_input(std::string& command, char* data, uint32_t size)
 {
-	LOGINFO(1, "event loop started");
+	command.append(data, size);
 
-	ConsoleCommands* pThis = static_cast<ConsoleCommands*>(data);
+	do {
+		size_t k = command.find_first_of("\r\n");
+		if (k == std::string::npos) {
+			break;
+		}
+		command[k] = '\0';
 
-	int err = uv_run(&pThis->m_loop, UV_RUN_DEFAULT);
-	if (err) {
-		LOGWARN(1, "uv_run returned " << err);
-	}
+		cmd* c = cmds;
+		for (; c->name.len; ++c) {
+			if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
+				const char* args = (c->name.len + 1 <= k) ? (command.c_str() + c->name.len + 1) : "";
 
-	err = uv_loop_close(&pThis->m_loop);
-	if (err) {
-		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
-	}
+				// Skip spaces
+				while ((args[0] == ' ') || (args[0] == '\t')) {
+					++args;
+				}
 
-	LOGINFO(1, "event loop stopped");
+				// Check if an argument is required
+				if (strlen(c->arg) && !strlen(args)) {
+					LOGWARN(0, c->name.str << " requires arguments");
+					do_help(nullptr, nullptr);
+					break;
+				}
+
+				c->func(m_pool, args);
+				break;
+			}
+		}
+
+		if (!c->name.len) {
+			LOGWARN(0, "Unknown command " << command.c_str());
+			do_help(nullptr, nullptr);
+		}
+
+		k = command.find_first_not_of("\r\n", k + 1);
+		command.erase(0, k);
+	} while (true);
 }
 
 } // namespace p2pool

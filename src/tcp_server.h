@@ -138,7 +138,6 @@ public:
 	FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, SendCallback<T>(std::move(callback))); }
 
 private:
-	static void loop(void* data);
 	static void on_new_connection(uv_stream_t* server, int status);
 	static void on_connection_close(uv_handle_t* handle);
 	static void on_connection_error(uv_handle_t* handle);
@@ -156,10 +155,14 @@ private:
 
 	std::vector<uv_tcp_t*> m_listenSockets6;
 	std::vector<uv_tcp_t*> m_listenSockets;
-	uv_thread_t m_loopThread;
 
 protected:
+	uv_thread_t m_loopThread;
+
+	static void loop(void* data);
+
 	void start_listening(const std::string& listen_addresses, bool upnp);
+	bool start_listening(bool is_v6, const std::string& ip, int port, std::string address = std::string());
 
 #ifdef WITH_UPNP
 	int m_portMapping;

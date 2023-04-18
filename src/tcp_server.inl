@@ -131,6 +131,102 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 }
 
 template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
+bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(bool is_v6, const std::string& ip, int port, std::string address)
+{
+	if ((m_listenPort >= 0) && (m_listenPort != port)) {
+		LOGERR(1, "all sockets must be listening on the same port number, fix the command line");
+		return false;
+	}
+
+	uv_tcp_t* socket = new uv_tcp_t();
+
+	int err = uv_tcp_init(&m_loop, socket);
+	if (err) {
+		LOGERR(1, "failed to create tcp server handle, error " << uv_err_name(err));
+		delete socket;
+		return false;
+	}
+	socket->data = this;
+
+	ON_SCOPE_LEAVE([is_v6, this, socket]()
+	{
+		const std::vector<uv_tcp_t*>& v = is_v6 ? m_listenSockets6 : m_listenSockets;
+		if (std::find(v.begin(), v.end(), socket) == v.end()) {
+			uv_close(reinterpret_cast<uv_handle_t*>(socket), [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
+		}
+	});
+
+	err = uv_tcp_nodelay(socket, 1);
+	if (err) {
+		LOGERR(1, "failed to set tcp_nodelay on tcp server handle, error " << uv_err_name(err));
+		return false;
+	}
+
+	if (is_v6) {
+		if (address.empty()) {
+			char buf[64] = {};
+			log::Stream s(buf);
+			s << '[' << ip << "]:" << port;
+			address = buf;
+		}
+
+		sockaddr_in6 addr6;
+		err = uv_ip6_addr(ip.c_str(), port, &addr6);
+		if (err) {
+			LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
+			return false;
+		}
+
+		err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr6), UV_TCP_IPV6ONLY);
+		if (err) {
+			LOGERR(1, "failed to bind tcp server IPv6 socket " << address << ", error " << uv_err_name(err));
+			return false;
+		}
+	}
+	else {
+		if (address.empty()) {
+			char buf[64] = {};
+			log::Stream s(buf);
+			s << ip << ':' << port;
+			address = buf;
+		}
+
+		sockaddr_in addr;
+		err = uv_ip4_addr(ip.c_str(), port, &addr);
+		if (err) {
+			LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
+			return false;
+		}
+
+		err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr), 0);
+		if (err) {
+			LOGERR(1, "failed to bind tcp server IPv4 socket " << address << ", error " << uv_err_name(err));
+			return false;
+		}
+	}
+
+	err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
+	if (err) {
+		LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
+		return false;
+	}
+
+	if (is_v6) {
+		m_listenSockets6.push_back(socket);
+	}
+	else {
+		m_listenSockets.push_back(socket);
+	}
+
+	if (m_listenPort < 0) {
+		m_listenPort = port;
+	}
+
+	LOGINFO(1, "listening on " << log::Gray() << address);
+	return true;
+}
+
+template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string& listen_addresses, bool upnp)
 {
 	if (listen_addresses.empty()) {
@@ -139,74 +235,11 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 	}
 
 	parse_address_list(listen_addresses,
-		[this](bool is_v6, const std::string& address, const std::string& ip, int port)
+		[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
 		{
-			if (m_listenPort < 0) {
-				m_listenPort = port;
-			}
-			else if (m_listenPort != port) {
-				LOGERR(1, "all sockets must be listening on the same port number, fix the command line");
+			if (!start_listening(is_v6, ip, port)) {
 				PANIC_STOP();
 			}
-
-			uv_tcp_t* socket = new uv_tcp_t();
-
-			if (is_v6) {
-				m_listenSockets6.push_back(socket);
-			}
-			else {
-				m_listenSockets.push_back(socket);
-			}
-
-			int err = uv_tcp_init(&m_loop, socket);
-			if (err) {
-				LOGERR(1, "failed to create tcp server handle, error " << uv_err_name(err));
-				PANIC_STOP();
-			}
-			socket->data = this;
-
-			err = uv_tcp_nodelay(socket, 1);
-			if (err) {
-				LOGERR(1, "failed to set tcp_nodelay on tcp server handle, error " << uv_err_name(err));
-				PANIC_STOP();
-			}
-
-			if (is_v6) {
-				sockaddr_in6 addr6;
-				err = uv_ip6_addr(ip.c_str(), port, &addr6);
-				if (err) {
-					LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
-					PANIC_STOP();
-				}
-
-				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr6), UV_TCP_IPV6ONLY);
-				if (err) {
-					LOGERR(1, "failed to bind tcp server IPv6 socket " << address << ", error " << uv_err_name(err));
-					PANIC_STOP();
-				}
-			}
-			else {
-				sockaddr_in addr;
-				err = uv_ip4_addr(ip.c_str(), port, &addr);
-				if (err) {
-					LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
-					PANIC_STOP();
-				}
-
-				err = uv_tcp_bind(socket, reinterpret_cast<sockaddr*>(&addr), 0);
-				if (err) {
-					LOGERR(1, "failed to bind tcp server IPv4 socket " << address << ", error " << uv_err_name(err));
-					PANIC_STOP();
-				}
-			}
-
-			err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
-			if (err) {
-				LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
-				PANIC_STOP();
-			}
-
-			LOGINFO(1, "listening on " << log::Gray() << address);
 		});
 
 #ifdef WITH_UPNP
