@@ -55,6 +55,7 @@ set(SOURCES
 	../src/pow_hash.cpp
 	../src/side_chain.cpp
 	../src/stratum_server.cpp
+	../src/tcp_server.cpp
 	../src/util.cpp
 	../src/wallet.cpp
 	../src/zmq_reader.cpp

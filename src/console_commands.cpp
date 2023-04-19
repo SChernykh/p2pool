@@ -32,12 +32,10 @@ static constexpr char log_category_prefix[] = "ConsoleCommands ";
 
 static constexpr int DEFAULT_BACKLOG = 1;
 
-#include "tcp_server.inl"
-
 namespace p2pool {
 
 ConsoleCommands::ConsoleCommands(p2pool* pool)
-	: TCPServer(ConsoleClient::allocate)
+	: TCPServer(DEFAULT_BACKLOG, ConsoleClient::allocate)
 	, m_pool(pool)
 	, m_tty{}
 	, m_stdin_pipe{}

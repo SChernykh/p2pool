@@ -275,6 +275,27 @@ struct PerfTimer
 #define PERFLOG(level, name) PerfTimer CONCAT(perf_timer_, __LINE__)(level, name)
 #endif
 
+template<typename R, typename ...Args>
+struct Callback
+{
+	struct Base
+	{
+		virtual ~Base() {}
+		virtual R operator()(Args...) = 0;
+	};
+
+	template<typename T>
+	struct Derived : public Base
+	{
+		explicit FORCEINLINE Derived(T&& cb) : m_cb(std::move(cb)) {}
+		R operator()(Args... args) override { return m_cb(args...); }
+
+	private:
+		Derived& operator=(Derived&&) = delete;
+		T m_cb;
+	};
+};
+
 } // namespace p2pool
 
 void memory_tracking_start();

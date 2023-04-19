@@ -41,12 +41,10 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 
 static constexpr size_t SEND_BUF_MIN_SIZE = 256;
 
-#include "tcp_server.inl"
-
 namespace p2pool {
 
 P2PServer::P2PServer(p2pool* pool)
-	: TCPServer(P2PClient::allocate)
+	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate)
 	, m_pool(pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
 	, m_cacheLoaded(false)
@@ -62,6 +60,8 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_lookForMissingBlocks(true)
 	, m_fastestPeer(nullptr)
 {
+	m_callbackBuf.resize(P2P_BUF_SIZE);
+
 	m_blockDeserializeBuf.reserve(131072);
 
 	// Diffuse the initial state in case it has low quality
@@ -1188,7 +1188,8 @@ void P2PServer::check_block_template()
 }
 
 P2PServer::P2PClient::P2PClient()
-	: m_peerId(0)
+	: Client(m_p2pReadBuf, sizeof(m_p2pReadBuf))
+	, m_peerId(0)
 	, m_connectedTime(0)
 	, m_broadcastMaxHeight(0)
 	, m_expectedMessage(MessageId::HANDSHAKE_CHALLENGE)
@@ -1211,6 +1212,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastBlockrequestTimestamp(0)
 	, m_broadcastedHashes{}
 {
+	m_p2pReadBuf[0] = '\0';
 }
 
 void P2PServer::on_shutdown()
@@ -1352,7 +1354,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 		return false;
 	}
 
-	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + sizeof(m_readBuf))) {
+	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
 		LOGERR(1, "peer " << static_cast<char*>(m_addrString) << " invalid data pointer or size in on_read()");
 		ban(DEFAULT_BAN_TIME);
 		server->remove_peer_from_list(this);
@@ -1811,9 +1813,8 @@ bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const 
 
 bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 {
-	check_event_loop_thread(__func__);
-
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	server->check_event_loop_thread(__func__);
 
 	uint8_t challenge[CHALLENGE_SIZE];
 	memcpy(challenge, buf, CHALLENGE_SIZE);
@@ -2084,9 +2085,9 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 
 bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 {
-	check_event_loop_thread(__func__);
-
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	server->check_event_loop_thread(__func__);
+
 	const uint64_t cur_time = seconds_since_epoch();
 	const bool first = (m_prevIncomingPeerListRequest == 0);
 

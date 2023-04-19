@@ -87,7 +87,7 @@ TEST(pool_block, deserialize)
 	class RandomX_Hasher_Test : public RandomX_Hasher_Base
 	{
 	public:
-		bool calculate(const void* data, size_t size, uint64_t, const hash&, hash& result, bool force_light_mode) override
+		bool calculate(const void* data, size_t size, uint64_t, const hash&, hash& result, bool /*force_light_mode*/) override
 		{
 			if (size == 76) {
 				char buf[76 * 2 + 1];

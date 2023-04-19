@@ -28,7 +28,7 @@ class BlockTemplate;
 static constexpr size_t STRATUM_BUF_SIZE = log::Stream::BUF_SIZE + 1;
 static constexpr int DEFAULT_STRATUM_PORT = 3333;
 
-class StratumServer : public TCPServer<STRATUM_BUF_SIZE, STRATUM_BUF_SIZE>
+class StratumServer : public TCPServer
 {
 public:
 	explicit StratumServer(p2pool *pool);
@@ -51,6 +51,8 @@ public:
 		bool process_request(char* data, uint32_t size);
 		bool process_login(rapidjson::Document& doc, uint32_t id);
 		bool process_submit(rapidjson::Document& doc, uint32_t id);
+
+		alignas(8) char m_stratumReadBuf[STRATUM_BUF_SIZE];
 
 		uint32_t m_rpcId;
 		uint32_t m_perConnectionJobId;
@@ -95,6 +97,8 @@ public:
 	void reset_share_counters();
 
 private:
+	const char* get_category() const override { return "StratumServer "; }
+
 	void print_stratum_status() const;
 	void update_auto_diff(StratumClient* client, const uint64_t timestamp, const uint64_t hashes);
 

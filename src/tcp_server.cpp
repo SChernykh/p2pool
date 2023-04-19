@@ -15,15 +15,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <thread>
+#include "common.h"
+#include "tcp_server.h"
 
-static thread_local bool server_event_loop_thread = false;
+static thread_local void* server_event_loop_thread = nullptr;
+static thread_local const char* log_category_prefix = "TCPServer ";
 
 namespace p2pool {
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback allocate_new_client)
+TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client)
 	: m_allocateNewClient(allocate_new_client)
+	, m_defaultBacklog(default_backlog)
 	, m_loopThread{}
 #ifdef WITH_UPNP
 	, m_portMapping(0)
@@ -71,9 +73,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::TCPServer(allocate_client_callback all
 	m_connectedClientsList->m_prev = m_connectedClientsList;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-// cppcheck-suppress functionStatic
-TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::~TCPServer()
+TCPServer::~TCPServer()
 {
 	if (m_finished.load() == 0) {
 		LOGERR(1, "TCP wasn't shutdown properly");
@@ -83,10 +83,7 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::~TCPServer()
 	delete m_connectedClientsList;
 }
 
-
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-template<typename T>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::string& address_list, T callback)
+void TCPServer::parse_address_list_internal(const std::string& address_list, Callback<void, bool, const std::string&, const std::string&, int>::Base&& callback)
 {
 	if (address_list.empty()) {
 		return;
@@ -120,7 +117,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 				callback(is_v6, address, ip, port);
 			}
 			else {
-				LOGWARN(1, "invalid IP:port " << address);
+				error_invalid_ip(address);
 			}
 		}
 
@@ -130,8 +127,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::parse_address_list(const std::str
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(bool is_v6, const std::string& ip, int port, std::string address)
+bool TCPServer::start_listening(bool is_v6, const std::string& ip, int port, std::string address)
 {
 	if ((m_listenPort >= 0) && (m_listenPort != port)) {
 		LOGERR(1, "all sockets must be listening on the same port number, fix the command line");
@@ -205,7 +201,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(bool is_v6, const
 		}
 	}
 
-	err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), DEFAULT_BACKLOG, on_new_connection);
+	err = uv_listen(reinterpret_cast<uv_stream_t*>(socket), m_defaultBacklog, on_new_connection);
 	if (err) {
 		LOGERR(1, "failed to listen on tcp server socket " << address << ", error " << uv_err_name(err));
 		return false;
@@ -226,8 +222,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(bool is_v6, const
 	return true;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string& listen_addresses, bool upnp)
+void TCPServer::start_listening(const std::string& listen_addresses, bool upnp)
 {
 	if (listen_addresses.empty()) {
 		LOGERR(1, "listen address not set");
@@ -257,8 +252,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::start_listening(const std::string
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const char* ip, int port)
+bool TCPServer::connect_to_peer(bool is_v6, const char* ip, int port)
 {
 	if (!ip || (strlen(ip) > sizeof(Client::m_addrString) - 16)) {
 		LOGERR(1, "failed to parse IP address, too long");
@@ -290,8 +284,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 	return connect_to_peer(client);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
+bool TCPServer::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
 {
 	if (m_finished.load()) {
 		return false;
@@ -307,8 +300,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(bool is_v6, const
 	return connect_to_peer(client);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
+bool TCPServer::is_banned(const raw_ip& ip)
 {
 	if (ip.is_localhost()) {
 		return false;
@@ -330,8 +322,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::is_banned(const raw_ip& ip)
 	return false;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
+bool TCPServer::connect_to_peer(Client* client)
 {
 	if (is_banned(client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
@@ -360,7 +351,11 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 		return false;
 	}
 
-	static_assert(sizeof(client->m_readBuf) >= sizeof(uv_connect_t), "READ_BUF_SIZE must be large enough");
+	if (client->m_readBufSize < sizeof(uv_connect_t)) {
+		LOGERR(1, "client read buf size is too small (" << client->m_readBufSize << " bytes), expected at least " << sizeof(uv_connect_t) << " bytes");
+		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
+		return false;
+	}
 
 	uv_connect_t* connect_request = reinterpret_cast<uv_connect_t*>(client->m_readBuf);
 	memset(connect_request, 0, sizeof(uv_connect_t));
@@ -412,17 +407,15 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::connect_to_peer(Client* client)
 }
 
 #ifdef P2POOL_DEBUGGING
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::check_event_loop_thread(const char* func)
+void TCPServer::check_event_loop_thread(const char* func) const
 {
-	if (!server_event_loop_thread) {
+	if (server_event_loop_thread != this) {
 		LOGERR(1, func << " called from another thread, this is not thread safe");
 	}
 }
 #endif
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets)
+void TCPServer::close_sockets(bool listen_sockets)
 {
 	check_event_loop_thread(__func__);
 
@@ -456,8 +449,12 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::close_sockets(bool listen_sockets
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
+void TCPServer::error_invalid_ip(const std::string& address)
+{
+	LOGERR(1, "invalid IP:port " << address);
+}
+
+void TCPServer::shutdown_tcp()
 {
 	if (m_finished.exchange(1)) {
 		return;
@@ -478,16 +475,14 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::shutdown_tcp()
 	LOGINFO(1, "stopped");
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_status()
+void TCPServer::print_status()
 {
 	LOGINFO(0, "status" <<
 		"\nConnections = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
 	);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::ban(const raw_ip& ip, uint64_t seconds)
+void TCPServer::ban(const raw_ip& ip, uint64_t seconds)
 {
 	if (ip.is_localhost()) {
 		return;
@@ -499,8 +494,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::ban(const raw_ip& ip, uint64_t se
 	m_bans[ip] = ban_time;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_bans()
+void TCPServer::print_bans()
 {
 	using namespace std::chrono;
 	const auto cur_time = steady_clock::now();
@@ -515,8 +509,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::print_bans()
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, SendCallbackBase&& callback)
+bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback)
 {
 	check_event_loop_thread(__func__);
 
@@ -525,12 +518,10 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		return true;
 	}
 
-	// callback_buf is used in only 1 thread, so it's safe
-	static uint8_t callback_buf[WRITE_BUF_SIZE];
-	const size_t bytes_written = callback(callback_buf, sizeof(callback_buf));
+	const size_t bytes_written = callback(m_callbackBuf.data(), m_callbackBuf.size());
 
-	if (bytes_written > WRITE_BUF_SIZE) {
-		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << WRITE_BUF_SIZE << " bytes");
+	if (bytes_written > m_callbackBuf.size()) {
+		LOGERR(0, "send callback wrote " << bytes_written << " bytes, expected no more than " << m_callbackBuf.size() << " bytes");
 		PANIC_STOP();
 	}
 
@@ -553,7 +544,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 		}
 	}
 
-	memcpy(buf->m_data, callback_buf, bytes_written);
+	memcpy(buf->m_data, m_callbackBuf.data(), bytes_written);
 
 	uv_buf_t bufs[1];
 	bufs[0].base = reinterpret_cast<char*>(buf->m_data);
@@ -569,15 +560,16 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::send_internal(Client* client, Sen
 	return true;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
+void TCPServer::loop(void* data)
 {
-	LOGINFO(1, "event loop started");
-	server_event_loop_thread = true;
 	TCPServer* server = static_cast<TCPServer*>(data);
+	log_category_prefix = server->get_category();
 
-	server->m_preallocatedClients.reserve(DEFAULT_BACKLOG);
-	for (size_t i = 0; i < DEFAULT_BACKLOG; ++i) {
+	LOGINFO(1, "event loop started");
+	server_event_loop_thread = data;
+
+	server->m_preallocatedClients.reserve(server->m_defaultBacklog);
+	for (int i = 0; i < server->m_defaultBacklog; ++i) {
 		WriteBuf* wb = new WriteBuf();
 		const size_t capacity = wb->m_dataCapacity;
 
@@ -622,8 +614,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::loop(void* data)
 	LOGINFO(1, "event loop stopped");
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_connection(uv_stream_t* server, int status)
+void TCPServer::on_new_connection(uv_stream_t* server, int status)
 {
 	TCPServer* pThis = static_cast<TCPServer*>(server->data);
 
@@ -639,17 +630,16 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_connection(uv_stream_t* se
 	pThis->on_new_client(server);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* handle)
+void TCPServer::on_connection_close(uv_handle_t* handle)
 {
-	check_event_loop_thread(__func__);
-
 	Client* client = static_cast<Client*>(handle->data);
 	TCPServer* owner = client->m_owner;
 
 	LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " disconnected");
 
 	if (owner) {
+		owner->check_event_loop_thread(__func__);
+
 		Client* prev_in_list = client->m_prev;
 		Client* next_in_list = client->m_next;
 
@@ -672,15 +662,13 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_close(uv_handle_t* 
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connection_error(uv_handle_t* handle)
+void TCPServer::on_connection_error(uv_handle_t* handle)
 {
 	Client* client = reinterpret_cast<Client*>(handle->data);
 	client->m_owner->return_client(client);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int status)
+void TCPServer::on_connect(uv_connect_t* req, int status)
 {
 	Client* client = reinterpret_cast<Client*>(req->data);
 
@@ -706,8 +694,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_connect(uv_connect_t* req, int
 	server->on_new_client(nullptr, client);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server)
+void TCPServer::on_new_client(uv_stream_t* server)
 {
 	if (m_finished.load()) {
 		return;
@@ -741,8 +728,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 	on_new_client(server, client);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server, Client* client)
+void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 {
 	check_event_loop_thread(__func__);
 
@@ -836,8 +822,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_new_client(uv_stream_t* server
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
+void TCPServer::on_shutdown(uv_async_t* async)
 {
 	TCPServer* s = reinterpret_cast<TCPServer*>(async->data);
 	s->on_shutdown();
@@ -897,8 +882,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::on_shutdown(uv_async_t* async)
 		});
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::WriteBuf* TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::get_write_buffer(size_t size_hint)
+TCPServer::WriteBuf* TCPServer::get_write_buffer(size_t size_hint)
 {
 	WriteBuf* buf;
 
@@ -925,8 +909,7 @@ typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::WriteBuf* TCPServer<READ_BUF_
 	return buf;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::return_write_buffer(WriteBuf* buf)
+void TCPServer::return_write_buffer(WriteBuf* buf)
 {
 	const size_t capacity = buf->m_dataCapacity;
 
@@ -938,8 +921,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::return_write_buffer(WriteBuf* buf
 	m_writeBuffers.emplace(capacity, buf);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client* TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::get_client()
+TCPServer::Client* TCPServer::get_client()
 {
 	Client* c;
 
@@ -957,16 +939,16 @@ typename TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client* TCPServer<READ_BUF_SI
 	return c;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::return_client(Client* c)
+void TCPServer::return_client(Client* c)
 {
 	ASAN_POISON_MEMORY_REGION(c, c->size());
 	m_preallocatedClients.push_back(c);
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
-	: m_owner(nullptr)
+TCPServer::Client::Client(char* read_buf, size_t size)
+	: m_readBuf(read_buf)
+	, m_readBufSize(static_cast<uint32_t>(size))
+	, m_owner(nullptr)
 	, m_prev(nullptr)
 	, m_next(nullptr)
 	, m_socket{}
@@ -982,11 +964,10 @@ TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::Client()
 	, m_resetCounter{ 0 }
 {
 	m_readBuf[0] = '\0';
-	m_readBuf[READ_BUF_SIZE - 1] = '\0';
+	m_readBuf[m_readBufSize - 1] = '\0';
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
+void TCPServer::Client::reset()
 {
 	m_resetCounter.fetch_add(1);
 
@@ -1004,11 +985,10 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::reset()
 	m_addrString[0] = '\0';
 	m_socks5ProxyState = Socks5ProxyState::Default;
 	m_readBuf[0] = '\0';
-	m_readBuf[READ_BUF_SIZE - 1] = '\0';
+	m_readBuf[m_readBufSize - 1] = '\0';
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_alloc(uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf)
+void TCPServer::Client::on_alloc(uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf)
 {
 	Client* pThis = static_cast<Client*>(handle->data);
 
@@ -1019,20 +999,19 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_alloc(uv_handle_t* han
 		return;
 	}
 
-	if (pThis->m_numRead >= sizeof(pThis->m_readBuf)) {
+	if (pThis->m_numRead >= pThis->m_readBufSize) {
 		LOGWARN(4, "client " << static_cast<const char*>(pThis->m_addrString) << " read buffer is full");
 		buf->len = 0;
 		buf->base = nullptr;
 		return;
 	}
 
-	buf->len = sizeof(pThis->m_readBuf) - pThis->m_numRead;
+	buf->len = pThis->m_readBufSize - pThis->m_numRead;
 	buf->base = pThis->m_readBuf + pThis->m_numRead;
 	pThis->m_readBufInUse = true;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
+void TCPServer::Client::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
 	Client* client = static_cast<Client*>(stream->data);
 	client->m_readBufInUse = false;
@@ -1067,10 +1046,9 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_read(uv_stream_t* stre
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_proxy_handshake(char* data, uint32_t size)
+bool TCPServer::Client::on_proxy_handshake(char* data, uint32_t size)
 {
-	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + sizeof(m_readBuf))) {
+	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
 		LOGERR(1, "peer " << static_cast<char*>(m_addrString) << " invalid data pointer or size in on_read()");
 		return false;
 	}
@@ -1189,8 +1167,7 @@ bool TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_proxy_handshake(char* 
 	return true;
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_write(uv_write_t* req, int status)
+void TCPServer::Client::on_write(uv_write_t* req, int status)
 {
 	WriteBuf* buf = static_cast<WriteBuf*>(req->data);
 	Client* client = buf->m_client;
@@ -1206,8 +1183,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::on_write(uv_write_t* req,
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::close()
+void TCPServer::Client::close()
 {
 	if (m_isClosing || !m_owner) {
 		// Already closed
@@ -1225,8 +1201,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::close()
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::ban(uint64_t seconds)
+void TCPServer::Client::ban(uint64_t seconds)
 {
 	if (m_addr.is_localhost()) {
 		return;
@@ -1238,8 +1213,7 @@ void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::ban(uint64_t seconds)
 	}
 }
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
-void TCPServer<READ_BUF_SIZE, WRITE_BUF_SIZE>::Client::init_addr_string()
+void TCPServer::Client::init_addr_string()
 {
 	const char* addr_str;
 	char addr_str_buf[64];

@@ -64,22 +64,7 @@ void uv_rwlock_init_checked(uv_rwlock_t* lock);
 void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async_cb);
 uv_loop_t* uv_default_loop_checked();
 
-struct UV_LoopCallbackBase
-{
-	virtual ~UV_LoopCallbackBase() {}
-	virtual void operator()() = 0;
-};
-
-template<typename T>
-struct UV_LoopCallback : public UV_LoopCallbackBase
-{
-	explicit FORCEINLINE UV_LoopCallback(T&& cb) : m_cb(std::move(cb)) {}
-	void operator()() override { m_cb(); }
-
-private:
-	UV_LoopCallback& operator=(UV_LoopCallback&&) = delete;
-	T m_cb;
-};
+typedef Callback<void>::Base UV_LoopCallbackBase;
 
 struct UV_LoopUserData
 {
@@ -147,7 +132,7 @@ bool CallOnLoop(uv_loop_t* loop, T&& callback)
 		return false;
 	}
 
-	UV_LoopCallbackBase* cb = new UV_LoopCallback<T>(std::move(callback));
+	UV_LoopCallbackBase* cb = new Callback<void>::Derived<T>(std::move(callback));
 	{
 		MutexLock lock(data->m_callbacksLock);
 		data->m_callbacks.push_back(cb);

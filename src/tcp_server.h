@@ -22,18 +22,14 @@
 
 namespace p2pool {
 
-template<size_t READ_BUF_SIZE, size_t WRITE_BUF_SIZE>
 class TCPServer : public nocopy_nomove
 {
 public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	explicit TCPServer(allocate_client_callback allocate_new_client);
+	TCPServer(int default_backlog, allocate_client_callback allocate_new_client);
 	virtual ~TCPServer();
-
-	template<typename T>
-	void parse_address_list(const std::string& address_list, T callback);
 
 	bool connect_to_peer(bool is_v6, const char* ip, int port);
 
@@ -53,7 +49,7 @@ public:
 
 	struct Client
 	{
-		Client();
+		Client(char* read_buf, size_t size);
 		virtual ~Client() {}
 
 		virtual size_t size() const = 0;
@@ -74,7 +70,8 @@ public:
 
 		void init_addr_string();
 
-		alignas(8) char m_readBuf[READ_BUF_SIZE];
+		char* m_readBuf;
+		uint32_t m_readBufSize;
 
 		TCPServer* m_owner;
 
@@ -116,26 +113,14 @@ public:
 	WriteBuf* get_write_buffer(size_t size_hint);
 	void return_write_buffer(WriteBuf* buf);
 
-	struct SendCallbackBase
+	template<typename T>
+	FORCEINLINE static void parse_address_list(const std::string& address_list, T&& callback)
 	{
-		virtual ~SendCallbackBase() {}
-		virtual size_t operator()(void*, size_t) = 0;
-	};
+		return parse_address_list_internal(address_list, Callback<void, bool, const std::string&, const std::string&, int>::Derived<T>(std::move(callback)));
+	}
 
 	template<typename T>
-	struct SendCallback : public SendCallbackBase
-	{
-		explicit FORCEINLINE SendCallback(T&& callback) : m_callback(std::move(callback)) {}
-		size_t operator()(void* buf, size_t buf_size) override { return m_callback(buf, buf_size); }
-
-	private:
-		SendCallback& operator=(SendCallback&&) = delete;
-
-		T m_callback;
-	};
-
-	template<typename T>
-	FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, SendCallback<T>(std::move(callback))); }
+	FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback))); }
 
 private:
 	static void on_new_connection(uv_stream_t* server, int status);
@@ -147,20 +132,27 @@ private:
 
 	bool connect_to_peer(Client* client);
 
-	bool send_internal(Client* client, SendCallbackBase&& callback);
+	bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback);
 
 	allocate_client_callback m_allocateNewClient;
 
 	void close_sockets(bool listen_sockets);
+	static void error_invalid_ip(const std::string& address);
 
 	std::vector<uv_tcp_t*> m_listenSockets6;
 	std::vector<uv_tcp_t*> m_listenSockets;
 
 protected:
+	virtual const char* get_category() const { return "TCPServer "; }
+
+	std::vector<uint8_t> m_callbackBuf;
+	int m_defaultBacklog;
+
 	uv_thread_t m_loopThread;
 
 	static void loop(void* data);
 
+	static void parse_address_list_internal(const std::string& address_list, Callback<void, bool, const std::string&, const std::string&, int>::Base&& callback);
 	void start_listening(const std::string& listen_addresses, bool upnp);
 	bool start_listening(bool is_v6, const std::string& ip, int port, std::string address = std::string());
 
@@ -179,7 +171,7 @@ protected:
 	uv_loop_t m_loop;
 
 #ifdef P2POOL_DEBUGGING
-	static void check_event_loop_thread(const char *func);
+	void check_event_loop_thread(const char *func) const;
 #else
 	static FORCEINLINE void check_event_loop_thread(const char*) {}
 #endif

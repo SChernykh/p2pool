@@ -37,12 +37,10 @@ static constexpr int32_t BAD_SHARE_POINTS = -5;
 static constexpr int32_t GOOD_SHARE_POINTS = 1;
 static constexpr int32_t BAN_THRESHOLD_POINTS = -15;
 
-#include "tcp_server.inl"
-
 namespace p2pool {
 
 StratumServer::StratumServer(p2pool* pool)
-	: TCPServer(StratumClient::allocate)
+	: TCPServer(DEFAULT_BACKLOG, StratumClient::allocate)
 	, m_pool(pool)
 	, m_autoDiff(pool->params().m_autoDiff)
 	, m_rng(RandomDeviceSeed::instance)
@@ -57,6 +55,8 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_totalFailedShares(0)
 	, m_apiLastUpdateTime(0)
 {
+	m_callbackBuf.resize(STRATUM_BUF_SIZE);
+
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
@@ -1027,7 +1027,8 @@ void StratumServer::on_shutdown()
 }
 
 StratumServer::StratumClient::StratumClient()
-	: m_rpcId(0)
+	: Client(m_stratumReadBuf, sizeof(m_stratumReadBuf))
+	, m_rpcId(0)
 	, m_perConnectionJobId(0)
 	, m_connectedTime(0)
 	, m_jobs{}
@@ -1040,6 +1041,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_lastJobTarget(0)
 	, m_score(0)
 {
+	m_stratumReadBuf[0] = '\0';
 }
 
 void StratumServer::StratumClient::reset()
@@ -1072,7 +1074,7 @@ bool StratumServer::StratumClient::on_connect()
 
 bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 {
-	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + sizeof(m_readBuf))) {
+	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
 		LOGERR(1, "client: invalid data pointer or size in on_read()");
 		ban(DEFAULT_BAN_TIME);
 		return false;

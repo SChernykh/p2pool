@@ -36,7 +36,7 @@ static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;
 
 static constexpr uint32_t SUPPORTED_PROTOCOL_VERSION = PROTOCOL_VERSION_1_1;
 
-class P2PServer : public TCPServer<P2P_BUF_SIZE, P2P_BUF_SIZE>
+class P2PServer : public TCPServer
 {
 public:
 	enum class MessageId {
@@ -114,6 +114,8 @@ public:
 
 		const char* software_name() const;
 
+		alignas(8) char m_p2pReadBuf[P2P_BUF_SIZE];
+
 		uint64_t m_peerId;
 		uint64_t m_connectedTime;
 		uint64_t m_broadcastMaxHeight;
@@ -167,6 +169,8 @@ public:
 	const PoolBlock* get_block() const { return m_block; }
 
 private:
+	const char* get_category() const override { return "P2PServer "; }
+
 	p2pool* m_pool;
 	BlockCache* m_cache;
 	bool m_cacheLoaded;

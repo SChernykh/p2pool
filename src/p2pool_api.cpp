@@ -103,7 +103,7 @@ void p2pool_api::on_stop()
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync), nullptr);
 }
 
-void p2pool_api::dump_to_file_async_internal(Category category, const char* filename, DumpFileCallbackBase&& callback)
+void p2pool_api::dump_to_file_async_internal(Category category, const char* filename, Callback<void, log::Stream&>::Base&& callback)
 {
 	std::vector<char> buf(16384);
 	log::Stream s(buf.data(), buf.size());

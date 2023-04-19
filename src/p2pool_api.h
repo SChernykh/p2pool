@@ -38,7 +38,7 @@ public:
 	void on_stop();
 
 	template<typename T>
-	void set(Category category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, DumpFileCallback<T>(std::move(callback))); }
+	void set(Category category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, Callback<void, log::Stream&>::Derived<T>(std::move(callback))); }
 
 private:
 	void create_dir(const std::string& path);
@@ -54,25 +54,7 @@ private:
 		std::vector<char> buf;
 	};
 
-	struct DumpFileCallbackBase
-	{
-		virtual ~DumpFileCallbackBase() {}
-		virtual void operator()(log::Stream&) = 0;
-	};
-
-	template<typename T>
-	struct DumpFileCallback : public DumpFileCallbackBase
-	{
-		explicit FORCEINLINE DumpFileCallback(T&& callback) : m_callback(std::move(callback)) {}
-		void operator()(log::Stream& s) override { m_callback(s); }
-
-	private:
-		DumpFileCallback& operator=(DumpFileCallback&&) = delete;
-
-		T m_callback;
-	};
-
-	void dump_to_file_async_internal(Category category, const char* filename, DumpFileCallbackBase&& callback);
+	void dump_to_file_async_internal(Category category, const char* filename, Callback<void, log::Stream&>::Base&& callback);
 	void dump_to_file();
 	static void on_fs_open(uv_fs_t* req);
 	static void on_fs_write(uv_fs_t* req);

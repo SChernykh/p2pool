@@ -20,29 +20,17 @@
 namespace p2pool {
 namespace JSONRPCRequest {
 
-struct CallbackBase
-{
-	virtual ~CallbackBase() {}
-	virtual void operator()(const char* data, size_t size) = 0;
-};
-
-template<typename T>
-struct Callback : public CallbackBase
-{
-	explicit FORCEINLINE Callback(T&& cb) : m_cb(std::move(cb)) {}
-	void operator()(const char* data, size_t size) override { m_cb(data, size); }
-
-private:
-	Callback& operator=(Callback&&) = delete;
-	T m_cb;
-};
+typedef Callback<void, const char*, size_t>::Base CallbackBase;
 
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 
 template<typename T, typename U>
 FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
 {
-	Call(address, port, req, auth, proxy, new Callback<T>(std::move(cb)), new Callback<U>(std::move(close_cb)), loop);
+	typedef Callback<void, const char*, size_t>::Derived<T> CallbackT;
+	typedef Callback<void, const char*, size_t>::Derived<U> CallbackU;
+
+	Call(address, port, req, auth, proxy, new CallbackT(std::move(cb)), new CallbackU(std::move(close_cb)), loop);
 }
 
 } // namespace JSONRPCRequest

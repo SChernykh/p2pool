@@ -24,7 +24,7 @@ namespace p2pool {
 
 class p2pool;
 
-class ConsoleCommands : public TCPServer<256, 256>
+class ConsoleCommands : public TCPServer
 {
 public:
 	explicit ConsoleCommands(p2pool* pool);
@@ -32,6 +32,7 @@ public:
 
 	struct ConsoleClient : public Client
 	{
+		ConsoleClient() : Client(m_consoleReadBuf, sizeof(m_consoleReadBuf)) {}
 		~ConsoleClient() {}
 
 		static Client* allocate() { return new ConsoleClient(); }
@@ -41,19 +42,23 @@ public:
 		bool on_connect() override { return true; };
 		bool on_read(char* data, uint32_t size) override { static_cast<ConsoleCommands*>(m_owner)->process_input(m_command, data, size); return true; };
 
+		char m_consoleReadBuf[1024] = {};
+
 		std::string m_command;
 	};
 
 	void on_shutdown() override;
 
 private:
+	const char* get_category() const override { return "ConsoleCommands "; }
+
 	p2pool* m_pool;
 
 	uv_tty_t m_tty;
 	uv_pipe_t m_stdin_pipe;
 	uv_stream_t* m_stdin_handle;
 
-	char m_readBuf[64];
+	char m_readBuf[1024];
 	bool m_readBufInUse;
 
 	std::string m_command;

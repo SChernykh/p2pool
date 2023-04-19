@@ -356,6 +356,7 @@ private:
 		hash m_derivation;
 		uint32_t m_viewTags1[2] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 		std::vector<uint32_t> m_viewTags2;
+		// cppcheck-suppress unusedStructMember
 		uint64_t m_timestamp;
 
 		FORCEINLINE bool find_view_tag(size_t output_index, uint8_t& view_tag) const
