@@ -32,6 +32,8 @@ static constexpr char log_file_name[] = "p2pool.log";
 
 namespace p2pool {
 
+extern const uv_handle_type stdin_type = uv_guess_handle(0);
+
 namespace log {
 
 int GLOBAL_LOG_LEVEL = 3;

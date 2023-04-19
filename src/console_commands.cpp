@@ -34,6 +34,8 @@ static constexpr int DEFAULT_BACKLOG = 1;
 
 namespace p2pool {
 
+extern const uv_handle_type stdin_type;
+
 ConsoleCommands::ConsoleCommands(p2pool* pool)
 	: TCPServer(DEFAULT_BACKLOG, ConsoleClient::allocate)
 	, m_pool(pool)
@@ -43,6 +45,12 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	, m_readBuf{}
 	, m_readBufInUse(false)
 {
+	LOGINFO(3, "uv_guess_handle returned " << static_cast<int>(stdin_type));
+	if (stdin_type != UV_TTY && stdin_type != UV_NAMED_PIPE) {
+		LOGERR(1, "tty or named pipe is not available");
+		throw std::exception();
+	}
+
 	std::random_device rd;
 
 	for (int i = 0; i < 10; ++i) {
@@ -60,13 +68,6 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
 		PANIC_STOP();
-	}
-
-	const uv_handle_type stdin_type = uv_guess_handle(0);
-	LOGINFO(3, "uv_guess_handle returned " << static_cast<int>(stdin_type));
-	if (stdin_type != UV_TTY && stdin_type != UV_NAMED_PIPE) {
-		LOGERR(1, "tty or named pipe is not available");
-		throw std::exception();
 	}
 
 	if (stdin_type == UV_TTY) {
@@ -102,7 +103,7 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 
 	if (m_pool->api() && m_pool->params().m_localStats) {
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
-			[stdin_type, this](log::Stream& s)
+			[this](log::Stream& s)
 			{
 				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
 					<< ",\"tcp_port\":" << m_listenPort
