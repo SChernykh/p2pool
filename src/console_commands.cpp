@@ -34,8 +34,6 @@ static constexpr int DEFAULT_BACKLOG = 1;
 
 namespace p2pool {
 
-extern const uv_handle_type stdin_type;
-
 ConsoleCommands::ConsoleCommands(p2pool* pool)
 	: TCPServer(DEFAULT_BACKLOG, ConsoleClient::allocate)
 	, m_pool(pool)
