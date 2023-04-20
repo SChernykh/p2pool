@@ -25,8 +25,6 @@ static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
 
 namespace p2pool {
 
-extern const uv_handle_type stdin_type;
-
 struct MutexLock : public nocopy_nomove
 {
 	explicit FORCEINLINE MutexLock(uv_mutex_t& handle) : m_handle(&handle) { uv_mutex_lock(&handle); }

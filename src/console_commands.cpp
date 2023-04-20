@@ -43,6 +43,7 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	, m_readBuf{}
 	, m_readBufInUse(false)
 {
+	const uv_handle_type stdin_type = uv_guess_handle(0);
 	LOGINFO(3, "uv_guess_handle returned " << static_cast<int>(stdin_type));
 	if (stdin_type != UV_TTY && stdin_type != UV_NAMED_PIPE) {
 		LOGERR(1, "tty or named pipe is not available");
@@ -101,7 +102,7 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 
 	if (m_pool->api() && m_pool->params().m_localStats) {
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
-			[this](log::Stream& s)
+			[stdin_type, this](log::Stream& s)
 			{
 				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
 					<< ",\"tcp_port\":" << m_listenPort
