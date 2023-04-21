@@ -39,8 +39,6 @@ static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "" };
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 
-static constexpr size_t SEND_BUF_MIN_SIZE = 256;
-
 namespace p2pool {
 
 P2PServer::P2PServer(p2pool* pool)
@@ -382,7 +380,7 @@ void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 		{
 			LOGINFO(6, "sending PEER_LIST_REQUEST to " << static_cast<char*>(client->m_addrString));
 
-			if (buf_size < SEND_BUF_MIN_SIZE) {
+			if (buf_size < 1) {
 				return 0;
 			}
 
@@ -890,7 +888,7 @@ void P2PServer::on_broadcast()
 					const std::vector<uint8_t>& blob = send_compact ? data->compact_blob : data->pruned_blob;
 
 					const uint32_t len = static_cast<uint32_t>(blob.size());
-					if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+					if (buf_size < 1 + sizeof(uint32_t) + len) {
 						return 0;
 					}
 
@@ -908,7 +906,7 @@ void P2PServer::on_broadcast()
 					LOGINFO(5, "sending BLOCK_BROADCAST (full)   to " << log::Gray() << static_cast<char*>(client->m_addrString));
 
 					const uint32_t len = static_cast<uint32_t>(data->blob.size());
-					if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+					if (buf_size < 1 + sizeof(uint32_t) + len) {
 						return 0;
 					}
 
@@ -1130,7 +1128,7 @@ void P2PServer::download_missing_blocks()
 			{
 				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(client->m_addrString));
 
-				if (buf_size < SEND_BUF_MIN_SIZE) {
+				if (buf_size < 1 + HASH_SIZE) {
 					return 0;
 				}
 
@@ -1610,7 +1608,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 		{
 			LOGINFO(5, "sending HANDSHAKE_CHALLENGE to " << static_cast<char*>(m_addrString));
 
-			if (buf_size < SEND_BUF_MIN_SIZE) {
+			if (buf_size < 1 + CHALLENGE_SIZE + sizeof(uint64_t)) {
 				return 0;
 			}
 
@@ -1734,7 +1732,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 				{
 					LOGINFO(5, "sending HANDSHAKE_SOLUTION to " << static_cast<char*>(work->client->m_addrString));
 
-					if (buf_size < SEND_BUF_MIN_SIZE) {
+					if (buf_size < 1 + HASH_SIZE + CHALLENGE_SIZE + 1 + sizeof(int32_t) + 1 + HASH_SIZE) {
 						return 0;
 					}
 
@@ -1881,7 +1879,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 			{
 				LOGINFO(5, "sending LISTEN_PORT and BLOCK_REQUEST for the chain tip to " << static_cast<char*>(m_addrString));
 
-				if (buf_size < SEND_BUF_MIN_SIZE) {
+				if (buf_size < 1 + sizeof(int32_t) + 1 + HASH_SIZE) {
 					return 0;
 				}
 
@@ -1952,7 +1950,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 
 			const uint32_t len = static_cast<uint32_t>(blob.size());
 
-			if (buf_size < SEND_BUF_MIN_SIZE + 1 + sizeof(uint32_t) + len) {
+			if (buf_size < 1 + sizeof(uint32_t) + len) {
 				return 0;
 			}
 
@@ -2156,7 +2154,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		{
 			LOGINFO(6, "sending PEER_LIST_RESPONSE to " << static_cast<char*>(m_addrString));
 
-			if (buf_size < SEND_BUF_MIN_SIZE + 2 + num_selected_peers * 19) {
+			if (buf_size < 2 + static_cast<size_t>(num_selected_peers) * 19) {
 				return 0;
 			}
 
@@ -2396,7 +2394,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 			{
 				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
 
-				if (buf_size < SEND_BUF_MIN_SIZE + 1 + HASH_SIZE) {
+				if (buf_size < 1 + HASH_SIZE) {
 					return 0;
 				}
 
