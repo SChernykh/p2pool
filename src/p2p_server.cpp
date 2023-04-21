@@ -61,8 +61,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_fastestPeer(nullptr)
 {
 	m_callbackBuf.resize(P2P_BUF_SIZE);
-
-	m_blockDeserializeBuf.reserve(131072);
+	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE);
 
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);

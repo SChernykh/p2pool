@@ -34,9 +34,6 @@
 
 static constexpr char log_category_prefix[] = "BlockTemplate ";
 
-// Max P2P message size (128 KB) minus BLOCK_RESPONSE header (5 bytes)
-static constexpr size_t MAX_BLOCK_TEMPLATE_SIZE = 128 * 1024 - (1 + sizeof(uint32_t));
-
 namespace p2pool {
 
 BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
@@ -168,9 +165,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 static FORCEINLINE uint64_t get_base_reward(uint64_t already_generated_coins)
 {
 	const uint64_t result = ~already_generated_coins >> 19;
-
-	constexpr uint64_t min_reward = 600000000000ULL;
-	return (result < min_reward) ? min_reward : result;
+	return (result < BASE_BLOCK_REWARD) ? BASE_BLOCK_REWARD : result;
 }
 
 static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t median_weight, uint64_t fees, uint64_t weight)
@@ -353,14 +348,27 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		b->m_transactions.resize(1);
 		b->m_outputs.clear();
 
-		// Block template size without coinbase outputs and transactions (add 1+1 more bytes for output and tx count if they go above 128)
-		size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() + 2;
+		// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
+		size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
 
-		// a rough estimation of outputs' size
-		// all outputs have <= 5 bytes for each output's reward, and up to 18 outputs can have 6 bytes for output's reward
-		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */) + 18;
+		// Add output and tx count real varints
+		writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+		writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
-		const size_t max_transactions = (MAX_BLOCK_TEMPLATE_SIZE > k) ? ((MAX_BLOCK_TEMPLATE_SIZE - k) / HASH_SIZE) : 0;
+		// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
+		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
+
+		// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
+		{
+			uint64_t r = BASE_BLOCK_REWARD;
+			for (const auto& tx : m_mempoolTxs) {
+				r += tx.fee;
+			}
+			k += r / 34359738368ULL;
+		}
+
+		const size_t max_transactions = (MAX_BLOCK_SIZE > k) ? ((MAX_BLOCK_SIZE - k) / HASH_SIZE) : 0;
+		LOGINFO(6, max_transactions << " transactions can be taken with current block size limit");
 
 		if (max_transactions == 0) {
 			m_mempoolTxs.clear();
@@ -678,6 +686,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_fullDataBlob = m_blockTemplateBlob;
 	m_fullDataBlob.insert(m_fullDataBlob.end(), sidechain_data.begin(), sidechain_data.end());
+	LOGINFO(6, "blob size = " << m_fullDataBlob.size());
 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
 
@@ -704,9 +713,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, nullptr, false);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
-		}
-		else {
-			LOGINFO(6, "blob size = " << m_fullDataBlob.size());
 		}
 	}
 

@@ -27,7 +27,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 {
 	try {
 		// Sanity check
-		if (!data || (size > 128 * 1024)) {
+		if (!data || (size > MAX_BLOCK_SIZE)) {
 			return __LINE__;
 		}
 
@@ -139,7 +139,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			READ_VARINT(tmp);
 
 			// Sanity check
-			if ((tmp == 0) || (tmp > 128 * 1024)) {
+			if ((tmp == 0) || (tmp > MAX_BLOCK_SIZE)) {
 				return __LINE__;
 			}
 
@@ -148,7 +148,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
 		// But default transaction picking algorithm never does that. It's better to just ban such nodes
-		if (total_reward < 600000000000ULL) {
+		if (total_reward < BASE_BLOCK_REWARD) {
 			return __LINE__;
 		}
 
@@ -341,6 +341,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
+
+		if (data_size > static_cast<int>(MAX_BLOCK_SIZE)) {
+			return __LINE__;
+		}
+
 		keccak_custom(
 			[nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
 			{

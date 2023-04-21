@@ -18,6 +18,7 @@
 #pragma once
 
 #include "tcp_server.h"
+#include "pool_block.h"
 #include <list>
 
 namespace p2pool {
@@ -26,7 +27,10 @@ class p2pool;
 struct PoolBlock;
 class BlockCache;
 
-static constexpr size_t P2P_BUF_SIZE = 128 * 1024;
+// Max block size plus BLOCK_RESPONSE header (5 bytes)
+static constexpr uint64_t P2P_BUF_SIZE = MAX_BLOCK_SIZE + (1 + sizeof(uint32_t));
+static_assert((P2P_BUF_SIZE & (P2P_BUF_SIZE - 1)) == 0, "P2P_BUF_SIZE is not a power of 2, fix MAX_BLOCK_SIZE");
+
 static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
 static constexpr int DEFAULT_P2P_PORT = 37889;
 static constexpr int DEFAULT_P2P_PORT_MINI = 37888;

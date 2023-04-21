@@ -47,6 +47,12 @@ class SideChain;
 * Pool block's PoW hash is calculated from the Monero block template part using Monero's consensus rules
 */
 
+// 128 KB minus BLOCK_RESPONSE P2P protocol header (5 bytes)
+static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
+
+// 0.6 XMR
+static constexpr uint64_t BASE_BLOCK_REWARD = 600000000000ULL;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}
