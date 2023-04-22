@@ -1368,10 +1368,10 @@ void SideChain::verify(PoolBlock* block)
 	// Deep block
 	//
 	// Blocks in PPLNS window (m_chainWindowSize) require up to m_chainWindowSize earlier blocks to verify
-	// If a block is deeper than m_chainWindowSize * 2 - 1 it can't influence blocks in PPLNS window
+	// If a block is deeper than (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH it can't influence blocks in PPLNS window
 	// Also, having so many blocks on top of this one means it was verified by the network at some point
 	// We skip checks in this case to make pruning possible
-	if (block->m_depth >= m_chainWindowSize * 2) {
+	if (block->m_depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH) {
 		LOGINFO(4, "block " << block->m_sidechainId << " skipped verification");
 		block->m_verified = true;
 		block->m_invalid = false;
@@ -1925,7 +1925,7 @@ void SideChain::update_depths(PoolBlock* block)
 		blocks_to_update.pop_back();
 
 		// Verify this block and possibly other blocks on top of it when we're sure it will get verified
-		if (!block->m_verified && ((block->m_depth >= m_chainWindowSize * 2) || (block->m_sidechainHeight == 0))) {
+		if (!block->m_verified && ((block->m_depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH) || (block->m_sidechainHeight == 0))) {
 			verify_loop(block);
 		}
 
