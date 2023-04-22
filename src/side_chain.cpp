@@ -197,6 +197,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	}
 
 	m_uniquePrecalcInputs = new unordered_set<size_t>();
+	m_uniquePrecalcInputs->reserve(1 << 18);
 }
 
 SideChain::~SideChain()
@@ -2156,7 +2157,7 @@ void SideChain::launch_precalc(const PoolBlock* block)
 		return;
 	}
 
-	for (int h = UNCLE_BLOCK_DEPTH - 1; h >= 0; --h) {
+	for (int h = UNCLE_BLOCK_DEPTH; h >= 0; --h) {
 		auto it = m_blocksByHeight.find(block->m_sidechainHeight + m_chainWindowSize + h - 1);
 		if (it == m_blocksByHeight.end()) {
 			continue;
@@ -2183,6 +2184,7 @@ void SideChain::precalc_worker()
 {
 	do {
 		PrecalcJob* job;
+		size_t num_inputs;
 		{
 			MutexLock lock(m_precalcJobsMutex);
 
@@ -2205,22 +2207,29 @@ void SideChain::precalc_worker()
 			uint8_t t[HASH_SIZE * 2 + sizeof(size_t)];
 			memcpy(t, job->b->m_txkeySec.h, HASH_SIZE);
 
-			for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
+			const size_t n = job->shares.size();
+			num_inputs = n;
+
+			for (size_t i = 0; i < n; ++i) {
 				memcpy(t + HASH_SIZE, job->shares[i].m_wallet->view_public_key().h, HASH_SIZE);
 				memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
 				if (!m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
 					job->shares[i].m_wallet = nullptr;
+					--num_inputs;
 				}
 			}
 		}
 
-		for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
-			if (job->shares[i].m_wallet) {
-				hash eph_public_key;
-				uint8_t view_tag;
-				job->shares[i].m_wallet->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
+		if (num_inputs) {
+			for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
+				if (job->shares[i].m_wallet) {
+					hash eph_public_key;
+					uint8_t view_tag;
+					job->shares[i].m_wallet->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
+				}
 			}
 		}
+
 		delete job;
 	} while (true);
 }
