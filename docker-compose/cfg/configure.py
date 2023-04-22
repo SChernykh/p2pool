@@ -620,7 +620,7 @@ class MoneroConfigForm(ConfigFormBase):
         self.fast_sync = self.add(
             npyscreen.Checkbox,
             name="Fast Block Sync",
-            value=False,
+            value=True,
             begin_entry_at=self.name_size,
             relx=self.indent,
         )
