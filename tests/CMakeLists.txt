@@ -9,6 +9,9 @@ if (${CMAKE_VERSION} VERSION_GREATER "3.5.2")
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool_tests)
 endif()
 
+set(BUILD_GMOCK OFF CACHE BOOL "Builds the googlemock subproject" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "Enable installation of googletest. (Projects embedding googletest may want to turn this OFF.)" FORCE)
+
 add_subdirectory(googletest)
 set(LIBS gtest)
 
@@ -175,5 +178,5 @@ add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/crypto_tests.txt" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/block.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump_mini.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump.dat.gz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump_mini.dat.gz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)

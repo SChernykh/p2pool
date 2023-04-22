@@ -131,8 +131,8 @@ TEST(pool_block, verify)
 		uint64_t m_txinGenHeight;
 		uint64_t m_sidechainHeight;
 	} tests[2] = {
-		{ "default", "sidechain_dump.dat", 2845288, 4674368 },
-		{ "mini", "sidechain_dump_mini.dat", 2845293, 4129185 },
+		{ "default", "sidechain_dump.dat", 2870010, 4957203 },
+		{ "mini", "sidechain_dump_mini.dat", 2870010, 4414446 },
 	};
 
 	for (const STest& t : tests)
@@ -140,8 +140,8 @@ TEST(pool_block, verify)
 		PoolBlock b;
 		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
 
-		// Difficulty of block 2844672
-		sidechain.m_testMainChainDiff = difficulty_type(321967641416ULL, 0ULL);
+		// Difficulty of block 2869248
+		sidechain.m_testMainChainDiff = difficulty_type(345786476185ULL, 0ULL);
 
 		std::ifstream f(t.m_fileName, std::ios::binary | std::ios::ate);
 		ASSERT_EQ(f.good() && f.is_open(), true);

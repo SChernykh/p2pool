@@ -42,7 +42,10 @@ jobs:
         make -j$(nproc)
 
     - name: Run tests
-      run: cd tests/build && ./p2pool_tests
+      run: |
+        cd tests/build
+        gunzip *.gz
+        ./p2pool_tests
 
     - name: Archive binary
       uses: actions/upload-artifact@v3
@@ -107,7 +110,10 @@ jobs:
         make -j$(nproc)
 
     - name: Run tests
-      run: cd tests/build && ./p2pool_tests
+      run: |
+        cd tests/build
+        gunzip *.gz
+        ./p2pool_tests
 
     - name: Archive binary
       uses: actions/upload-artifact@v3
@@ -235,6 +241,7 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
+        gunzip *.gz
         ./p2pool_tests.exe
 
     - name: Archive binary
@@ -282,6 +289,7 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build/Debug
+        7z x *.gz
         ./p2pool_tests.exe
 
     - name: Archive binary
@@ -349,6 +357,7 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
+        gunzip *.gz
         ./p2pool_tests
 
     - name: Archive binary
@@ -409,6 +418,7 @@ jobs:
           cd build
           cmake .. -DSTATIC_LIBS=ON
           make -j2
+          gunzip *.gz
           ./p2pool_tests
 
     - name: Archive binary
@@ -452,6 +462,7 @@ jobs:
           mkdir build && cd build
           cmake ..
           make -j2
+          gunzip *.gz
           ./p2pool_tests
 
     - name: Archive binary
