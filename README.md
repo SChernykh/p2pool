@@ -4,7 +4,7 @@ Decentralized pool for Monero mining.
 
 Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/, https://mini.p2pool.observer/
 
-These are 3rd-party pages. If they are down, it doesn't mean there is a probem with P2Pool itself - it keeps mining always thanks to its decentralized nature.
+These are 3rd-party pages. If they are down, it doesn't mean there is a problem with P2Pool itself - it keeps mining always thanks to its decentralized nature.
 
 # P2Pool hardforked on March 18, 2023
 
