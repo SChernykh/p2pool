@@ -107,6 +107,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	const uint32_t num_connections = m_numConnections;
 	if (num_connections == 0) {
 		LOGINFO(4, "no clients connected");
+		api_update_local_stats(seconds_since_epoch());
 		return;
 	}
 
@@ -186,6 +187,8 @@ void StratumServer::on_block(const BlockTemplate& block)
 			delete blobs_data;
 		}
 	}
+
+	api_update_local_stats(seconds_since_epoch());
 }
 
 template<size_t N>
@@ -1261,9 +1264,9 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 		return;
 	}
 
-	// Rate limit to no more than once in 60 seconds.
+	// Rate limit to no more than once in 20 seconds.
 	uint64_t t = m_apiLastUpdateTime.load();
-	if (timestamp < t + 60) {
+	if (timestamp < t + 20) {
 		return;
 	}
 
