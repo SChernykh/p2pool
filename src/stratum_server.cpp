@@ -1318,8 +1318,10 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	uint32_t connections = m_numConnections;
 	uint32_t incoming_connections = m_numIncomingConnections;
 
+	const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
+
 	m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum",
-		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections](log::Stream& s)
+		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections, block_reward_share_percent](log::Stream& s)
 		{
 			s << "{\"hashrate_15m\":" << hashrate_15m
 				<< ",\"hashrate_1h\":" << hashrate_1h
@@ -1331,6 +1333,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"current_effort\":" << current_effort
 				<< ",\"connections\":" << connections
 				<< ",\"incoming_connections\":" << incoming_connections
+				<< ",\"block_reward_share_percent\":" << block_reward_share_percent
 				<< "}";
 		});
 }
