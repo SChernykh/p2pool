@@ -1123,6 +1123,8 @@ uint64_t SideChain::bottom_height(const PoolBlock* tip) const
 	uint64_t bottom_height;
 	std::vector<MinerShare> shares;
 
+	ReadLock lock(m_sidechainLock);
+
 	if (!get_shares(tip, shares, &bottom_height, true)) {
 		return 0;
 	}
