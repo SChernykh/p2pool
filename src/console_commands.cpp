@@ -63,11 +63,17 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		throw std::exception();
 	}
 
-	int err = uv_thread_create(&m_loopThread, loop, this);
-	if (err) {
-		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
-		PANIC_STOP();
+	if (m_pool->api() && m_pool->params().m_localStats) {
+		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
+			[stdin_type, this](log::Stream& s)
+			{
+				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
+					<< ",\"tcp_port\":" << m_listenPort
+					<< "}";
+			});
 	}
+
+	int err;
 
 	if (stdin_type == UV_TTY) {
 		LOGINFO(3, "processing stdin as UV_TTY");
@@ -100,14 +106,10 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		throw std::exception();
 	}
 
-	if (m_pool->api() && m_pool->params().m_localStats) {
-		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
-			[stdin_type, this](log::Stream& s)
-			{
-				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
-					<< ",\"tcp_port\":" << m_listenPort
-					<< "}";
-			});
+	err = uv_thread_create(&m_loopThread, loop, this);
+	if (err) {
+		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
+		throw std::exception();
 	}
 }
 
