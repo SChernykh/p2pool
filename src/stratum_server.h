@@ -142,6 +142,7 @@ private:
 		uv_work_t m_req;
 		StratumServer* m_server;
 		StratumClient* m_client;
+		bool m_clientIPv6;
 		raw_ip m_clientAddr;
 		uint32_t m_clientResetCounter;
 		uint32_t m_rpcId;

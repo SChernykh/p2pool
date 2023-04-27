@@ -410,6 +410,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_req.data = share;
 		share->m_server = this;
 		share->m_client = client;
+		share->m_clientIPv6 = client->m_isV6;
 		share->m_clientAddr = client->m_addr;
 		share->m_clientResetCounter = client->m_resetCounter.load();
 		share->m_rpcId = client->m_rpcId;
@@ -843,7 +844,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
 	StratumServer* server = share->m_server;
 
-	if (server->is_banned(share->m_clientAddr)) {
+	if (server->is_banned(share->m_clientIPv6, share->m_clientAddr)) {
 		share->m_highEnoughDifficulty = false;
 		share->m_result = SubmittedShare::Result::BANNED;
 		return;
@@ -1019,7 +1020,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		}
 	}
 	else if (bad_share) {
-		server->ban(share->m_clientAddr, DEFAULT_BAN_TIME);
+		server->ban(share->m_clientIPv6, share->m_clientAddr, DEFAULT_BAN_TIME);
 	}
 }
 

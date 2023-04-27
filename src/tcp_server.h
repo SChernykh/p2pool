@@ -44,7 +44,7 @@ public:
 	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
 
-	void ban(const raw_ip& ip, uint64_t seconds);
+	void ban(bool is_v6, raw_ip ip, uint64_t seconds);
 	virtual void print_bans();
 
 	struct Client
@@ -188,7 +188,7 @@ protected:
 	uv_mutex_t m_bansLock;
 	unordered_map<raw_ip, std::chrono::steady_clock::time_point> m_bans;
 
-	bool is_banned(const raw_ip& ip);
+	bool is_banned(bool is_v6, raw_ip ip);
 
 	unordered_set<raw_ip> m_pendingConnections;
 

@@ -591,7 +591,7 @@ void P2PServer::load_peer_list()
 			p.m_numFailedConnections = 0;
 			p.m_lastSeen = seconds_since_epoch();
 
-			if (!already_added && !is_banned(p.m_addr)) {
+			if (!already_added && !is_banned(p.m_isV6, p.m_addr)) {
 				m_peerList.push_back(p);
 			}
 		});
@@ -661,7 +661,7 @@ void P2PServer::load_monerod_peer_list()
 				p.m_port = port;
 				p.m_numFailedConnections = 0;
 
-				if (!is_banned(p.m_addr)) {
+				if (!is_banned(p.m_isV6, p.m_addr)) {
 					m_peerListMonero.push_back(p);
 				}
 			}
@@ -694,7 +694,7 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 		}
 	}
 
-	if (!is_banned(ip)) {
+	if (!is_banned(is_v6, ip)) {
 		m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
 	}
 }
@@ -2237,7 +2237,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 			}
 		}
 
-		if (!already_added && !server->is_banned(ip)) {
+		if (!already_added && !server->is_banned(is_v6, ip)) {
 			server->m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
 		}
 	}
@@ -2306,11 +2306,12 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		P2PClient* client;
 		P2PServer* server;
 		uint32_t client_reset_counter;
+		bool client_isV6;
 		raw_ip client_ip;
 		std::vector<hash> missing_blocks;
 	};
 
-	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_addr, {} };
+	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_isV6, m_addr, {} };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -2318,7 +2319,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		{
 			BACKGROUND_JOB_START(P2PServer::handle_incoming_block_async);
 			Work* work = reinterpret_cast<Work*>(req->data);
-			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_ip, work->missing_blocks);
+			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_isV6, work->client_ip, work->missing_blocks);
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
@@ -2337,7 +2338,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 	return true;
 }
 
-void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, const raw_ip& addr, std::vector<hash>& missing_blocks)
+void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks)
 {
 	if (!pool->side_chain().add_external_block(block, missing_blocks)) {
 		// Client sent bad data, disconnect and ban it
@@ -2351,7 +2352,7 @@ void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block,
 		}
 
 		P2PServer* server = pool->p2p_server();
-		server->ban(addr, DEFAULT_BAN_TIME);
+		server->ban(is_v6, addr, DEFAULT_BAN_TIME);
 		server->remove_peer_from_list(addr);
 	}
 }

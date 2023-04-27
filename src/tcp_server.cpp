@@ -300,10 +300,15 @@ bool TCPServer::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
 	return connect_to_peer(client);
 }
 
-bool TCPServer::is_banned(const raw_ip& ip)
+bool TCPServer::is_banned(bool is_v6, raw_ip ip)
 {
 	if (ip.is_localhost()) {
 		return false;
+	}
+
+	// If it's IPv6, check the whole /64 prefix
+	if (is_v6 && !ip.is_ipv4_prefix()) {
+		memset(ip.data + 8, 0, sizeof(ip.data) - 8);
 	}
 
 	const auto cur_time = std::chrono::steady_clock::now();
@@ -324,7 +329,7 @@ bool TCPServer::is_banned(const raw_ip& ip)
 
 bool TCPServer::connect_to_peer(Client* client)
 {
-	if (is_banned(client->m_addr)) {
+	if (is_banned(client->m_isV6, client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
 		return_client(client);
 		return false;
@@ -482,10 +487,15 @@ void TCPServer::print_status()
 	);
 }
 
-void TCPServer::ban(const raw_ip& ip, uint64_t seconds)
+void TCPServer::ban(bool is_v6, raw_ip ip, uint64_t seconds)
 {
 	if (ip.is_localhost()) {
 		return;
+	}
+
+	// If it's IPv6, ban the whole /64 prefix
+	if (is_v6 && !ip.is_ipv4_prefix()) {
+		memset(ip.data + 8, 0, sizeof(ip.data) - 8);
 	}
 
 	const auto ban_time = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
@@ -772,7 +782,7 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 
 	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
 
-	if (is_banned(client->m_addr)) {
+	if (is_banned(client->m_isV6, client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
 		client->close();
 		return;
@@ -1209,7 +1219,7 @@ void TCPServer::Client::ban(uint64_t seconds)
 
 	if (m_owner) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << seconds << " seconds");
-		m_owner->ban(m_addr, seconds);
+		m_owner->ban(m_isV6, m_addr, seconds);
 	}
 }
 
