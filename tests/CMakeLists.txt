@@ -95,7 +95,7 @@ include_directories(src)
 include_directories(googletest/googletest/include)
 
 if (WIN32)
-	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi wldap32)
+	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi)
 	if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(LIBS ${LIBS} bcrypt)
 	endif()

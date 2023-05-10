@@ -129,7 +129,7 @@ if (WITH_UPNP)
 endif()
 
 if (WIN32)
-	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi)
+	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi)
 	if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(LIBS ${LIBS} bcrypt)
 	endif()
@@ -193,13 +193,59 @@ endif()
 
 add_definitions(/DZMQ_STATIC)
 
-set(CMAKE_REQUIRED_FLAGS "${GENERAL_FLAGS}")
-
 include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles("int main(){ return __builtin_clzll(1);}" HAVE_BUILTIN_CLZLL)
 check_cxx_source_compiles("#include <intrin.h>\n#pragma intrinsic(_BitScanReverse64)\nint main(){unsigned long r;_BitScanReverse64(&r,1);return r;}" HAVE_BITSCANREVERSE64)
 check_cxx_source_compiles("#include <sched.h>\nint main(){sched_param param;return sched_setscheduler(0, SCHED_IDLE, &param);}" HAVE_SCHED)
+
+include(CheckCSourceCompiles)
+
+set(CMAKE_REQUIRED_LIBRARIES "resolv")
+
+check_c_source_compiles("
+#include <arpa/nameser.h>
+#include <resolv.h>
+#include <stdio.h>
+#include <memory.h>
+
+int main(int argc, char* argv[])
+{
+	if (argc < 2) {
+		return 1;
+	}
+
+	res_init();
+
+	uint8_t answer[4096];
+	const int anslen = res_query(argv[1], ns_c_in, ns_t_txt, answer, sizeof(answer));
+
+	if (anslen > (int) sizeof(answer)) {
+		return 1;
+	}
+
+	ns_msg handle;
+	ns_initparse(answer, anslen, &handle);
+
+	for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
+		ns_rr rr;
+		if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
+			const uint8_t* data = ns_rr_rdata(rr);
+
+			int len = ns_rr_rdlen(rr) - 1;
+			if (len > data[0]) len = data[0];
+
+			char buf[256];
+			memcpy(buf, data + 1, len);
+			buf[len] = 0;
+			puts(buf);
+		}
+	}
+
+	return 0;
+}" HAVE_RES_QUERY)
+
+set(CMAKE_REQUIRED_LIBRARIES)
 
 if (HAVE_BUILTIN_CLZLL)
 	add_definitions(/DHAVE_BUILTIN_CLZLL)
@@ -211,6 +257,11 @@ endif()
 
 if (HAVE_SCHED)
 	add_definitions(/DHAVE_SCHED)
+endif()
+
+if (HAVE_RES_QUERY)
+	add_definitions(/DHAVE_RES_QUERY)
+	set(LIBS ${LIBS} resolv)
 endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
@@ -231,7 +282,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 	endif()
 
 	if (WIN32)
-		set(STATIC_LIBS ${STATIC_LIBS} ws2_32 iphlpapi userenv psapi wldap32)
+		set(STATIC_LIBS ${STATIC_LIBS} ws2_32 iphlpapi userenv psapi dnsapi)
 		if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 			set(STATIC_LIBS ${STATIC_LIBS} bcrypt)
 		endif()
@@ -244,6 +295,10 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS ${STATIC_LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 	else()
 		set(STATIC_LIBS ${STATIC_LIBS} pthread)
+	endif()
+
+	if (HAVE_RES_QUERY)
+		set(STATIC_LIBS ${STATIC_LIBS} resolv)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
