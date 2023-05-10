@@ -699,7 +699,7 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 	}
 }
 
-void P2PServer::remove_peer_from_list(P2PClient* client)
+void P2PServer::remove_peer_from_list(const P2PClient* client)
 {
 	MutexLock lock(m_peerListLock);
 

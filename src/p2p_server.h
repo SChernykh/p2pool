@@ -201,7 +201,7 @@ private:
 	void load_peer_list();
 	void load_monerod_peer_list();
 	void update_peer_in_list(bool is_v6, const raw_ip& ip, int port);
-	void remove_peer_from_list(P2PClient* client);
+	void remove_peer_from_list(const P2PClient* client);
 	void remove_peer_from_list(const raw_ip& ip);
 
 	std::mt19937_64 m_rng;

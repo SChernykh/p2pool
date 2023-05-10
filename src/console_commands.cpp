@@ -196,6 +196,7 @@ static void do_loglevel(p2pool * /* m_pool */, const char *args)
 	LOGINFO(0, "log level set to " << level);
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_addpeers(p2pool *m_pool, const char *args)
 {
 	if (m_pool->p2p_server()) {
@@ -203,6 +204,7 @@ static void do_addpeers(p2pool *m_pool, const char *args)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_droppeers(p2pool *m_pool, const char * /* args */)
 {
 	if (m_pool->p2p_server()) {
@@ -210,6 +212,7 @@ static void do_droppeers(p2pool *m_pool, const char * /* args */)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_showpeers(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->p2p_server()) {
@@ -217,6 +220,7 @@ static void do_showpeers(p2pool* m_pool, const char* /* args */)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_showworkers(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->stratum_server()) {
@@ -224,6 +228,7 @@ static void do_showworkers(p2pool* m_pool, const char* /* args */)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_showbans(p2pool* m_pool, const char* /* args */)
 {
 	if (m_pool->stratum_server()) {
@@ -234,6 +239,7 @@ static void do_showbans(p2pool* m_pool, const char* /* args */)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_outpeers(p2pool* m_pool, const char* args)
 {
 	if (m_pool->p2p_server()) {
@@ -242,6 +248,7 @@ static void do_outpeers(p2pool* m_pool, const char* args)
 	}
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_inpeers(p2pool* m_pool, const char* args)
 {
 	if (m_pool->p2p_server()) {
