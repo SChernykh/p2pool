@@ -41,6 +41,10 @@
                     <td>{{ local_stats["shares_found"] }}</td>
                   </tr>
                   <tr>
+                    <td>Shares Failed</td>
+                    <td>{{ local_stats["shares_failed"] }}</td>
+                  </tr>
+                  <tr>
                     <td>Current Effort</td>
                     <td>{{ local_stats["current_effort"] }}%</td>
                   </tr>
@@ -55,6 +59,10 @@
                   <tr>
                     <td>Miner Connections</td>
                     <td>{{ local_stats["incoming_connections"] }}</td>
+                  </tr>
+                  <tr>
+                    <td>Block reward share</td>
+                    <td>{{ local_stats["block_reward_share_percent"] }}%</td>
                   </tr>
                 </tbody>
               </table>
