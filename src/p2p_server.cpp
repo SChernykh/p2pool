@@ -34,6 +34,8 @@
 #ifdef _WIN32
 #include <WinDNS.h>
 #elif defined(HAVE_RES_QUERY)
+#include <sys/types.h>
+#include <netinet/in.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
 #endif
@@ -528,6 +530,9 @@ void P2PServer::load_peer_list()
 							const uint8_t* data = ns_rr_rdata(rr);
 
 							const int len = std::min<int>(ns_rr_rdlen(rr) - 1, *data);
+							if (len <= 0) {
+								continue;
+							}
 							++data;
 
 							if (!saved_list.empty()) {

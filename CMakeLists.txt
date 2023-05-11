@@ -204,6 +204,8 @@ include(CheckCSourceCompiles)
 set(CMAKE_REQUIRED_LIBRARIES "resolv")
 
 check_c_source_compiles("
+#include <sys/types.h>
+#include <netinet/in.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
 #include <stdio.h>
@@ -234,6 +236,10 @@ int main(int argc, char* argv[])
 
 			int len = ns_rr_rdlen(rr) - 1;
 			if (len > data[0]) len = data[0];
+
+			if (len <= 0) {
+				continue;
+			}
 
 			char buf[256];
 			memcpy(buf, data + 1, len);
