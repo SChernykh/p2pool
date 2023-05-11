@@ -203,6 +203,12 @@ include(CheckCSourceCompiles)
 
 set(CMAKE_REQUIRED_LIBRARIES "resolv")
 
+check_c_source_compiles("int main() { return 0; }" HAVE_RESOLV_LIB)
+
+if (NOT HAVE_RESOLV_LIB)
+	set(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
 check_c_source_compiles("
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -267,7 +273,9 @@ endif()
 
 if (HAVE_RES_QUERY)
 	add_definitions(/DHAVE_RES_QUERY)
-	set(LIBS ${LIBS} resolv)
+	if (HAVE_RESOLV_LIB)
+		set(LIBS ${LIBS} resolv)
+	endif()
 endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
@@ -303,7 +311,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS ${STATIC_LIBS} pthread)
 	endif()
 
-	if (HAVE_RES_QUERY)
+	if (HAVE_RES_QUERY AND HAVE_RESOLV_LIB)
 		set(STATIC_LIBS ${STATIC_LIBS} resolv)
 	endif()
 
