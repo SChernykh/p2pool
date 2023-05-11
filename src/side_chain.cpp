@@ -604,12 +604,15 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		}
 
 		if (block.m_sidechainId == m_watchBlockSidechainId) {
-			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << m_watchBlock.height << " was mined by this p2pool" << BLOCK_FOUND);
+			const Wallet& w = m_pool->params().m_wallet;
+
+			const char* who = (block.m_minerWallet == w) ? "you" : "someone else in this p2pool";
+			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << m_watchBlock.height << " was mined by " << who << BLOCK_FOUND);
+
 			m_watchBlockSidechainId = {};
 			data = m_watchBlock;
 			block_found = true;
 
-			const Wallet& w = m_pool->params().m_wallet;
 			const uint64_t payout = block.get_payout(w);
 			if (payout) {
 				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightGreen() << w << log::LightCyan() << " got a payout of " << log::LightGreen() << log::XMRAmount(payout) << log::LightCyan() << " in block " << log::LightGreen() << data.height);
