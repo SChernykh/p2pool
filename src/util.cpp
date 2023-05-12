@@ -517,10 +517,12 @@ bool get_dns_txt_records_base(const std::string& host, Callback<void, const char
 	for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
 		ns_rr rr;
 		if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
-			const uint8_t* s = ns_rr_rdata(rr);
-			const int n = std::min<int>(ns_rr_rdlen(rr) - 1, *s);
-			if (n > 0) {
-				callback(reinterpret_cast<const char*>(s + 1), static_cast<size_t>(n));
+			for (const uint8_t* data = ns_rr_rdata(rr), *e = data + ns_rr_rdlen(rr); data < e;) {
+				const size_t k = *(data++);
+				if (k && (data + k <= e)) {
+					callback(reinterpret_cast<const char*>(data), k);
+				}
+				data += k;
 			}
 		}
 	}

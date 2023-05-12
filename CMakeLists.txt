@@ -238,19 +238,16 @@ int main(int argc, char* argv[])
 	for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
 		ns_rr rr;
 		if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
-			const uint8_t* data = ns_rr_rdata(rr);
-
-			int len = ns_rr_rdlen(rr) - 1;
-			if (len > data[0]) len = data[0];
-
-			if (len <= 0) {
-				continue;
+			for (const uint8_t* data = ns_rr_rdata(rr), *e = data + ns_rr_rdlen(rr); data < e;) {
+				const int k = *(data++);
+				if (k && (data + k <= e)) {
+					char buf[256];
+					memcpy(buf, data, k);
+					buf[k] = 0;
+					puts(buf);
+				}
+				data += k;
 			}
-
-			char buf[256];
-			memcpy(buf, data + 1, len);
-			buf[len] = 0;
-			puts(buf);
 		}
 	}
 
