@@ -296,6 +296,11 @@ struct Callback
 	};
 };
 
+bool get_dns_txt_records_base(const std::string& host, Callback<void, const char*, size_t>::Base&& callback);
+
+template<typename T>
+FORCEINLINE bool get_dns_txt_records(const std::string& host, T&& callback) { return get_dns_txt_records_base(host, Callback<void, const char*, size_t>::Derived<T>(std::move(callback))); }
+
 } // namespace p2pool
 
 void memory_tracking_start();

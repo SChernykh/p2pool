@@ -31,6 +31,15 @@
 #include "upnpcommands.h"
 #endif
 
+#ifdef _WIN32
+#include <WinDNS.h>
+#elif defined(HAVE_RES_QUERY)
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
+#endif
+
 static constexpr char log_category_prefix[] = "Util ";
 
 namespace p2pool {
@@ -460,6 +469,69 @@ bool resolve_host(std::string& host, bool& is_v6)
 	}
 
 	return true;
+}
+
+bool get_dns_txt_records_base(const std::string& host, Callback<void, const char*, size_t>::Base&& callback)
+{
+	if (disable_resolve_host) {
+		LOGERR(1, "get_dns_txt_records was called with DNS disabled for host " << host);
+		return false;
+	}
+
+#ifdef _WIN32
+	PDNS_RECORD pQueryResults;
+	if (DnsQuery(host.c_str(), DNS_TYPE_TEXT, DNS_QUERY_STANDARD, NULL, &pQueryResults, NULL) != 0) {
+		return false;
+	}
+
+	for (PDNS_RECORD p = pQueryResults; p; p = p->pNext) {
+		for (size_t j = 0; j < p->Data.TXT.dwStringCount; ++j) {
+			const char* s = p->Data.TXT.pStringArray[j];
+			const size_t n = strlen(s);
+			if (n > 0) {
+				callback(s, n);
+			}
+		}
+	}
+
+	DnsRecordListFree(pQueryResults, DnsFreeRecordList);
+
+	return true;
+#elif defined(HAVE_RES_QUERY)
+	static const int res_init_result = res_init();
+	if (res_init_result != 0) {
+		return false;
+	}
+
+	uint8_t answer[4096];
+	const int anslen = res_query(host.c_str(), ns_c_in, ns_t_txt, answer, sizeof(answer));
+	if ((anslen <= 0) || (anslen > static_cast<int>(sizeof(answer)))) {
+		return false;
+	}
+
+	ns_msg handle;
+	if (ns_initparse(answer, anslen, &handle) != 0) {
+		return false;
+	}
+
+	for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
+		ns_rr rr;
+		if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
+			const uint8_t* s = ns_rr_rdata(rr);
+			const int n = std::min<int>(ns_rr_rdlen(rr) - 1, *s);
+			if (n > 0) {
+				callback(reinterpret_cast<const char*>(s + 1), static_cast<size_t>(n));
+			}
+		}
+	}
+
+	return true;
+#else
+	(void)host;
+	(void)callback;
+
+	return false;
+#endif
 }
 
 RandomDeviceSeed RandomDeviceSeed::instance;

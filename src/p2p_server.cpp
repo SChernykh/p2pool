@@ -31,15 +31,6 @@
 #include <fstream>
 #include <numeric>
 
-#ifdef _WIN32
-#include <WinDNS.h>
-#elif defined(HAVE_RES_QUERY)
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/nameser.h>
-#include <resolv.h>
-#endif
-
 static constexpr char log_category_prefix[] = "P2PServer ";
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", ""};
@@ -139,10 +130,6 @@ P2PServer::P2PServer(p2pool* pool)
 		LOGERR(1, "failed to start timer, error " << uv_err_name(err));
 		PANIC_STOP();
 	}
-
-#if !defined(_WIN32) && defined(HAVE_RES_QUERY)
-	res_init();
-#endif
 
 	load_peer_list();
 	start_listening(params.m_p2pAddresses, params.m_upnp);
@@ -499,55 +486,21 @@ void P2PServer::load_peer_list()
 	// Load peers from seed nodes if we're on the default or mini sidechain
 	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
 		for (size_t i = 0; nodes[i][0]; ++i) {
-			LOGINFO(4, "loading peers from " << nodes[i]);
+			const char* cur_node = nodes[i];
+			LOGINFO(4, "loading peers from " << cur_node);
 
 			// Prefer DNS TXT records
-#ifdef _WIN32
-			PDNS_RECORD pQueryResults;
-			if (DnsQuery(nodes[i], DNS_TYPE_TEXT, DNS_QUERY_STANDARD, NULL, &pQueryResults, NULL) == 0) {
-				for (PDNS_RECORD p = pQueryResults; p; p = p->pNext) {
-					for (size_t j = 0; j < p->Data.TXT.dwStringCount; ++j) {
-						if (!saved_list.empty()) {
-							saved_list += ',';
-						}
-						LOGINFO(4, "added " << p->Data.TXT.pStringArray[j] << " from " << nodes[i]);
-						saved_list += p->Data.TXT.pStringArray[j];
-					}
+			const bool has_txt = get_dns_txt_records(cur_node, [&saved_list, cur_node](const char* s, size_t n) {
+				if (!saved_list.empty()) {
+					saved_list += ',';
 				}
-				DnsRecordListFree(pQueryResults, DnsFreeRecordList);
+				LOGINFO(4, "added " << log::const_buf(s, n) << " from " << cur_node);
+				saved_list.append(s, n);
+			});
+
+			if (has_txt) {
 				continue;
 			}
-#elif defined(HAVE_RES_QUERY)
-			uint8_t answer[4096];
-			const int anslen = res_query(nodes[i], ns_c_in, ns_t_txt, answer, sizeof(answer));
-
-			if ((0 < anslen) && (anslen < static_cast<int>(sizeof(answer)))) {
-				ns_msg handle;
-				if (ns_initparse(answer, anslen, &handle) == 0) {
-					for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
-						ns_rr rr;
-						if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
-							const uint8_t* data = ns_rr_rdata(rr);
-
-							const int len = std::min<int>(ns_rr_rdlen(rr) - 1, *data);
-							if (len <= 0) {
-								continue;
-							}
-							++data;
-
-							if (!saved_list.empty()) {
-								saved_list += ',';
-							}
-
-							const char* c = reinterpret_cast<const char*>(data);
-							LOGINFO(4, "added " << log::const_buf(c, len) << " from " << nodes[i]);
-							saved_list.append(c, len);
-						}
-					}
-					continue;
-				}
-			}
-#endif
 
 			addrinfo hints{};
 			hints.ai_family = AF_UNSPEC;
@@ -555,11 +508,11 @@ void P2PServer::load_peer_list()
 			hints.ai_flags = AI_ADDRCONFIG;
 
 			addrinfo* result;
-			int err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+			int err = getaddrinfo(cur_node, nullptr, &hints, &result);
 			if (err) {
-				LOGWARN(4, "getaddrinfo failed for " << nodes[i] << ": " << gai_strerror(err) << ", retrying with IPv4 only");
+				LOGWARN(4, "getaddrinfo failed for " << cur_node << ": " << gai_strerror(err) << ", retrying with IPv4 only");
 				hints.ai_family = AF_INET;
-				err = getaddrinfo(nodes[i], nullptr, &hints, &result);
+				err = getaddrinfo(cur_node, nullptr, &hints, &result);
 			}
 			if (err == 0) {
 				for (addrinfo* r = result; r != NULL; r = r->ai_next) {
@@ -585,7 +538,7 @@ void P2PServer::load_peer_list()
 					}
 
 					if (s.m_pos) {
-						LOGINFO(4, "added " << static_cast<const char*>(buf) << " from " << nodes[i]);
+						LOGINFO(4, "added " << static_cast<const char*>(buf) << " from " << cur_node);
 						if (!saved_list.empty()) {
 							saved_list += ',';
 						}
@@ -595,7 +548,7 @@ void P2PServer::load_peer_list()
 				freeaddrinfo(result);
 			}
 			else {
-				LOGWARN(3, "getaddrinfo failed for " << nodes[i] << ": " << gai_strerror(err));
+				LOGWARN(3, "getaddrinfo failed for " << cur_node << ": " << gai_strerror(err));
 			}
 		}
 	};
