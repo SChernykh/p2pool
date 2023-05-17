@@ -7,8 +7,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
+
+	if (DEV_WITH_TSAN)
+		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=thread")
+	endif()
+
 	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
-	set(OPTIMIZATION_FLAGS "-Ofast -s")
+
+	if (DEV_WITH_TSAN)
+		set(OPTIMIZATION_FLAGS "-O2 -g")
+	else()
+		set(OPTIMIZATION_FLAGS "-Ofast -s")
+	endif()
 
 	if (WITH_LTO)
 		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto -fuse-linker-plugin")

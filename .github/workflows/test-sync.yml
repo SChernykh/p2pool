@@ -24,7 +24,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DDEV_TEST_SYNC=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_TSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
         make -j$(nproc)
 
     - name: Run p2pool
@@ -35,7 +35,7 @@ jobs:
         python ../tests/src/stratum_dummy.py stratum_dummy1.log &
         python ../tests/src/stratum_dummy.py stratum_dummy2.log &
         python ../tests/src/stratum_dummy.py stratum_dummy3.log &
-        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
+        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
     - name: Archive p2pool.log

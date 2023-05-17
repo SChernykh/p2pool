@@ -8,6 +8,7 @@ option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, 
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
+option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -29,6 +30,10 @@ endif()
 
 if (DEV_TEST_SYNC)
 	add_definitions(-DDEV_TEST_SYNC)
+endif()
+
+if (DEV_WITH_TSAN)
+	add_definitions(-DDEV_WITH_TSAN)
 endif()
 
 include(cmake/flags.cmake)

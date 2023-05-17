@@ -154,7 +154,9 @@ public:
 		memcpy(p + 1, buf + 1, size - 1);
 
 		// Ensure memory order in the writer thread
+#ifndef DEV_WITH_TSAN
 		std::atomic_thread_fence(std::memory_order_seq_cst);
+#endif
 
 		// Mark that everything is written into this log slot
 		p[0] = buf[0] + 1;
@@ -221,7 +223,9 @@ private:
 					}
 
 					// Ensure memory order in the reader thread
+#ifndef DEV_WITH_TSAN
 					std::atomic_thread_fence(std::memory_order_seq_cst);
+#endif
 
 					uint32_t size = static_cast<uint8_t>(p[2]);
 					size = (size << 8) + static_cast<uint8_t>(p[1]);
