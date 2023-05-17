@@ -174,7 +174,11 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEDATA, this);
 
+#ifdef DEV_TEST_SYNC
+	const int timeout = 10;
+#else
 	const int timeout = proxy.empty() ? 1 : 5;
+#endif
 
 	curl_easy_setopt_checked(m_handle, CURLOPT_URL, m_url.c_str());
 	curl_easy_setopt_checked(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());

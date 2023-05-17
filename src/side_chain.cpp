@@ -66,6 +66,9 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_chainWindowSize(2160)
 	, m_unclePenalty(20)
 	, m_precalcFinished(false)
+#ifdef DEV_TEST_SYNC
+	, m_synchronizedTime(0)
+#endif
 {
 	if (s_networkType == NetworkType::Invalid) {
 		s_networkType = type;
@@ -1722,6 +1725,9 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 					// Also clear cache because it has data from all old blocks now
 					clear_crypto_cache();
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
+#ifdef DEV_TEST_SYNC
+					m_synchronizedTime = seconds_since_epoch();
+#endif
 				}
 			}
 			prune_old_blocks();
@@ -2028,6 +2034,20 @@ void SideChain::prune_old_blocks()
 
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
+
+#ifdef DEV_TEST_SYNC
+		if (m_pool && m_precalcFinished.load() && (cur_time >= m_synchronizedTime + 120)) {
+			LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
+			print_status(false);
+			P2PServer* server = m_pool->p2p_server();
+			if (server) {
+				server->print_status();
+				server->print_bans();
+				server->show_peers_async();
+			}
+			m_pool->stop();
+		}
+#endif
 	}
 }
 
@@ -2278,20 +2298,6 @@ void SideChain::finish_precalc()
 	{
 		LOGERR(1, "exception in finish_precalc(): " << e.what());
 	}
-
-#ifdef DEV_TEST_SYNC
-	if (m_pool) {
-		LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
-		print_status(false);
-		P2PServer* server = m_pool->p2p_server();
-		if (server) {
-			server->print_status();
-			server->print_bans();
-			server->show_peers_async();
-		}
-		m_pool->stop();
-	}
-#endif
 }
 
 } // namespace p2pool

@@ -152,6 +152,10 @@ private:
 
 	std::atomic<bool> m_precalcFinished;
 
+#ifdef DEV_TEST_SYNC
+	uint64_t m_synchronizedTime;
+#endif
+
 	hash m_consensusHash;
 
 	void launch_precalc(const PoolBlock* block);
