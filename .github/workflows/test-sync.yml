@@ -32,7 +32,10 @@ jobs:
       run: |
         cd build
         mkdir data
-        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
+        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
     - name: Archive p2pool.log
@@ -40,7 +43,7 @@ jobs:
       with:
         name: p2pool_ubuntu_data
         path: |
-          build/p2pool.log
+          build/*.log
           build/data/
 
   sync-test-macos:
@@ -69,7 +72,10 @@ jobs:
       run: |
         cd build
         mkdir data
-        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
+        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        ./p2pool --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
     - name: Archive p2pool.log
@@ -77,7 +83,7 @@ jobs:
       with:
         name: p2pool_macos_data
         path: |
-          build/p2pool.log
+          build/*.log
           build/data/
 
   sync-test-windows:
@@ -106,7 +112,10 @@ jobs:
       run: |
         cd build/Debug
         mkdir data
-        ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --no-cache --data-api data --local-api --loglevel 6
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy1.log"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy2.log"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy3.log"
+        ./p2pool.exe --host p2pmd.xmrvsbeast.com --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         findstr /C:"Synchronization finished successfully" p2pool.log
 
     - name: Archive p2pool.log
@@ -114,5 +123,5 @@ jobs:
       with:
         name: p2pool_windows_data
         path: |
-          build/Debug/p2pool.log
+          build/Debug/*.log
           build/Debug/data/
