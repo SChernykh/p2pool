@@ -1987,14 +1987,18 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 
 bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, const hash& expected_id)
 {
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	const uint64_t cur_time = seconds_since_epoch();
+
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
+		if (cur_time >= m_nextOutgoingPeerListRequest) {
+			server->send_peer_list_request(this, cur_time);
+		}
 		return true;
 	}
 
 	const uint64_t received_timestamp = microseconds_since_epoch();
-
-	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	MutexLock lock(server->m_blockLock);
 
@@ -2016,7 +2020,6 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 			return false;
 		}
 
-		const uint64_t cur_time = seconds_since_epoch();
 		if (cur_time >= m_nextOutgoingPeerListRequest) {
 			server->send_peer_list_request(this, cur_time);
 		}
