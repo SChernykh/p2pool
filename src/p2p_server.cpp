@@ -1992,7 +1992,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
-		if (cur_time >= m_nextOutgoingPeerListRequest) {
+		if (expected_id.empty() && (cur_time >= m_nextOutgoingPeerListRequest)) {
 			server->send_peer_list_request(this, cur_time);
 		}
 		return true;
