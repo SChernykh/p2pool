@@ -970,9 +970,18 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 void p2pool::get_version()
 {
+	const uint64_t t1 = microseconds_since_epoch();
+
 	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[this](const char* data, size_t size)
+		[this, t1](const char* data, size_t size)
 		{
+			const double node_ping = static_cast<double>(microseconds_since_epoch() - t1) / 1e3;
+			if (node_ping < 100) {
+				LOGINFO(1, m_hostStr << " ping time is " << node_ping << " ms");
+			}
+			else {
+				LOGWARN(1, m_hostStr << " ping time is " << node_ping << " ms, this is too high for an efficient mining. Try to use a different node, or your own local node.");
+			}
 			parse_get_version_rpc(data, size);
 		},
 		[this](const char* data, size_t size)
