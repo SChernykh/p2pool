@@ -140,7 +140,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_outpeers, do_inpeers, do_exit;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_outpeers, do_inpeers, do_exit, do_version;
 
 #ifdef WITH_RANDOMX
 static cmdfunc do_start_mining, do_stop_mining;
@@ -162,6 +162,7 @@ static cmd cmds[] = {
 	{ STRCONST("stop_mining"), "", "stop mining", do_stop_mining },
 #endif
 	{ STRCONST("exit"), "", "terminate p2pool", do_exit },
+	{ STRCONST("version"), "", "show p2pool version", do_version },
 	{ STRCNULL, NULL, NULL, NULL }
 };
 
@@ -275,6 +276,11 @@ static void do_exit(p2pool *m_pool, const char * /* args */)
 {
 	bkg_jobs_tracker.wait();
 	m_pool->stop();
+}
+
+static void do_version(p2pool* /* m_pool */, const char* /* args */)
+{
+	LOGINFO(0, log::LightCyan() << VERSION);
 }
 
 void ConsoleCommands::allocCallback(uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf)
