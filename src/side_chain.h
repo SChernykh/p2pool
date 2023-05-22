@@ -48,6 +48,8 @@ public:
 
 	bool block_seen(const PoolBlock& block);
 	void unsee_block(const PoolBlock& block);
+	size_t cleanup_seen_blocks();
+
 	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
 	bool add_block(const PoolBlock& block);
 	void get_missing_blocks(std::vector<hash>& missing_blocks) const;

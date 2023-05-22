@@ -490,6 +490,28 @@ void SideChain::unsee_block(const PoolBlock& block)
 	m_seenBlocks.erase(block.get_full_id());
 }
 
+size_t SideChain::cleanup_seen_blocks()
+{
+	size_t n = 0;
+
+	MutexLock lock(m_seenBlocksLock);
+
+	// Forget seen blocks that weren't added for any reason
+	hash h;
+	for (auto i = m_seenBlocks.begin(); i != m_seenBlocks.end();) {
+		memcpy(h.h, i->data(), HASH_SIZE);
+		if (m_blocksById.count(h) == 0) {
+			i = m_seenBlocks.erase(i);
+			++n;
+		}
+		else {
+			++i;
+		}
+	}
+
+	return n;
+}
+
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
 {
 	if (block.m_difficulty < m_minDifficulty) {
@@ -2003,7 +2025,6 @@ void SideChain::prune_old_blocks()
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);
-						unsee_block(*block);
 						delete block;
 						++num_blocks_pruned;
 					}
@@ -2034,6 +2055,11 @@ void SideChain::prune_old_blocks()
 
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
+
+		const size_t n = cleanup_seen_blocks();
+		if (n > 0) {
+			LOGINFO(5, "pruned " << n << " seen blocks");
+		}
 
 #ifdef DEV_TEST_SYNC
 		if (m_pool && m_precalcFinished.load() && (cur_time >= m_synchronizedTime + 120)) {
