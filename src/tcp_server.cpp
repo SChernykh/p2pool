@@ -1119,7 +1119,7 @@ bool TCPServer::Client::on_proxy_handshake(char* data, uint32_t size)
 
 	case Socks5ProxyState::ConnectRequestSent:
 		if (m_numRead >= 4) {
-			uint8_t* p = reinterpret_cast<uint8_t*>(m_readBuf);
+			const uint8_t* p = reinterpret_cast<uint8_t*>(m_readBuf);
 			if ((p[0] != 5) && (p[1] != 0) && p[2] != 0) {
 				LOGWARN(5, "SOCKS5 proxy returned an invalid reply to CONNECT");
 				return false;

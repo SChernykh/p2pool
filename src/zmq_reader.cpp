@@ -188,7 +188,7 @@ bool ZMQReader::connect(const std::string& address)
 void ZMQReader::parse(char* data, size_t size)
 {
 	char* value = data;
-	char* end = data + size;
+	const char* end = data + size;
 
 	while ((value < end) && (*value != ':')) {
 		++value;

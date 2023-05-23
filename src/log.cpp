@@ -290,9 +290,9 @@ private:
 
 	static FORCEINLINE void strip_colors(char* buf, uint32_t& size)
 	{
-		char* p_read = buf;
+		const char* p_read = buf;
 		char* p_write = buf;
-		char* buf_end = buf + size;
+		const char* buf_end = buf + size;
 
 		bool is_color = false;
 

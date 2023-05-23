@@ -1714,7 +1714,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					return;
 				}
 
-				uint64_t* value = reinterpret_cast<uint64_t*>(work->solution.h);
+				const uint64_t* value = reinterpret_cast<uint64_t*>(work->solution.h);
 
 				uint64_t high;
 				umul128(value[HASH_SIZE / sizeof(uint64_t) - 1], CHALLENGE_DIFFICULTY, &high);
@@ -1861,7 +1861,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 
 	// Check that incoming connection provided enough PoW
 	if (m_isIncoming) {
-		uint64_t* value = reinterpret_cast<uint64_t*>(solution.h);
+		const uint64_t* value = reinterpret_cast<uint64_t*>(solution.h);
 
 		uint64_t high;
 		umul128(value[HASH_SIZE / sizeof(uint64_t) - 1], CHALLENGE_DIFFICULTY, &high);

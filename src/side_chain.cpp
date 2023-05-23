@@ -940,7 +940,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 			blocks_in_window.emplace(uncle_id);
 			auto it = m_blocksById.find(uncle_id);
 			if (it != m_blocksById.end()) {
-				PoolBlock* uncle = it->second;
+				const PoolBlock* uncle = it->second;
 				if (tip_height - uncle->m_sidechainHeight < window_size) {
 					++total_uncles_in_window;
 					if (uncle->m_minerWallet == w) {
