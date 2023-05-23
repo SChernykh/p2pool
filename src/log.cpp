@@ -174,7 +174,7 @@ private:
 
 		const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), 4U), 8U);
 
-		char buf[40] = {};
+		static char buf[40] = {};
 		log::Stream s(buf);
 		s << "UV_THREADPOOL_SIZE=" << N << '\0';
 
