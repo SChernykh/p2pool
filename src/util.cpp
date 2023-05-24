@@ -503,19 +503,19 @@ bool get_dns_txt_records_base(const std::string& host, Callback<void, const char
 		return false;
 	}
 
-	uint8_t answer[4096];
+	uint8_t answer[4096] = {};
 	const int anslen = res_query(host.c_str(), ns_c_in, ns_t_txt, answer, sizeof(answer));
 	if ((anslen <= 0) || (anslen > static_cast<int>(sizeof(answer)))) {
 		return false;
 	}
 
-	ns_msg handle;
+	ns_msg handle{};
 	if (ns_initparse(answer, anslen, &handle) != 0) {
 		return false;
 	}
 
 	for (int rrnum = 0, n = ns_msg_count(handle, ns_s_an); rrnum < n; ++rrnum) {
-		ns_rr rr;
+		ns_rr rr{};
 		if ((ns_parserr(&handle, ns_s_an, rrnum, &rr) == 0) && (ns_rr_type(rr) == ns_t_txt)) {
 			for (const uint8_t* data = ns_rr_rdata(rr), *e = data + ns_rr_rdlen(rr); data < e;) {
 				const size_t k = *(data++);

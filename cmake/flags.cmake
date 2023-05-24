@@ -10,13 +10,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 
 	if (DEV_WITH_TSAN)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=thread")
-	elseif (DEV_WITH_MSAN)
-		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=memory")
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
 
-	if (DEV_WITH_TSAN OR DEV_WITH_MSAN)
+	if (DEV_WITH_TSAN)
 		set(OPTIMIZATION_FLAGS "-O2 -g")
 	else()
 		set(OPTIMIZATION_FLAGS "-Ofast -s")
@@ -64,7 +62,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	set(GENERAL_FLAGS "-pthread")
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
-	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
+
+	if (NOT DEV_WITH_MSAN)
+		set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
+	endif()
 
 	if (WITH_LTO)
 		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto")
