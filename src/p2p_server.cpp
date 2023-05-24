@@ -376,7 +376,7 @@ void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 	client->m_nextOutgoingPeerListRequest = cur_time + (60 + (get_random64() % 61));
 
 	const bool result = send(client,
-		[client](void* buf, size_t buf_size)
+		[client](uint8_t* buf, size_t buf_size)
 		{
 			LOGINFO(6, "sending PEER_LIST_REQUEST to " << static_cast<char*>(client->m_addrString));
 
@@ -384,7 +384,7 @@ void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 				return 0;
 			}
 
-			*reinterpret_cast<uint8_t*>(buf) = static_cast<uint8_t>(MessageId::PEER_LIST_REQUEST);
+			*buf = static_cast<uint8_t>(MessageId::PEER_LIST_REQUEST);
 			return 1;
 		});
 
@@ -878,10 +878,9 @@ void P2PServer::on_broadcast()
 		}
 
 		for (Broadcast* data : broadcast_queue) {
-			const bool result = send(client, [client, data](void* buf, size_t buf_size) -> size_t
+			const bool result = send(client, [client, data](uint8_t* buf, size_t buf_size) -> size_t
 			{
-				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-				uint8_t* p = p0;
+				uint8_t* p = buf;
 
 				bool send_pruned = true;
 				bool send_compact = (client->m_protocolVersion >= PROTOCOL_VERSION_1_1) && !data->compact_blob.empty() && (data->compact_blob.size() < data->pruned_blob.size());
@@ -935,7 +934,7 @@ void P2PServer::on_broadcast()
 					}
 				}
 
-				return p - p0;
+				return p - buf;
 			});
 			if (!result) {
 				LOGWARN(5, "failed to broadcast to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
@@ -1138,7 +1137,7 @@ void P2PServer::download_missing_blocks()
 		}
 
 		const bool result = send(client,
-			[&id, client](void* buf, size_t buf_size) -> size_t
+			[&id, client](uint8_t* buf, size_t buf_size) -> size_t
 			{
 				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(client->m_addrString));
 
@@ -1146,15 +1145,14 @@ void P2PServer::download_missing_blocks()
 					return 0;
 				}
 
-				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-				uint8_t* p = p0;
+				uint8_t* p = buf;
 
 				*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
 				memcpy(p, id.h, HASH_SIZE);
 				p += HASH_SIZE;
 
-				return p - p0;
+				return p - buf;
 			});
 
 		if (result) {
@@ -1618,7 +1616,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 	m_handshakeChallenge = owner->get_random64();
 
 	return owner->send(this,
-		[this, owner](void* buf, size_t buf_size) -> size_t
+		[this, owner](uint8_t* buf, size_t buf_size) -> size_t
 		{
 			LOGINFO(5, "sending HANDSHAKE_CHALLENGE to " << static_cast<char*>(m_addrString));
 
@@ -1626,8 +1624,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 				return 0;
 			}
 
-			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-			uint8_t* p = p0;
+			uint8_t* p = buf;
 
 			*(p++) = static_cast<uint8_t>(MessageId::HANDSHAKE_CHALLENGE);
 
@@ -1641,7 +1638,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 			memcpy(p, &k, sizeof(uint64_t));
 			p += sizeof(uint64_t);
 
-			return p - p0;
+			return p - buf;
 		});
 }
 
@@ -1742,7 +1739,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 			}
 
 			const bool result = work->server->send(work->client,
-				[work](void* buf, size_t buf_size) -> size_t
+				[work](uint8_t* buf, size_t buf_size) -> size_t
 				{
 					LOGINFO(5, "sending HANDSHAKE_SOLUTION to " << static_cast<char*>(work->client->m_addrString));
 
@@ -1750,8 +1747,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 						return 0;
 					}
 
-					uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-					uint8_t* p = p0;
+					uint8_t* p = buf;
 
 					*(p++) = static_cast<uint8_t>(MessageId::HANDSHAKE_SOLUTION);
 
@@ -1765,7 +1761,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 						work->client->on_after_handshake(p);
 					}
 
-					return p - p0;
+					return p - buf;
 				});
 
 			if (result) {
@@ -1889,7 +1885,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 		}
 
 		return m_owner->send(this,
-			[this](void* buf, size_t buf_size) -> size_t
+			[this](uint8_t* buf, size_t buf_size) -> size_t
 			{
 				LOGINFO(5, "sending LISTEN_PORT and BLOCK_REQUEST for the chain tip to " << static_cast<char*>(m_addrString));
 
@@ -1897,10 +1893,9 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 					return 0;
 				}
 
-				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-				uint8_t* p = p0;
+				uint8_t* p = buf;
 				on_after_handshake(p);
-				return p - p0;
+				return p - buf;
 			});
 	}
 
@@ -1958,7 +1953,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	}
 
 	return server->send(this,
-		[this, &blob](void* buf, size_t buf_size) -> size_t
+		[this, &blob](uint8_t* buf, size_t buf_size) -> size_t
 		{
 			LOGINFO(5, "sending BLOCK_RESPONSE to " << static_cast<char*>(m_addrString));
 
@@ -1968,8 +1963,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 				return 0;
 			}
 
-			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-			uint8_t* p = p0;
+			uint8_t* p = buf;
 
 			*(p++) = static_cast<uint8_t>(MessageId::BLOCK_RESPONSE);
 
@@ -1981,7 +1975,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 				p += len;
 			}
 
-			return p - p0;
+			return p - buf;
 		});
 }
 
@@ -2167,7 +2161,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	}
 
 	return server->send(this,
-		[this, &peers, num_selected_peers](void* buf, size_t buf_size) -> size_t
+		[this, &peers, num_selected_peers](uint8_t* buf, size_t buf_size) -> size_t
 		{
 			LOGINFO(6, "sending PEER_LIST_RESPONSE to " << static_cast<char*>(m_addrString));
 
@@ -2175,8 +2169,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 				return 0;
 			}
 
-			uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-			uint8_t* p = p0;
+			uint8_t* p = buf;
 
 			*(p++) = static_cast<uint8_t>(MessageId::PEER_LIST_RESPONSE);
 			*(p++) = static_cast<uint8_t>(num_selected_peers);
@@ -2193,7 +2186,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 				p += 2;
 			}
 
-			return p - p0;
+			return p - buf;
 		});
 }
 
@@ -2408,7 +2401,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 		}
 
 		const bool result = server->send(this,
-			[this, &id](void* buf, size_t buf_size) -> size_t
+			[this, &id](uint8_t* buf, size_t buf_size) -> size_t
 			{
 				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
 
@@ -2416,15 +2409,14 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 					return 0;
 				}
 
-				uint8_t* p0 = reinterpret_cast<uint8_t*>(buf);
-				uint8_t* p = p0;
+				uint8_t* p = buf;
 
 				*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
 				memcpy(p, id.h, HASH_SIZE);
 				p += HASH_SIZE;
 
-				return p - p0;
+				return p - buf;
 			});
 
 		if (!result) {

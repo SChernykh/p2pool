@@ -809,16 +809,15 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 	}
 	else {
 		const bool result = owner->send(client,
-			[](void* buf, size_t buf_size) -> size_t
+			[](uint8_t* buf, size_t buf_size) -> size_t
 			{
 				if (buf_size < 3) {
 					return 0;
 				}
 
-				uint8_t* p = reinterpret_cast<uint8_t*>(buf);
-				p[0] = 5; // Protocol version (SOCKS5)
-				p[1] = 1; // NMETHODS
-				p[2] = 0; // Method 0 (no authentication)
+				buf[0] = 5; // Protocol version (SOCKS5)
+				buf[1] = 1; // NMETHODS
+				buf[2] = 0; // Method 0 (no authentication)
 
 				return 3;
 			});
@@ -1082,27 +1081,26 @@ bool TCPServer::Client::on_proxy_handshake(char* data, uint32_t size)
 			n = 2;
 
 			const bool result = m_owner->send(this,
-				[this](void* buf, size_t buf_size) -> size_t
+				[this](uint8_t* buf, size_t buf_size) -> size_t
 				{
 					if (buf_size < 22) {
 						return 0;
 					}
 
-					uint8_t* p = reinterpret_cast<uint8_t*>(buf);
-					p[0] = 5; // Protocol version (SOCKS5)
-					p[1] = 1; // CONNECT
-					p[2] = 0; // RESERVED
+					buf[0] = 5; // Protocol version (SOCKS5)
+					buf[1] = 1; // CONNECT
+					buf[2] = 0; // RESERVED
 					if (m_isV6) {
-						p[3] = 4; // ATYP
-						memcpy(p + 4, m_addr.data, 16);
-						p[20] = static_cast<uint8_t>(m_port >> 8);
-						p[21] = static_cast<uint8_t>(m_port & 0xFF);
+						buf[3] = 4; // ATYP
+						memcpy(buf + 4, m_addr.data, 16);
+						buf[20] = static_cast<uint8_t>(m_port >> 8);
+						buf[21] = static_cast<uint8_t>(m_port & 0xFF);
 					}
 					else {
-						p[3] = 1; // ATYP
-						memcpy(p + 4, m_addr.data + 12, 4);
-						p[8] = static_cast<uint8_t>(m_port >> 8);
-						p[9] = static_cast<uint8_t>(m_port & 0xFF);
+						buf[3] = 1; // ATYP
+						memcpy(buf + 4, m_addr.data + 12, 4);
+						buf[8] = static_cast<uint8_t>(m_port >> 8);
+						buf[9] = static_cast<uint8_t>(m_port & 0xFF);
 					}
 
 					return m_isV6 ? 22 : 10;

@@ -287,7 +287,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	client->m_lastJobTarget = target;
 
 	const bool result = send(client,
-		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](void* buf, size_t buf_size)
+		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](uint8_t* buf, size_t buf_size)
 		{
 			do {
 				client->m_rpcId = static_cast<StratumServer*>(client->m_owner)->get_random32();
@@ -377,7 +377,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		if (!block.get_difficulties(template_id, height, sidechain_height, mainchain_diff, sidechain_diff)) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
 			return send(client,
-				[id](void* buf, size_t buf_size)
+				[id](uint8_t* buf, size_t buf_size)
 				{
 					log::Stream s(buf, buf_size);
 					s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Stale share\"}}\n";
@@ -463,7 +463,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a share with invalid job id " << job_id << " (latest job sent has id " << client->m_perConnectionJobId << ')');
 
 	const bool result = send(client,
-		[id](void* buf, size_t buf_size)
+		[id](uint8_t* buf, size_t buf_size)
 		{
 			log::Stream s(buf, buf_size);
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Invalid job id\"}}\n";
@@ -773,7 +773,7 @@ void StratumServer::on_blobs_ready()
 		client->m_lastJobTarget = target;
 
 		const bool result = send(client,
-			[data, target, hashing_blob, job_id](void* buf, size_t buf_size)
+			[data, target, hashing_blob, job_id](uint8_t* buf, size_t buf_size)
 			{
 				log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
 
@@ -985,7 +985,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	if ((client->m_resetCounter.load() == share->m_clientResetCounter) && (client->m_rpcId == share->m_rpcId)) {
 		const bool result = server->send(client,
-			[share](void* buf, size_t buf_size)
+			[share](uint8_t* buf, size_t buf_size)
 			{
 				log::Stream s(buf, buf_size);
 				switch (share->m_result) {
