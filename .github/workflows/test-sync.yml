@@ -3,7 +3,7 @@ name: Sync test
 on: [push, pull_request]
 
 jobs:
-  sync-test-ubuntu:
+  sync-test-ubuntu-tsan:
 
     timeout-minutes: 30
     runs-on: ubuntu-22.04
@@ -25,6 +25,54 @@ jobs:
         mkdir build
         cd build
         cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_TSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+        make -j$(nproc)
+
+    - name: Run p2pool
+      timeout-minutes: 20
+      run: |
+        cd build
+        mkdir data
+        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
+        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
+        grep 'Synchronization finished successfully' p2pool.log
+
+    - name: Archive p2pool.log
+      uses: actions/upload-artifact@v3
+      with:
+        name: p2pool_ubuntu_data
+        path: |
+          build/*.log
+          build/data/
+
+  sync-test-ubuntu-msan:
+
+    timeout-minutes: 30
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
+
+    - name: Install clang
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 17
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_MSAN=ON -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17
         make -j$(nproc)
 
     - name: Run p2pool
@@ -86,7 +134,7 @@ jobs:
           build/*.log
           build/data/
 
-  sync-test-windows:
+  sync-test-windows-debug-asan:
 
     timeout-minutes: 30
     runs-on: windows-2022

@@ -9,6 +9,7 @@ option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not b
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
+option(DEV_WITH_MSAN "[Developer only] Compile with memory sanitizer" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -34,6 +35,10 @@ endif()
 
 if (DEV_WITH_TSAN)
 	add_definitions(-DDEV_WITH_TSAN)
+endif()
+
+if (DEV_WITH_MSAN)
+	add_definitions(-DDEV_WITH_MSAN)
 endif()
 
 include(cmake/flags.cmake)
