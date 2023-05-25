@@ -32,7 +32,7 @@ jobs:
         make -j$(nproc)
 
     - name: Run p2pool
-      timeout-minutes: 20
+      timeout-minutes: 25
       run: |
         cd build
         mkdir data
