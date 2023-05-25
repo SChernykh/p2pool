@@ -1029,6 +1029,10 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 
 void P2PServer::on_timer()
 {
+	if (m_pool->stopped()) {
+		return;
+	}
+
 	++m_timerCounter;
 
 	if (!m_initialPeerList.empty()) {
