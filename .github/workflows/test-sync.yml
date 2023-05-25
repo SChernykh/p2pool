@@ -32,9 +32,9 @@ jobs:
       run: |
         cd build
         mkdir data
-        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        python ../tests/src/stratum_dummy.py 1 &
+        python ../tests/src/stratum_dummy.py 2 &
+        python ../tests/src/stratum_dummy.py 3 &
         TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
@@ -110,9 +110,9 @@ jobs:
       run: |
         cd build
         mkdir data
-        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        python ../tests/src/stratum_dummy.py 1 &
+        python ../tests/src/stratum_dummy.py 2 &
+        python ../tests/src/stratum_dummy.py 3 &
         MSAN_OPTIONS="halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
@@ -153,9 +153,9 @@ jobs:
       run: |
         cd build
         mkdir data
-        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        python ../tests/src/stratum_dummy.py 1 &
+        python ../tests/src/stratum_dummy.py 2 &
+        python ../tests/src/stratum_dummy.py 3 &
         UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
@@ -193,9 +193,9 @@ jobs:
       run: |
         cd build
         mkdir data
-        python ../tests/src/stratum_dummy.py stratum_dummy1.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy2.log &
-        python ../tests/src/stratum_dummy.py stratum_dummy3.log &
+        python ../tests/src/stratum_dummy.py 1 &
+        python ../tests/src/stratum_dummy.py 2 &
+        python ../tests/src/stratum_dummy.py 3 &
         ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         grep 'Synchronization finished successfully' p2pool.log
 
@@ -233,9 +233,9 @@ jobs:
       run: |
         cd build/Debug
         mkdir data
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy1.log"
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy2.log"
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py stratum_dummy3.log"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 1"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 2"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 3"
         ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
         findstr /C:"Synchronization finished successfully" p2pool.log
 
