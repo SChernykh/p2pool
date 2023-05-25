@@ -1,6 +1,10 @@
 name: cppcheck
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '57 0 * * *'
 
 jobs:
   cppcheck-ubuntu:
