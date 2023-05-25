@@ -12,9 +12,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=thread")
 	endif()
 
+	if (DEV_WITH_UBSAN)
+		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=undefined")
+	endif()
+
 	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
 
-	if (DEV_WITH_TSAN)
+	if (DEV_WITH_TSAN OR DEV_WITH_UBSAN)
 		set(OPTIMIZATION_FLAGS "-O2 -g")
 	else()
 		set(OPTIMIZATION_FLAGS "-Ofast -s")
