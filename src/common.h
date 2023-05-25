@@ -436,19 +436,13 @@ struct raw_ip
 
 	FORCEINLINE bool operator!=(const raw_ip& other) const { return !operator==(other); }
 
-	FORCEINLINE bool is_localhost() const
-	{
-		static constexpr raw_ip localhost_ipv4 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01 };
-		static constexpr raw_ip localhost_ipv6 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+	FORCEINLINE bool is_localhost() const { return (*this == localhost_ipv4) || (*this == localhost_ipv6); }
+	FORCEINLINE bool is_ipv4_prefix() const { return memcmp(data, ipv4_prefix, sizeof(ipv4_prefix)) == 0; }
 
-		return (*this == localhost_ipv4) || (*this == localhost_ipv6);
-	}
+	static const raw_ip localhost_ipv4;
+	static const raw_ip localhost_ipv6;
 
-	FORCEINLINE bool is_ipv4_prefix() const
-	{
-		alignas(8) static constexpr uint8_t ipv4_prefix[12] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
-		return memcmp(data, ipv4_prefix, sizeof(ipv4_prefix)) == 0;
-	}
+	alignas(8) static const uint8_t ipv4_prefix[12];
 };
 
 static_assert(sizeof(raw_ip) == 16, "struct raw_ip has invalid size");
