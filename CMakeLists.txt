@@ -11,6 +11,7 @@ option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is comp
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
 option(DEV_WITH_MSAN "[Developer only] Compile with memory sanitizer" OFF)
 option(DEV_WITH_UBSAN "[Developer only] Compile with undefined behavior sanitizer" OFF)
+option(DEV_WITH_ASAN "[Developer only] Compile with address sanitizer" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -44,6 +45,10 @@ endif()
 
 if (DEV_WITH_UBSAN)
 	add_definitions(-DDEV_WITH_UBSAN)
+endif()
+
+if (DEV_WITH_ASAN)
+	add_definitions(-DDEV_WITH_ASAN)
 endif()
 
 include(cmake/flags.cmake)
@@ -293,7 +298,7 @@ endif()
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 if (STATIC_BINARY OR STATIC_LIBS)
-	if (NOT (DEV_WITH_TSAN OR DEV_WITH_MSAN OR DEV_WITH_UBSAN))
+	if (NOT (DEV_WITH_TSAN OR DEV_WITH_MSAN OR DEV_WITH_UBSAN OR DEV_WITH_ASAN))
 		if (WIN32)
 			add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} "${CMAKE_PROJECT_NAME}.exe")
 		else()
