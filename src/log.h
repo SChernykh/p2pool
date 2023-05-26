@@ -105,8 +105,6 @@ struct Stream
 	FORCEINLINE int getNumberWidth() const { return m_numberWidth; }
 	FORCEINLINE void setNumberWidth(int width) { m_numberWidth = width; }
 
-	NOINLINE void writeCurrentTime();
-
 	int m_pos;
 	int m_numberWidth;
 	char* m_buf;

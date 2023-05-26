@@ -333,6 +333,31 @@ static Worker worker;
 
 #endif // P2POOL_LOG_DISABLE
 
+static FORCEINLINE void writeCurrentTime(Stream& s)
+{
+	using namespace std::chrono;
+
+	const system_clock::time_point now = system_clock::now();
+	const time_t t0 = system_clock::to_time_t(now);
+
+	tm t;
+
+#ifdef _WIN32
+	gmtime_s(&t, &t0);
+#else
+	gmtime_r(&t0, &t);
+#endif
+
+	s.setNumberWidth(2);
+	s << (t.tm_year + 1900) << '-' << (t.tm_mon + 1) << '-' << t.tm_mday << ' ' << t.tm_hour << ':' << t.tm_min << ':' << t.tm_sec << '.';
+
+	const int32_t mcs = time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000;
+
+	s.setNumberWidth(4);
+	s << (mcs / 100);
+	s.setNumberWidth(1);
+}
+
 NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 {
 	m_stackBuf[BUF_SIZE] = '\0';
@@ -340,7 +365,7 @@ NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 	m_pos = 3;
 
 	*this << Cyan();
-	writeCurrentTime();
+	writeCurrentTime(*this);
 	*this << NoColor() << ' ';
 }
 
@@ -368,53 +393,14 @@ void stop()
 #endif
 }
 
-NOINLINE void Stream::writeCurrentTime()
-{
-	using namespace std::chrono;
-
-	const system_clock::time_point now = system_clock::now();
-	const time_t t0 = system_clock::to_time_t(now);
-
-	tm t;
-
-#ifdef _WIN32
-	gmtime_s(&t, &t0);
-#else
-	gmtime_r(&t0, &t);
-#endif
-
-	m_numberWidth = 2;
-	*this << (t.tm_year + 1900) << '-' << (t.tm_mon + 1) << '-' << t.tm_mday << ' ' << t.tm_hour << ':' << t.tm_min << ':' << t.tm_sec << '.';
-
-	const int32_t mcs = time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000;
-
-	m_numberWidth = 4;
-	*this << (mcs / 100);
-	// cppcheck-suppress redundantAssignment
-	m_numberWidth = 1;
-}
-
 NOINLINE void Stream::Entry<raw_ip>::put(const raw_ip& value, Stream* wrapper)
 {
-	const char* addr_str;
+	const bool is_ipv4 = value.is_ipv4_prefix();
+
 	char addr_str_buf[64];
+	const char* addr_str = inet_ntop(is_ipv4 ? AF_INET : AF_INET6, value.data + (is_ipv4 ? 12 : 0), addr_str_buf, sizeof(addr_str_buf));
 
-	static constexpr uint8_t ipv4_prefix[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255 };
-	const bool is_v6 = (memcmp(value.data, ipv4_prefix, 12) != 0);
-
-	if (is_v6) {
-		addr_str = inet_ntop(AF_INET6, value.data, addr_str_buf, sizeof(addr_str_buf));
-	}
-	else {
-		addr_str = inet_ntop(AF_INET, value.data + 12, addr_str_buf, sizeof(addr_str_buf));
-	}
-
-	if (addr_str) {
-		*wrapper << addr_str;
-	}
-	else {
-		*wrapper << "N/A";
-	}
+	*wrapper << (addr_str ? addr_str : "N/A");
 }
 
 NOINLINE void Stream::Entry<Wallet>::put(const Wallet& w, Stream* wrapper)
