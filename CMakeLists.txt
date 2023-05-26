@@ -149,7 +149,7 @@ if (WITH_UPNP)
 endif()
 
 if (WIN32)
-	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi)
+	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp)
 	if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(LIBS ${LIBS} bcrypt)
 	endif()
@@ -163,8 +163,8 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	find_library(ZMQ_LIBRARY_DEBUG NAMES libzmq-v142-mt-sgd-4_3_5 PATHS "external/lib/libzmq/Debug")
 	find_library(ZMQ_LIBRARY NAMES libzmq-v142-mt-s-4_3_5 PATHS "external/lib/libzmq/Release")
-	find_library(UV_LIBRARY_DEBUG NAMES uv_a PATHS "external/lib/libuv/Debug")
-	find_library(UV_LIBRARY NAMES uv_a PATHS "external/lib/libuv/Release")
+	find_library(UV_LIBRARY_DEBUG NAMES libuv PATHS "external/lib/libuv/Debug")
+	find_library(UV_LIBRARY NAMES libuv PATHS "external/lib/libuv/Release")
 	find_library(CURL_LIBRARY_DEBUG NAMES libcurld PATHS "external/lib/libcurl/Debug")
 	find_library(CURL_LIBRARY NAMES libcurl PATHS "external/lib/libcurl/Release")
 	add_definitions(-D_DISABLE_VECTOR_ANNOTATION)
@@ -336,7 +336,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"
-		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv_a.a"
+		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv.a"
 		"${CMAKE_SOURCE_DIR}/external/src/curl/lib/.libs/libcurl.a"
 		${STATIC_LIBS}
 	)
