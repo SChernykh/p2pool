@@ -160,7 +160,7 @@ TEST(pool_block, verify)
 			ASSERT_EQ(b.deserialize(p, n, sidechain, nullptr, false), 0);
 			p += n;
 
-			sidechain.add_block(b);
+			ASSERT_TRUE(sidechain.add_block(b));
 			ASSERT_TRUE(sidechain.find_block(b.m_sidechainId) != nullptr);
 		}
 

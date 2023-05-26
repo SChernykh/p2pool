@@ -92,6 +92,7 @@ TEST(block_template, update)
 
 	tpl.update(data, mempool, &wallet);
 
+	ASSERT_EQ(b->m_sidechainId, H("272a7eea0b804cf24427528977d221850d0ee06c26e935219a75f180cfbfc7f3"));
 	ASSERT_EQ(b->m_transactions.size(), 203);
 
 	for (size_t i = 1; i < b->m_transactions.size(); ++i) {

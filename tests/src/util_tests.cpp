@@ -87,6 +87,10 @@ TEST(util, bsr)
 	for (uint64_t i = 0, x = 1; i <= 63; ++i, x <<= 1) {
 		ASSERT_EQ(bsr(x), i);
 		ASSERT_EQ(bsr_reference(x), i);
+
+		const uint64_t y = x | (x - 1);
+		ASSERT_EQ(bsr(y), i);
+		ASSERT_EQ(bsr_reference(y), i);
 	}
 }
 
