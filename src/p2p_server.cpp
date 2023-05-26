@@ -2214,6 +2214,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 		buf += 2;
 
 		// Treat IPv4-mapped addresses as regular IPv4 addresses
+		// cppcheck-suppress uninitvar
 		if (is_v6 && ip.is_ipv4_prefix()) {
 			is_v6 = false;
 		}
