@@ -45,7 +45,7 @@ private:
 	zmq::context_t m_context{ 1 };
 	zmq::socket_t m_publisher{ m_context, ZMQ_PUB };
 	zmq::socket_t m_subscriber{ m_context, ZMQ_SUB };
-	uint16_t m_publisherPort = 37891;
+	uint16_t m_publisherPort = 0;
 	std::atomic<bool> m_finished{ false };
 	std::atomic<bool> m_threadRunning{ false };
 

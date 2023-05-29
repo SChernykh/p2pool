@@ -38,14 +38,13 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		m_proxy.clear();
 	}
 
-	for (uint32_t i = m_publisherPort; i < std::numeric_limits<uint16_t>::max(); ++i) {
+	std::random_device rd;
+	for (uint32_t port = 49152 + (rd() % 16384), i = 0; i < 100; ++i, port = (port < 65535) ? (port + 1) : 49152) {
 		try {
-			m_publisherPort = 0;
-
 			char addr[32];
-			snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", i);
+			snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", port);
 			m_publisher.bind(addr);
-			m_publisherPort = static_cast<uint16_t>(i);
+			m_publisherPort = static_cast<uint16_t>(port);
 			break;
 		}
 		catch (const std::exception& e) {
