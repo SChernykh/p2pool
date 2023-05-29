@@ -46,9 +46,9 @@ public:
 
 	void fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
 
-	bool block_seen(const PoolBlock& block);
-	void unsee_block(const PoolBlock& block);
-	size_t cleanup_seen_blocks();
+	bool incoming_block_seen(const PoolBlock& block);
+	void forget_incoming_block(const PoolBlock& block);
+	void cleanup_incoming_blocks();
 
 	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
 	bool add_block(const PoolBlock& block);
@@ -118,8 +118,9 @@ private:
 	unordered_map<hash, uint64_t> m_seenWallets;
 	uint64_t m_seenWalletsLastPruneTime;
 
-	uv_mutex_t m_seenBlocksLock;
-	unordered_set<PoolBlock::full_id> m_seenBlocks;
+	// Used to quickly cut off multiple broadcasts of the same block by different peers. Only the first broadcast will be processed.
+	uv_mutex_t m_incomingBlocksLock;
+	unordered_map<PoolBlock::full_id, uint64_t> m_incomingBlocks;
 
 	std::vector<DifficultyData> m_difficultyData;
 

@@ -92,7 +92,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	uv_rwlock_init_checked(&m_sidechainLock);
 	uv_mutex_init_checked(&m_seenWalletsLock);
-	uv_mutex_init_checked(&m_seenBlocksLock);
+	uv_mutex_init_checked(&m_incomingBlocksLock);
 	uv_rwlock_init_checked(&m_curDifficultyLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
@@ -209,7 +209,7 @@ SideChain::~SideChain()
 
 	uv_rwlock_destroy(&m_sidechainLock);
 	uv_mutex_destroy(&m_seenWalletsLock);
-	uv_mutex_destroy(&m_seenBlocksLock);
+	uv_mutex_destroy(&m_incomingBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
 
 	for (const auto& it : m_blocksById) {
@@ -469,7 +469,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	return true;
 }
 
-bool SideChain::block_seen(const PoolBlock& block)
+bool SideChain::incoming_block_seen(const PoolBlock& block)
 {
 	// Check if it's some old block
 	const PoolBlock* tip = m_chainTip;
@@ -479,37 +479,35 @@ bool SideChain::block_seen(const PoolBlock& block)
 		return true;
 	}
 
+	const uint64_t cur_time = seconds_since_epoch();
+
 	// Check if it was received before
-	MutexLock lock(m_seenBlocksLock);
-	return !m_seenBlocks.insert(block.get_full_id()).second;
+	MutexLock lock(m_incomingBlocksLock);
+	return !m_incomingBlocks.emplace(block.get_full_id(), cur_time).second;
 }
 
-void SideChain::unsee_block(const PoolBlock& block)
+void SideChain::forget_incoming_block(const PoolBlock& block)
 {
-	MutexLock lock(m_seenBlocksLock);
-	m_seenBlocks.erase(block.get_full_id());
+	MutexLock lock(m_incomingBlocksLock);
+	m_incomingBlocks.erase(block.get_full_id());
 }
 
-size_t SideChain::cleanup_seen_blocks()
+void SideChain::cleanup_incoming_blocks()
 {
-	size_t n = 0;
+	const uint64_t cur_time = seconds_since_epoch();
 
-	MutexLock lock(m_seenBlocksLock);
+	MutexLock lock(m_incomingBlocksLock);
 
-	// Forget seen blocks that weren't added for any reason
+	// Forget seen blocks that were added more than a minute ago
 	hash h;
-	for (auto i = m_seenBlocks.begin(); i != m_seenBlocks.end();) {
-		memcpy(h.h, i->data(), HASH_SIZE);
-		if (m_blocksById.count(h) == 0) {
-			i = m_seenBlocks.erase(i);
-			++n;
-		}
-		else {
+	for (auto i = m_incomingBlocks.begin(); i != m_incomingBlocks.end();) {
+		if (cur_time < i->second + 60) {
 			++i;
 		}
+		else {
+			i = m_incomingBlocks.erase(i);
+		}
 	}
-
-	return n;
 }
 
 bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks)
@@ -567,14 +565,14 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	hash seed;
 	if (!m_pool->get_seed(block.m_txinGenHeight, seed)) {
 		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
-		unsee_block(block);
+		forget_incoming_block(block);
 		return false;
 	}
 
 	hash pow_hash;
 	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, seed, pow_hash)) {
 		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight << ". Ignoring it.");
-		unsee_block(block);
+		forget_incoming_block(block);
 		return true;
 	}
 
@@ -1753,6 +1751,7 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 				}
 			}
 			prune_old_blocks();
+			cleanup_incoming_blocks();
 		}
 	}
 	else if (block->m_sidechainHeight > tip->m_sidechainHeight) {
@@ -2055,11 +2054,6 @@ void SideChain::prune_old_blocks()
 
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
-
-		const size_t n = cleanup_seen_blocks();
-		if (n > 0) {
-			LOGINFO(5, "pruned " << n << " seen blocks");
-		}
 
 #ifdef DEV_TEST_SYNC
 		if (m_pool && m_precalcFinished.load() && (cur_time >= m_synchronizedTime + 120)) {

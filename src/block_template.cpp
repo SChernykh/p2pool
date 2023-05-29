@@ -1325,7 +1325,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		}
 
 		m_poolBlockTemplate->m_verified = true;
-		if (!m_sidechain->block_seen(*m_poolBlockTemplate)) {
+		if (!m_sidechain->incoming_block_seen(*m_poolBlockTemplate)) {
 			m_poolBlockTemplate->m_wantBroadcast = true;
 			const bool result = m_sidechain->add_block(*m_poolBlockTemplate);
 			if (!result) {
