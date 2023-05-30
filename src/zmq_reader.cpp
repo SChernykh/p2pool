@@ -57,6 +57,8 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		throw zmq::error_t(EFSM);
 	}
 
+	LOGINFO(5, "listening on tcp://127.0.0.1:" << m_publisherPort << " for internal communications");
+
 	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
 
 	if (!m_proxy.empty()) {
