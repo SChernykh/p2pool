@@ -1065,6 +1065,7 @@ void p2pool::get_miner_data()
 				LOGWARN(1, "get_miner_data RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					m_getMinerDataPending = false;
 					get_miner_data();
 				}
 			}
