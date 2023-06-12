@@ -295,6 +295,8 @@ if (HAVE_RES_QUERY)
 	endif()
 endif()
 
+add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
+
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 if (STATIC_BINARY OR STATIC_LIBS)

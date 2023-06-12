@@ -206,7 +206,7 @@ void ZMQReader::parse(char* data, size_t size)
 	using namespace rapidjson;
 
 	Document doc;
-	if (doc.Parse<kParseCommentsFlag | kParseTrailingCommasFlag>(value, end - value).HasParseError()) {
+	if (doc.Parse(value, end - value).HasParseError()) {
 		LOGWARN(1, "ZeroMQ message failed to parse, skipping it");
 		return;
 	}

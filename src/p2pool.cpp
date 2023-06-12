@@ -607,7 +607,7 @@ void p2pool::submit_block() const
 		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
-			if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
+			if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
 				LOGERR(0, "submit_block: invalid JSON response from daemon");
 				return;
 			}
@@ -919,7 +919,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 	}
 
 	rapidjson::Document doc;
-	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
+	doc.Parse(data, size);
 
 	if (!doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_info RPC response is invalid (\"result\" not found), trying again in 1 second");
@@ -1003,7 +1003,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 	}
 
 	rapidjson::Document doc;
-	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
+	doc.Parse(data, size);
 
 	if (!doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_version RPC response is invalid (\"result\" not found), trying again in 1 second");
@@ -1090,7 +1090,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	m_getMinerDataHash = h;
 
 	rapidjson::Document doc;
-	doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size);
+	doc.Parse(data, size);
 
 	if (!doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_miner_data RPC response is invalid, skipping it");
@@ -1140,7 +1140,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 {
 	rapidjson::Document doc;
-	if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
+	if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon");
 		return false;
 	}
@@ -1182,7 +1182,7 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 {
 	rapidjson::Document doc;
-	if (doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(data, size).HasParseError() || !doc.IsObject()) {
+	if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
 		LOGERR(1, "parse_block_headers_range: invalid JSON response from daemon");
 		return 0;
 	}
