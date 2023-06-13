@@ -1918,11 +1918,11 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	LOGINFO(5, "sending BLOCK_REQUEST for the chain tip to " << static_cast<char*>(m_addrString));
 	*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
 
-	hash empty;
-	memcpy(p, empty.h, HASH_SIZE);
+	hash zero_hash;
+	memcpy(p, zero_hash.h, HASH_SIZE);
 	p += HASH_SIZE;
 
-	m_blockPendingRequests.push_back(empty);
+	m_blockPendingRequests.push_back(zero_hash);
 	m_lastBroadcastTimestamp = seconds_since_epoch();
 }
 
