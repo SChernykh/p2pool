@@ -804,13 +804,13 @@ bool p2pool::get_timestamps(uint64_t (&timestamps)[TIMESTAMP_WINDOW]) const
 {
 	ReadLock lock(m_mainchainLock);
 
-	if (m_mainchainByHeight.size() <= TIMESTAMP_WINDOW) {
+	if (m_mainchainByHeight.size() < TIMESTAMP_WINDOW) {
 		return false;
 	}
 
 	auto it = m_mainchainByHeight.end();
 
-	for (int i = 0; (i < TIMESTAMP_WINDOW) && (it != m_mainchainByHeight.begin()); ++i) {
+	for (int i = 0; i < TIMESTAMP_WINDOW; ++i) {
 		--it;
 		timestamps[i] = it->second.timestamp;
 	}

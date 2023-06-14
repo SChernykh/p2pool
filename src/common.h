@@ -204,7 +204,7 @@ struct
 	{
 #ifdef _MSC_VER
 		_addcarry_u64(_addcarry_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
-#elif __GNUC__
+#elif defined(__GNUC__) && !defined(CLANG_TIDY)
 		*reinterpret_cast<unsigned __int128*>(this) += *reinterpret_cast<const unsigned __int128*>(&b);
 #else
 		const uint64_t t = lo;
@@ -221,7 +221,7 @@ struct
 	{
 #ifdef _MSC_VER
 		_subborrow_u64(_subborrow_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
-#elif __GNUC__
+#elif defined(__GNUC__) && !defined(CLANG_TIDY)
 		*reinterpret_cast<unsigned __int128*>(this) -= *reinterpret_cast<const unsigned __int128*>(&b);
 #else
 		const uint64_t t = b.lo;

@@ -24,6 +24,7 @@ Reddit discussions: [original announcement](https://www.reddit.com/r/MoneroMinin
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/23659/badge.svg"/>
 </a>
+![clang-tidy](https://github.com/SChernykh/p2pool/actions/workflows/clang-tidy.yml/badge.svg)
 # Contents
 - [Pool mining vs Solo mining vs P2Pool mining](#pool-mining-vs-solo-mining-vs-p2pool-mining)
 - [Features](#features)

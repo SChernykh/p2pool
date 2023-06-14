@@ -1,0 +1,30 @@
+name: clang-tidy
+
+on: [push, pull_request]
+
+jobs:
+  clang-tidy:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install clang
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 16
+        sudo apt-get install -y clang-tidy-16
+
+    - name: Verify clang-tidy configuration
+      run: |
+        clang-tidy-16 --verify-config
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Run clang-tidy
+      run: |
+        cd src
+        clang-tidy-16 *.cpp -checks=-clang-diagnostic-undefined-internal -warnings-as-errors=* -- -I../external/src/robin-hood-hashing/src/include -I../external/src/rapidjson/include -I../external/src/cryptonote -I../external/src/RandomX/src -I../external/src/cppzmq -I../external/src/libuv/include -I../external/src/libzmq/include -I../external/src/curl/include -I../external/src -DCLANG_TIDY -DSIZE_MAX=UINT64_MAX -DRAPIDJSON_ENDIAN=RAPIDJSON_LITTLEENDIAN -DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag

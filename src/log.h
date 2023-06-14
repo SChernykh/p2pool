@@ -65,7 +65,7 @@ struct Stream
 		return *this;
 	}
 
-	template<typename T, int base = 10>
+	template<typename T, unsigned int base = 10>
 	NOINLINE void writeInt(T data)
 	{
 		static_assert(1 < base && base <= 64, "Invalid base");
@@ -78,11 +78,13 @@ struct Stream
 		size_t k = sizeof(buf);
 		int w = m_numberWidth;
 
+		std::make_unsigned_t<T> udata = static_cast<std::make_unsigned_t<T>>(data);
+
 		do {
-			buf[--k] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"[data % base];
-			data /= base;
+			buf[--k] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"[udata % base];
+			udata /= base;
 			--w;
-		} while ((data > 0) || (w > 0));
+		} while (udata || (w > 0));
 
 		if (negative) {
 			buf[--k] = '-';
