@@ -12,6 +12,7 @@ option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
 option(DEV_WITH_MSAN "[Developer only] Compile with memory sanitizer" OFF)
 option(DEV_WITH_UBSAN "[Developer only] Compile with undefined behavior sanitizer" OFF)
 option(DEV_WITH_ASAN "[Developer only] Compile with address sanitizer" OFF)
+option(DEV_CLANG_TIDY "[Developer only] Compile for clang-tidy" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -49,6 +50,10 @@ endif()
 
 if (DEV_WITH_ASAN)
 	add_definitions(-DDEV_WITH_ASAN)
+endif()
+
+if (DEV_CLANG_TIDY)
+	add_definitions(-DDEV_CLANG_TIDY)
 endif()
 
 include(cmake/flags.cmake)

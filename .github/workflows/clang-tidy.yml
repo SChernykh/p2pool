@@ -8,15 +8,17 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y libuv1-dev libzmq3-dev libcurl4-openssl-dev
+
     - name: Install clang
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 16
         sudo apt-get install -y clang-tidy-16
-
-    - name: Verify clang-tidy configuration
-      run: |
         clang-tidy-16 --verify-config
 
     - name: Checkout repository
@@ -24,7 +26,13 @@ jobs:
       with:
         submodules: true
 
+    - name: cmake p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DDEV_CLANG_TIDY=ON
+
     - name: Run clang-tidy
       run: |
         cd src
-        clang-tidy-16 *.cpp -checks=-clang-diagnostic-undefined-internal -warnings-as-errors=* -header-filter=^[^\.] -- -I../external/src/robin-hood-hashing/src/include -I../external/src/rapidjson/include -I../external/src/cryptonote -I../external/src/RandomX/src -I../external/src/cppzmq -I../external/src/libuv/include -I../external/src/libzmq/include -I../external/src/curl/include -I../external/src/miniupnp/miniupnpc/include -I../external/src -DCLANG_TIDY -DSIZE_MAX=UINT64_MAX -DRAPIDJSON_ENDIAN=RAPIDJSON_LITTLEENDIAN -DMINIUPNP_STATICLIB -DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag -DWITH_RANDOMX -DWITH_UPNP -DZMQ_STATIC
+        clang-tidy-16 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal -warnings-as-errors=* -header-filter=^[^\.]
