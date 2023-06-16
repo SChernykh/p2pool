@@ -20,6 +20,8 @@
 #include "stratum_server.h"
 #include "p2p_server.h"
 
+constexpr char log_category_prefix[] = "P2Pool ";
+
 void p2pool_usage();
 
 namespace p2pool {
@@ -30,17 +32,35 @@ Params::Params(int argc, char* const argv[])
 		bool ok = false;
 
 		if ((strcmp(argv[i], "--host") == 0) && (i + 1 < argc)) {
-			m_host = argv[++i];
+			const char* address = argv[++i];
+
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+				m_hosts.back().m_address = address;
+			}
+			else {
+				const Host& h = m_hosts.back();
+				m_hosts.emplace_back(address, h.m_rpcPort, h.m_zmqPort, "");
+			}
+
 			ok = true;
 		}
 
 		if ((strcmp(argv[i], "--rpc-port") == 0) && (i + 1 < argc)) {
-			m_rpcPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+			}
+
+			m_hosts.back().m_rpcPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
 			ok = true;
 		}
 
 		if ((strcmp(argv[i], "--zmq-port") == 0) && (i + 1 < argc)) {
-			m_zmqPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+			}
+
+			m_hosts.back().m_zmqPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
 			ok = true;
 		}
 
@@ -133,7 +153,11 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--rpc-login") == 0) && (i + 1 < argc)) {
-			m_rpcLogin = argv[++i];
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+			}
+
+			m_hosts.back().m_rpcLogin = argv[++i];
 			ok = true;
 		}
 
@@ -172,6 +196,21 @@ Params::Params(int argc, char* const argv[])
 		}
 	}
 
+	auto invalid_host = [](const Host& h)
+	{
+		if (!h.valid()) {
+			LOGERR(1, "Invalid host " << h.m_address << ':' << h.m_rpcPort << ":ZMQ:" << h.m_zmqPort << ". Try \"p2pool --help\".");
+			return true;
+		}
+		return false;
+	};
+
+	m_hosts.erase(std::remove_if(m_hosts.begin(), m_hosts.end(), invalid_host), m_hosts.end());
+
+	if (m_hosts.empty()) {
+		m_hosts.emplace_back(Host());
+	}
+
 	if (m_stratumAddresses.empty()) {
 		const int stratum_port = DEFAULT_STRATUM_PORT;
 
@@ -185,7 +224,41 @@ Params::Params(int argc, char* const argv[])
 
 bool Params::valid() const
 {
-	return !m_host.empty() && m_rpcPort && m_zmqPort && m_wallet.valid();
+	if (!m_wallet.valid()) {
+		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
+		return false;
+	}
+
+	return true;
+}
+
+bool Params::Host::init_display_name(const Params& p)
+{
+	m_displayName = m_address;
+
+	if (p.m_socks5Proxy.empty()) {
+		if (p.m_dns) {
+			bool is_v6;
+			if (!resolve_host(m_address, is_v6)) {
+				LOGERR(1, "resolve_host failed for " << m_address);
+				return false;
+			}
+		}
+		else if (m_address.find_first_not_of("0123456789.:") != std::string::npos) {
+			LOGERR(1, "Can't resolve hostname " << m_address << " with DNS disabled");
+			return false;
+		}
+	}
+
+	const bool changed = (m_address != m_displayName);
+	const std::string rpc_port = ':' + std::to_string(m_rpcPort);
+	const std::string zmq_port = ":ZMQ:" + std::to_string(m_zmqPort);
+	m_displayName += rpc_port + zmq_port;
+	if (changed) {
+		m_displayName += " (" + m_address + ')';
+	}
+
+	return true;
 }
 
 } // namespace p2pool

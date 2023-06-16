@@ -27,9 +27,32 @@ struct Params
 
 	bool valid() const;
 
-	std::string m_host = "127.0.0.1";
-	uint32_t m_rpcPort = 18081;
-	uint32_t m_zmqPort = 18083;
+	struct Host
+	{
+		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083) {}
+
+		Host(const char* address, uint32_t rpcPort, uint32_t zmqPort, const char* rpcLogin)
+			: m_address(address)
+			, m_rpcPort(rpcPort)
+			, m_zmqPort(zmqPort)
+			, m_rpcLogin(rpcLogin)
+		{}
+
+		bool valid() const { return !m_address.empty() && m_rpcPort && m_zmqPort && (m_rpcPort != m_zmqPort); }
+
+		bool init_display_name(const Params& p);
+
+		std::string m_address;
+		uint32_t m_rpcPort;
+		uint32_t m_zmqPort;
+
+		std::string m_rpcLogin;
+
+		std::string m_displayName;
+	};
+
+	std::vector<Host> m_hosts;
+
 	bool m_lightMode = false;
 	Wallet m_wallet{ nullptr };
 	std::string m_stratumAddresses;
@@ -49,7 +72,6 @@ struct Params
 	uint32_t m_minerThreads = 0;
 	bool m_mini = false;
 	bool m_autoDiff = true;
-	std::string m_rpcLogin;
 	std::string m_socks5Proxy;
 	bool m_dns = true;
 	uint32_t m_p2pExternalPort = 0;

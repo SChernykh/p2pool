@@ -615,9 +615,9 @@ void P2PServer::load_peer_list()
 
 void P2PServer::load_monerod_peer_list()
 {
-	const Params& params = m_pool->params();
+	const Params::Host host = m_pool->current_host();
 
-	JSONRPCRequest::call(params.m_host, params.m_rpcPort, "/get_peer_list", params.m_rpcLogin, m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy,
 		[this](const char* data, size_t size)
 		{
 #define ERR_STR "/get_peer_list RPC request returned invalid JSON "
@@ -1045,7 +1045,7 @@ void P2PServer::on_timer()
 	update_peer_list();
 	save_peer_list_async();
 	update_peer_connections();
-	check_zmq();
+	check_host();
 	check_block_template();
 	api_update_local_stats();
 }
@@ -1165,25 +1165,41 @@ void P2PServer::download_missing_blocks()
 	}
 }
 
-void P2PServer::check_zmq()
+void P2PServer::check_host()
 {
-	if ((m_timerCounter % 30) != 3) {
+	if (!m_pool->startup_finished()) {
 		return;
 	}
 
 	if (!m_pool->zmq_running()) {
 		LOGERR(1, "ZMQ is not running, restarting it");
-		m_pool->restart_zmq();
+		m_pool->reconnect_to_host();
 		return;
+	}
+
+	const uint64_t height = m_pool->miner_data().height;
+	const SideChain& side_chain = m_pool->side_chain();
+
+	// If the latest 5 side chain blocks are 2 or more Monero blocks ahead, then the node is probably stuck
+	uint32_t counter = 5;
+	for (const PoolBlock* b = side_chain.chainTip(); b && (b->m_txinGenHeight >= height + 2); b = side_chain.find_block(b->m_parent)) {
+		if (--counter == 0) {
+			const Params::Host host = m_pool->current_host();
+			LOGERR(1, host.m_displayName << " seems to be stuck, reconnecting");
+			m_pool->reconnect_to_host();
+			return;
+		}
 	}
 
 	const uint64_t cur_time = seconds_since_epoch();
 	const uint64_t last_active = m_pool->zmq_last_active();
 
+	// If there were no ZMQ messages in the last 5 minutes, then the node is probably stuck
 	if (cur_time >= last_active + 300) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
-		LOGERR(1, "no ZMQ messages received from monerod in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
-		m_pool->restart_zmq();
+		const Params::Host host = m_pool->current_host();
+		LOGERR(1, "no ZMQ messages received from " << host.m_displayName << " in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
+		m_pool->reconnect_to_host();
 	}
 }
 
@@ -1230,6 +1246,8 @@ P2PServer::P2PClient::P2PClient()
 
 void P2PServer::on_shutdown()
 {
+	save_peer_list();
+
 	uv_timer_stop(&m_timer);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);

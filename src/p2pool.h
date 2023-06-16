@@ -18,11 +18,11 @@
 #pragma once
 
 #include "uv_util.h"
+#include "params.h"
 #include <map>
 
 namespace p2pool {
 
-struct Params;
 class RandomX_Hasher_Base;
 class BlockTemplate;
 class Mempool;
@@ -46,10 +46,17 @@ public:
 	bool stopped() const { return m_stopped; }
 	void stop();
 
-	const std::string& host_str() const { return m_hostStr; }
 	const Params& params() const { return *m_params; }
 	BlockTemplate& block_template() { return *m_blockTemplate; }
 	SideChain& side_chain() { return *m_sideChain; }
+
+	FORCEINLINE Params::Host current_host() const
+	{
+		ReadLock lock(m_currentHostLock);
+		return m_currentHost;
+	}
+
+	void print_hosts() const;
 
 	FORCEINLINE MinerData miner_data() const
 	{
@@ -98,23 +105,30 @@ public:
 	bool zmq_running() const;
 	uint64_t zmq_last_active() const { return m_zmqLastActive; }
 	uint64_t start_time() const { return m_startTime; }
-	void restart_zmq();
+	void reconnect_to_host();
+
+	bool startup_finished() const { return m_startupFinished.load(); }
 
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
 
+	Params::Host switch_host();
+
 	static void on_submit_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_block(); }
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
 	static void on_stop(uv_async_t*);
-	static void on_restart_zmq(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->restart_zmq(); }
+	static void on_reconnect_to_host(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->reconnect_to_host(); }
 
 	void submit_block() const;
 
 	std::atomic<bool> m_stopped;
 
-	std::string m_hostStr;
 	const Params* m_params;
+
+	mutable uv_rwlock_t m_currentHostLock;
+	Params::Host m_currentHost;
+	uint32_t m_currentHostIndex;
 
 	p2pool_api* m_api;
 	SideChain* m_sideChain;
@@ -143,7 +157,7 @@ private:
 	void get_version();
 	void parse_get_version_rpc(const char* data, size_t size);
 
-	void get_miner_data();
+	void get_miner_data(bool retry = true);
 	void parse_get_miner_data_rpc(const char* data, size_t size);
 
 	bool parse_block_header(const char* data, size_t size, ChainMain& c);
@@ -179,6 +193,8 @@ private:
 	StratumServer* m_stratumServer = nullptr;
 	P2PServer* m_p2pServer = nullptr;
 
+	std::atomic<bool> m_startupFinished{ false };
+
 #ifdef WITH_RANDOMX
 	uv_mutex_t m_minerLock;
 	Miner* m_miner = nullptr;
@@ -205,8 +221,9 @@ private:
 
 	std::atomic<uint64_t> m_zmqLastActive;
 	uint64_t m_startTime;
-	uv_async_t m_restartZMQAsync;
+	uv_async_t m_reconnectToHostAsync;
 
+	mutable uv_rwlock_t m_ZMQReaderLock;
 	ZMQReader* m_ZMQReader = nullptr;
 
 	hash m_getMinerDataHash;

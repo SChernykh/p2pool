@@ -27,12 +27,29 @@ public:
 	ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler);
 	~ZMQReader();
 
-	bool is_running() const { return m_threadRunning.load(); }
+	bool is_running() const { return m_workerThreadRunning.load(); }
 
 private:
+	struct Monitor : public zmq::monitor_t {
+		Monitor() : m_connected(false) {}
+		Monitor(const Monitor&) = delete;
+
+		void on_event_connected(const zmq_event_t&, const char* address) ZMQ_OVERRIDE;
+		void on_event_disconnected(const zmq_event_t&, const char* address) ZMQ_OVERRIDE;
+
+		std::atomic<bool> m_connected;
+	} *m_monitor;
+
+	static void monitor_thread(void* arg);
+
+	uv_thread_t m_monitorThread{};
+
+private:
+	void stop();
+
 	static void run_wrapper(void* arg);
 	void run();
-	bool connect(const std::string& address);
+	bool connect(const std::string& address, bool keep_monitor);
 
 	void parse(char* data, size_t size);
 
@@ -46,8 +63,8 @@ private:
 	zmq::socket_t m_publisher{ m_context, ZMQ_PUB };
 	zmq::socket_t m_subscriber{ m_context, ZMQ_SUB };
 	uint16_t m_publisherPort = 0;
-	std::atomic<bool> m_finished{ false };
-	std::atomic<bool> m_threadRunning{ false };
+	std::atomic<bool> m_stopped{ false };
+	std::atomic<bool> m_workerThreadRunning{ false };
 
 	TxMempoolData m_tx;
 	MinerData m_minerData;

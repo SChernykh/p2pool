@@ -67,7 +67,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_unclePenalty(20)
 	, m_precalcFinished(false)
 #ifdef DEV_TEST_SYNC
-	, m_synchronizedTime(0)
+	, m_firstPruneTime(0)
 #endif
 {
 	if (s_networkType == NetworkType::Invalid) {
@@ -1022,7 +1022,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	}
 
 	LOGINFO(0, "status" <<
-		"\nMonero node               = " << m_pool->host_str() <<
+		"\nMonero node               = " << m_pool->current_host().m_displayName <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : m_consensusIdDisplayStr.c_str())) <<
@@ -1753,9 +1753,6 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 					// Also clear cache because it has data from all old blocks now
 					clear_crypto_cache();
 					LOGINFO(0, log::LightCyan() << "SYNCHRONIZED");
-#ifdef DEV_TEST_SYNC
-					m_synchronizedTime = seconds_since_epoch();
-#endif
 				}
 			}
 			prune_old_blocks();
@@ -2064,7 +2061,14 @@ void SideChain::prune_old_blocks()
 		finish_precalc();
 
 #ifdef DEV_TEST_SYNC
-		if (m_pool && m_precalcFinished.load() && (cur_time >= m_synchronizedTime + 120)) {
+		if (m_firstPruneTime == 0) {
+			m_firstPruneTime = seconds_since_epoch();
+
+			// Test Monero node switching
+			m_pool->reconnect_to_host();
+		}
+
+		if (m_pool && m_precalcFinished.load() && (cur_time >= m_firstPruneTime + 120)) {
 			LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
 			print_status(false);
 			P2PServer* server = m_pool->p2p_server();
@@ -2073,6 +2077,7 @@ void SideChain::prune_old_blocks()
 				server->print_bans();
 				server->show_peers_async();
 			}
+			m_pool->print_hosts();
 			m_pool->stop();
 		}
 #endif

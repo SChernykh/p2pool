@@ -69,36 +69,14 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 #endif
 
-	if (!p->m_wallet.valid()) {
-		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
-		throw std::exception();
-	}
-
-	m_hostStr = p->m_host;
-
-	if (p->m_socks5Proxy.empty()) {
-		if (p->m_dns) {
-			bool is_v6;
-			if (!resolve_host(p->m_host, is_v6)) {
-				LOGERR(1, "resolve_host failed for " << p->m_host);
-				throw std::exception();
-			}
-		}
-		else if (p->m_host.find_first_not_of("0123456789.:") != std::string::npos) {
-			LOGERR(1, "Can't resolve hostname " << p->m_host << " with DNS disabled");
+	for (Params::Host& h : p->m_hosts) {
+		if (!h.init_display_name(*p)) {
 			throw std::exception();
 		}
 	}
 
-	{
-		const bool changed = (p->m_host != m_hostStr);
-		const std::string rpc_port = ':' + std::to_string(p->m_rpcPort);
-		const std::string zmq_port = ":ZMQ:" + std::to_string(p->m_zmqPort);
-		m_hostStr += rpc_port + zmq_port;
-		if (changed) {
-			m_hostStr += " (" + p->m_host + ')';
-		}
-	}
+	m_currentHost = p->m_hosts.front();
+	m_currentHostIndex = 0;
 
 	hash pub, sec, eph_public_key;
 	generate_keys(pub, sec);
@@ -139,15 +117,17 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 	m_stopAsync.data = this;
 
-	err = uv_async_init(uv_default_loop_checked(), &m_restartZMQAsync, on_restart_zmq);
+	err = uv_async_init(uv_default_loop_checked(), &m_reconnectToHostAsync, on_reconnect_to_host);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
 		throw std::exception();
 	}
-	m_restartZMQAsync.data = this;
+	m_reconnectToHostAsync.data = this;
 
+	uv_rwlock_init_checked(&m_currentHostLock);
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
+	uv_rwlock_init_checked(&m_ZMQReaderLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
 #ifdef WITH_RANDOMX
 	uv_mutex_init_checked(&m_minerLock);
@@ -204,8 +184,10 @@ p2pool::~p2pool()
 	}
 #endif
 
+	uv_rwlock_destroy(&m_currentHostLock);
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
+	uv_rwlock_destroy(&m_ZMQReaderLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
 #ifdef WITH_RANDOMX
 	uv_mutex_destroy(&m_minerLock);
@@ -218,6 +200,20 @@ p2pool::~p2pool()
 	delete m_blockTemplate;
 	delete m_mempool;
 	delete m_params;
+}
+
+void p2pool::print_hosts() const
+{
+	const Params::Host host = current_host();
+
+	for (const Params::Host& h : m_params->m_hosts) {
+		if (h.m_displayName == host.m_displayName) {
+			LOGINFO(0, log::LightCyan() << "-> " << h.m_displayName);
+		}
+		else {
+			LOGINFO(0, "   " << h.m_displayName);
+		}
+	}
 }
 
 bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode)
@@ -297,17 +293,15 @@ void p2pool::handle_miner_data(MinerData& data)
 	{
 		WriteLock lock(m_mainchainLock);
 
-		m_mainchainByHeight[data.height].difficulty = data.difficulty;
+		ChainMain& c0 = m_mainchainByHeight[data.height];
+		c0.height = data.height;
+		c0.difficulty = data.difficulty;
 
-		ChainMain& c = m_mainchainByHeight[data.height - 1];
-		c.height = data.height - 1;
-		c.id = data.prev_id;
+		ChainMain& c1 = m_mainchainByHeight[data.height - 1];
+		c1.height = data.height - 1;
+		c1.id = data.prev_id;
 
-		// timestamp and reward is unknown here
-		c.timestamp = 0;
-		c.reward = 0;
-
-		m_mainchainByHash[c.id] = c;
+		m_mainchainByHash[c1.id] = c1;
 
 		cleanup_mainchain_data(data.height);
 	}
@@ -321,8 +315,11 @@ void p2pool::handle_miner_data(MinerData& data)
 	m_updateSeed = true;
 	update_median_timestamp();
 
+	const Params::Host host = current_host();
+
 	LOGINFO(2,
 		"new miner data\n---------------------------------------------------------------------------------------------------------------" <<
+		"\nhost                    = " << host.m_displayName <<
 		"\nmajor_version           = " << data.major_version <<
 		"\nheight                  = " << data.height <<
 		"\nprev_id                 = " << log::LightBlue() << data.prev_id << log::NoColor() <<
@@ -370,7 +367,7 @@ void p2pool::handle_miner_data(MinerData& data)
 			log::Stream s(buf);
 			s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
 
-			JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin, m_params->m_socks5Proxy,
+			JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
 				[this, h](const char* data, size_t size)
 				{
 					ChainMain block;
@@ -528,7 +525,7 @@ void p2pool::on_stop(uv_async_t* async)
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitBlockAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_restartZMQAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_reconnectToHostAsync), nullptr);
 
 	init_signals(pool, false);
 
@@ -603,7 +600,9 @@ void p2pool::submit_block() const
 	}
 	request.append("\"]}");
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, request, m_params->m_rpcLogin, m_params->m_socks5Proxy,
+	const Params::Host host = current_host();
+
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy,
 		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size)
 		{
 			rapidjson::Document doc;
@@ -714,13 +713,15 @@ void p2pool::download_block_headers(uint64_t current_height)
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
 
+	const Params::Host host = current_host();
+
 	// First download 2 RandomX seeds
 	const uint64_t seed_heights[2] = { prev_seed_height, seed_height };
 	for (uint64_t height : seed_heights) {
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << height << "}}\0";
 
-		JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin, m_params->m_socks5Proxy,
+		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
 			[this, prev_seed_height, height](const char* data, size_t size)
 			{
 				ChainMain block;
@@ -749,8 +750,8 @@ void p2pool::download_block_headers(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, buf, m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[this, start_height, current_height](const char* data, size_t size)
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
+		[this, start_height, current_height, host](const char* data, size_t size)
 		{
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
 				update_median_timestamp();
@@ -762,15 +763,23 @@ void p2pool::download_block_headers(uint64_t current_height)
 						start_mining(m_params->m_minerThreads);
 					}
 #endif
-					try {
-						m_ZMQReader = new ZMQReader(m_params->m_host, m_params->m_zmqPort, m_params->m_socks5Proxy, this);
+					{
+						WriteLock lock(m_ZMQReaderLock);
+
+						try {
+							m_ZMQReader = new ZMQReader(host.m_address, host.m_zmqPort, m_params->m_socks5Proxy, this);
+							m_zmqLastActive = seconds_since_epoch();
+						}
+						catch (const std::exception& e) {
+							LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
+							PANIC_STOP();
+						}
 					}
-					catch (const std::exception& e) {
-						LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-						PANIC_STOP();
-					}
+
 					api_update_network_stats();
 					get_miner_data();
+
+					m_startupFinished = true;
 				}
 			}
 			else {
@@ -857,17 +866,20 @@ void p2pool::stratum_on_block()
 
 void p2pool::get_info()
 {
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", m_params->m_rpcLogin, m_params->m_socks5Proxy,
+	const Params::Host host = current_host();
+
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
 		[this](const char* data, size_t size)
 		{
 			parse_get_info_rpc(data, size);
 		},
-		[this](const char* data, size_t size)
+		[this, host](const char* data, size_t size)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_info RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				LOGWARN(1, "get_info RPC request to " << host.m_displayName << " failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					switch_host();
 					get_info();
 				}
 			}
@@ -970,17 +982,19 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 void p2pool::get_version()
 {
+	const Params::Host host = current_host();
+
 	const uint64_t t1 = microseconds_since_epoch();
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", m_params->m_rpcLogin, m_params->m_socks5Proxy,
-		[this, t1](const char* data, size_t size)
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
+		[this, t1, host](const char* data, size_t size)
 		{
 			const double node_ping = static_cast<double>(microseconds_since_epoch() - t1) / 1e3;
 			if (node_ping < 100) {
-				LOGINFO(1, m_hostStr << " ping time is " << node_ping << " ms");
+				LOGINFO(1, host.m_displayName << " ping time is " << node_ping << " ms");
 			}
 			else {
-				LOGWARN(1, m_hostStr << " ping time is " << node_ping << " ms, this is too high for an efficient mining. Try to use a different node, or your own local node.");
+				LOGWARN(1, host.m_displayName << " ping time is " << node_ping << " ms, this is too high for an efficient mining. Try to use a different node, or your own local node.");
 			}
 			parse_get_version_rpc(data, size);
 		},
@@ -1047,23 +1061,25 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 	get_miner_data();
 }
 
-void p2pool::get_miner_data()
+void p2pool::get_miner_data(bool retry)
 {
 	if (m_getMinerDataPending) {
 		return;
 	}
 	m_getMinerDataPending = true;
 
-	JSONRPCRequest::call(m_params->m_host, m_params->m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", m_params->m_rpcLogin, m_params->m_socks5Proxy,
+	const Params::Host host = current_host();
+
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
 		[this](const char* data, size_t size)
 		{
 			parse_get_miner_data_rpc(data, size);
 		},
-		[this](const char* data, size_t size)
+		[this, host, retry](const char* data, size_t size)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_miner_data RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
-				if (!m_stopped) {
+				LOGWARN(1, "get_miner_data RPC request to " << host.m_displayName << " failed: error " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
+				if (!m_stopped && retry) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;
 					get_miner_data();
@@ -1574,32 +1590,52 @@ void p2pool::stop()
 
 bool p2pool::zmq_running() const
 {
+	ReadLock lock(m_ZMQReaderLock);
 	return m_ZMQReader && m_ZMQReader->is_running();
 }
 
-void p2pool::restart_zmq()
+Params::Host p2pool::switch_host()
 {
-	// If p2pool is stopped, m_restartZMQAsync is most likely already closed
+	const Params::Host new_host = m_params->m_hosts[++m_currentHostIndex % m_params->m_hosts.size()];
+	{
+		WriteLock lock(m_currentHostLock);
+		m_currentHost = new_host;
+	}
+	return new_host;
+}
+
+void p2pool::reconnect_to_host()
+{
+	// If p2pool is stopped, m_reconnectToHostAsync is most likely already closed
 	if (m_stopped) {
 		return;
 	}
 
 	if (!is_main_thread()) {
-		uv_async_send(&m_restartZMQAsync);
+		uv_async_send(&m_reconnectToHostAsync);
 		return;
 	}
 
-	get_miner_data();
+	const Params::Host new_host = switch_host();
 
-	delete m_ZMQReader;
+	WriteLock lock(m_ZMQReaderLock);
+
+	ZMQReader* old_reader = m_ZMQReader;
 	m_ZMQReader = nullptr;
 
+	delete old_reader;
+
 	try {
-		m_ZMQReader = new ZMQReader(m_params->m_host, m_params->m_zmqPort, m_params->m_socks5Proxy, this);
+		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params->m_socks5Proxy, this);
 		m_zmqLastActive = seconds_since_epoch();
+		m_ZMQReader = new_reader;
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "Couldn't restart ZMQ reader: exception " << e.what());
+	}
+
+	if (m_ZMQReader) {
+		get_miner_data(false);
 	}
 }
 

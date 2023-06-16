@@ -191,7 +191,7 @@ private:
 
 	void flush_cache();
 	void download_missing_blocks();
-	void check_zmq();
+	void check_host();
 	void check_block_template();
 	void update_peer_connections();
 	void update_peer_list();

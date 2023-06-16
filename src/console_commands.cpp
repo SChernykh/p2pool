@@ -140,7 +140,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_outpeers, do_inpeers, do_exit, do_version;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_showhosts, do_nexthost, do_outpeers, do_inpeers, do_exit, do_version;
 
 #ifdef WITH_RANDOMX
 static cmdfunc do_start_mining, do_stop_mining;
@@ -155,6 +155,8 @@ static cmd cmds[] = {
 	{ STRCONST("peers"), "", "show all peers", do_showpeers },
 	{ STRCONST("workers"), "", "show all connected workers", do_showworkers },
 	{ STRCONST("bans"), "", "show all banned IPs", do_showbans },
+	{ STRCONST("hosts"), "", "show Monero hosts", do_showhosts },
+	{ STRCONST("next_host"), "", "switch to the next Monero host", do_nexthost },
 	{ STRCONST("outpeers"), "<N>", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "<N>", "set maximum number of incoming connections", do_inpeers },
 #ifdef WITH_RANDOMX
@@ -238,6 +240,18 @@ static void do_showbans(p2pool* m_pool, const char* /* args */)
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->print_bans();
 	}
+}
+
+// cppcheck-suppress constParameterCallback
+static void do_showhosts(p2pool* m_pool, const char* /* args */)
+{
+	m_pool->print_hosts();
+}
+
+// cppcheck-suppress constParameterCallback
+static void do_nexthost(p2pool* m_pool, const char* /* args */)
+{
+	m_pool->reconnect_to_host();
 }
 
 // cppcheck-suppress constParameterCallback

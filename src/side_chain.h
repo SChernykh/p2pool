@@ -156,7 +156,7 @@ private:
 	std::atomic<bool> m_precalcFinished;
 
 #ifdef DEV_TEST_SYNC
-	uint64_t m_synchronizedTime;
+	uint64_t m_firstPruneTime;
 #endif
 
 	hash m_consensusHash;
