@@ -39,6 +39,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        python ../cppcheck/remove_external.py compile_commands.json
 
     - name: Run cppcheck
       run: |
