@@ -38,7 +38,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSTATIC_LIBS=ON
         python ../cppcheck/remove_external.py compile_commands.json
 
     - name: Run cppcheck
@@ -81,7 +81,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022"
+        cmake .. -G "Visual Studio 17 2022" -DSTATIC_LIBS=ON
 
     - name: Run cppcheck
       run: |
