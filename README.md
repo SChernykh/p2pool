@@ -6,12 +6,6 @@ Pool status and monitoring pages can be found at https://p2pool.io/, https://p2p
 
 These are 3rd-party pages. If they are down, it doesn't mean there is a problem with P2Pool itself - it keeps mining always thanks to its decentralized nature.
 
-# P2Pool hardforked on March 18, 2023
-
-P2Pool (not Monero!) hardforked to new consensus rules on March 18th at 21:00 UTC. The hardfork was necessary to improve P2Pool scalability and reduce the impact on Monero blockchain. You need to update to the latest P2Pool version to continue mining on P2Pool.
-
-Reddit discussions: [original announcement](https://www.reddit.com/r/MoneroMining/comments/1095730/psa_p2pool_network_upgrade_aka_hardfork_on_march/), [final announcement](https://www.reddit.com/r/MoneroMining/comments/11tln6z/psa_p2pool_miners_update_to_the_latest_version/)
-
 ### Build Status
 
 ![C/C++ CI](https://github.com/SChernykh/p2pool/actions/workflows/c-cpp.yml/badge.svg)
