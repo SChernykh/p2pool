@@ -2068,7 +2068,7 @@ void SideChain::prune_old_blocks()
 			m_pool->reconnect_to_host();
 		}
 
-		if (m_pool && m_precalcFinished.load() && (cur_time >= m_firstPruneTime + 120)) {
+		if (cur_time >= m_firstPruneTime + 120) {
 			LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
 			print_status(false);
 			P2PServer* server = m_pool->p2p_server();

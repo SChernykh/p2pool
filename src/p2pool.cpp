@@ -1596,12 +1596,10 @@ bool p2pool::zmq_running() const
 
 Params::Host p2pool::switch_host()
 {
-	const Params::Host new_host = m_params->m_hosts[++m_currentHostIndex % m_params->m_hosts.size()];
-	{
-		WriteLock lock(m_currentHostLock);
-		m_currentHost = new_host;
-	}
-	return new_host;
+	WriteLock lock(m_currentHostLock);
+
+	m_currentHost = m_params->m_hosts[++m_currentHostIndex % m_params->m_hosts.size()];
+	return m_currentHost;
 }
 
 void p2pool::reconnect_to_host()
@@ -1620,10 +1618,8 @@ void p2pool::reconnect_to_host()
 
 	WriteLock lock(m_ZMQReaderLock);
 
-	ZMQReader* old_reader = m_ZMQReader;
+	delete m_ZMQReader;
 	m_ZMQReader = nullptr;
-
-	delete old_reader;
 
 	try {
 		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params->m_socks5Proxy, this);
