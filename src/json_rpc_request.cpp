@@ -78,6 +78,9 @@ struct CurlContext
 	std::string m_error;
 
 	curl_slist* m_headers;
+
+	uint64_t m_startTime;
+	uint64_t m_connectedTime;
 };
 
 CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
@@ -90,6 +93,8 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_handle(nullptr)
 	, m_req(req)
 	, m_headers(nullptr)
+	, m_startTime(0)
+	, m_connectedTime(0)
 {
 	m_pollHandles.reserve(2);
 
@@ -214,12 +219,17 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error("curl_multi_add_handle failed");
 	}
+
+	m_startTime = microseconds_since_epoch();
 }
 
 CurlContext::~CurlContext()
 {
+	double tcp_ping = 0.0;
+
 	if (m_error.empty() && !m_response.empty()) {
-		(*m_callback)(m_response.data(), m_response.size());
+		tcp_ping = static_cast<double>(m_connectedTime - m_startTime) / 1000.0;
+		(*m_callback)(m_response.data(), m_response.size(), tcp_ping);
 	}
 	delete m_callback;
 
@@ -232,7 +242,7 @@ CurlContext::~CurlContext()
 		}
 	}
 
-	(*m_closeCallback)(m_error.c_str(), m_error.length());
+	(*m_closeCallback)(m_error.c_str(), m_error.length(), tcp_ping);
 	delete m_closeCallback;
 
 	curl_slist_free_all(m_headers);
@@ -369,6 +379,8 @@ size_t CurlContext::on_write(const void* buffer, size_t size, size_t count)
 
 void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 {
+	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
+
 	int flags = 0;
 	if (status < 0) {
 		flags |= CURL_CSELECT_ERR;
@@ -376,10 +388,13 @@ void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 	}
 	else {
 		if (events & UV_READABLE) flags |= CURL_CSELECT_IN;
-		if (events & UV_WRITABLE) flags |= CURL_CSELECT_OUT;
+		if (events & UV_WRITABLE) {
+			flags |= CURL_CSELECT_OUT;
+			if (!ctx->m_connectedTime) {
+				ctx->m_connectedTime = microseconds_since_epoch();
+			}
+		}
 	}
-
-	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
 	int running_handles = 0;
 	auto it = std::find_if(ctx->m_pollHandles.begin(), ctx->m_pollHandles.end(), [req](const auto& value) { return value.second == req; });
@@ -471,7 +486,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 			}
 			catch (const std::exception& e) {
 				const char* msg = e.what();
-				(*close_cb)(msg, strlen(msg));
+				(*close_cb)(msg, strlen(msg), 0.0);
 			}
 		});
 

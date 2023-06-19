@@ -450,7 +450,7 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	const Params::Host host = m_pool->current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, params.m_socks5Proxy,
-		[&result, &h](const char* data, size_t size)
+		[&result, &h](const char* data, size_t size, double)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse(data, size).HasParseError() || !parseValue(doc, "result", h)) {
@@ -460,7 +460,7 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 			}
 			result = 1;
 		},
-		[this, &result, &done](const char* data, size_t size)
+		[this, &result, &done](const char* data, size_t size, double)
 		{
 			if (size > 0) {
 				LOGWARN(3, "RPC calc_pow: server returned error " << log::const_buf(data, size));

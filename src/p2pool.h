@@ -56,6 +56,7 @@ public:
 		return m_currentHost;
 	}
 
+	void update_host_ping(const std::string& display_name, double ping);
 	void print_hosts() const;
 
 	FORCEINLINE MinerData miner_data() const
@@ -125,6 +126,7 @@ private:
 	std::atomic<bool> m_stopped;
 
 	const Params* m_params;
+	std::vector<double> m_hostPing;
 
 	mutable uv_rwlock_t m_currentHostLock;
 	Params::Host m_currentHost;
