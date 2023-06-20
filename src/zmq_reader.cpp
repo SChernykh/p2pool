@@ -155,7 +155,11 @@ void ZMQReader::run()
 			LOGERR(1, "failed to start ZMQ monitor thread, error " << uv_err_name(err));
 			throw zmq::error_t(EMTHREAD);
 		}
-		ON_SCOPE_LEAVE([this]() { uv_thread_join(&m_monitorThread); });
+
+		ON_SCOPE_LEAVE([this]() {
+			m_monitor->abort();
+			uv_thread_join(&m_monitorThread);
+		});
 
 		LOGINFO(1, "worker thread ready");
 
@@ -166,7 +170,6 @@ void ZMQReader::run()
 			}
 
 			if (m_stopped) {
-				m_monitor->abort();
 				break;
 			}
 
