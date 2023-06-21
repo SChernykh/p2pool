@@ -40,9 +40,11 @@ p2pool.exe --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALL
 
 ### Multiple backup hosts
 
-You can have multiple hosts in command line. Each new host uses RPC and zmq-pub port numbers from the previous host (or default 18081/18083 if none were specified).
+You can have multiple hosts in command line. If P2Pool detects that the host it's currently using is down or stuck, it will cycle through hosts until it finds a working one. It will not switch back as long as the current host it found is working.
 
-In this example, you have local Monero node running on ports 18081/18083 (RPC/zmq-pub), and several backup nodes running on ports 18089/18084. If P2Pool detects that the node it's currently using is unavailable or stuck, it will cycle to the next node in the list.
+Each new host uses RPC and zmq-pub port numbers from the previous host (or default 18081/18083 if none were specified). Note that `--rpc-login` is not copied from the previous host, you must specify it for each host that has username/password.
+
+In this example, you have local Monero host running on ports 18081/18083 (RPC/zmq-pub), and several backup hosts running on ports 18089/18084.
 
 
 ```
