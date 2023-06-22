@@ -41,7 +41,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 |-|-|-|-|-|-|-|-|
 |Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|Pool admin controls your mined funds, what you mine and can execute network attacks|Only miner software is required
 |Solo|Rare|0%|0.6 XMR or more|No|As stable as your Monero node|100% under your control|Monero node + optional miner
-|**P2Pool**|Regular|0%|~0.0003 XMR|No|As stable as your Monero node|100% under your control|Monero node + P2Pool node + miner
+|**P2Pool**|Regular|0%|~0.00027 XMR|No|Very stable: node failover and multiple Monero nodes are supported|100% under your control|Monero node(s) + P2Pool node(s) + miner(s)
 
 ## Features
 
@@ -57,6 +57,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * Configurable PPLNS window size and block time
 * Advanced mempool picking algorithm, it creates blocks with better reward than what monerod solo mining does
 * Password protected private pools
+* Highly reliable configurations are supported (multiple P2Pool nodes mining to the same wallet, each P2Pool node can use multiple Monero nodes and switch on the fly if an issue is detected)
 
 ## How PPLNS works in P2Pool
 
