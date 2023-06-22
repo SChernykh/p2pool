@@ -1024,7 +1024,7 @@ void p2pool::get_version()
 	const Params::Host host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
-		[this, host](const char* data, size_t size, double)
+		[this](const char* data, size_t size, double)
 		{
 			parse_get_version_rpc(data, size);
 		},
@@ -1688,7 +1688,11 @@ int p2pool::run()
 		load_found_blocks();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
+
+		WriteLock lock(m_ZMQReaderLock);
+
 		delete m_ZMQReader;
+		m_ZMQReader = nullptr;
 	}
 	catch (const std::exception& e) {
 		const char* s = e.what();
