@@ -726,23 +726,26 @@ int add_portmapping(int external_port, int internal_port)
 		LOGINFO(1, "UPnP: WAN IP address " << log::Gray() << static_cast<const char*>(ext_addr));
 	}
 
-	const std::string eport = std::to_string(external_port);
-	const std::string iport = std::to_string(internal_port);
+	char eport[16] = {};
+	do { log::Stream s(eport); s << external_port; } while (0);
 
-	result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), iport.c_str(), local_addr, "P2Pool", "TCP", nullptr, nullptr);
+	char iport[16] = {};
+	do { log::Stream s(iport); s << internal_port; } while (0);
+
+	result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport, iport, local_addr, "P2Pool", "TCP", nullptr, nullptr);
 
 	// ConflictInMappingEntry: try to delete the old record and then add the new one again
 	if (result == 718) {
 		LOGWARN(1, "UPNP_AddPortMapping failed: ConflictInMappingEntry");
 
-		result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), "TCP", nullptr);
+		result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport, "TCP", nullptr);
 		if (result) {
 			LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
 			return 0;
 		}
 		else {
 			LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
-			result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), iport.c_str(), local_addr, "P2Pool", "TCP", nullptr, nullptr);
+			result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport, iport, local_addr, "P2Pool", "TCP", nullptr, nullptr);
 		}
 	}
 
@@ -776,8 +779,10 @@ void remove_portmapping(int external_port)
 		return;
 	}
 
-	const std::string eport = std::to_string(external_port);
-	result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport.c_str(), "TCP", nullptr);
+	char eport[16] = {};
+	do { log::Stream s(eport); s << external_port; } while (0);
+
+	result = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, eport, "TCP", nullptr);
 	if (result) {
 		LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
 	}

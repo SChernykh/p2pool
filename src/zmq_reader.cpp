@@ -26,7 +26,6 @@ namespace p2pool {
 
 ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler)
 	: m_monitor(nullptr)
-	, m_address(address)
 	, m_zmqPort(zmq_port)
 	, m_proxy(proxy)
 	, m_handler(handler)
@@ -39,12 +38,15 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		m_proxy.clear();
 	}
 
+	char addr_buf[log::Stream::BUF_SIZE + 1];
+	addr_buf[0] = '\0';
+
 	std::random_device rd;
 	for (uint32_t port = 49152 + (rd() % 16384), i = 0; i < 100; ++i, port = (port < 65535) ? (port + 1) : 49152) {
 		try {
-			char addr[32];
-			snprintf(addr, sizeof(addr), "tcp://127.0.0.1:%u", port);
-			m_publisher.bind(addr);
+			log::Stream s(addr_buf);
+			s << "tcp://127.0.0.1:" << port << '\0';
+			m_publisher.bind(addr_buf);
 			m_publisherPort = static_cast<uint16_t>(port);
 			break;
 		}
@@ -62,7 +64,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 
 	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
 
-	std::string addr = "tcp://127.0.0.1:" + std::to_string(m_publisherPort);
+	std::string addr(addr_buf);
 	if (!connect(addr, false)) {
 		throw zmq::error_t(EFSM);
 	}
@@ -71,11 +73,14 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer(m_proxy.c_str(), m_proxy.length()));
 	}
 
-	addr = "tcp://" + m_address + ':' + std::to_string(m_zmqPort);
+	log::Stream s(addr_buf);
+	s << "tcp://" << address << ':' << m_zmqPort << '\0';
+	addr.assign(addr_buf);
+
 	if (!connect(addr, true)) {
 		throw zmq::error_t(EFSM);
 	}
-	m_address = addr;
+	m_address = std::move(addr);
 
 	m_subscriber.set(zmq::sockopt::socks_proxy, zmq::const_buffer());
 

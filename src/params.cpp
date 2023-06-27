@@ -250,13 +250,16 @@ bool Params::Host::init_display_name(const Params& p)
 		}
 	}
 
-	const bool changed = (m_address != m_displayName);
-	const std::string rpc_port = ':' + std::to_string(m_rpcPort);
-	const std::string zmq_port = ":ZMQ:" + std::to_string(m_zmqPort);
-	m_displayName += rpc_port + zmq_port;
-	if (changed) {
-		m_displayName += " (" + m_address + ')';
+	char buf[log::Stream::BUF_SIZE + 1];
+	buf[0] = '\0';
+	log::Stream s(buf);
+
+	s << m_displayName << ':' << m_rpcPort << ":ZMQ:" << m_zmqPort;
+	if (m_address != m_displayName) {
+		s << " (" << m_address << ')';
 	}
+
+	m_displayName.assign(buf, s.m_pos);
 
 	return true;
 }
