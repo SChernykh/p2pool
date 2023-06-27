@@ -615,7 +615,7 @@ void P2PServer::load_peer_list()
 
 void P2PServer::load_monerod_peer_list()
 {
-	const Params::Host host = m_pool->current_host();
+	const Params::Host& host = m_pool->current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy,
 		[this](const char* data, size_t size, double)
@@ -1184,7 +1184,7 @@ void P2PServer::check_host()
 	uint32_t counter = 5;
 	for (const PoolBlock* b = side_chain.chainTip(); b && (b->m_txinGenHeight >= height + 2); b = side_chain.find_block(b->m_parent)) {
 		if (--counter == 0) {
-			const Params::Host host = m_pool->current_host();
+			const Params::Host& host = m_pool->current_host();
 			LOGERR(1, host.m_displayName << " seems to be stuck, reconnecting");
 			m_pool->reconnect_to_host();
 			return;
@@ -1197,7 +1197,7 @@ void P2PServer::check_host()
 	// If there were no ZMQ messages in the last 5 minutes, then the node is probably stuck
 	if (cur_time >= last_active + 300) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
-		const Params::Host host = m_pool->current_host();
+		const Params::Host& host = m_pool->current_host();
 		LOGERR(1, "no ZMQ messages received from " << host.m_displayName << " in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
 		m_pool->reconnect_to_host();
 	}

@@ -50,10 +50,10 @@ public:
 	BlockTemplate& block_template() { return *m_blockTemplate; }
 	SideChain& side_chain() { return *m_sideChain; }
 
-	FORCEINLINE Params::Host current_host() const
+	FORCEINLINE const Params::Host& current_host() const
 	{
-		ReadLock lock(m_currentHostLock);
-		return m_currentHost;
+		const std::vector<Params::Host>& v = m_params->m_hosts;
+		return v[m_currentHostIndex % v.size()];
 	}
 
 	void update_host_ping(const std::string& display_name, double ping);
@@ -114,7 +114,7 @@ private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
 
-	Params::Host switch_host();
+	const Params::Host& switch_host();
 
 	static void on_submit_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_block(); }
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
@@ -128,9 +128,7 @@ private:
 	const Params* m_params;
 	std::vector<double> m_hostPing;
 
-	mutable uv_rwlock_t m_currentHostLock;
-	Params::Host m_currentHost;
-	uint32_t m_currentHostIndex;
+	std::atomic<uint32_t> m_currentHostIndex;
 
 	p2pool_api* m_api;
 	SideChain* m_sideChain;

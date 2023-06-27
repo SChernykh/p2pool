@@ -75,7 +75,6 @@ p2pool::p2pool(int argc, char* argv[])
 		}
 	}
 
-	m_currentHost = p->m_hosts.front();
 	m_currentHostIndex = 0;
 
 	m_hostPing.resize(p->m_hosts.size());
@@ -126,7 +125,6 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 	m_reconnectToHostAsync.data = this;
 
-	uv_rwlock_init_checked(&m_currentHostLock);
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_rwlock_init_checked(&m_ZMQReaderLock);
@@ -186,7 +184,6 @@ p2pool::~p2pool()
 	}
 #endif
 
-	uv_rwlock_destroy(&m_currentHostLock);
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_rwlock_destroy(&m_ZMQReaderLock);
@@ -225,7 +222,7 @@ void p2pool::update_host_ping(const std::string& display_name, double ping)
 
 void p2pool::print_hosts() const
 {
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	for (size_t i = 0, n = m_params->m_hosts.size(); i < n; ++i) {
 		const Params::Host& h = m_params->m_hosts[i];
@@ -344,7 +341,7 @@ void p2pool::handle_miner_data(MinerData& data)
 	m_updateSeed = true;
 	update_median_timestamp();
 
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	LOGINFO(2,
 		"new miner data\n---------------------------------------------------------------------------------------------------------------" <<
@@ -629,7 +626,7 @@ void p2pool::submit_block() const
 	}
 	request.append("\"]}");
 
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy,
 		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size, double)
@@ -742,7 +739,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
 
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	// First download 2 RandomX seeds
 	const uint64_t seed_heights[2] = { prev_seed_height, seed_height };
@@ -905,7 +902,7 @@ void p2pool::stratum_on_block()
 
 void p2pool::get_info()
 {
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
 		[this](const char* data, size_t size, double)
@@ -1021,7 +1018,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 void p2pool::get_version()
 {
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
 		[this](const char* data, size_t size, double)
@@ -1098,7 +1095,7 @@ void p2pool::get_miner_data(bool retry)
 	}
 	m_getMinerDataPending = true;
 
-	const Params::Host host = current_host();
+	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
 		[this, host](const char* data, size_t size, double tcp_ping)
@@ -1625,12 +1622,10 @@ bool p2pool::zmq_running() const
 	return m_ZMQReader && m_ZMQReader->is_running();
 }
 
-Params::Host p2pool::switch_host()
+const Params::Host& p2pool::switch_host()
 {
-	WriteLock lock(m_currentHostLock);
-
-	m_currentHost = m_params->m_hosts[++m_currentHostIndex % m_params->m_hosts.size()];
-	return m_currentHost;
+	const std::vector<Params::Host>& v = m_params->m_hosts;
+	return v[++m_currentHostIndex % v.size()];
 }
 
 void p2pool::reconnect_to_host()
@@ -1645,7 +1640,7 @@ void p2pool::reconnect_to_host()
 		return;
 	}
 
-	const Params::Host new_host = switch_host();
+	const Params::Host& new_host = switch_host();
 
 	WriteLock lock(m_ZMQReaderLock);
 
