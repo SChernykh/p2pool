@@ -38,6 +38,7 @@ static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "" };
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
+static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 
 namespace p2pool {
 
@@ -373,7 +374,7 @@ void P2PServer::update_peer_list()
 void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 {
 	// Send peer list requests at random intervals (60-120 seconds)
-	client->m_nextOutgoingPeerListRequest = cur_time + (60 + (get_random64() % 61));
+	client->m_nextOutgoingPeerListRequest = cur_time + (PEER_REQUEST_DELAY + (get_random64() % (PEER_REQUEST_DELAY + 1)));
 
 	const bool result = send(client,
 		[client](uint8_t* buf, size_t buf_size)
@@ -1227,8 +1228,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_handshakeComplete(false)
 	, m_handshakeInvalid(false)
 	, m_listenPort(-1)
-	, m_fastPeerListRequestCount(0)
-	, m_prevIncomingPeerListRequest(0)
+	, m_prevPeersSent(0)
 	, m_nextOutgoingPeerListRequest(0)
 	, m_lastPeerListRequestTime{}
 	, m_peerListPendingRequests(0)
@@ -1329,8 +1329,7 @@ void P2PServer::P2PClient::reset()
 	m_handshakeComplete = false;
 	m_handshakeInvalid = false;
 	m_listenPort = -1;
-	m_fastPeerListRequestCount = 0;
-	m_prevIncomingPeerListRequest = 0;
+	m_prevPeersSent = 0;
 	m_nextOutgoingPeerListRequest = 0;
 	m_lastPeerListRequestTime = {};
 	m_peerListPendingRequests = 0;
@@ -2118,46 +2117,40 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	server->check_event_loop_thread(__func__);
 
-	const uint64_t cur_time = seconds_since_epoch();
-	const bool first = (m_prevIncomingPeerListRequest == 0);
-
-	// Allow peer list requests no more than once every 30 seconds
-	if (cur_time - m_prevIncomingPeerListRequest < 30) {
-		++m_fastPeerListRequestCount;
-		if (m_fastPeerListRequestCount >= 3) {
-			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " is sending PEER_LIST_REQUEST too often");
-			return false;
-		}
-	}
-
-	m_prevIncomingPeerListRequest = cur_time;
-
 	Peer peers[PEER_LIST_RESPONSE_MAX_PEERS];
 	uint32_t num_selected_peers = 0;
 
-	// Send every 4th peer on average, selected at random
-	const uint32_t peers_to_send_target = std::min<uint32_t>(PEER_LIST_RESPONSE_MAX_PEERS, std::max<uint32_t>(1, server->m_numConnections / 4));
-	uint32_t n = 0;
+	const uint64_t cur_time = seconds_since_epoch();
+	const bool first = (m_prevPeersSent == 0);
 
-	for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-		if (!client->is_good() || (client->m_addr == m_addr)) {
-			continue;
-		}
+	// Rate limit peer list requests (send an empty response if the request comes too soon)
+	if (first || (cur_time >= m_prevPeersSent + PEER_REQUEST_DELAY)) {
+		m_prevPeersSent = cur_time;
 
-		const Peer p{ client->m_isV6, client->m_addr, client->m_listenPort, 0, 0 };
-		++n;
+		// Send every 4th peer on average, selected at random
+		const uint32_t peers_to_send_target = std::min<uint32_t>(PEER_LIST_RESPONSE_MAX_PEERS, std::max<uint32_t>(1, server->m_numConnections / 4));
+		uint32_t n = 0;
 
-		// Use https://en.wikipedia.org/wiki/Reservoir_sampling algorithm
-		if (num_selected_peers < peers_to_send_target) {
-			peers[num_selected_peers++] = p;
-			continue;
-		}
+		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+			if (!client->is_good() || (client->m_addr == m_addr)) {
+				continue;
+			}
 
-		uint64_t k;
-		umul128(server->get_random64(), n, &k);
+			const Peer p{ client->m_isV6, client->m_addr, client->m_listenPort, 0, 0 };
+			++n;
 
-		if (k < peers_to_send_target) {
-			peers[k] = p;
+			// Use https://en.wikipedia.org/wiki/Reservoir_sampling algorithm
+			if (num_selected_peers < peers_to_send_target) {
+				peers[num_selected_peers++] = p;
+				continue;
+			}
+
+			uint64_t k;
+			umul128(server->get_random64(), n, &k);
+
+			if (k < peers_to_send_target) {
+				peers[k] = p;
+			}
 		}
 	}
 
