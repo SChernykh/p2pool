@@ -146,7 +146,13 @@ COLOR_ENTRY(LightCyan,    "\x1b[0;96m")
 
 template<size_t N> struct Stream::Entry<char[N]>
 {
-	static FORCEINLINE void put(const char (&data)[N], Stream* wrapper) { wrapper->writeBuf(data, N - 1); }
+	template<typename T>
+	// cppcheck-suppress constParameterReference
+	static FORCEINLINE void put(T (&data)[N], Stream* wrapper)
+	{
+		static_assert(std::is_same<T, const char>::value, "Non-const char buffer must be cast to \"const char*\"");
+		wrapper->writeBuf(data, N - 1);
+	}
 };
 
 template<> struct Stream::Entry<const char*>

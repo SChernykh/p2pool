@@ -234,10 +234,10 @@ void p2pool::print_hosts() const
 		}
 
 		if (h.m_displayName == host.m_displayName) {
-			LOGINFO(0, log::LightCyan() << "-> " << h.m_displayName << buf);
+			LOGINFO(0, log::LightCyan() << "-> " << h.m_displayName << static_cast<const char*>(buf));
 		}
 		else {
-			LOGINFO(0, "   " << h.m_displayName << buf);
+			LOGINFO(0, "   " << h.m_displayName << static_cast<const char*>(buf));
 		}
 	}
 }
