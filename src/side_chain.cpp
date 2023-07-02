@@ -1779,13 +1779,8 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 
 PoolBlock* SideChain::get_parent(const PoolBlock* block) const
 {
-	if (block) {
-		auto it = m_blocksById.find(block->m_parent);
-		if (it != m_blocksById.end()) {
-			return it->second;
-		}
-	}
-	return nullptr;
+	auto it = m_blocksById.find(block->m_parent);
+	return (it != m_blocksById.end()) ? it->second : nullptr;
 }
 
 bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative) const
