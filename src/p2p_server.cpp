@@ -986,8 +986,8 @@ void P2PServer::show_peers() const
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if (client->m_listenPort >= 0) {
 			char buf[32] = {};
-			log::Stream s(buf);
 			if (client->m_SoftwareVersion) {
+				log::Stream s(buf);
 				s << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
 			}
 			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")

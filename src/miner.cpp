@@ -85,11 +85,11 @@ void Miner::print_status()
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
 	char shares_failed_buf[64] = {};
-	log::Stream s(shares_failed_buf);
 
 	const uint32_t shares_found = m_sharesFound;
 	const uint32_t shares_failed = m_sharesFailed;
 	if (shares_failed) {
+		log::Stream s(shares_failed_buf);
 		s << log::Yellow() << "\nShares failed = " << shares_failed << log::NoColor();
 	}
 

@@ -589,8 +589,8 @@ void StratumServer::print_stratum_status() const
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
 	char shares_failed_buf[64] = {};
-	log::Stream s(shares_failed_buf);
 	if (shares_failed) {
+		log::Stream s(shares_failed_buf);
 		s << log::Yellow() << "\nShares failed      = " << shares_failed << log::NoColor();
 	}
 
