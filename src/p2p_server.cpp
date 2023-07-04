@@ -883,11 +883,27 @@ void P2PServer::on_broadcast()
 			{
 				uint8_t* p = buf;
 
-				bool send_pruned = true;
-				bool send_compact = (client->m_protocolVersion >= PROTOCOL_VERSION_1_1) && !data->compact_blob.empty() && (data->compact_blob.size() < data->pruned_blob.size());
-
 				const hash* a = client->m_broadcastedHashes;
 				const hash* b = client->m_broadcastedHashes + array_size(&P2PClient::m_broadcastedHashes);
+
+				// If this peer already broadcasted this block to us, we don't need to broadcast it back, we just need to notify the peer
+				if ((client->m_protocolVersion >= PROTOCOL_VERSION_1_2) && (std::find(a, b, data->id) != b)) {
+					LOGINFO(5, "sending BLOCK_NOTIFY to " << log::Gray() << static_cast<char*>(client->m_addrString));
+
+					if (buf_size < 1 + HASH_SIZE) {
+						return 0;
+					}
+
+					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_NOTIFY);
+
+					memcpy(p, data->id.h, HASH_SIZE);
+					p += HASH_SIZE;
+
+					return p - buf;
+				}
+
+				bool send_pruned = true;
+				bool send_compact = (client->m_protocolVersion >= PROTOCOL_VERSION_1_1) && !data->compact_blob.empty() && (data->compact_blob.size() < data->pruned_blob.size());
 
 				for (const hash& id : data->ancestor_hashes) {
 					if (std::find(a, b, id) == b) {
@@ -898,7 +914,7 @@ void P2PServer::on_broadcast()
 				}
 
 				if (send_pruned) {
-					LOGINFO(6, "sending BLOCK_BROADCAST (" << (send_compact ? "compact" : "pruned") << ") to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(6, "sending BLOCK_BROADCAST " << (send_compact ? "(compact)" : "(pruned) ") << ") to " << log::Gray() << static_cast<char*>(client->m_addrString));
 					const std::vector<uint8_t>& blob = send_compact ? data->compact_blob : data->pruned_blob;
 
 					const uint32_t len = static_cast<uint32_t>(blob.size());
@@ -917,7 +933,7 @@ void P2PServer::on_broadcast()
 					}
 				}
 				else {
-					LOGINFO(5, "sending BLOCK_BROADCAST (full)   to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(5, "sending BLOCK_BROADCAST (full)    to " << log::Gray() << static_cast<char*>(client->m_addrString));
 
 					const uint32_t len = static_cast<uint32_t>(data->blob.size());
 					if (buf_size < 1 + sizeof(uint32_t) + len) {
@@ -1240,6 +1256,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
 	, m_broadcastedHashes{}
+	, m_broadcastedHashesIndex(0)
 {
 	m_p2pReadBuf[0] = '\0';
 }
@@ -1584,6 +1601,15 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 					--m_peerListPendingRequests;
 					on_peer_list_response(buf + 1);
 				}
+			}
+			break;
+
+		case MessageId::BLOCK_NOTIFY:
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent BLOCK_NOTIFY");
+
+			if (bytes_left >= 1 + HASH_SIZE) {
+				bytes_read = 1 + HASH_SIZE;
+				on_block_notify(buf + 1);
 			}
 			break;
 		}
@@ -2072,7 +2098,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 	const PoolBlock* block = server->get_block();
 
 	m_broadcastMaxHeight = std::max(m_broadcastMaxHeight, block->m_sidechainHeight);
-	m_broadcastedHashes[m_broadcastedHashesIndex.fetch_add(1) % array_size(&P2PClient::m_broadcastedHashes)] = block->m_sidechainId;
+	m_broadcastedHashes[m_broadcastedHashesIndex++ % array_size(&P2PClient::m_broadcastedHashes)] = block->m_sidechainId;
 
 	MinerData miner_data = server->m_pool->miner_data();
 
@@ -2267,6 +2293,14 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 			server->m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
 		}
 	}
+}
+
+void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
+{
+	hash id;
+	memcpy(id.h, buf, HASH_SIZE);
+
+	m_broadcastedHashes[m_broadcastedHashesIndex++ % array_size(&P2PClient::m_broadcastedHashes)] = id;
 }
 
 bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)

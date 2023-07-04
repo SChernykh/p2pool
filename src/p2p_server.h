@@ -37,8 +37,9 @@ static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 
 static constexpr uint32_t PROTOCOL_VERSION_1_0 = 0x00010000UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;
+static constexpr uint32_t PROTOCOL_VERSION_1_2 = 0x00010002UL;
 
-static constexpr uint32_t SUPPORTED_PROTOCOL_VERSION = PROTOCOL_VERSION_1_1;
+static constexpr uint32_t SUPPORTED_PROTOCOL_VERSION = PROTOCOL_VERSION_1_2;
 
 class P2PServer : public TCPServer
 {
@@ -53,6 +54,7 @@ public:
 		PEER_LIST_REQUEST = 6,
 		PEER_LIST_RESPONSE = 7,
 		BLOCK_BROADCAST_COMPACT = 8,
+		BLOCK_NOTIFY = 9,
 	};
 
 	explicit P2PServer(p2pool *pool);
@@ -109,6 +111,7 @@ public:
 		bool on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact);
 		bool on_peer_list_request(const uint8_t* buf);
 		void on_peer_list_response(const uint8_t* buf);
+		void on_block_notify(const uint8_t* buf);
 
 		bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
 		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks);
@@ -149,7 +152,7 @@ public:
 		uint64_t m_lastBlockrequestTimestamp;
 
 		hash m_broadcastedHashes[8];
-		std::atomic<uint32_t> m_broadcastedHashesIndex{ 0 };
+		uint32_t m_broadcastedHashesIndex;
 	};
 
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);
