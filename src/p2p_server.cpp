@@ -1418,7 +1418,14 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 
 	uint32_t bytes_read;
 	do {
-		MessageId id = static_cast<MessageId>(buf[0]);
+		if (buf[0] > static_cast<uint8_t>(MessageId::LAST)) {
+			LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an unknown message id " << buf[0]);
+			ban(DEFAULT_BAN_TIME);
+			server->remove_peer_from_list(this);
+			return false;
+		}
+
+		const MessageId id = static_cast<MessageId>(buf[0]);
 
 		// Peer must complete the handshake challenge before sending any other messages
 		if (!m_handshakeComplete && (id != m_expectedMessage)) {
