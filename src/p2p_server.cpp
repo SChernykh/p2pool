@@ -1044,6 +1044,11 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 	return result;
 }
 
+const PoolBlock* P2PServer::find_block(const hash& id) const
+{
+	return m_pool->side_chain().find_block(id);
+}
+
 void P2PServer::on_timer()
 {
 	if (m_pool->stopped()) {
@@ -2308,6 +2313,36 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 	memcpy(id.h, buf, HASH_SIZE);
 
 	m_broadcastedHashes[m_broadcastedHashesIndex++ % array_size(&P2PClient::m_broadcastedHashes)] = id;
+
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	// If we don't know about this block, request it from this peer. The peer can do it to speed up our initial sync, for example.
+	if (!server->find_block(id)) {
+		LOGINFO(5, "Received an unknown block " << id << " in BLOCK_NOTIFY");
+
+		const bool result = server->send(this,
+			[&id, this](uint8_t* buf, size_t buf_size) -> size_t
+			{
+				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
+
+				if (buf_size < 1 + HASH_SIZE) {
+					return 0;
+				}
+
+				uint8_t* p = buf;
+
+				*(p++) = static_cast<uint8_t>(MessageId::BLOCK_REQUEST);
+
+				memcpy(p, id.h, HASH_SIZE);
+				p += HASH_SIZE;
+
+				return p - buf;
+			});
+
+		if (result) {
+			m_blockPendingRequests.push_back(id);
+		}
+	}
 }
 
 bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)

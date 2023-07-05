@@ -175,6 +175,8 @@ public:
 	int deserialize_block(const uint8_t* buf, uint32_t size, bool compact, uint64_t received_timestamp);
 	const PoolBlock* get_block() const { return m_block; }
 
+	const PoolBlock* find_block(const hash& id) const;
+
 private:
 	const char* get_category() const override { return "P2PServer "; }
 
