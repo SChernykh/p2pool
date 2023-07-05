@@ -228,7 +228,9 @@ CurlContext::~CurlContext()
 	double tcp_ping = 0.0;
 
 	if (m_error.empty() && !m_response.empty()) {
-		tcp_ping = static_cast<double>(m_connectedTime - m_startTime) / 1000.0;
+		if (m_connectedTime) {
+			tcp_ping = static_cast<double>(m_connectedTime - m_startTime) / 1000.0;
+		}
 		(*m_callback)(m_response.data(), m_response.size(), tcp_ping);
 	}
 	delete m_callback;
@@ -371,6 +373,10 @@ void CurlContext::on_timeout(uv_handle_t* req)
 
 size_t CurlContext::on_write(const void* buffer, size_t size, size_t count)
 {
+	if (!m_connectedTime) {
+		m_connectedTime = microseconds_since_epoch();
+	}
+
 	const size_t realsize = size * count;
 	const char* p = reinterpret_cast<const char*>(buffer);
 	m_response.insert(m_response.end(), p, p + realsize);
