@@ -888,7 +888,7 @@ void P2PServer::on_broadcast()
 
 				// If this peer already broadcasted this block to us, we don't need to broadcast it back, we just need to notify the peer
 				if ((client->m_protocolVersion >= PROTOCOL_VERSION_1_2) && (std::find(a, b, data->id) != b)) {
-					LOGINFO(5, "sending BLOCK_NOTIFY to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(6, "sending BLOCK_NOTIFY to " << log::Gray() << static_cast<char*>(client->m_addrString));
 
 					if (buf_size < 1 + HASH_SIZE) {
 						return 0;
