@@ -455,7 +455,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 		hash h;
 		keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);
 
-		uint64_t seed = *reinterpret_cast<uint64_t*>(h.h);
+		uint64_t seed = *h.u64();
 		if (seed == 0) seed = 1;
 
 		for (uint64_t i = 0, k; i < n - 1; ++i) {

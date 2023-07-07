@@ -289,6 +289,9 @@ struct hex_buf
 {
 	FORCEINLINE hex_buf(const uint8_t* data, size_t size) : m_data(data), m_size(size) {}
 
+	template<typename T>
+	explicit FORCEINLINE hex_buf(const T* data) : m_data(reinterpret_cast<const uint8_t*>(data)), m_size(sizeof(T)) {}
+
 	const uint8_t* m_data;
 	size_t m_size;
 };

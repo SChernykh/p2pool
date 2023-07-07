@@ -141,7 +141,7 @@ NOINLINE difficulty_type& difficulty_type::operator/=(difficulty_type b)
 
 NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 {
-	const uint64_t* a = reinterpret_cast<const uint64_t*>(pow_hash.h);
+	const uint64_t* a = pow_hash.u64();
 
 	uint64_t result[6] = {};
 	uint64_t product[6] = {};

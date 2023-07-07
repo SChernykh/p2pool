@@ -293,7 +293,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 				client->m_rpcId = static_cast<StratumServer*>(client->m_owner)->get_random32();
 			} while (!client->m_rpcId);
 
-			log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
+			log::hex_buf target_hex(&target);
 
 			if (target >= TARGET_4_BYTES_LIMIT) {
 				target_hex.m_data += sizeof(uint32_t);
@@ -775,7 +775,7 @@ void StratumServer::on_blobs_ready()
 		const bool result = send(client,
 			[data, target, hashing_blob, job_id](uint8_t* buf, size_t buf_size)
 			{
-				log::hex_buf target_hex(reinterpret_cast<const uint8_t*>(&target), sizeof(uint64_t));
+				log::hex_buf target_hex(&target);
 
 				if (target >= TARGET_4_BYTES_LIMIT) {
 					target_hex.m_data += sizeof(uint32_t);
@@ -930,7 +930,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	}
 
 	// Send the response to miner
-	const uint64_t value = *reinterpret_cast<uint64_t*>(share->m_resultHash.h + HASH_SIZE - sizeof(uint64_t));
+	const uint64_t value = share->m_resultHash.u64()[HASH_SIZE / sizeof(uint64_t) - 1];
 
 	if (LIKELY(value < target)) {
 		const uint64_t timestamp = share->m_timestamp;

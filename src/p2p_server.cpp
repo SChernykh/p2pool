@@ -1120,6 +1120,7 @@ void P2PServer::download_missing_blocks()
 	if (missing_blocks.empty()) {
 		m_lookForMissingBlocks = false;
 		m_missingBlockRequests.clear();
+		m_blockNotifyRequests.clear();
 		return;
 	}
 
@@ -1146,8 +1147,12 @@ void P2PServer::download_missing_blocks()
 	for (const hash& id : missing_blocks) {
 		P2PClient* client = clients[get_random64() % clients.size()];
 
-		const uint64_t truncated_block_id = *reinterpret_cast<const uint64_t*>(id.h);
-		if (!m_missingBlockRequests.insert({ client->m_peerId, truncated_block_id }).second) {
+		if (client->m_blockPendingRequests.size() >= 25) {
+			// Too many pending requests to this peer
+			continue;
+		}
+
+		if (!m_missingBlockRequests.insert({ client->m_peerId, *id.u64() }).second) {
 			// We already asked this peer about this block
 			// Don't try to ask another peer, leave it for another timer tick
 			continue;
@@ -1182,7 +1187,7 @@ void P2PServer::download_missing_blocks()
 			});
 
 		if (result) {
-			client->m_blockPendingRequests.push_back(id);
+			client->m_blockPendingRequests.push_back(*id.u64());
 		}
 	}
 }
@@ -1540,7 +1545,7 @@ bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
 
-					const hash expected_id = m_blockPendingRequests.front();
+					const uint64_t expected_id = m_blockPendingRequests.front();
 					m_blockPendingRequests.pop_front();
 
 					if (!on_block_response(buf + 1 + sizeof(uint32_t), block_size, expected_id)) {
@@ -1770,7 +1775,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					return;
 				}
 
-				const uint64_t* value = reinterpret_cast<uint64_t*>(work->solution.h);
+				const uint64_t* value = work->solution.u64();
 
 				uint64_t high;
 				umul128(value[HASH_SIZE / sizeof(uint64_t) - 1], CHALLENGE_DIFFICULTY, &high);
@@ -1916,7 +1921,7 @@ bool P2PServer::P2PClient::on_handshake_solution(const uint8_t* buf)
 
 	// Check that incoming connection provided enough PoW
 	if (m_isIncoming) {
-		const uint64_t* value = reinterpret_cast<uint64_t*>(solution.h);
+		const uint64_t* value = solution.u64();
 
 		uint64_t high;
 		umul128(value[HASH_SIZE / sizeof(uint64_t) - 1], CHALLENGE_DIFFICULTY, &high);
@@ -1977,7 +1982,7 @@ void P2PServer::P2PClient::on_after_handshake(uint8_t* &p)
 	memcpy(p, zero_hash.h, HASH_SIZE);
 	p += HASH_SIZE;
 
-	m_blockPendingRequests.push_back(zero_hash);
+	m_blockPendingRequests.push_back(0);
 	m_lastBroadcastTimestamp = seconds_since_epoch();
 }
 
@@ -2038,14 +2043,14 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 		});
 }
 
-bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, const hash& expected_id)
+bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, uint64_t expected_id)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
 
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
-		if (expected_id.empty() && (cur_time >= m_nextOutgoingPeerListRequest)) {
+		if ((expected_id == 0) && (cur_time >= m_nextOutgoingPeerListRequest)) {
 			server->send_peer_list_request(this, cur_time);
 		}
 		return true;
@@ -2064,7 +2069,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 	const PoolBlock* block = server->get_block();
 
 	// Chain tip request
-	if (expected_id.empty()) {
+	if (expected_id == 0) {
 		const uint64_t peer_height = block->m_txinGenHeight;
 		const uint64_t our_height = server->m_pool->miner_data().height;
 
@@ -2077,8 +2082,8 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 			server->send_peer_list_request(this, cur_time);
 		}
 	}
-	else if (block->m_sidechainId != expected_id) {
-		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent a wrong block: expected " << expected_id << ", got " << block->m_sidechainId);
+	else if (*block->m_sidechainId.u64() != expected_id) {
+		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent a wrong block: expected " << log::hex_buf(&expected_id) << ", got " << block->m_sidechainId);
 		return false;
 	}
 
@@ -2320,6 +2325,16 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 	if (!server->find_block(id)) {
 		LOGINFO(5, "Received an unknown block " << id << " in BLOCK_NOTIFY");
 
+		if (m_blockPendingRequests.size() >= 25) {
+			LOGINFO(5, "Too many pending requests, ignoring it");
+			return;
+		}
+
+		if (!server->m_blockNotifyRequests.insert(*id.u64()).second || !server->m_missingBlockRequests.insert({ m_peerId, *id.u64() }).second) {
+			LOGINFO(5, "BLOCK_REQUEST for id = " << id << " was already sent");
+			return;
+		}
+
 		const bool result = server->send(this,
 			[&id, this](uint8_t* buf, size_t buf_size) -> size_t
 			{
@@ -2340,7 +2355,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			});
 
 		if (result) {
-			m_blockPendingRequests.push_back(id);
+			m_blockPendingRequests.push_back(*id.u64());
 		}
 	}
 }
@@ -2449,8 +2464,7 @@ void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block,
 			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
 		}
 		else {
-			const log::hex_buf addr_hex(addr.data, sizeof(addr.data));
-			LOGWARN(3, "IP " << addr_hex << " banned for " << DEFAULT_BAN_TIME << " seconds");
+			LOGWARN(3, addr << " banned for " << DEFAULT_BAN_TIME << " seconds");
 		}
 
 		P2PServer* server = pool->p2p_server();
@@ -2515,7 +2529,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 			return;
 		}
 
-		m_blockPendingRequests.push_back(id);
+		m_blockPendingRequests.push_back(*id.u64());
 	}
 }
 
