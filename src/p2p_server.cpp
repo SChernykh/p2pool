@@ -2506,6 +2506,10 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 			}
 		}
 
+		if (!server->m_missingBlockRequests.insert({ m_peerId, *id.u64() }).second) {
+			continue;
+		}
+
 		const bool result = server->send(this,
 			[this, &id](uint8_t* buf, size_t buf_size) -> size_t
 			{
