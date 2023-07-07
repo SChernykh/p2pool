@@ -701,9 +701,6 @@ bool SideChain::add_block(const PoolBlock& block)
 
 	m_blocksByHeight[new_block->m_sidechainHeight].push_back(new_block);
 
-	// Pre-calculate eph_public_keys during initial sync
-	launch_precalc(new_block);
-
 	update_depths(new_block);
 
 	if (new_block->m_verified) {
@@ -1928,6 +1925,18 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 
 void SideChain::update_depths(PoolBlock* block)
 {
+	const uint64_t precalc_depth = m_chainWindowSize + UNCLE_BLOCK_DEPTH - 1;
+
+	auto update_depth = [this, precalc_depth](PoolBlock* b, const uint64_t new_depth) {
+		const uint64_t old_depth = b->m_depth;
+		if (old_depth < new_depth) {
+			b->m_depth = new_depth;
+			if ((old_depth < precalc_depth) && (new_depth >= precalc_depth)) {
+				launch_precalc(b);
+			}
+		}
+	};
+
 	for (size_t i = 1; i <= UNCLE_BLOCK_DEPTH; ++i) {
 		auto it = m_blocksByHeight.find(block->m_sidechainHeight + i);
 		if (it == m_blocksByHeight.end()) {
@@ -1940,12 +1949,12 @@ void SideChain::update_depths(PoolBlock* block)
 					return;
 				}
 				else {
-					block->m_depth = std::max(block->m_depth, child->m_depth + 1);
+					update_depth(block, child->m_depth + 1);
 				}
 			}
 
 			if (std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId) != child->m_uncles.end()) {
-				block->m_depth = std::max(block->m_depth, child->m_depth + i);
+				update_depth(block, child->m_depth + i);
 			}
 		}
 	}
@@ -1969,7 +1978,7 @@ void SideChain::update_depths(PoolBlock* block)
 			}
 
 			if (it->second->m_depth < block->m_depth + 1) {
-				it->second->m_depth = block->m_depth + 1;
+				update_depth(it->second, block->m_depth + 1);
 				blocks_to_update.push_back(it->second);
 			}
 		}
@@ -1987,7 +1996,7 @@ void SideChain::update_depths(PoolBlock* block)
 
 			const uint64_t d = block->m_sidechainHeight - it->second->m_sidechainHeight;
 			if (it->second->m_depth < block->m_depth + d) {
-				it->second->m_depth = block->m_depth + d;
+				update_depth(it->second, block->m_depth + d);
 				blocks_to_update.push_back(it->second);
 			}
 		}
