@@ -57,7 +57,7 @@ public:
 	PoolBlock* find_block(const hash& id) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
 
-	bool get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
+	const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
 	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
 
 	void print_status(bool obtain_sidechain_lock = true) const;

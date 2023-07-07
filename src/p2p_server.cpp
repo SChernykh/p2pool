@@ -2012,12 +2012,23 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	std::vector<uint8_t> blob;
-	if (!server->m_pool->side_chain().get_block_blob(id, blob) && !id.empty()) {
+	const PoolBlock* block = server->m_pool->side_chain().get_block_blob(id, blob);
+
+	if (!block && !id.empty()) {
 		LOGWARN(5, "got a request for block with id " << id << " but couldn't find it");
 	}
 
+	// Notifications about parent and uncle blocks to speed up syncing
+	std::vector<hash> notify_blocks;
+
+	if (block && (m_protocolVersion >= PROTOCOL_VERSION_1_2)) {
+		notify_blocks.reserve(block->m_uncles.size() + 1);
+		notify_blocks.push_back(block->m_parent);
+		notify_blocks.insert(notify_blocks.end(), block->m_uncles.begin(), block->m_uncles.end());
+	}
+
 	return server->send(this,
-		[this, &blob](uint8_t* buf, size_t buf_size) -> size_t
+		[this, &blob, &notify_blocks](uint8_t* buf, size_t buf_size) -> size_t
 		{
 			LOGINFO(5, "sending BLOCK_RESPONSE to " << static_cast<char*>(m_addrString));
 
@@ -2028,6 +2039,17 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 			}
 
 			uint8_t* p = buf;
+
+			if (buf_size >= 1 + sizeof(uint32_t) + len + notify_blocks.size() * (1 + HASH_SIZE)) {
+				for (const hash& id : notify_blocks) {
+					LOGINFO(5, "sending BLOCK_NOTIFY for " << id << " to " << static_cast<char*>(m_addrString));
+
+					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_NOTIFY);
+
+					memcpy(p, id.h, HASH_SIZE);
+					p += HASH_SIZE;
+				}
+			}
 
 			*(p++) = static_cast<uint8_t>(MessageId::BLOCK_RESPONSE);
 

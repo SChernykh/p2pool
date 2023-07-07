@@ -739,7 +739,7 @@ void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possibl
 	m_watchBlockSidechainId = possible_id;
 }
 
-bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
+const PoolBlock* SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 {
 	ReadLock lock(m_sidechainLock);
 
@@ -751,7 +751,7 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 
 		// Don't return stale chain tip
 		if (block && (block->m_txinGenHeight + 2 < m_pool->miner_data().height)) {
-			return false;
+			return nullptr;
 		}
 	}
 	else {
@@ -762,14 +762,14 @@ bool SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 	}
 
 	if (!block) {
-		return false;
+		return nullptr;
 	}
 
 	blob = block->serialize_mainchain_data();
 	const std::vector<uint8_t> sidechain_data = block->serialize_sidechain_data();
 	blob.insert(blob.end(), sidechain_data.begin(), sidechain_data.end());
 
-	return true;
+	return block;
 }
 
 bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const
