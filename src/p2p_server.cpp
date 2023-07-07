@@ -298,8 +298,16 @@ void P2PServer::update_peer_connections()
 		connected_clients.insert(client->m_addr);
 		if (client->is_good()) {
 			has_good_peers = true;
-			if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
-				m_fastestPeer = client;
+			if (client->m_pingTime >= 0) {
+				if (!m_fastestPeer) {
+					m_fastestPeer = client;
+				}
+				else if (m_fastestPeer->m_protocolVersion < client->m_protocolVersion) {
+					m_fastestPeer = client;
+				}
+				else if ((m_fastestPeer->m_protocolVersion == client->m_protocolVersion) && (m_fastestPeer->m_pingTime > client->m_pingTime)) {
+					m_fastestPeer = client;
+				}
 			}
 		}
 	}
@@ -2511,7 +2519,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 
 	// If the initial sync is not finished yet, try to ask the fastest peer too
 	P2PClient* c = server->m_fastestPeer;
-	if (c && (c != this) && !server->m_pool->side_chain().precalcFinished()) {
+	if (c && (c != this) && (c->m_protocolVersion >= m_protocolVersion) && !server->m_pool->side_chain().precalcFinished()) {
 		LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it too");
 		c->post_handle_incoming_block(c->m_resetCounter.load(), missing_blocks);
 	}
