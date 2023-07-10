@@ -2471,7 +2471,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		[](uv_work_t* req, int /*status*/)
 		{
 			Work* work = reinterpret_cast<Work*>(req->data);
-			work->client->post_handle_incoming_block(work->client_reset_counter, work->missing_blocks);
+			work->client->post_handle_incoming_block(work->block, work->client_reset_counter, work->missing_blocks);
 			delete work;
 			BACKGROUND_JOB_STOP(P2PServer::handle_incoming_block_async);
 		});
@@ -2503,7 +2503,7 @@ void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block,
 	}
 }
 
-void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_counter, std::vector<hash>& missing_blocks)
+void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks)
 {
 	// We might have been disconnected while side_chain was adding the block
 	// In this case we can't send BLOCK_REQUEST messages on this connection anymore
@@ -2517,11 +2517,14 @@ void P2PServer::P2PClient::post_handle_incoming_block(const uint32_t reset_count
 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
-	// If the initial sync is not finished yet, try to ask the fastest peer too
-	P2PClient* c = server->m_fastestPeer;
-	if (c && (c != this) && (c->m_protocolVersion >= m_protocolVersion) && !server->m_pool->side_chain().precalcFinished()) {
-		LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it too");
-		c->post_handle_incoming_block(c->m_resetCounter.load(), missing_blocks);
+	// If the initial sync is not finished yet, try to ask the fastest peer instead
+	if (!server->m_pool->side_chain().precalcFinished()) {
+		P2PClient* c = server->m_fastestPeer;
+		if (c && (c != this) && (c->m_protocolVersion >= m_protocolVersion) && (c->m_broadcastMaxHeight >= block.m_sidechainHeight)) {
+			LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it instead");
+			c->post_handle_incoming_block(block, c->m_resetCounter.load(), missing_blocks);
+			return;
+		}
 	}
 
 	ReadLock lock(server->m_cachedBlocksLock);
