@@ -2018,9 +2018,10 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	memcpy(id.h, buf, HASH_SIZE);
 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	const SideChain& sidechain = server->m_pool->side_chain();
 
 	std::vector<uint8_t> blob;
-	const PoolBlock* block = server->m_pool->side_chain().get_block_blob(id, blob);
+	const PoolBlock* block = sidechain.get_block_blob(id, blob);
 
 	if (!block && !id.empty()) {
 		LOGWARN(5, "got a request for block with id " << id << " but couldn't find it");
@@ -2030,9 +2031,15 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	std::vector<hash> notify_blocks;
 
 	if (block && (m_protocolVersion >= PROTOCOL_VERSION_1_2)) {
-		notify_blocks.reserve(block->m_uncles.size() + 1);
+		notify_blocks.reserve(block->m_uncles.size() + 2);
+
 		notify_blocks.push_back(block->m_parent);
 		notify_blocks.insert(notify_blocks.end(), block->m_uncles.begin(), block->m_uncles.end());
+
+		block = sidechain.find_block(block->m_parent);
+		if (block) {
+			notify_blocks.push_back(block->m_parent);
+		}
 	}
 
 	return server->send(this,
@@ -2050,7 +2057,7 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 
 			if (buf_size >= 1 + sizeof(uint32_t) + len + notify_blocks.size() * (1 + HASH_SIZE)) {
 				for (const hash& id : notify_blocks) {
-					LOGINFO(5, "sending BLOCK_NOTIFY for " << id << " to " << static_cast<char*>(m_addrString));
+					LOGINFO(6, "sending BLOCK_NOTIFY for " << id << " to " << static_cast<char*>(m_addrString));
 
 					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_NOTIFY);
 
@@ -2353,15 +2360,15 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 
 	// If we don't know about this block, request it from this peer. The peer can do it to speed up our initial sync, for example.
 	if (!server->find_block(id)) {
-		LOGINFO(5, "Received an unknown block " << id << " in BLOCK_NOTIFY");
+		LOGINFO(6, "Received an unknown block " << id << " in BLOCK_NOTIFY");
 
 		if (m_blockPendingRequests.size() >= 25) {
-			LOGINFO(5, "Too many pending requests, ignoring it");
+			LOGINFO(5, "Too many pending block requests, ignoring it");
 			return;
 		}
 
 		if (!server->m_blockNotifyRequests.insert(*id.u64()).second || !server->m_missingBlockRequests.insert({ m_peerId, *id.u64() }).second) {
-			LOGINFO(5, "BLOCK_REQUEST for id = " << id << " was already sent");
+			LOGINFO(6, "BLOCK_REQUEST for id = " << id << " was already sent");
 			return;
 		}
 
