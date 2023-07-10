@@ -2088,7 +2088,7 @@ void SideChain::prune_old_blocks()
 	}
 }
 
-void SideChain::get_missing_blocks(std::vector<hash>& missing_blocks) const
+void SideChain::get_missing_blocks(unordered_set<hash>& missing_blocks) const
 {
 	missing_blocks.clear();
 
@@ -2100,14 +2100,14 @@ void SideChain::get_missing_blocks(std::vector<hash>& missing_blocks) const
 		}
 
 		if (!b.second->m_parent.empty() && (m_blocksById.find(b.second->m_parent) == m_blocksById.end())) {
-			missing_blocks.push_back(b.second->m_parent);
+			missing_blocks.insert(b.second->m_parent);
 		}
 
 		int num_missing_uncles = 0;
 
 		for (const hash& h : b.second->m_uncles) {
 			if (!h.empty() && (m_blocksById.find(h) == m_blocksById.end())) {
-				missing_blocks.push_back(h);
+				missing_blocks.insert(h);
 
 				// Get no more than 2 first missing uncles at a time from each block
 				// Blocks with more than 2 uncles are very rare and they will be processed in several steps

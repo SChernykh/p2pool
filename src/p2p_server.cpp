@@ -1122,7 +1122,7 @@ void P2PServer::download_missing_blocks()
 		return;
 	}
 
-	std::vector<hash> missing_blocks;
+	unordered_set<hash> missing_blocks;
 	m_pool->side_chain().get_missing_blocks(missing_blocks);
 
 	if (missing_blocks.empty()) {
@@ -1178,7 +1178,7 @@ void P2PServer::download_missing_blocks()
 		const bool result = send(client,
 			[&id, client](uint8_t* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(client->m_addrString));
+				LOGINFO(5, "[download_missing_blocks] sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(client->m_addrString));
 
 				if (buf_size < 1 + HASH_SIZE) {
 					return 0;
@@ -2368,7 +2368,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 		const bool result = server->send(this,
 			[&id, this](uint8_t* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
+				LOGINFO(5, "[on_block_notify] sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
 
 				if (buf_size < 1 + HASH_SIZE) {
 					return 0;
@@ -2546,7 +2546,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 		const bool result = server->send(this,
 			[this, &id](uint8_t* buf, size_t buf_size) -> size_t
 			{
-				LOGINFO(5, "sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
+				LOGINFO(5, "[post_handle_incoming_block] sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
 
 				if (buf_size < 1 + HASH_SIZE) {
 					return 0;

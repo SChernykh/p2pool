@@ -52,7 +52,7 @@ public:
 
 	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
 	bool add_block(const PoolBlock& block);
-	void get_missing_blocks(std::vector<hash>& missing_blocks) const;
+	void get_missing_blocks(unordered_set<hash>& missing_blocks) const;
 
 	PoolBlock* find_block(const hash& id) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
