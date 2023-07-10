@@ -922,7 +922,7 @@ void P2PServer::on_broadcast()
 				}
 
 				if (send_pruned) {
-					LOGINFO(6, "sending BLOCK_BROADCAST " << (send_compact ? "(compact)" : "(pruned) ") << ") to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					LOGINFO(6, "sending BLOCK_BROADCAST " << (send_compact ? "(compact)" : "(pruned) ") << " to " << log::Gray() << static_cast<char*>(client->m_addrString));
 					const std::vector<uint8_t>& blob = send_compact ? data->compact_blob : data->pruned_blob;
 
 					const uint32_t len = static_cast<uint32_t>(blob.size());
