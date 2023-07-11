@@ -130,14 +130,14 @@ TEST(pool_block, verify)
 		const char* m_fileName;
 		uint64_t m_txinGenHeight;
 		uint64_t m_sidechainHeight;
+		bool m_shuffle;
 	} tests[2] = {
-		{ "default", "sidechain_dump.dat", 2870010, 4957203 },
-		{ "mini", "sidechain_dump_mini.dat", 2870010, 4414446 },
+		{ "default", "sidechain_dump.dat", 2870010, 4957203, true },
+		{ "mini", "sidechain_dump_mini.dat", 2870010, 4414446, false },
 	};
 
 	for (const STest& t : tests)
 	{
-		PoolBlock b;
 		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
 
 		// Difficulty of block 2869248
@@ -151,17 +151,40 @@ TEST(pool_block, verify)
 		f.read(reinterpret_cast<char*>(buf.data()), buf.size());
 		ASSERT_EQ(f.good(), true);
 
+		std::vector<PoolBlock*> blocks;
 		for (const uint8_t *p = buf.data(), *e = buf.data() + buf.size(); p < e;) {
 			ASSERT_TRUE(p + sizeof(uint32_t) <= e);
 			const uint32_t n = *reinterpret_cast<const uint32_t*>(p);
 			p += sizeof(uint32_t);
 
 			ASSERT_TRUE(p + n <= e);
-			ASSERT_EQ(b.deserialize(p, n, sidechain, nullptr, false), 0);
+
+			PoolBlock* b = new PoolBlock();
+			ASSERT_EQ(b->deserialize(p, n, sidechain, nullptr, false), 0);
 			p += n;
 
-			ASSERT_TRUE(sidechain.add_block(b));
-			ASSERT_TRUE(sidechain.find_block(b.m_sidechainId) != nullptr);
+			blocks.push_back(b);
+		}
+
+		if (t.m_shuffle) {
+			std::mt19937_64 rng;
+
+			for (uint64_t i = 0, k, n = blocks.size(); i < n - 1; ++i) {
+				umul128(rng(), n - i, &k);
+				std::swap(blocks[i], blocks[i + k]);
+			}
+		}
+
+		for (uint64_t i = 0, n = blocks.size(); i < n; ++i) {
+			ASSERT_TRUE(sidechain.add_block(*blocks[i]));
+			ASSERT_TRUE(sidechain.find_block(blocks[i]->m_sidechainId) != nullptr);
+			delete blocks[i];
+		}
+
+		for (auto it = sidechain.blocksById().begin(); it != sidechain.blocksById().end(); ++it) {
+			const PoolBlock* b = it->second;
+			ASSERT_TRUE(b->m_verified);
+			ASSERT_FALSE(b->m_invalid);
 		}
 
 		const PoolBlock* tip = sidechain.chainTip();

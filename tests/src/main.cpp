@@ -18,9 +18,11 @@
 #include "gtest/gtest.h"
 
 void p2pool_usage() {}
+namespace p2pool { void set_main_thread(); }
 
 int main(int argc, char** argv)
 {
+	p2pool::set_main_thread();
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }

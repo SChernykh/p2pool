@@ -84,6 +84,7 @@ public:
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
+	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
 #endif
 
 	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);

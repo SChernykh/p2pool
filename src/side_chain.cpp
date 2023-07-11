@@ -1762,7 +1762,7 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 			" is not a longer chain than " << tip->m_sidechainId <<
 			", height " << tip->m_sidechainHeight);
 	}
-	else if (block->m_sidechainHeight + UNCLE_BLOCK_DEPTH > tip->m_sidechainHeight) {
+	else if (m_pool && (block->m_sidechainHeight + UNCLE_BLOCK_DEPTH > tip->m_sidechainHeight)) {
 		LOGINFO(4, "possible uncle block: id = " << log::Gray() << block->m_sidechainId << log::NoColor() <<
 			", height = " << log::Gray() << block->m_sidechainHeight);
 		m_pool->update_block_template_async();
@@ -1968,6 +1968,36 @@ void SideChain::update_depths(PoolBlock* block)
 		// Verify this block and possibly other blocks on top of it when we're sure it will get verified
 		if (!block->m_verified && ((block->m_depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH) || (block->m_sidechainHeight == 0))) {
 			verify_loop(block);
+		}
+
+		for (size_t i = 1; i <= UNCLE_BLOCK_DEPTH; ++i) {
+			auto it = m_blocksByHeight.find(block->m_sidechainHeight + i);
+			if (it == m_blocksByHeight.end()) {
+				continue;
+			}
+			for (PoolBlock* child : it->second) {
+				const uint64_t old_depth = child->m_depth;
+
+				if (child->m_parent == block->m_sidechainId) {
+					if (i != 1) {
+						LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
+						return;
+					}
+					else if (block->m_depth > 0) {
+						update_depth(child, block->m_depth - 1);
+					}
+				}
+
+				if (std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId) != child->m_uncles.end()) {
+					if (block->m_depth > i) {
+						update_depth(child, block->m_depth - i);
+					}
+				}
+
+				if (child->m_depth > old_depth) {
+					blocks_to_update.push_back(child);
+				}
+			}
 		}
 
 		auto it = m_blocksById.find(block->m_parent);
