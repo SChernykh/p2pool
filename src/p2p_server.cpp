@@ -298,16 +298,8 @@ void P2PServer::update_peer_connections()
 		connected_clients.insert(client->m_addr);
 		if (client->is_good()) {
 			has_good_peers = true;
-			if (client->m_pingTime >= 0) {
-				if (!m_fastestPeer) {
-					m_fastestPeer = client;
-				}
-				else if (m_fastestPeer->m_protocolVersion < client->m_protocolVersion) {
-					m_fastestPeer = client;
-				}
-				else if ((m_fastestPeer->m_protocolVersion == client->m_protocolVersion) && (m_fastestPeer->m_pingTime > client->m_pingTime)) {
-					m_fastestPeer = client;
-				}
+			if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
+				m_fastestPeer = client;
 			}
 		}
 	}
@@ -2115,6 +2107,9 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 			return false;
 		}
 
+		m_broadcastMaxHeight = std::max(m_broadcastMaxHeight, block->m_sidechainHeight);
+		m_broadcastedHashes[m_broadcastedHashesIndex++ % array_size(&P2PClient::m_broadcastedHashes)] = block->m_sidechainId;
+
 		if (cur_time >= m_nextOutgoingPeerListRequest) {
 			server->send_peer_list_request(this, cur_time);
 		}
@@ -2527,7 +2522,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 	// If the initial sync is not finished yet, try to ask the fastest peer instead
 	if (!server->m_pool->side_chain().precalcFinished()) {
 		P2PClient* c = server->m_fastestPeer;
-		if (c && (c != this) && (c->m_protocolVersion >= m_protocolVersion) && (c->m_broadcastMaxHeight >= block.m_sidechainHeight)) {
+		if (c && (c != this) && (c->m_broadcastMaxHeight >= block.m_sidechainHeight)) {
 			LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it instead");
 			c->post_handle_incoming_block(block, c->m_resetCounter.load(), missing_blocks);
 			return;
