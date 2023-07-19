@@ -2102,7 +2102,7 @@ void SideChain::prune_old_blocks()
 			m_pool->reconnect_to_host();
 		}
 
-		if (cur_time >= m_firstPruneTime + 120) {
+		if ((cur_time >= m_firstPruneTime + 120) && !m_pool->stopped()) {
 			LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
 #ifdef DEV_TRACK_MEMORY
 			show_top_10_allocations();

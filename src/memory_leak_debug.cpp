@@ -123,13 +123,16 @@ void show_top_10_allocations()
 
 		std::sort(buf, end, [](const auto& a, const auto& b) { return a.allocated_size > b.allocated_size; });
 
-		printf("%I64u total bytes allocated\n", total_allocated);
+		printf("%I64u total bytes allocated\n\n", total_allocated);
+		printf("Top 10 allocations:\n\n");
 
 		for (TrackedAllocation* p = buf; (p < buf + 10) && (p < end); ++p) {
 			printf("%I64u bytes allocated at:\n", p->allocated_size);
 			p->print(h);
 		}
 	}
+
+	printf("\n");
 
 	VirtualFree(buf, 0, MEM_RELEASE);
 }
@@ -299,6 +302,9 @@ bool memory_tracking_stop()
 
 	if (total_leaks > 0) {
 		printf("%I64u bytes leaked\n\n", total_leaks);
+	}
+	else {
+		printf("No memory leaks detected\n\n");
 	}
 
 	SymCleanup(h);
