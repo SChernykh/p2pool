@@ -2104,6 +2104,9 @@ void SideChain::prune_old_blocks()
 
 		if (cur_time >= m_firstPruneTime + 120) {
 			LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
+#ifdef DEV_TRACK_MEMORY
+			show_top_10_allocations();
+#endif
 			print_status(false);
 			P2PServer* server = m_pool->p2p_server();
 			if (server) {

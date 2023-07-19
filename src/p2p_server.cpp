@@ -1152,7 +1152,7 @@ void P2PServer::download_missing_blocks()
 			continue;
 		}
 
-		if (!m_missingBlockRequests.insert({ client->m_peerId, *id.u64() }).second) {
+		if (!m_missingBlockRequests.emplace(client->m_peerId, *id.u64()).second) {
 			// We already asked this peer about this block
 			// Don't try to ask another peer, leave it for another timer tick
 			continue;
@@ -2362,7 +2362,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			return;
 		}
 
-		if (!server->m_blockNotifyRequests.insert(*id.u64()).second || !server->m_missingBlockRequests.insert({ m_peerId, *id.u64() }).second) {
+		if (!server->m_blockNotifyRequests.insert(*id.u64()).second || !server->m_missingBlockRequests.emplace(m_peerId, *id.u64()).second) {
 			LOGINFO(6, "BLOCK_REQUEST for id = " << id << " was already sent");
 			return;
 		}
@@ -2541,7 +2541,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 			}
 		}
 
-		if (!server->m_missingBlockRequests.insert({ m_peerId, *id.u64() }).second) {
+		if (!server->m_missingBlockRequests.emplace(m_peerId, *id.u64()).second) {
 			continue;
 		}
 

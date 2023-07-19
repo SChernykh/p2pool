@@ -301,10 +301,14 @@ bool get_dns_txt_records_base(const std::string& host, Callback<void, const char
 template<typename T>
 FORCEINLINE bool get_dns_txt_records(const std::string& host, T&& callback) { return get_dns_txt_records_base(host, Callback<void, const char*, size_t>::Derived<T>(std::move(callback))); }
 
+#ifdef DEV_TRACK_MEMORY
+void show_top_10_allocations();
+#endif
+
 } // namespace p2pool
 
 void memory_tracking_start();
-void memory_tracking_stop();
+bool memory_tracking_stop();
 void p2pool_usage();
 void p2pool_version();
 

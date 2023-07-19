@@ -81,9 +81,6 @@ void p2pool_version()
 	printf("P2Pool %s\n", p2pool::VERSION);
 }
 
-void memory_tracking_start();
-void memory_tracking_stop();
-
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
@@ -124,7 +121,9 @@ int main(int argc, char* argv[])
 
 	p2pool::destroy_crypto_cache();
 
-	memory_tracking_stop();
+	if (!memory_tracking_stop()) {
+		result = 1;
+	}
 
 	return result;
 }

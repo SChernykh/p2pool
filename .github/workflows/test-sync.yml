@@ -287,3 +287,42 @@ jobs:
         path: |
           build/Debug/*.log
           build/Debug/data/
+
+  sync-test-windows-leaks:
+
+    timeout-minutes: 30
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Setup cmake
+      uses: lukka/get-cmake@latest
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON -DDEV_TRACK_MEMORY=ON
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=RelWithDebInfo p2pool.vcxproj
+
+    - name: Run p2pool
+      run: |
+        cd build/RelWithDebInfo
+        mkdir data
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 1"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 2"
+        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 3"
+        ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
+        findstr /C:"Synchronization finished successfully" p2pool.log
+
+    - name: Archive p2pool.log
+      uses: actions/upload-artifact@v3
+      with:
+        name: p2pool_windows_data_leaks
+        path: |
+          build/RelWithDebInfo/*.log
+          build/RelWithDebInfo/data/
