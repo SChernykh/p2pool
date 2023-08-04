@@ -2312,7 +2312,17 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 				// Check for protocol version message
 				if ((*reinterpret_cast<uint32_t*>(ip.data + 12) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
-					m_protocolVersion = std::min(*reinterpret_cast<uint32_t*>(ip.data), SUPPORTED_PROTOCOL_VERSION);
+					const uint32_t version = *reinterpret_cast<uint32_t*>(ip.data);
+
+					// Clients with different major protocol versions communicate using v1.0 protocol
+					// to reduce backwards compatibility requirements for newer clients
+					if ((version >> 16) != (SUPPORTED_PROTOCOL_VERSION >> 16)) {
+						m_protocolVersion = PROTOCOL_VERSION_1_0;
+					}
+					else {
+						m_protocolVersion = std::min(version, SUPPORTED_PROTOCOL_VERSION);
+					}
+
 					m_SoftwareVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
 					m_SoftwareID = *reinterpret_cast<uint32_t*>(ip.data + 8);
 					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
