@@ -54,8 +54,6 @@ jobs:
           build/data/
 
   sync-test-ubuntu-msan:
-    if: ${{ false }}  # disable for now
-
     timeout-minutes: 30
     runs-on: ubuntu-22.04
 
