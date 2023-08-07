@@ -162,6 +162,7 @@ template<> struct Stream::Entry<const char*>
 
 template<> struct Stream::Entry<char*>
 {
+	// cppcheck-suppress constParameterPointer
 	static FORCEINLINE void put(char* data, Stream* wrapper) { wrapper->writeBuf(data, strlen(data)); }
 };
 
