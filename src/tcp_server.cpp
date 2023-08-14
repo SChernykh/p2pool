@@ -593,6 +593,7 @@ void TCPServer::loop(void* data)
 
 		ASAN_POISON_MEMORY_REGION(wb, sizeof(WriteBuf));
 		ASAN_POISON_MEMORY_REGION(c, c->size());
+		ASAN_UNPOISON_MEMORY_REGION(&c->m_resetCounter, sizeof(c->m_resetCounter));
 
 		server->m_writeBuffers.emplace(capacity, wb);
 		server->m_preallocatedClients.emplace_back(c);
@@ -957,6 +958,7 @@ TCPServer::Client* TCPServer::get_client()
 void TCPServer::return_client(Client* c)
 {
 	ASAN_POISON_MEMORY_REGION(c, c->size());
+	ASAN_UNPOISON_MEMORY_REGION(&c->m_resetCounter, sizeof(c->m_resetCounter));
 	m_preallocatedClients.push_back(c);
 }
 
