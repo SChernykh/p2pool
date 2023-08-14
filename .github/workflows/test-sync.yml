@@ -243,7 +243,9 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake libuv zmq libpgm curl
+      run: |
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake libuv zmq libpgm curl pyenv
+        pyenv install 3:latest
 
     - name: Build p2pool
       run: |
@@ -256,9 +258,9 @@ jobs:
       run: |
         cd build
         mkdir data
-        python ../tests/src/stratum_dummy.py 1 &
-        python ../tests/src/stratum_dummy.py 2 &
-        python ../tests/src/stratum_dummy.py 3 &
+        python3 ../tests/src/stratum_dummy.py 1 &
+        python3 ../tests/src/stratum_dummy.py 2 &
+        python3 ../tests/src/stratum_dummy.py 3 &
         ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --data-api data --local-api --loglevel 6
 
     - name: Check p2pool.log
