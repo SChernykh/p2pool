@@ -56,7 +56,7 @@ while True:
 	if ('method' in obj) and ('params' in obj) and (obj['method'] == 'job'):
 		job_id = obj['params']['job_id']
 		target = obj['params']['target']
-	elif ('result' in obj):
+	elif ('result' in obj) and ('job' in obj['result']):
 		if ('id' in obj['result']):
 			rpc_id = obj['result']['id']
 		job_id = obj['result']['job']['job_id']
@@ -66,8 +66,19 @@ while True:
 		if (msg_id < 4):
 			result = ('f' if (msg_id == 2) else '0') * 64
 			request = '{"id":' + str(msg_id) + ',"method":"submit","params":{"id":"' + rpc_id + '","job_id":"' + job_id + '","nonce":"ffffffff","result":"' + result + '"}}\n'
-		else:
+		elif (msg_id == 4):
 			request = '{"id":' + str(msg_id) + ',"method":"keepalived"}\n'
+		else:
+			t = bytearray.fromhex(target)
+			for i in range(len(t)):
+				if (t[i] > 0):
+					t[i] -= 1
+					break
+				else:
+					t[i] = 255
+
+			result = ('0' * (64 - len(target))) + t.hex()
+			request = '{"id":' + str(msg_id) + ',"method":"submit","params":{"id":"' + rpc_id + '","job_id":"' + job_id + '","nonce":"ffffffff","result":"' + result + '"}}\n'
 
 		msg_id += 1
 		s = '-> ' + request
