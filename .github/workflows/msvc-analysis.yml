@@ -10,7 +10,13 @@ name: Microsoft C++ Code Analysis
 
 on:
   push:
+    paths-ignore:
+      - 'docker-compose/**'
+      - 'docs/**'
+      - 'README.md'
+
   pull_request:
+
   schedule:
     - cron: '40 10 * * 0'
 

@@ -22,7 +22,7 @@ These are 3rd-party pages. If they are down, it doesn't mean there is a problem 
 # Contents
 - [Pool mining vs Solo mining vs P2Pool mining](#pool-mining-vs-solo-mining-vs-p2pool-mining)
 - [Features](#features)
-- [How PPLNS works in P2Pool](#how-pplns-works-in-p2pool)
+- [How payouts work in P2Pool](#how-payouts-work-in-p2pool)
 - [Default P2Pool parameters](#default-p2pool-parameters)
 - [Monero version support](#monero-version-support)
 - [How to mine on P2Pool](#how-to-mine-on-p2pool)
@@ -41,7 +41,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 |-|-|-|-|-|-|-|-|
 |Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|Pool admin controls your mined funds, what you mine and can execute network attacks|Only miner software is required
 |Solo|Rare|0%|0.6 XMR or more|No|As stable as your Monero node|100% under your control|Monero node + optional miner
-|**P2Pool**|Regular|0%|~0.00027 XMR|No|Very stable: node failover and multiple Monero nodes are supported|100% under your control|Monero node(s) + P2Pool node(s) + miner(s)
+|**P2Pool**|Regular|0%|~0.00027 XMR|No|Very stable: node failover and multiple Monero nodes are supported|100% under your control|Monero node(s) + P2Pool node(s) + optional miner(s)
 
 ## Features
 
@@ -51,7 +51,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * PPLNS payout scheme
 * **0% fee**
 * **0 XMR payout fee**
-* **~0.0003 XMR minimal payout**
+* **~0.00027 XMR minimal payout**
 * Fast block times, down to 1 second
 * Uncle blocks are supported to avoid orphans - all your shares will be accounted for!
 * Configurable PPLNS window size and block time
@@ -59,21 +59,24 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * Password protected private pools
 * Highly reliable configurations are supported (multiple P2Pool nodes mining to the same wallet, each P2Pool node can use multiple Monero nodes and switch on the fly if an issue is detected)
 
-## How PPLNS works in P2Pool
+## How payouts work in P2Pool
 
-First you need to find a pool share. This share will stay in PPLNS window for 2160 pool blocks (6 hours). The moment P2Pool finds a Monero block and you have at least 1 pool share in PPLNS window, you'll get a payout! Monero block reward is split between all miner wallets in PPLNS window. Each miner gets a part of block reward proportional to the total difficulty of his/her shares in PPLNS window.
+First you need to find a pool share. This share will stay in [PPLNS](https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares) window for up to 2160 pool blocks (6 hours, auto adjustable to balance payout sizes and frequency). The moment P2Pool finds a Monero block and you have at least 1 pool share in PPLNS window, you'll get a payout! Monero block reward is split between all miner wallets in PPLNS window. Each miner gets a part of block reward proportional to the total difficulty of his/her shares in PPLNS window.
 
 **NOTE** If P2Pool doesn't have enough hashrate to find Monero blocks faster than every 6 hours on average (~15 MH/s), **not all your pool shares will result in a payout**. Even if pool hashrate is higher, bad luck can sometimes result in a share going through PPLNS window without a payout. But in the long run it will be compensated by other shares receiving multiple payouts - your payouts will average out to what you'd get with regular pool mining.
 
 ## Default P2Pool parameters
 
 * Block time: 10 seconds
-* PPLNS window: up to 2160 blocks (6 hours), auto adjustable to balance payout sizes and frequency
-* Minimum payout = Monero block reward/2160, ~0.0003 XMR
+* PPLNS window: up to 2160 blocks (6 hours, auto adjustable to balance payout sizes and frequency)
+* Minimum payout = Monero block reward/2160, ~0.00027 XMR
 
 ## Monero version support
 
-Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order to continue mining, you must update both Monero and P2Pool software to the latest available versions as soon as they are released.
+- The latest Monero network upgrade happened on August 13th, 2022 (block 2,688,888).
+- The latest P2Pool network upgrade happened on March 18th, 2023 at 21:00 UTC.
+
+In order to continue mining on P2Pool, you must update both Monero and P2Pool software to the latest available versions as soon as they are released.
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
@@ -85,7 +88,7 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 
 - In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the official Monero binaries, start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
-- You have to use a primary wallet address for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
+- You have to use a primary wallet address (the one starting with `4`) for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
 - You can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
 - Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same P2Pool node. The more the better!
@@ -109,21 +112,21 @@ Monero network upgrade happened on August 13th, 2022 (block 2,688,888). In order
 1. Download the latest P2Pool binaries [here](https://github.com/SChernykh/p2pool/releases/latest).
    -  Alternatively, grab the latest source code for P2Pool and [build it](#build-instructions).
 2. Download the latest XMRig (linux-static-x64) binary [here](https://github.com/xmrig/xmrig/releases/latest).
-3. Prepare enough huge pages (required for each instance of monerod/P2Pool/XMRig): 
+3. Prepare enough huge pages (each of monerod/P2Pool/XMRig needs them): 
 ```
 sudo sysctl vm.nr_hugepages=3072
 ```
 4. Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your local firewall to ensure better connectivity. 
 5. Start `monerod` with the following command/options: 
 ```
-./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
 ``` 
 **Note:**
 The `--zmq-pub` option is required for P2Pool to work properly.
 
 `--out-peers 64 --in-peers 32` is needed to (1) have many connections to other nodes and (2) limit incoming connection count because it can grow uncontrollably and cause problems when it goes above 1000 (open files limit in Linux). If your network connection's **upload** bandwidth is less than **10 Mbit**, use `--out-peers 16 --in-peers 8` instead.
 
-`--add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
+`--add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
 
 `--disable-dns-checkpoints` is needed to avoid periodical lags when DNS is updated (it's not needed when mining)
 
@@ -174,7 +177,7 @@ nocreate
 2. Download the latest XMRig binary [here](https://github.com/xmrig/xmrig/releases/latest).
 3. Expand the P2Pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
 4. Expand XMRig binary into an appropriate location (the same folder as P2Pool is fine). 
-5. Prepare huge pages to work properly (each instance of monerod/P2Pool/XMRig needs them): 
+5. Prepare huge pages to work properly (each of monerod/P2Pool/XMRig needs them): 
    - On Windows 10 or above, run XMRig at least once as Administrator (right-click Run As Administrator)
    - On earlier versions of Windows, you'll need to run XMRig as Administrator at least once per login.
 6. Create "Monero" folder inside extracted P2Pool folder and copy Monero binaries there.
@@ -184,14 +187,14 @@ nocreate
 
 8. Start `monerod` with the following command/options: 
 ```
-.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
 ```
 **Note:**
 The `--zmq-pub` option is required for P2Pool to work properly.
 
 `--out-peers 64 --in-peers 32` is needed to (1) have many connections to other nodes and (2) limit incoming connection count because it can grow uncontrollably and cause problems when it goes above 1000 (open files limit in Linux). If your network connection's **upload** bandwidth is less than **10 Mbit**, use `--out-peers 16 --in-peers 8` instead.
 
-`--add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
+`--add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
 
 `--disable-dns-checkpoints` is needed to avoid periodical lags when DNS is updated (it's not needed when mining)
 
@@ -215,7 +218,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 13. *(Optional but highly recommended)* You can create a Quickstart by creating a batch (.bat) file with the following contents and placing it in your P2Pool directory along with `xmrig.exe`.
 ```
 @ECHO OFF
-start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
 ECHO Wait until the Monero daemon shows fully synced before continuing. This can take some time. Type 'status' in other window to check progress.
 PAUSE
 start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS --mini

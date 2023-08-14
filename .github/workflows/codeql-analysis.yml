@@ -13,7 +13,13 @@ name: "CodeQL"
 
 on:
   push:
+    paths-ignore:
+      - 'docker-compose/**'
+      - 'docs/**'
+      - 'README.md'
+
   pull_request:
+
   schedule:
     - cron: '44 11 * * 0'
 

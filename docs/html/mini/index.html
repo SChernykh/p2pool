@@ -241,7 +241,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <ul>
 <li>Download the latest Monero <a href="https://www.getmonero.org/downloads/" target="_blank">release</a>
 <li>[Optional] Open port <span>18080</span> (Monero p2p port) in your firewall to ensure better connectivity
-<li>Run <span>./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=node.supportxmr.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist</span>
+<li>Run <span>./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 64 --in-peers 32 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist</span>
 <li>If your network connection's upload bandwidth is less than 10 Mbit, use <span>--out-peers 16 --in-peers 8</span> instead.
 <li>Wait until it's fully synchronized. If you didn't run Monero node before, it can take up to several days to synchronize (5-6 hours on a modern PC with fast SSD and fast Internet connection). You can add <span>--prune-blockchain</span> argument to the command line to run a pruned node (3-4 times less disk usage)
 </ul></details>

@@ -1,6 +1,13 @@
 name: clang-tidy
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'docker-compose/**'
+      - 'docs/**'
+      - 'README.md'
+
+  pull_request:
 
 jobs:
   clang-tidy:
