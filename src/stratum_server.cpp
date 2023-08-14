@@ -973,13 +973,13 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
-	ON_SCOPE_LEAVE([share]()
+	StratumServer* server = share->m_server;
+
+	ON_SCOPE_LEAVE([share, server]()
 		{
 			ASAN_POISON_MEMORY_REGION(share, sizeof(SubmittedShare));
-			share->m_server->m_submittedSharesPool.push_back(share);
+			server->m_submittedSharesPool.push_back(share);
 		});
-
-	StratumServer* server = share->m_server;
 
 	const bool bad_share = (share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW);
 
