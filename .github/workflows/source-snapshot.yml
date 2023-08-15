@@ -1,0 +1,24 @@
+name: source-snapshot
+
+on: [push, pull_request]
+
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Compress source code
+      run: |
+        mkdir build
+        XZ_OPT=-e9 tar --exclude=".git" --exclude="build" -f build/p2pool.tar.xz -c ../p2pool --xz
+
+    - name: Archive source code
+      uses: actions/upload-artifact@v3
+      with:
+        name: p2pool.tar.xz
+        path: build/p2pool.tar.xz

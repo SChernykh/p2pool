@@ -41,7 +41,12 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Ob1 /Ot /Zi /MT")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	set(GENERAL_FLAGS "-pthread")
+	if (WIN32)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	else()
+		set(GENERAL_FLAGS "-pthread")
+	endif()
+
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
 	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants -flto")
 

@@ -318,6 +318,8 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		endif()
 	endif()
 
+	set(STATIC_LIBS "")
+
 	if (WITH_RANDOMX)
 		set(STATIC_LIBS randomx)
 	endif()
@@ -328,7 +330,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 
 	if (WIN32)
 		set(STATIC_LIBS ${STATIC_LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp)
-		if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+		if ((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR (CMAKE_CXX_COMPILER_ID MATCHES Clang))
 			set(STATIC_LIBS ${STATIC_LIBS} bcrypt)
 		endif()
 	elseif (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)

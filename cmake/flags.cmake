@@ -68,7 +68,12 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 
 	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	set(GENERAL_FLAGS "-pthread")
+	if (WIN32)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	else()
+		set(GENERAL_FLAGS "-pthread")
+	endif()
+
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 
 	if (NOT DEV_WITH_MSAN)
