@@ -17,14 +17,14 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 16
+        sudo ./llvm.sh 17
 
     - name: Build libcxx_msan
       run: |
-        git clone --depth=1 https://github.com/llvm/llvm-project -b release/16.x
+        git clone --depth=1 https://github.com/llvm/llvm-project -b release/17.x
         cd llvm-project
         mkdir build
-        cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DLLVM_USE_SANITIZER=MemoryWithOrigins
+        cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DLLVM_USE_SANITIZER=MemoryWithOrigins
         ninja -C build cxx cxxabi
         cd build
         XZ_OPT=-e9 tar cfJ libcxx_msan.tar.xz include lib
