@@ -77,7 +77,7 @@ while True:
 				else:
 					t[i] = 255
 
-			result = ('0' * (64 - len(target))) + t.hex()
+			result = ('f' * (64 - len(target))) + t.hex()
 			request = '{"id":' + str(msg_id) + ',"method":"submit","params":{"id":"' + rpc_id + '","job_id":"' + job_id + '","nonce":"ffffffff","result":"' + result + '"}}\n'
 
 		msg_id += 1
