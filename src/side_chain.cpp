@@ -2108,13 +2108,23 @@ void SideChain::prune_old_blocks()
 			show_top_10_allocations();
 #endif
 			print_status(false);
-			P2PServer* server = m_pool->p2p_server();
-			if (server) {
-				server->print_status();
-				server->print_bans();
-				server->show_peers_async();
+
+			StratumServer* server1 = m_pool->stratum_server();
+			P2PServer* server2 = m_pool->p2p_server();
+
+			if (server1 && server2) {
+				server1->print_status();
+				server2->print_status();
+
+				server1->print_bans();
+				server2->print_bans();
+
+				server1->show_workers_async();
+				server2->show_peers_async();
 			}
+
 			m_pool->print_hosts();
+			bkg_jobs_tracker.print_status();
 			m_pool->stop();
 		}
 #endif
