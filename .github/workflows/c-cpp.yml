@@ -194,7 +194,7 @@ jobs:
     strategy:
       matrix:
         config:
-          - {c: "gcc", cxx: "g++", flags: ""}
+          - {c: "gcc", cxx: "g++", flags: "-flto -fuse-linker-plugin -ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes"}
           - {c: "clang", cxx: "clang++", flags: "-flto -ffunction-sections -fuse-ld=lld -Wno-unused-command-line-argument"}
 
     defaults:
@@ -240,7 +240,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,--gc-sections" -DSTATIC_LIBS=ON
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON
         make -j$(nproc)
 
     - name: Build tests
@@ -248,7 +248,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,--gc-sections" -DSTATIC_LIBS=ON
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON
         make -j$(nproc)
 
     - name: Run tests
