@@ -23,7 +23,7 @@
 #include "params.h"
 #include "p2pool_api.h"
 
-static constexpr char log_category_prefix[] = "StratumServer ";
+LOG_CATEGORY(StratumServer)
 
 static constexpr int DEFAULT_BACKLOG = 128;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
@@ -542,6 +542,11 @@ void StratumServer::reset_share_counters()
 	m_cumulativeHashesAtLastShare = m_cumulativeHashes;
 	m_totalFoundShares = 0;
 	m_totalFailedShares = 0;
+}
+
+const char* StratumServer::get_log_category() const
+{
+	return log_category_prefix;
 }
 
 void StratumServer::print_stratum_status() const

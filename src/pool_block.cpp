@@ -22,7 +22,7 @@
 #include "pow_hash.h"
 #include "crypto.h"
 
-static constexpr char log_category_prefix[] = "PoolBlock ";
+LOG_CATEGORY(PoolBlock)
 
 #include "pool_block_parser.inl"
 

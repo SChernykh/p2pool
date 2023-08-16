@@ -20,7 +20,7 @@
 #include "stratum_server.h"
 #include "p2p_server.h"
 
-constexpr char log_category_prefix[] = "P2Pool ";
+LOG_CATEGORY(Params)
 
 void p2pool_usage();
 

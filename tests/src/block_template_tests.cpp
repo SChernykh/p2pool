@@ -74,8 +74,8 @@ TEST(block_template, update)
 	ASSERT_EQ(diff, 300346053753ULL);
 	ASSERT_EQ(sidechain_diff, sidechain.difficulty());
 	ASSERT_EQ(seed_hash, data.seed_hash);
-	ASSERT_EQ(nonce_offset, 39);
-	ASSERT_EQ(template_id, 1);
+	ASSERT_EQ(nonce_offset, 39U);
+	ASSERT_EQ(template_id, 1U);
 
 	hash blobs_hash;
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
@@ -105,8 +105,8 @@ TEST(block_template, update)
 	ASSERT_EQ(diff, 300346053753ULL);
 	ASSERT_EQ(sidechain_diff, sidechain.difficulty());
 	ASSERT_EQ(seed_hash, data.seed_hash);
-	ASSERT_EQ(nonce_offset, 39);
-	ASSERT_EQ(template_id, 2);
+	ASSERT_EQ(nonce_offset, 39U);
+	ASSERT_EQ(template_id, 2U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("c74d295a9cb7e808030284e2169a6f05b685a11c6c577a774d5eb8fad175d5cd"));

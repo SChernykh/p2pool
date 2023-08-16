@@ -19,7 +19,7 @@
 #include "mempool.h"
 #include "util.h"
 
-static constexpr char log_category_prefix[] = "Mempool ";
+LOG_CATEGORY(Mempool)
 
 namespace p2pool {
 

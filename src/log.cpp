@@ -27,7 +27,8 @@
 #pragma warning(disable : 4996)
 #endif
 
-static constexpr char log_category_prefix[] = "Log ";
+LOG_CATEGORY(Log)
+
 static constexpr char log_file_name[] = "p2pool.log";
 
 namespace p2pool {

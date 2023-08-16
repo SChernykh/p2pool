@@ -178,7 +178,7 @@ public:
 	const PoolBlock* find_block(const hash& id) const;
 
 private:
-	const char* get_category() const override { return "P2PServer "; }
+	const char* get_log_category() const override;
 
 	p2pool* m_pool;
 	BlockCache* m_cache;

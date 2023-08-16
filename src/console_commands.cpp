@@ -28,7 +28,7 @@
 #include "p2pool_api.h"
 #include "params.h"
 
-static constexpr char log_category_prefix[] = "ConsoleCommands ";
+LOG_CATEGORY(ConsoleCommands)
 
 static constexpr int DEFAULT_BACKLOG = 1;
 
@@ -121,6 +121,11 @@ ConsoleCommands::~ConsoleCommands()
 void ConsoleCommands::on_shutdown()
 {
 	uv_close(reinterpret_cast<uv_handle_t*>(m_stdin_handle), nullptr);
+}
+
+const char* ConsoleCommands::get_log_category() const
+{
+	return log_category_prefix;
 }
 
 typedef struct strconst {

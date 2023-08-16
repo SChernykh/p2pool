@@ -27,7 +27,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(GENERAL_FLAGS "")
-	set(WARNING_FLAGS "/Wall /sdl")
+	set(WARNING_FLAGS "/W4 /sdl")
 	set(SECURITY_FLAGS "/GS /guard:cf")
 	set(OPTIMIZATION_FLAGS "/O2 /Oi /Ob2 /Ot /DNDEBUG /GL")
 

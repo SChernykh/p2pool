@@ -20,7 +20,7 @@
 #include "json_rpc_request.h"
 #include <curl/curl.h>
 
-static constexpr char log_category_prefix[] = "JSONRPCRequest ";
+LOG_CATEGORY(JSONRPCRequest)
 
 namespace p2pool {
 namespace JSONRPCRequest {

@@ -510,17 +510,19 @@ struct DummyStream
 	}
 #endif
 
+#define LOG_CATEGORY(category) static constexpr char log_category_prefix[] = #category " ";
+
 #ifdef P2POOL_LOG_DISABLE
 
-#define LOGINFO(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
-#define LOGWARN(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
-#define LOGERR(level, ...) SIDE_EFFECT_CHECK(level, __VA_ARGS__)
+#define LOGINFO(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
+#define LOGWARN(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
+#define LOGERR(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
 
 #else
 
 #define LOG(level, severity, ...) \
 	do { \
-		SIDE_EFFECT_CHECK(level, __VA_ARGS__); \
+		SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__); \
 		if ((level) <= log::GLOBAL_LOG_LEVEL) { \
 			log::Writer CONCAT(log_wrapper_, __LINE__)(severity); \
 			CONCAT(log_wrapper_, __LINE__) << log::Gray() << log_category_prefix; \

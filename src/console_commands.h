@@ -50,7 +50,7 @@ public:
 	void on_shutdown() override;
 
 private:
-	const char* get_category() const override { return "ConsoleCommands "; }
+	const char* get_log_category() const override;
 
 	p2pool* m_pool;
 

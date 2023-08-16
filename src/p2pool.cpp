@@ -40,7 +40,8 @@
 #include <fstream>
 #include <numeric>
 
-constexpr char log_category_prefix[] = "P2Pool ";
+LOG_CATEGORY(P2Pool)
+
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
 
 constexpr uint64_t SEEDHASH_EPOCH_BLOCKS = 2048;

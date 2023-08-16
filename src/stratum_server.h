@@ -97,7 +97,7 @@ public:
 	void reset_share_counters();
 
 private:
-	const char* get_category() const override { return "StratumServer "; }
+	const char* get_log_category() const override;
 
 	void print_stratum_status() const;
 	void update_auto_diff(StratumClient* client, const uint64_t timestamp, const uint64_t hashes);

@@ -107,7 +107,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -295,7 +295,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON
-        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=Debug p2pool.vcxproj
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool.vcxproj
 
     - name: Run p2pool
       run: |
@@ -338,7 +338,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Visual Studio 17 2022" -DDEV_TEST_SYNC=ON -DDEV_TRACK_MEMORY=ON
-        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" /m /p:Configuration=RelWithDebInfo p2pool.vcxproj
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=RelWithDebInfo p2pool.vcxproj
 
     - name: Run p2pool
       run: |

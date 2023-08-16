@@ -98,7 +98,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -170,7 +170,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -233,7 +233,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -289,7 +289,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
-        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Release p2pool.vcxproj
+        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Build tests
       run: |
@@ -297,7 +297,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "${{ matrix.config.vs }}"
-        & "${{ matrix.config.msbuild }}msbuild" /m /p:Configuration=Debug p2pool_tests.vcxproj
+        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Debug p2pool_tests.vcxproj
 
     - name: Run tests
       run: |
@@ -349,7 +349,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j3
 
     - name: Build p2pool
@@ -417,7 +417,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -target arm64-apple-${{ matrix.os }}' -DCMAKE_CXX_FLAGS='-Os -target arm64-apple-${{ matrix.os }}' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os -target arm64-apple-${{ matrix.os }}' -DCMAKE_CXX_FLAGS='-Os -target arm64-apple-${{ matrix.os }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
         make -j3
 
     - name: Build p2pool
@@ -473,7 +473,7 @@ jobs:
           cd ../../libzmq
           mkdir build
           cd build
-          cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_TLS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
+          cmake .. -DCMAKE_C_FLAGS='-Os' -DCMAKE_CXX_FLAGS='-Os' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF
           make -j2
           cd ../../../..
           mkdir build

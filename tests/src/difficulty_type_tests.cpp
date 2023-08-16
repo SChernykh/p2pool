@@ -567,8 +567,8 @@ TEST(difficulty_type, check_pow)
 
 	for (int i = 0; i < 1000; ++i) {
 		// Random difficulty between 300G and 400G
-		difficulty_type diff{ 300000000000ull + (r() % 100000000000ull), 0 };
-		hash h;
+		diff.lo = 300000000000ull + (r() % 100000000000ull);
+		diff.hi = 0;
 
 		// All zeros
 		memset(h.h, 0, HASH_SIZE);

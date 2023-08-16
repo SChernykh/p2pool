@@ -40,7 +40,7 @@
 #include <iterator>
 #include <numeric>
 
-static constexpr char log_category_prefix[] = "SideChain ";
+LOG_CATEGORY(SideChain)
 
 static constexpr uint64_t MIN_DIFFICULTY = 100000;
 static constexpr size_t UNCLE_BLOCK_DEPTH = 3;

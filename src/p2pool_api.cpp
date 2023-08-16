@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #endif
 
-static constexpr char log_category_prefix[] = "P2Pool API ";
+LOG_CATEGORY(P2Pool API)
 
 namespace p2pool {
 

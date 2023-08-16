@@ -29,7 +29,7 @@
 #include <rapidjson/document.h>
 #include <thread>
 
-static constexpr char log_category_prefix[] = "RandomX_Hasher ";
+LOG_CATEGORY(RandomX_Hasher)
 
 namespace p2pool {
 

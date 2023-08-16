@@ -31,7 +31,8 @@
 #include <fstream>
 #include <numeric>
 
-static constexpr char log_category_prefix[] = "P2PServer ";
+LOG_CATEGORY(P2PServer)
+
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", ""};
 static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "" };
@@ -1047,6 +1048,11 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 const PoolBlock* P2PServer::find_block(const hash& id) const
 {
 	return m_pool->side_chain().find_block(id);
+}
+
+const char* P2PServer::get_log_category() const
+{
+	return log_category_prefix;
 }
 
 void P2PServer::on_timer()

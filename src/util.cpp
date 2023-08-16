@@ -40,7 +40,7 @@
 #include <resolv.h>
 #endif
 
-static constexpr char log_category_prefix[] = "Util ";
+LOG_CATEGORY(Util)
 
 namespace p2pool {
 

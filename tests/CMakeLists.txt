@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.5)
 project(p2pool_tests)
 
 option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)

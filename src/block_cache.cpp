@@ -20,7 +20,7 @@
 #include "pool_block.h"
 #include "p2p_server.h"
 
-static constexpr char log_category_prefix[] = "BlockCache ";
+LOG_CATEGORY(BlockCache)
 
 static constexpr uint32_t BLOCK_SIZE = 96 * 1024;
 static constexpr uint32_t NUM_BLOCKS = 4608;

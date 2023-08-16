@@ -20,7 +20,7 @@
 #include "json_parsers.h"
 #include <rapidjson/document.h>
 
-static constexpr char log_category_prefix[] = "ZMQReader ";
+LOG_CATEGORY(ZMQReader)
 
 namespace p2pool {
 

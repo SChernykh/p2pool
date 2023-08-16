@@ -32,7 +32,7 @@
 #include <ctime>
 #include <numeric>
 
-static constexpr char log_category_prefix[] = "BlockTemplate ";
+LOG_CATEGORY(BlockTemplate)
 
 namespace p2pool {
 

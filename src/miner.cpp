@@ -28,7 +28,7 @@
 #include "p2p_server.h"
 #include <thread>
 
-static constexpr char log_category_prefix[] = "Miner ";
+LOG_CATEGORY(Miner)
 
 using namespace std::chrono;
 
