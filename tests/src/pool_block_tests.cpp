@@ -84,6 +84,14 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_broadcasted, false);
 	ASSERT_EQ(b.m_wantBroadcast, false);
 
+	hash seed;
+	{
+		std::stringstream s;
+		s << "6fc9c4a55eb513eb31955c084d9342e0082987f9e42da042449b7c9001176d3a";
+		s >> seed;
+	}
+
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 	class RandomX_Hasher_Test : public RandomX_Hasher_Base
 	{
 	public:
@@ -107,8 +115,12 @@ TEST(pool_block, deserialize)
 			return false;
 		}
 	} hasher;
+#else
+	RandomX_Hasher hasher(nullptr);
+	hasher.set_seed(seed);
+#endif
 
-	hash seed, pow_hash;
+	hash pow_hash;
 	ASSERT_EQ(b.get_pow_hash(&hasher, 0, seed, pow_hash), true);
 
 	std::stringstream s;
