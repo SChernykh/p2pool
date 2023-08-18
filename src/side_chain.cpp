@@ -778,11 +778,12 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	struct Data
 	{
-		FORCEINLINE Data() : counter(0)  {}
+		FORCEINLINE Data() : blockMinerWallet(nullptr), counter(0) {}
 		Data(Data&&) = delete;
 		Data& operator=(Data&&) = delete;
 
 		std::vector<MinerShare> tmpShares;
+		Wallet blockMinerWallet;
 		hash txkeySec;
 		std::atomic<int> counter;
 	};
@@ -817,6 +818,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 
 		data = std::make_shared<Data>();
+		data->blockMinerWallet = block->m_minerWallet;
 		data->txkeySec = block->m_txkeySec;
 
 		if (!get_shares(block, data->tmpShares) || !split_reward(total_reward, data->tmpShares, tmpRewards) || (tmpRewards.size() != data->tmpShares.size())) {
@@ -830,6 +832,14 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	// Helper jobs call get_eph_public_key with indices in descending order
 	// Current thread will process indices in ascending order so when they meet, everything will be cached
 	if (loop) {
+		// Avoid accessing block->m_minerWallet from other threads in "parallel_run" below
+		for (MinerShare& share : data->tmpShares) {
+			if (share.m_wallet == &block->m_minerWallet) {
+				share.m_wallet = &data->blockMinerWallet;
+				break;
+			}
+		}
+
 		parallel_run(loop, [data]() {
 			Data* d = data.get();
 			hash eph_public_key;

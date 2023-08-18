@@ -33,8 +33,10 @@ jobs:
         apk add git cmake gcc g++ make
 
     - name: Checkout repository
-      run: |
-        git clone --recursive --shallow-submodules --filter=blob:none https://github.com/${{ github.repository }}
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        path: p2pool
 
     - name: Build libcurl
       shell: alpine.sh {0}
