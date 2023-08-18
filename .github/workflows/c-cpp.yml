@@ -59,7 +59,7 @@ jobs:
         cd p2pool/external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -192,7 +192,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -264,7 +264,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -341,7 +341,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DZMQ_HAVE_IPC=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
@@ -457,7 +457,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j3
 
     - name: Build p2pool
@@ -525,7 +525,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto -target arm64-apple-${{ matrix.os }}' -DCMAKE_CXX_FLAGS='-Os -flto -target arm64-apple-${{ matrix.os }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_FLAGS='-Os -flto -target arm64-apple-${{ matrix.os }}' -DCMAKE_CXX_FLAGS='-Os -flto -target arm64-apple-${{ matrix.os }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j3
 
     - name: Build p2pool
@@ -581,7 +581,7 @@ jobs:
           cd ../../libzmq
           mkdir build
           cd build
-          cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+          cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
           make -j2
           cd ../../../..
           mkdir build

@@ -107,7 +107,7 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DWITH_PERF_TOOL=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Os -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
