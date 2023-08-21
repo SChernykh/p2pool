@@ -73,6 +73,12 @@ jobs:
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON
         make -j$(nproc)
 
+    - name: Run RandomX tests
+      shell: alpine.sh {0}
+      run: |
+        cd p2pool/build/external/src/RandomX
+        ./randomx-tests
+
     - name: Build tests
       shell: alpine.sh {0}
       run: |
@@ -130,6 +136,11 @@ jobs:
         cd build
         cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='-flto=2' -DCMAKE_CXX_FLAGS='-flto=2'
         make -j$(nproc)
+
+    - name: Run RandomX tests
+      run: |
+        cd build/external/src/RandomX
+        ./randomx-tests
 
     - name: Build tests
       run: |
@@ -204,6 +215,11 @@ jobs:
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
         make -j$(nproc)
 
+    - name: Run RandomX tests
+      run: |
+        cd build/external/src/RandomX
+        ./randomx-tests
+
     - name: Build tests
       run: |
         cd tests
@@ -275,6 +291,11 @@ jobs:
         cd build
         cmake .. -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_STRIP=/usr/bin/aarch64-linux-gnu-strip -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=aarch64
         make -j$(nproc)
+
+    - name: Run RandomX tests
+      run: |
+        cd build/external/src/RandomX
+        qemu-aarch64 -L /usr/aarch64-linux-gnu ./randomx-tests
 
     - name: Build tests
       run: |
@@ -353,6 +374,11 @@ jobs:
         cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON
         make -j$(nproc)
 
+    - name: Run RandomX tests
+      run: |
+        cd build/external/src/RandomX
+        ./randomx-tests.exe
+
     - name: Build tests
       run: |
         cd tests
@@ -400,6 +426,13 @@ jobs:
         cd build
         cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
         & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
+
+    - name: Run RandomX tests
+      run: |
+        cd build
+        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release randomx-tests.vcxproj
+        cd external/src/RandomX
+        ./randomx-tests.exe
 
     - name: Build tests
       run: |
@@ -468,6 +501,11 @@ jobs:
         cd build
         cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
         make -j3
+
+    - name: Run RandomX tests
+      run: |
+        cd build/external/src/RandomX
+        ./randomx-tests
 
     - name: Build tests
       run: |
@@ -590,7 +628,9 @@ jobs:
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
           make -j2
-          cd ../tests
+          cd external/src/RandomX
+          ./randomx-tests
+          cd ../../../../tests
           mkdir build
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
@@ -635,7 +675,9 @@ jobs:
           mkdir build && cd build
           cmake ..
           make -j2
-          cd ../tests
+          cd external/src/RandomX
+          ./randomx-tests
+          cd ../../../../tests
           mkdir build && cd build
           cmake ..
           make -j2
