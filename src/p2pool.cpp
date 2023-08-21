@@ -1691,8 +1691,7 @@ int p2pool::run()
 		m_ZMQReader = nullptr;
 	}
 	catch (const std::exception& e) {
-		const char* s = e.what();
-		LOGERR(1, "exception " << s);
+		LOGERR(1, "exception " << e.what());
 		PANIC_STOP();
 	}
 

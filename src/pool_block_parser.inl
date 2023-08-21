@@ -393,8 +393,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 	}
 	catch (std::exception& e) {
-		const char* msg = e.what();
-		LOGERR(0, "Exception in PoolBlock::deserialize(): " << (msg ? msg : "unknown exception"));
+		LOGERR(0, "Exception in PoolBlock::deserialize(): " << e.what());
 		return __LINE__;
 	}
 

@@ -224,7 +224,16 @@ void Miner::run(WorkerData* data)
 		job[index].set_nonce(static_cast<uint32_t>(full_nonce), static_cast<uint32_t>(full_nonce >> 32));
 
 		hash h;
-		randomx_calculate_hash_next(vm, job[index].m_blob, job[index].m_blobSize, &h);
+		try {
+			randomx_calculate_hash_next(vm, job[index].m_blob, job[index].m_blobSize, &h);
+		}
+		catch (const std::exception& e) {
+			LOGERR(0, "Failed to calculate RandomX hash: exception \"" << e.what() << "\". Is your CPU/RAM unstable?" <<
+				"\nFailed RandomX hash input: " << log::hex_buf(j.m_blob, j.m_blobSize));
+
+			// Make the result hash all FF's to fail difficulty checks
+			memset(h.h, -1, HASH_SIZE);
+		}
 
 		if (j.m_diff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block at height " << j.m_height << ", submitting it");

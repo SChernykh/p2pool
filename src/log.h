@@ -288,7 +288,7 @@ template<> struct log::Stream::Entry<const_buf>
 
 struct hex_buf
 {
-	FORCEINLINE hex_buf(const uint8_t* data, size_t size) : m_data(data), m_size(size) {}
+	FORCEINLINE hex_buf(const void* data, size_t size) : m_data(reinterpret_cast<const uint8_t*>(data)), m_size(size) {}
 
 	template<typename T>
 	explicit FORCEINLINE hex_buf(const T* data) : m_data(reinterpret_cast<const uint8_t*>(data)), m_size(sizeof(T)) {}

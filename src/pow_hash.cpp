@@ -322,6 +322,22 @@ void RandomX_Hasher::sync_wait()
 	ReadLock lock2(m_cacheLock);
 }
 
+static bool randomx_calculate_hash_safe(randomx_vm* machine, const void* input, size_t inputSize, void* output)
+{
+	// Try to calculate the hash again if something went wrong the first time (for example, because of an unstable CPU)
+	for (size_t i = 0; i < 2; ++i) {
+		try {
+			randomx_calculate_hash(machine, input, inputSize, output);
+			return true;
+		}
+		catch (const std::exception& e) {
+			LOGERR(0, "Failed to calculate RandomX hash: exception \"" << e.what() << "\". Is your CPU/RAM unstable?" <<
+				"\nFailed RandomX hash input: " << log::hex_buf(input, inputSize));
+		}
+	}
+	return false;
+}
+
 bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result, bool force_light_mode)
 {
 	// First try to use the dataset if it's ready
@@ -335,8 +351,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 		MutexLock lock(m_vm[FULL_DATASET_VM].mutex);
 
 		if (m_vm[FULL_DATASET_VM].vm && (seed == m_seed[m_index])) {
-			randomx_calculate_hash(m_vm[FULL_DATASET_VM].vm, data, size, &result);
-			return true;
+			return randomx_calculate_hash_safe(m_vm[FULL_DATASET_VM].vm, data, size, &result);
 		}
 	}
 
@@ -350,8 +365,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 	{
 		MutexLock lock2(m_vm[m_index].mutex);
 		if (m_vm[m_index].vm && (seed == m_seed[m_index])) {
-			randomx_calculate_hash(m_vm[m_index].vm, data, size, &result);
-			return true;
+			return randomx_calculate_hash_safe(m_vm[m_index].vm, data, size, &result);
 		}
 	}
 
@@ -360,8 +374,7 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 	MutexLock lock2(m_vm[prev_index].mutex);
 
 	if (m_vm[prev_index].vm && (seed == m_seed[prev_index])) {
-		randomx_calculate_hash(m_vm[prev_index].vm, data, size, &result);
-		return true;
+		return randomx_calculate_hash_safe(m_vm[prev_index].vm, data, size, &result);
 	}
 
 	return false;
