@@ -168,7 +168,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	// Hide most consensus ID bytes, we only want it on screen to show that we're on the right sidechain
 	memset(buf + 8, '*', HASH_SIZE * 2 - 16);
-	m_consensusIdDisplayStr.assign(buf);
+	m_consensusIdDisplayStr = buf;
+
 	LOGINFO(1, "consensus ID = " << log::LightCyan() << m_consensusIdDisplayStr.c_str());
 
 	memcpy(m_consensusHash.h, m_consensusId.data(), HASH_SIZE);
