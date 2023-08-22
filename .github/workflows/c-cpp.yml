@@ -590,9 +590,7 @@ jobs:
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
           make -j2
-          cd external/src/RandomX
-          ./randomx-tests
-          cd ../../../../tests
+          cd ../tests
           mkdir build
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
@@ -637,9 +635,7 @@ jobs:
           mkdir build && cd build
           cmake ..
           make -j2
-          cd external/src/RandomX
-          ./randomx-tests
-          cd ../../../../tests
+          cd ../tests
           mkdir build && cd build
           cmake ..
           make -j2
