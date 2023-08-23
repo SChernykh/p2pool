@@ -458,14 +458,7 @@ jobs:
   build-macos:
 
     timeout-minutes: 20
-    runs-on: ${{ matrix.config.os }}
-
-    strategy:
-      matrix:
-        config:
-          - {os: "macos-11", xcode: "12.5.1"}
-          - {os: "macos-12", xcode: "14.2"}
-          - {os: "macos-13", xcode: "15.0"}
+    runs-on: macos-11
 
     steps:
     - name: Checkout repository
@@ -473,15 +466,10 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install dependencies
-      run: |
-        HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
-        sudo xcode-select -s /Applications/Xcode_${{ matrix.config.xcode }}.app
-
     - name: Build libcurl
       run: |
         cd external/src/curl
-        cmake . -DCMAKE_C_FLAGS="-Os -flto" -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
+        cmake . -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-Os -flto" -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
         make -j3
         cd lib && mkdir .libs && cp libcurl.a .libs
 
@@ -490,7 +478,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='-Os -flto' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
         make -j3
 
     - name: Build libzmq
@@ -498,14 +486,14 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='-Os -flto' -DCMAKE_CXX_FLAGS='-Os -flto' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j3
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-flto" -DCMAKE_CXX_FLAGS="-flto" -DSTATIC_LIBS=ON
         make -j3
 
     - name: Run RandomX tests
@@ -518,7 +506,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-flto" -DCMAKE_CXX_FLAGS="-flto" -DSTATIC_LIBS=ON
         make -j3
 
     - name: Run tests
@@ -530,20 +518,13 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool-${{ matrix.config.os }}
+        name: p2pool-macos-11
         path: build/p2pool
 
   build-macos-aarch64:
 
-    timeout-minutes: 15
-    runs-on: ${{ matrix.config.os }}
-
-    strategy:
-      matrix:
-        config:
-          - {os: "macos-11", target: "arm64-apple-macos-11", xcode: "12.5.1"}
-          - {os: "macos-12", target: "arm64-apple-macos-12", xcode: "14.2"}
-          - {os: "macos-13", target: "arm64-apple-macos", xcode: "15.0"}
+    timeout-minutes: 20
+    runs-on: macos-11
 
     steps:
     - name: Checkout repository
@@ -551,15 +532,10 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install dependencies
-      run: |
-        HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
-        sudo xcode-select -s /Applications/Xcode_${{ matrix.config.xcode }}.app
-
     - name: Build libcurl
       run: |
         cd external/src/curl
-        cmake . -DCMAKE_C_FLAGS='-Os -flto -target ${{ matrix.config.target }}' -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
+        cmake . -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-Os -flto -target arm64-apple-macos-11" -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
         make -j3
         cd lib && mkdir .libs && cp libcurl.a .libs
 
@@ -568,7 +544,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto -target ${{ matrix.config.target }}' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='-Os -flto -target arm64-apple-macos-11' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
         make -j3
 
     - name: Build libzmq
@@ -576,20 +552,20 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-Os -flto -target ${{ matrix.config.target }}' -DCMAKE_CXX_FLAGS='-Os -flto -target ${{ matrix.config.target }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='-Os -flto -target arm64-apple-macos-11' -DCMAKE_CXX_FLAGS='-Os -flto -target arm64-apple-macos-11' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j3
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_FLAGS='-flto -target ${{ matrix.config.target }}' -DCMAKE_CXX_FLAGS='-flto -target ${{ matrix.config.target }}' -DSTATIC_BINARY=ON -DARCH_ID=aarch64
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-flto -target arm64-apple-macos-11" -DCMAKE_CXX_FLAGS="-flto -target arm64-apple-macos-11" -DSTATIC_LIBS=ON -DARCH_ID=aarch64
         make -j3
 
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool-${{ matrix.config.os }}-aarch64
+        name: p2pool-macos-11-aarch64
         path: build/p2pool
 
   build-freebsd:
