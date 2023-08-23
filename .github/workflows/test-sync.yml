@@ -234,7 +234,7 @@ jobs:
   sync-test-macos:
 
     timeout-minutes: 30
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
     - name: Checkout repository
