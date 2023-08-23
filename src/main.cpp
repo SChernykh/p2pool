@@ -22,6 +22,10 @@
 #include "p2p_server.h"
 #include <curl/curl.h>
 
+#ifdef WITH_RANDOMX
+#include "randomx.h"
+#endif
+
 void p2pool_usage()
 {
 	printf("P2Pool %s\n"
@@ -81,6 +85,55 @@ void p2pool_version()
 	printf("P2Pool %s\n", p2pool::VERSION);
 }
 
+int p2pool_test()
+{
+#ifdef WITH_RANDOMX
+	const char myKey[] = "test key 000";
+	const char myInput[] = "This is a test";
+	char hash[RANDOMX_HASH_SIZE];
+
+	const randomx_flags flags = randomx_get_flags() | RANDOMX_FLAG_FULL_MEM;
+	randomx_cache* myCache = randomx_alloc_cache(flags);
+	if (!myCache) {
+		printf("Cache allocation failed\n");
+		return 1;
+	}
+	randomx_init_cache(myCache, myKey, sizeof(myKey) - 1);
+
+	randomx_dataset* myDataset = randomx_alloc_dataset(flags);
+	if (!myDataset) {
+		printf("Dataset allocation failed\n");
+		return 1;
+	}
+
+	randomx_init_dataset(myDataset, myCache, 0, randomx_dataset_item_count());
+	randomx_release_cache(myCache);
+
+	randomx_vm* myMachine = randomx_create_vm(flags, nullptr, myDataset);
+	if (!myMachine) {
+		printf("Failed to create a virtual machine");
+		return 1;
+	}
+
+	randomx_calculate_hash(myMachine, &myInput, sizeof(myInput) - 1, hash);
+
+	char buf[RANDOMX_HASH_SIZE * 2 + 1] = {};
+	p2pool::log::Stream s(buf);
+	s << p2pool::log::hex_buf(hash, RANDOMX_HASH_SIZE);
+
+	if (memcmp(buf, "639183aae1bf4c9a35884cb46b09cad9175f04efd7684e7262a0ac1c2f0b4e3f", RANDOMX_HASH_SIZE * 2) != 0) {
+		printf("Invalid hash calculated\n");
+		return 1;
+	}
+
+	randomx_destroy_vm(myMachine);
+	randomx_release_dataset(myDataset);
+#endif
+
+	printf("Self-test passed\n");
+	return 0;
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
@@ -97,6 +150,10 @@ int main(int argc, char* argv[])
 		if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "/version") || !strcmp(argv[i], "-v") || !strcmp(argv[i], "/v")) {
 			p2pool_version();
 			return 0;
+		}
+
+		if (!strcmp(argv[i], "--test")) {
+			return p2pool_test();
 		}
 	}
 

@@ -311,6 +311,7 @@ void memory_tracking_start();
 bool memory_tracking_stop();
 void p2pool_usage();
 void p2pool_version();
+int p2pool_test();
 
 namespace robin_hood {
 

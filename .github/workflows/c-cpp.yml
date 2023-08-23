@@ -76,6 +76,7 @@ jobs:
     - name: Run RandomX tests
       shell: alpine.sh {0}
       run: |
+        p2pool/build/p2pool --test
         p2pool/build/external/src/RandomX/randomx-tests
 
     - name: Build tests
@@ -138,6 +139,7 @@ jobs:
 
     - name: Run RandomX tests
       run: |
+        build/p2pool --test
         build/external/src/RandomX/randomx-tests
 
     - name: Build tests
@@ -215,6 +217,7 @@ jobs:
 
     - name: Run RandomX tests
       run: |
+        build/p2pool --test
         build/external/src/RandomX/randomx-tests
 
     - name: Build tests
@@ -291,6 +294,7 @@ jobs:
 
     - name: Run RandomX tests
       run: |
+        qemu-aarch64 -L /usr/aarch64-linux-gnu build/p2pool --test
         qemu-aarch64 -L /usr/aarch64-linux-gnu build/external/src/RandomX/randomx-tests
 
     - name: Build tests
@@ -372,6 +376,7 @@ jobs:
 
     - name: Run RandomX tests
       run: |
+        build/p2pool.exe --test
         build/external/src/RandomX/randomx-tests.exe
 
     - name: Build tests
@@ -425,6 +430,7 @@ jobs:
     - name: Run RandomX tests
       if: matrix.config.rx == 'ON'
       run: |
+        build/Release/p2pool.exe --test
         cd build/external/src/RandomX
         & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release randomx-tests.vcxproj
         Release/randomx-tests.exe
@@ -504,6 +510,7 @@ jobs:
 
     - name: Run RandomX tests
       run: |
+        build/p2pool --test
         build/external/src/RandomX/randomx-tests
 
     - name: Build tests
@@ -536,7 +543,7 @@ jobs:
         config:
           - {os: "macos-11", target: "arm64-apple-macos-11", xcode: "12.5.1"}
           - {os: "macos-12", target: "arm64-apple-macos-12", xcode: "14.2"}
-          - {os: "macos-13", target: "arm64-apple-macos-13.5", xcode: "15.0"}
+          - {os: "macos-13", target: "arm64-apple-macos", xcode: "15.0"}
 
     steps:
     - name: Checkout repository
@@ -632,6 +639,7 @@ jobs:
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
           make -j2
+          ./p2pool --test
           external/src/RandomX/randomx-tests
           cd ../tests
           mkdir build
