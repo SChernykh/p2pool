@@ -67,7 +67,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
+        sudo apt install -y git build-essential cmake ninja-build
 
     - name: Install clang
       run: |
@@ -75,17 +75,22 @@ jobs:
         chmod +x llvm.sh
         sudo ./llvm.sh 17
 
+    - name: Build libcxx_msan
+      run: |
+        git clone --depth=1 https://github.com/llvm/llvm-project -b release/17.x
+        cd llvm-project
+        mkdir build
+        cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DLLVM_USE_SANITIZER=MemoryWithOrigins
+        ninja -C build cxx cxxabi
+        cd build
+        mkdir /tmp/libcxx_msan
+        cp -r include /tmp/libcxx_msan
+        cp -r lib /tmp/libcxx_msan
+
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
         submodules: true
-
-    - name: Install libcxx_msan
-      run: |
-        mkdir /tmp/libcxx_msan
-        cp tests/src/libcxx_msan.tar.xz /tmp/libcxx_msan
-        cd /tmp/libcxx_msan
-        tar xvf libcxx_msan.tar.xz
 
     - name: Build libcurl
       run: |

@@ -76,7 +76,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 
-	if (NOT DEV_WITH_MSAN)
+	if (DEV_WITH_MSAN)
+		set(OPTIMIZATION_FLAGS "-O2 -g")
+	else()
 		set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
 	endif()
 
