@@ -15,10 +15,10 @@ jobs:
     - name: Compress source code
       run: |
         mkdir build
-        XZ_OPT=-e9 tar --exclude=".git" --exclude="build" -f build/p2pool.tar.xz -c ../p2pool --xz
+        XZ_OPT=-e9 tar --exclude=".git" --exclude="build" -f build/p2pool_source.tar.xz -c ../p2pool --xz
 
     - name: Archive source code
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool.tar.xz
-        path: build/p2pool.tar.xz
+        name: p2pool_source.tar.xz
+        path: build/p2pool_source.tar.xz

@@ -36,12 +36,11 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: true
-        path: p2pool
 
     - name: Build libcurl
       shell: alpine.sh {0}
       run: |
-        cd p2pool/external/src/curl
+        cd external/src/curl
         cmake . -DCMAKE_C_FLAGS="-Os ${{ matrix.config.flags }}" -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
         make -j$(nproc)
         cd lib && mkdir .libs && cp libcurl.a .libs
@@ -49,7 +48,7 @@ jobs:
     - name: Build libuv
       shell: alpine.sh {0}
       run: |
-        cd p2pool/external/src/libuv
+        cd external/src/libuv
         mkdir build
         cd build
         cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
@@ -58,7 +57,7 @@ jobs:
     - name: Build libzmq
       shell: alpine.sh {0}
       run: |
-        cd p2pool/external/src/libzmq
+        cd external/src/libzmq
         mkdir build
         cd build
         cmake .. -DCMAKE_C_FLAGS='-Os ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
@@ -67,7 +66,6 @@ jobs:
     - name: Build p2pool
       shell: alpine.sh {0}
       run: |
-        cd p2pool
         mkdir build
         cd build
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON
@@ -76,13 +74,13 @@ jobs:
     - name: Run RandomX tests
       shell: alpine.sh {0}
       run: |
-        p2pool/build/p2pool --test
-        p2pool/build/external/src/RandomX/randomx-tests
+        build/p2pool --test
+        build/external/src/RandomX/randomx-tests
 
     - name: Build tests
       shell: alpine.sh {0}
       run: |
-        cd p2pool/tests
+        cd tests
         mkdir build
         cd build
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
@@ -91,13 +89,13 @@ jobs:
     - name: Run tests
       shell: alpine.sh {0}
       run: |
-        cd p2pool/tests/build
+        cd tests/build
         gunzip *.gz
         ./p2pool_tests
 
     - name: List directory
       run: |
-        cd p2pool/build
+        cd build
         ls -la
         file p2pool
 
@@ -105,7 +103,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: p2pool-alpine-static-${{ matrix.config.arch }}
-        path: p2pool/build/p2pool
+        path: build/p2pool
 
   build-ubuntu:
 
