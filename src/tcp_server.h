@@ -149,6 +149,7 @@ protected:
 	int m_defaultBacklog;
 
 	uv_thread_t m_loopThread;
+	std::atomic<bool> m_loopThreadCreated;
 
 	static void loop(void* data);
 

@@ -27,6 +27,7 @@ TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_
 	: m_allocateNewClient(allocate_new_client)
 	, m_defaultBacklog(default_backlog)
 	, m_loopThread{}
+	, m_loopThreadCreated(false)
 #ifdef WITH_UPNP
 	, m_portMapping(0)
 #endif
@@ -250,6 +251,8 @@ void TCPServer::start_listening(const std::string& listen_addresses, bool upnp)
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
 		PANIC_STOP();
 	}
+
+	m_loopThreadCreated = true;
 }
 
 bool TCPServer::connect_to_peer(bool is_v6, const char* ip, int port)
@@ -473,7 +476,9 @@ void TCPServer::shutdown_tcp()
 	}
 #endif
 
-	uv_thread_join(&m_loopThread);
+	if (m_loopThreadCreated) {
+		uv_thread_join(&m_loopThread);
+	}
 
 	uv_mutex_destroy(&m_bansLock);
 

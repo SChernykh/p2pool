@@ -47,7 +47,41 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	LOGINFO(3, "uv_guess_handle returned " << static_cast<int>(stdin_type));
 	if (stdin_type != UV_TTY && stdin_type != UV_NAMED_PIPE) {
 		LOGERR(1, "tty or named pipe is not available");
-		throw std::exception();
+	}
+
+	int err;
+
+	if (stdin_type == UV_TTY) {
+		LOGINFO(3, "processing stdin as UV_TTY");
+		err = uv_tty_init(&m_loop, &m_tty, 0, 1);
+		if (err) {
+			LOGERR(1, "uv_tty_init failed, error " << uv_err_name(err));
+			throw std::exception();
+		}
+		m_stdin_handle = reinterpret_cast<uv_stream_t*>(&m_tty);
+	}
+	else if (stdin_type == UV_NAMED_PIPE) {
+		LOGINFO(3, "processing stdin as UV_NAMED_PIPE");
+		err = uv_pipe_init(&m_loop, &m_stdin_pipe, 0);
+		if (err) {
+			LOGERR(1, "uv_pipe_init failed, error " << uv_err_name(err));
+			throw std::exception();
+		}
+		m_stdin_handle = reinterpret_cast<uv_stream_t*>(&m_stdin_pipe);
+		err = uv_pipe_open(&m_stdin_pipe, 0);
+		if (err) {
+			LOGERR(1, "uv_pipe_open failed, error " << uv_err_name(err));
+			throw std::exception();
+		}
+	}
+
+	if (m_stdin_handle) {
+		m_stdin_handle->data = this;
+		err = uv_read_start(m_stdin_handle, allocCallback, stdinReadCallback);
+		if (err) {
+			LOGERR(1, "uv_read_start failed, error " << uv_err_name(err));
+			throw std::exception();
+		}
 	}
 
 	std::random_device rd;
@@ -67,43 +101,20 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
 			[stdin_type, this](log::Stream& s)
 			{
-				s << "{\"mode\":" << ((stdin_type == UV_TTY) ? "\"tty\"" : "\"pipe\"")
-					<< ",\"tcp_port\":" << m_listenPort
-					<< "}";
+				s << "{\"mode\":\"";
+
+				if (stdin_type == UV_TTY) {
+					s << "tty";
+				}
+				else if (stdin_type == UV_NAMED_PIPE) {
+					s << "pipe";
+				}
+				else {
+					s << static_cast<int>(stdin_type);
+				}
+
+				s << "\",\"tcp_port\":" << m_listenPort << '}';
 			});
-	}
-
-	int err;
-
-	if (stdin_type == UV_TTY) {
-		LOGINFO(3, "processing stdin as UV_TTY");
-		err = uv_tty_init(&m_loop, &m_tty, 0, 1);
-		if (err) {
-			LOGERR(1, "uv_tty_init failed, error " << uv_err_name(err));
-			throw std::exception();
-		}
-		m_stdin_handle = reinterpret_cast<uv_stream_t*>(&m_tty);
-	}
-	else {
-		LOGINFO(3, "processing stdin as UV_NAMED_PIPE");
-		err = uv_pipe_init(&m_loop, &m_stdin_pipe, 0);
-		if (err) {
-			LOGERR(1, "uv_pipe_init failed, error " << uv_err_name(err));
-			throw std::exception();
-		}
-		m_stdin_handle = reinterpret_cast<uv_stream_t*>(&m_stdin_pipe);
-		err = uv_pipe_open(&m_stdin_pipe, 0);
-		if (err) {
-			LOGERR(1, "uv_pipe_open failed, error " << uv_err_name(err));
-			throw std::exception();
-		}
-	}
-	m_stdin_handle->data = this;
-
-	err = uv_read_start(m_stdin_handle, allocCallback, stdinReadCallback);
-	if (err) {
-		LOGERR(1, "uv_read_start failed, error " << uv_err_name(err));
-		throw std::exception();
 	}
 
 	err = uv_thread_create(&m_loopThread, loop, this);
@@ -111,6 +122,8 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
 		throw std::exception();
 	}
+
+	m_loopThreadCreated = true;
 }
 
 ConsoleCommands::~ConsoleCommands()
@@ -120,7 +133,9 @@ ConsoleCommands::~ConsoleCommands()
 
 void ConsoleCommands::on_shutdown()
 {
-	uv_close(reinterpret_cast<uv_handle_t*>(m_stdin_handle), nullptr);
+	if (m_stdin_handle) {
+		uv_close(reinterpret_cast<uv_handle_t*>(m_stdin_handle), nullptr);
+	}
 }
 
 const char* ConsoleCommands::get_log_category() const
