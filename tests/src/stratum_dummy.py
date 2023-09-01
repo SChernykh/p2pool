@@ -5,15 +5,19 @@ import json
 
 f = open('stratum_dummy' + sys.argv[1] + '.log', 'wb')
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(1)
-sock.setblocking(True)
-
 f.write(b'Connecting')
 f.flush()
-time.sleep(5)
 
-while sock.connect_ex(('127.0.0.1', 3333)) != 0:
+while True:
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.settimeout(1)
+	sock.setblocking(True)
+
+	if sock.connect_ex(('127.0.0.1', 3333)) == 0:
+		break;
+
+	sock.close()
+
 	f.write(b'.')
 	f.flush()
 	print('.')
