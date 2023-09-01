@@ -10,14 +10,17 @@ sock.settimeout(1)
 sock.setblocking(True)
 
 f.write(b'Connecting')
+f.flush()
 time.sleep(5)
 
 while sock.connect_ex(('127.0.0.1', 3333)) != 0:
 	f.write(b'.')
+	f.flush()
 	print('.')
 	time.sleep(1)
 
 f.write(b'\n')
+f.flush()
 
 diff = ''
 
