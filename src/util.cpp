@@ -44,7 +44,13 @@ LOG_CATEGORY(Util)
 
 namespace p2pool {
 
-const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) " (built"
+#if defined(P2POOL_VERSION_PATCH) && (P2POOL_VERSION_PATCH > 0)
+#define P2POOL_VERSION_PATCH_STR "." STR2(P2POOL_VERSION_PATCH)
+#else
+#define P2POOL_VERSION_PATCH_STR ""
+#endif
+
+const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) P2POOL_VERSION_PATCH_STR " (built"
 #if defined(__clang__)
 	" with clang/" __clang_version__
 #elif defined(__GNUC__)
