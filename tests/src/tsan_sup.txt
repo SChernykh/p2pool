@@ -1,4 +1,3 @@
 race:p2pool::log::Worker::run()
 race:p2pool::log::Worker::write
-called_from_lib:libzmq.so
 race_top:do_loglevel
