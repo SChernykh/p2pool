@@ -1299,9 +1299,15 @@ void P2PServer::api_update_local_stats()
 		{
 			const uint64_t cur_time = seconds_since_epoch();
 
+			size_t peer_list_size;
+			{
+				MutexLock lock(m_peerListLock);
+				peer_list_size = m_peerList.size();
+			}
+
 			s << "{\"connections\":" << m_numConnections.load()
 				<< ",\"incoming_connections\":" << m_numIncomingConnections.load()
-				<< ",\"peer_list_size\":" << m_peerList.size()
+				<< ",\"peer_list_size\":" << peer_list_size
 				<< ",\"peers\":[";
 
 			bool first = true;
@@ -2474,9 +2480,10 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		bool client_isV6;
 		raw_ip client_ip;
 		std::vector<hash> missing_blocks;
+		bool result;
 	};
 
-	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_isV6, m_addr, {} };
+	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_isV6, m_addr, {}, true };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -2484,12 +2491,12 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		{
 			BACKGROUND_JOB_START(P2PServer::handle_incoming_block_async);
 			Work* work = reinterpret_cast<Work*>(req->data);
-			work->client->handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_isV6, work->client_ip, work->missing_blocks);
+			work->client->handle_incoming_block(work->server->m_pool, work->block, work->missing_blocks, work->result);
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
 			Work* work = reinterpret_cast<Work*>(req->data);
-			work->client->post_handle_incoming_block(work->block, work->client_reset_counter, work->missing_blocks);
+			work->client->post_handle_incoming_block(work->server->m_pool, work->block, work->client_reset_counter, work->client_isV6, work->client_ip, work->missing_blocks, work->result);
 			delete work;
 			BACKGROUND_JOB_STOP(P2PServer::handle_incoming_block_async);
 		});
@@ -2503,11 +2510,18 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 	return true;
 }
 
-void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks)
+void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result)
 {
-	if (!pool->side_chain().add_external_block(block, missing_blocks)) {
+	result = pool->side_chain().add_external_block(block, missing_blocks);
+}
+
+void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks, const bool result)
+{
+	const uint32_t new_reset_counter = m_resetCounter.load();
+
+	if (!result) {
 		// Client sent bad data, disconnect and ban it
-		if (reset_counter == m_resetCounter.load()) {
+		if (reset_counter == new_reset_counter) {
 			close();
 			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
 		}
@@ -2519,13 +2533,10 @@ void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block,
 		server->ban(is_v6, addr, DEFAULT_BAN_TIME);
 		server->remove_peer_from_list(addr);
 	}
-}
 
-void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks)
-{
 	// We might have been disconnected while side_chain was adding the block
 	// In this case we can't send BLOCK_REQUEST messages on this connection anymore
-	if (reset_counter != m_resetCounter.load()) {
+	if (reset_counter != new_reset_counter) {
 		return;
 	}
 
@@ -2540,7 +2551,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 		P2PClient* c = server->m_fastestPeer;
 		if (c && (c != this) && (c->m_broadcastMaxHeight >= block.m_sidechainHeight)) {
 			LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it instead");
-			c->post_handle_incoming_block(block, c->m_resetCounter.load(), missing_blocks);
+			c->post_handle_incoming_block(pool, block, c->m_resetCounter.load(), c->m_isV6, c->m_addr, missing_blocks, true);
 			return;
 		}
 	}
@@ -2561,7 +2572,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 			continue;
 		}
 
-		const bool result = server->send(this,
+		const bool send_result = server->send(this,
 			[this, &id](uint8_t* buf, size_t buf_size) -> size_t
 			{
 				LOGINFO(5, "[post_handle_incoming_block] sending BLOCK_REQUEST for id = " << id << " to " << static_cast<char*>(m_addrString));
@@ -2580,7 +2591,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(const PoolBlock& block, co
 				return p - buf;
 			});
 
-		if (!result) {
+		if (!send_result) {
 			return;
 		}
 

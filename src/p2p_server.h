@@ -115,8 +115,8 @@ public:
 		void on_block_notify(const uint8_t* buf);
 
 		bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
-		void handle_incoming_block(p2pool* pool, PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks);
-		void post_handle_incoming_block(const PoolBlock& block, const uint32_t reset_counter, std::vector<hash>& missing_blocks);
+		void handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result);
+		void post_handle_incoming_block(p2pool* pool, const PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks, const bool result);
 
 		bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }
 
