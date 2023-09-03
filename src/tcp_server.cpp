@@ -862,7 +862,12 @@ void TCPServer::on_shutdown(uv_async_t* async)
 
 	uv_timer_init(&s->m_loop, &s->m_shutdownTimer);
 	s->m_shutdownTimer.data = s;
+
+#ifdef DEV_TEST_SYNC
+	s->m_shutdownCountdown = 300;
+#else
 	s->m_shutdownCountdown = 30;
+#endif
 
 	uv_timer_start(&s->m_shutdownTimer,
 		[](uv_timer_t* h)
