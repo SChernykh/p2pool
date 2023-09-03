@@ -70,6 +70,8 @@ public:
 
 		void init_addr_string();
 
+		void asan_poison_this() const;
+
 		char* m_readBuf;
 		uint32_t m_readBufSize;
 

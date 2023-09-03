@@ -597,8 +597,7 @@ void TCPServer::loop(void* data)
 		Client* c = server->m_allocateNewClient();
 
 		ASAN_POISON_MEMORY_REGION(wb, sizeof(WriteBuf));
-		ASAN_POISON_MEMORY_REGION(c, c->size());
-		ASAN_UNPOISON_MEMORY_REGION(&c->m_resetCounter, sizeof(c->m_resetCounter));
+		c->asan_poison_this();
 
 		server->m_writeBuffers.emplace(capacity, wb);
 		server->m_preallocatedClients.emplace_back(c);
@@ -967,8 +966,7 @@ TCPServer::Client* TCPServer::get_client()
 
 void TCPServer::return_client(Client* c)
 {
-	ASAN_POISON_MEMORY_REGION(c, c->size());
-	ASAN_UNPOISON_MEMORY_REGION(&c->m_resetCounter, sizeof(c->m_resetCounter));
+	c->asan_poison_this();
 	m_preallocatedClients.push_back(c);
 }
 
@@ -1265,6 +1263,19 @@ void TCPServer::Client::init_addr_string()
 			s << log::const_buf(addr_str, n) << ':' << m_port << '\0';
 		}
 	}
+}
+
+void TCPServer::Client::asan_poison_this() const
+{
+#ifdef P2POOL_ASAN
+	const uint8_t* begin = reinterpret_cast<const uint8_t*>(this);
+	const uint8_t* counter_begin = reinterpret_cast<const uint8_t*>(&m_resetCounter);
+	const uint8_t* counter_end = counter_begin + sizeof(m_resetCounter);
+	const uint8_t* end = begin + size();
+
+	ASAN_POISON_MEMORY_REGION(begin, counter_begin - begin);
+	ASAN_POISON_MEMORY_REGION(counter_end, end - counter_end);
+#endif
 }
 
 } // namespace p2pool
