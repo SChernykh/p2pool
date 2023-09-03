@@ -419,6 +419,7 @@ void TCPServer::check_event_loop_thread(const char* func) const
 {
 	if (server_event_loop_thread != this) {
 		LOGERR(1, func << " called from another thread, this is not thread safe");
+		PANIC_STOP();
 	}
 }
 #endif
@@ -1213,8 +1214,9 @@ void TCPServer::Client::close()
 		// Already closed
 		return;
 	}
-
 	m_isClosing = true;
+
+	m_owner->check_event_loop_thread(__func__);
 
 	uv_read_stop(reinterpret_cast<uv_stream_t*>(&m_socket));
 
