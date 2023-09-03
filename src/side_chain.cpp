@@ -114,11 +114,11 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	constexpr char mini_config[] = "mainnet\0" "mini\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
 
 	// Hardcoded default consensus ID
-	if (memcmp(buf, default_config, sizeof(default_config) - 1) == 0) {
+	if ((s.m_pos == sizeof(default_config) - 1) && (memcmp(buf, default_config, sizeof(default_config) - 1) == 0)) {
 		m_consensusId.assign(default_consensus_id, default_consensus_id + HASH_SIZE);
 	}
 	// Hardcoded mini consensus ID
-	else if (memcmp(buf, mini_config, sizeof(mini_config) - 1) == 0) {
+	else if ((s.m_pos == sizeof(mini_config) - 1) && (memcmp(buf, mini_config, sizeof(mini_config) - 1) == 0)) {
 		m_consensusId.assign(mini_consensus_id, mini_consensus_id + HASH_SIZE);
 	}
 	else {
