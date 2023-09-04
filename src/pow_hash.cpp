@@ -396,7 +396,6 @@ RandomX_Hasher_RPC::RandomX_Hasher_RPC(p2pool* pool)
 	GetLoopUserData(&m_loop);
 
 	uv_async_init_checked(&m_loop, &m_shutdownAsync, on_shutdown);
-	uv_async_init_checked(&m_loop, &m_kickTheLoopAsync, nullptr);
 	m_shutdownAsync.data = this;
 
 	uv_mutex_init_checked(&m_requestMutex);
@@ -456,8 +455,8 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 		",\"block_blob\":\"" << log::hex_buf(data, size) << '"' <<
 		",\"seed_hash\":\"\"}}\0";
 
-	volatile int result = 0;
-	volatile bool done = false;
+	std::atomic<int> result{ 0 };
+	std::atomic<bool> done{ false };
 
 	const Params& params = m_pool->params();
 	const Params::Host& host = m_pool->current_host();
@@ -484,8 +483,6 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 			done = true;
 			uv_cond_signal(&m_cond);
 		}, &m_loop);
-
-	uv_async_send(&m_kickTheLoopAsync);
 
 	{
 		MutexLock lock2(m_condMutex);
