@@ -100,6 +100,7 @@ void p2pool_api::create_dir(const std::string& path)
 
 void p2pool_api::on_stop()
 {
+	MutexLock lock(m_dumpDataLock);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync), nullptr);
 }
 
@@ -119,10 +120,8 @@ void p2pool_api::dump_to_file_async_internal(Category category, const char* file
 	case Category::LOCAL:   path = m_localPath   + filename; break;
 	}
 
-	{
-		MutexLock lock(m_dumpDataLock);
-		m_dumpData[path] = std::move(buf);
-	}
+	MutexLock lock(m_dumpDataLock);
+	m_dumpData[path] = std::move(buf);
 
 	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync))) {
 		uv_async_send(&m_dumpToFileAsync);

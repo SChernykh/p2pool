@@ -267,6 +267,7 @@ private:
 
 	static void on_connect_to_peers(uv_async_t* handle);
 
+	uv_mutex_t m_showPeersLock;
 	uv_async_t m_showPeersAsync;
 
 	static void on_show_peers(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->show_peers(); }

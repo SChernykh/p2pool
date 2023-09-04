@@ -127,6 +127,7 @@ private:
 	static void on_blobs_ready(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->on_blobs_ready(); }
 	void on_blobs_ready();
 
+	uv_mutex_t m_showWorkersLock;
 	uv_async_t m_showWorkersAsync;
 
 	static void on_show_workers(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->show_workers(); }

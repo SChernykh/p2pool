@@ -63,6 +63,7 @@ StratumServer::StratumServer(p2pool* pool)
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
 	uv_mutex_init_checked(&m_blobsQueueLock);
+	uv_mutex_init_checked(&m_showWorkersLock);
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
 
@@ -91,6 +92,7 @@ StratumServer::~StratumServer()
 	shutdown_tcp();
 
 	uv_mutex_destroy(&m_blobsQueueLock);
+	uv_mutex_destroy(&m_showWorkersLock);
 	uv_mutex_destroy(&m_rngLock);
 	uv_rwlock_destroy(&m_hashrateDataLock);
 
@@ -161,29 +163,19 @@ void StratumServer::on_block(const BlockTemplate& block)
 
 	{
 		MutexLock lock(m_blobsQueueLock);
-		m_blobsQueue.push_back(blobs_data);
-	}
 
-	if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_blobsAsync))) {
-		return;
-	}
-
-	const int err = uv_async_send(&m_blobsAsync);
-	if (err) {
-		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
-
-		bool found = false;
-		{
-			MutexLock lock(m_blobsQueueLock);
-
-			auto it = std::find(m_blobsQueue.begin(), m_blobsQueue.end(), blobs_data);
-			if (it != m_blobsQueue.end()) {
-				found = true;
-				m_blobsQueue.erase(it);
-			}
+		if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_blobsAsync))) {
+			delete blobs_data;
+			return;
 		}
 
-		if (found) {
+		m_blobsQueue.push_back(blobs_data);
+
+		const int err = uv_async_send(&m_blobsAsync);
+		if (err) {
+			LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+
+			m_blobsQueue.pop_back();
 			delete blobs_data;
 		}
 	}
@@ -487,6 +479,8 @@ void StratumServer::print_status()
 
 void StratumServer::show_workers_async()
 {
+	MutexLock lock(m_showWorkersLock);
+
 	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync))) {
 		uv_async_send(&m_showWorkersAsync);
 	}
@@ -1031,8 +1025,14 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 void StratumServer::on_shutdown()
 {
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync), nullptr);
+	{
+		MutexLock lock(m_blobsQueueLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
+	}
+	{
+		MutexLock lock(m_showWorkersLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_showWorkersAsync), nullptr);
+	}
 }
 
 StratumServer::StratumClient::StratumClient()

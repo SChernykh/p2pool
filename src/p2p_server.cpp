@@ -91,6 +91,7 @@ P2PServer::P2PServer(p2pool* pool)
 	uv_mutex_init_checked(&m_broadcastLock);
 	uv_rwlock_init_checked(&m_cachedBlocksLock);
 	uv_mutex_init_checked(&m_connectToPeersLock);
+	uv_mutex_init_checked(&m_showPeersLock);
 
 	int err = uv_async_init(&m_loop, &m_broadcastAsync, on_broadcast);
 	if (err) {
@@ -149,6 +150,7 @@ P2PServer::~P2PServer()
 	uv_rwlock_destroy(&m_cachedBlocksLock);
 
 	uv_mutex_destroy(&m_connectToPeersLock);
+	uv_mutex_destroy(&m_showPeersLock);
 
 	delete m_block;
 	delete m_cache;
@@ -205,13 +207,12 @@ void P2PServer::store_in_cache(const PoolBlock& block)
 
 void P2PServer::connect_to_peers_async(const char* peer_list)
 {
-	{
-		MutexLock lock(m_connectToPeersLock);
-		if (!m_connectToPeersData.empty()) {
-			m_connectToPeersData.append(1, ',');
-		}
-		m_connectToPeersData.append(peer_list);
+	MutexLock lock(m_connectToPeersLock);
+
+	if (!m_connectToPeersData.empty()) {
+		m_connectToPeersData.append(1, ',');
 	}
+	m_connectToPeersData.append(peer_list);
 
 	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync))) {
 		uv_async_send(&m_connectToPeersAsync);
@@ -827,33 +828,21 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " << data->compact_blob.size() << '/' << data->pruned_blob.size() << '/' << data->blob.size() << " bytes (compact/pruned/full)");
 
-	{
-		MutexLock lock(m_broadcastLock);
-		m_broadcastQueue.push_back(data);
-	}
+	MutexLock lock(m_broadcastLock);
 
 	if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync))) {
+		delete data;
 		return;
 	}
+
+	m_broadcastQueue.push_back(data);
 
 	const int err = uv_async_send(&m_broadcastAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
 
-		bool found = false;
-		{
-			MutexLock lock(m_broadcastLock);
-
-			auto it = std::find(m_broadcastQueue.begin(), m_broadcastQueue.end(), data);
-			if (it != m_broadcastQueue.end()) {
-				found = true;
-				m_broadcastQueue.erase(it);
-			}
-		}
-
-		if (found) {
-			delete data;
-		}
+		m_broadcastQueue.pop_back();
+		delete data;
 	}
 }
 
@@ -988,6 +977,8 @@ void P2PServer::print_status()
 
 void P2PServer::show_peers_async()
 {
+	MutexLock lock(m_showPeersLock);
+
 	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync))) {
 		uv_async_send(&m_showPeersAsync);
 	}
@@ -1283,9 +1274,18 @@ void P2PServer::on_shutdown()
 
 	uv_timer_stop(&m_timer);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
+	{
+		MutexLock lock(m_broadcastLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_broadcastAsync), nullptr);
+	}
+	{
+		MutexLock lock(m_connectToPeersLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_connectToPeersAsync), nullptr);
+	}
+	{
+		MutexLock lock(m_showPeersLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
+	}
 }
 
 void P2PServer::api_update_local_stats()
