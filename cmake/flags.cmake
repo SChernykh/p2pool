@@ -5,8 +5,23 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if(NOT ARCH_ID)
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+    set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
+  endif()
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" ARCH_ID)
+endif()
+
+if (ARCH_ID MATCHES "^(aarch64|arm64|armv8-a)$")
+	set(ARMv8 1)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
+
+	if (ARMv8)
+		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769 -mfix-cortex-a53-843419")
+	endif()
 
 	if (DEV_WITH_TSAN)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=thread")
@@ -69,9 +84,14 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	if (WIN32)
+		set(GENERAL_FLAGS "")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 	else()
 		set(GENERAL_FLAGS "-pthread")
+	endif()
+
+	if (ARMv8)
+		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769")
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")

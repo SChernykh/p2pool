@@ -19,7 +19,7 @@ jobs:
       matrix:
         config:
           - {arch: x86_64, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
-          - {arch: aarch64, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
+          - {arch: aarch64, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
 
     steps:
     - name: Setup Alpine Linux
@@ -68,7 +68,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON
+        cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON -DARCH_ID=${{ matrix.config.arch }}
         make -j$(nproc)
 
     - name: Run RandomX tests
@@ -83,7 +83,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
+        cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=${{ matrix.config.arch }}
         make -j$(nproc)
 
     - name: Run tests
@@ -246,8 +246,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections"}
-          - {os: ubuntu-22.04, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections"}
+          - {os: ubuntu-20.04, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
+          - {os: ubuntu-22.04, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
 
     steps:
     - name: Install dependencies

@@ -359,3 +359,10 @@ if (STATIC_BINARY OR STATIC_LIBS)
 else()
 	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
 endif()
+
+message(STATUS "Summary of build options:
+    C compiler:      ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})
+    CXX compiler:    ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})
+    C_FLAGS:         ${CMAKE_C_FLAGS}
+    CXX_FLAGS:       ${CMAKE_CXX_FLAGS}
+")
