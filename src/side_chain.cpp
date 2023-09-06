@@ -2061,21 +2061,20 @@ void SideChain::prune_old_blocks()
 
 	const uint64_t h = tip->m_sidechainHeight - prune_distance;
 
-	uint64_t num_blocks_pruned = 0;
+	std::vector<PoolBlock*> blocks_to_prune;
 
 	for (auto it = m_blocksByHeight.begin(); (it != m_blocksByHeight.end()) && (it->first <= h);) {
 		const uint64_t height = it->first;
 		std::vector<PoolBlock*>& v = it->second;
 
 		v.erase(std::remove_if(v.begin(), v.end(),
-			[this, prune_distance, cur_time, prune_delay, &num_blocks_pruned, height](PoolBlock* block)
+			[this, prune_distance, cur_time, prune_delay, &blocks_to_prune, height](PoolBlock* block)
 			{
 				if ((block->m_depth >= prune_distance) || (cur_time >= block->m_localTimestamp + prune_delay)) {
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);
-						delete block;
-						++num_blocks_pruned;
+						blocks_to_prune.push_back(block);
 					}
 					else {
 						LOGERR(1, "m_blocksByHeight and m_blocksById are inconsistent at height " << height << ". Fix the code!");
@@ -2093,8 +2092,8 @@ void SideChain::prune_old_blocks()
 		}
 	}
 
-	if (num_blocks_pruned) {
-		LOGINFO(4, "pruned " << num_blocks_pruned << " old blocks at heights <= " << h);
+	if (!blocks_to_prune.empty()) {
+		LOGINFO(4, "pruned " << blocks_to_prune.size() << " old blocks at heights <= " << h);
 
 		// If side-chain started pruning blocks it means the initial sync is complete
 		// It's now safe to delete cached blocks
@@ -2104,6 +2103,11 @@ void SideChain::prune_old_blocks()
 
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
+
+		// We can only delete old blocks after the precalc is stopped because it can still use some of them
+		for (const PoolBlock* b : blocks_to_prune) {
+			delete b;
+		}
 
 #ifdef DEV_TEST_SYNC
 		if (m_firstPruneTime == 0) {
