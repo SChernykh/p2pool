@@ -111,7 +111,7 @@ class MoneroHelpBox(HelpBoxBase):
         ],
         "Expose RPC Port": [
             "Expose restricted RPC API port to your network so external services",
-            "(wallets for example) can connect",
+            "(wallets for example) can connect. Port 18083 (ZMQ-pub) will also be exposed.",
             "Note: You may choose to open this port in your hosts firewall and/or",
             "      router to allow services outside your network to connect",
         ],
