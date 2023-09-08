@@ -61,6 +61,7 @@ public:
 		enum { 
 			JOBS_SIZE = 4,
 			AUTO_DIFF_SIZE = 64,
+			CUSTOM_USER_SIZE = 32,
 		};
 
 		struct SavedJob {
@@ -80,7 +81,7 @@ public:
 
 		difficulty_type m_customDiff;
 		difficulty_type m_autoDiff;
-		char m_customUser[32];
+		char m_customUser[CUSTOM_USER_SIZE];
 
 		uint64_t m_lastJobTarget;
 
@@ -145,6 +146,8 @@ private:
 		StratumClient* m_client;
 		bool m_clientIPv6;
 		raw_ip m_clientAddr;
+		char m_clientAddrString[Client::ADDR_STRING_SIZE];
+		char m_clientCustomUser[StratumClient::CUSTOM_USER_SIZE];
 		uint32_t m_clientResetCounter;
 		uint32_t m_rpcId;
 		uint32_t m_id;

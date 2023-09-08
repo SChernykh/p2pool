@@ -89,9 +89,13 @@ public:
 		bool m_isClosing;
 		uint32_t m_numRead;
 
+		enum {
+			ADDR_STRING_SIZE = 72,
+		};
+
 		raw_ip m_addr;
 		int m_port;
-		char m_addrString[72];
+		char m_addrString[ADDR_STRING_SIZE];
 
 		enum class Socks5ProxyState {
 			Default,

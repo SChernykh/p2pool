@@ -238,6 +238,11 @@ static bool get_custom_diff(const char* s, difficulty_type& diff)
 
 bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login)
 {
+	if (client->m_rpcId) {
+		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " tried to login, but it's already logged in");
+		return false;
+	}
+
 	const uint32_t extra_nonce = m_extraNonce.fetch_add(1);
 
 	uint8_t hashing_blob[128];
@@ -404,6 +409,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share->m_client = client;
 		share->m_clientIPv6 = client->m_isV6;
 		share->m_clientAddr = client->m_addr;
+		memcpy(share->m_clientAddrString, client->m_addrString, sizeof(share->m_clientAddrString));
+		memcpy(share->m_clientCustomUser, client->m_customUser, sizeof(share->m_clientCustomUser));
 		share->m_clientResetCounter = client->m_resetCounter.load();
 		share->m_rpcId = client->m_rpcId;
 		share->m_id = id;
@@ -853,7 +860,6 @@ void StratumServer::on_share_found(uv_work_t* req)
 		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
-	StratumClient* client = share->m_client;
 	p2pool* pool = server->m_pool;
 
 	const uint64_t target = share->m_target;
@@ -873,7 +879,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		const uint32_t blob_size = pool->block_template().get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
 		if (!blob_size) {
-			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
+			LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " got a stale share");
 			share->m_result = SubmittedShare::Result::STALE;
 			return;
 		}
@@ -885,13 +891,13 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		hash pow_hash;
 		if (!pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash, false)) {
-			LOGWARN(3, "client " << static_cast<char*>(client->m_addrString) << " couldn't check share PoW");
+			LOGWARN(3, "client " << static_cast<char*>(share->m_clientAddrString) << " couldn't check share PoW");
 			share->m_result = SubmittedShare::Result::COULDNT_CHECK_POW;
 			return;
 		}
 
 		if (pow_hash != share->m_resultHash) {
-			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " submitted a share with invalid PoW");
+			LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " submitted a share with invalid PoW");
 			share->m_result = SubmittedShare::Result::INVALID_POW;
 			share->m_score = BAD_SHARE_POINTS;
 
@@ -938,7 +944,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		share->m_result = SubmittedShare::Result::OK;
 	}
 	else {
-		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a low diff share");
+		LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " got a low diff share");
 		share->m_result = SubmittedShare::Result::LOW_DIFF;
 		share->m_score = BAD_SHARE_POINTS;
 	}
@@ -947,13 +953,11 @@ void StratumServer::on_share_found(uv_work_t* req)
 void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 {
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
-	StratumClient* client = share->m_client;
-	client->m_score += share->m_score;
 
 	if (share->m_highEnoughDifficulty) {
-		const char* s = client->m_customUser;
+		const char* s = share->m_clientCustomUser;
 		if (share->m_result == SubmittedShare::Result::OK) {
-			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? ", user " : "") << s << ", effort " << share->m_effort << '%');
+			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(share->m_clientAddrString) << (*s ? ", user " : "") << s << ", effort " << share->m_effort << '%');
 		}
 		else {
 			static const char* reason_list[] = {
@@ -967,7 +971,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 			const size_t k = static_cast<size_t>(share->m_result);
 			const char* reason = (k < array_size(reason_list)) ? reason_list[k] : "unknown";
-			LOGWARN(0, "INVALID SHARE: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(client->m_addrString) << (*s ? ", user " : "") << s << ", reason: " << reason);
+			LOGWARN(0, "INVALID SHARE: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(share->m_clientAddrString) << (*s ? ", user " : "") << s << ", reason: " << reason);
 		}
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
@@ -981,6 +985,8 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		});
 
 	const bool bad_share = (share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW);
+
+	StratumClient* client = share->m_client;
 
 	if ((client->m_resetCounter.load() == share->m_clientResetCounter) && (client->m_rpcId == share->m_rpcId)) {
 		const bool result = server->send(client,
@@ -1009,6 +1015,8 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				}
 				return s.m_pos;
 			});
+
+		client->m_score += share->m_score;
 
 		if (bad_share && (client->m_score <= BAN_THRESHOLD_POINTS)) {
 			client->ban(DEFAULT_BAN_TIME);
