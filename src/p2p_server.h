@@ -226,6 +226,8 @@ private:
 
 	struct Peer
 	{
+		void normalize();
+
 		bool m_isV6;
 		raw_ip m_addr;
 		int m_port;

@@ -595,10 +595,11 @@ void P2PServer::load_peer_list()
 				return;
 			}
 			p.m_isV6 = is_v6;
+			p.normalize();
 
 			bool already_added = false;
 			for (const Peer& peer : m_peerList) {
-				if ((peer.m_isV6 == p.m_isV6) && (peer.m_addr == p.m_addr)) {
+				if (peer.m_addr == p.m_addr) {
 					already_added = true;
 					break;
 				}
@@ -700,10 +701,13 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 {
 	const uint64_t cur_time = seconds_since_epoch();
 
+	Peer peer{ is_v6, ip, port, 0, cur_time };
+	peer.normalize();
+
 	MutexLock lock(m_peerListLock);
 
 	for (Peer& p : m_peerList) {
-		if ((p.m_isV6 == is_v6) && (p.m_addr == ip)) {
+		if (p.m_addr == peer.m_addr) {
 			p.m_port = port;
 			p.m_numFailedConnections = 0;
 			p.m_lastSeen = cur_time;
@@ -711,8 +715,8 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 		}
 	}
 
-	if (!is_banned(is_v6, ip)) {
-		m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
+	if (!is_banned(peer.m_isV6, peer.m_addr)) {
+		m_peerList.push_back(peer);
 	}
 }
 
@@ -739,6 +743,17 @@ void P2PServer::remove_peer_from_list(const raw_ip& ip)
 			m_peerList.erase(it);
 			return;
 		}
+	}
+}
+
+void P2PServer::Peer::normalize()
+{
+	if (m_isV6 && m_addr.is_ipv4_prefix()) {
+		m_isV6 = false;
+	}
+	else if (!m_isV6) {
+		// Fill in default bytes for IPv4 addresses
+		memcpy(m_addr.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
 	}
 }
 
@@ -2346,14 +2361,12 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 			}
 
 			// Fill in default bytes for IPv4 addresses
-			memset(ip.data, 0, 10);
-			ip.data[10] = 0xFF;
-			ip.data[11] = 0xFF;
+			memcpy(ip.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
 		}
 
 		bool already_added = false;
 		for (Peer& p : server->m_peerList) {
-			if ((p.m_isV6 == is_v6) && (p.m_addr == ip)) {
+			if (p.m_addr == ip) {
 				already_added = true;
 				p.m_lastSeen = cur_time;
 				break;
@@ -2361,7 +2374,9 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 		}
 
 		if (!already_added && !server->is_banned(is_v6, ip)) {
-			server->m_peerList.emplace_back(Peer{ is_v6, ip, port, 0, cur_time });
+			Peer p{ is_v6, ip, port, 0, cur_time };
+			p.normalize();
+			server->m_peerList.push_back(p);
 		}
 	}
 }
