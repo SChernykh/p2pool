@@ -608,10 +608,8 @@ bool str_to_ip(bool is_v6, const char* ip, raw_ip& result)
 			LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
 			return false;
 		}
-		result = {};
-		result.data[10] = 0xFF;
-		result.data[11] = 0xFF;
-		memcpy(result.data + 12, &addr4->sin_addr, sizeof(in_addr));
+		memcpy(result.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
+		memcpy(result.data + sizeof(raw_ip::ipv4_prefix), &addr4->sin_addr, sizeof(in_addr));
 	}
 
 	return true;

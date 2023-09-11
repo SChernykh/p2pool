@@ -461,7 +461,7 @@ void P2PServer::save_peer_list()
 		}
 		else {
 			in_addr addr{};
-			memcpy(&addr.s_addr, p.m_addr.data + 12, sizeof(addr.s_addr));
+			memcpy(&addr.s_addr, p.m_addr.data + sizeof(raw_ip::ipv4_prefix), sizeof(addr.s_addr));
 			addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, sizeof(addr_str_buf));
 			if (addr_str) {
 				f << addr_str << ':' << p.m_port << '\n';
@@ -2269,7 +2269,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		peers[0] = {};
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 12) = 0xFFFFFFFFU;
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + sizeof(raw_ip::ipv4_prefix)) = 0xFFFFFFFFU;
 		peers[0].m_port = 0xFFFF;
 
 		if (num_selected_peers == 0) {
@@ -2338,7 +2338,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 				// Ignore 0.0.0.0/8 (special-purpose range for "this network") and 224.0.0.0/3 (IP multicast and reserved ranges)
 
 				// Check for protocol version message
-				if ((*reinterpret_cast<uint32_t*>(ip.data + 12) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
+				if ((*reinterpret_cast<uint32_t*>(ip.data + sizeof(raw_ip::ipv4_prefix)) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
 					const uint32_t version = *reinterpret_cast<uint32_t*>(ip.data);
 
 					// Clients with different major protocol versions communicate using v1.0 protocol

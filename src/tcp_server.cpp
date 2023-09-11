@@ -381,7 +381,7 @@ bool TCPServer::connect_to_peer(Client* client)
 		else {
 			sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
 			addr4->sin_family = AF_INET;
-			memcpy(&addr4->sin_addr, client->m_addr.data + 12, sizeof(in_addr));
+			memcpy(&addr4->sin_addr, client->m_addr.data + sizeof(raw_ip::ipv4_prefix), sizeof(in_addr));
 			addr4->sin_port = htons(static_cast<uint16_t>(client->m_port));
 		}
 	}
@@ -395,7 +395,7 @@ bool TCPServer::connect_to_peer(Client* client)
 		else {
 			sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
 			addr4->sin_family = AF_INET;
-			memcpy(&addr4->sin_addr, m_socks5ProxyIP.data + 12, sizeof(in_addr));
+			memcpy(&addr4->sin_addr, m_socks5ProxyIP.data + sizeof(raw_ip::ipv4_prefix), sizeof(in_addr));
 			addr4->sin_port = htons(static_cast<uint16_t>(m_socks5ProxyPort));
 		}
 	}
@@ -782,10 +782,8 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 			client->m_port = ntohs(reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_port);
 		}
 		else {
-			client->m_addr = {};
-			client->m_addr.data[10] = 0xFF;
-			client->m_addr.data[11] = 0xFF;
-			memcpy(client->m_addr.data + 12, &reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_addr, sizeof(in_addr));
+			memcpy(client->m_addr.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
+			memcpy(client->m_addr.data + sizeof(raw_ip::ipv4_prefix), &reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_addr, sizeof(in_addr));
 			client->m_port = ntohs(reinterpret_cast<sockaddr_in*>(&peer_addr)->sin_port);
 		}
 
@@ -1109,7 +1107,7 @@ bool TCPServer::Client::on_proxy_handshake(char* data, uint32_t size)
 					}
 					else {
 						buf[3] = 1; // ATYP
-						memcpy(buf + 4, m_addr.data + 12, 4);
+						memcpy(buf + 4, m_addr.data + sizeof(raw_ip::ipv4_prefix), 4);
 						buf[8] = static_cast<uint8_t>(m_port >> 8);
 						buf[9] = static_cast<uint8_t>(m_port & 0xFF);
 					}
@@ -1248,7 +1246,7 @@ void TCPServer::Client::init_addr_string()
 		addr_str = inet_ntop(AF_INET6, m_addr.data, addr_str_buf, sizeof(addr_str_buf));
 	}
 	else {
-		addr_str = inet_ntop(AF_INET, m_addr.data + 12, addr_str_buf, sizeof(addr_str_buf));
+		addr_str = inet_ntop(AF_INET, m_addr.data + sizeof(raw_ip::ipv4_prefix), addr_str_buf, sizeof(addr_str_buf));
 	}
 
 	if (addr_str) {
