@@ -1224,7 +1224,7 @@ void P2PServer::check_host()
 	for (const PoolBlock* b = side_chain.chainTip(); b && (b->m_txinGenHeight >= height + 2); b = side_chain.find_block(b->m_parent)) {
 		if (--counter == 0) {
 			const Params::Host& host = m_pool->current_host();
-			LOGERR(1, host.m_displayName << " seems to be stuck, reconnecting");
+			LOGERR(1, "Host " << host.m_displayName << " seems to be stuck, reconnecting");
 			m_pool->reconnect_to_host();
 			return;
 		}
@@ -1237,7 +1237,7 @@ void P2PServer::check_host()
 	if (cur_time >= last_active + 300) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
 		const Params::Host& host = m_pool->current_host();
-		LOGERR(1, "no ZMQ messages received from " << host.m_displayName << " in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
+		LOGERR(1, "no ZMQ messages received from host " << host.m_displayName << " in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
 		m_pool->reconnect_to_host();
 	}
 }

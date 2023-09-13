@@ -913,7 +913,7 @@ void p2pool::get_info()
 		[this, host](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_info RPC request to " << host.m_displayName << " failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					switch_host();
@@ -1107,7 +1107,7 @@ void p2pool::get_miner_data(bool retry)
 		[this, host, retry](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_miner_data RPC request to " << host.m_displayName << " failed: error " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
+				LOGWARN(1, "get_miner_data RPC request to host " << host.m_displayName << " failed: error " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
 				if (!m_stopped && retry) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;
