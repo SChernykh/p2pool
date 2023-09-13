@@ -925,7 +925,7 @@ void p2pool::get_info()
 
 void p2pool::load_found_blocks()
 {
-	if (!m_api) {
+	if (!m_api || m_stopped) {
 		return;
 	}
 
@@ -1277,7 +1277,7 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 
 void p2pool::api_update_network_stats()
 {
-	if (!m_api) {
+	if (!m_api || m_stopped) {
 		return;
 	}
 
@@ -1308,7 +1308,7 @@ void p2pool::api_update_network_stats()
 
 void p2pool::api_update_pool_stats()
 {
-	if (!m_api) {
+	if (!m_api || m_stopped) {
 		return;
 	}
 
@@ -1360,7 +1360,7 @@ void p2pool::api_update_pool_stats()
 
 void p2pool::api_update_stats_mod()
 {
-	if (!m_api) {
+	if (!m_api || m_stopped) {
 		return;
 	}
 
@@ -1453,7 +1453,7 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 
 void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* block)
 {
-	if (!m_api) {
+	if (!m_api || m_stopped) {
 		return;
 	}
 

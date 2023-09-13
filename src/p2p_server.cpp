@@ -1305,7 +1305,7 @@ void P2PServer::on_shutdown()
 
 void P2PServer::api_update_local_stats()
 {
-	if (!m_pool->api() || !m_pool->params().m_localStats || ((m_timerCounter % 30) != 5)) {
+	if (!m_pool->api() || !m_pool->params().m_localStats || m_pool->stopped() || ((m_timerCounter % 30) != 5)) {
 		return;
 	}
 

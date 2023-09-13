@@ -1274,7 +1274,7 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 
 void StratumServer::api_update_local_stats(uint64_t timestamp)
 {
-	if (!m_pool->api() || !m_pool->params().m_localStats) {
+	if (!m_pool->api() || !m_pool->params().m_localStats || m_pool->stopped()) {
 		return;
 	}
 
