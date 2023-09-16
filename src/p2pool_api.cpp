@@ -106,9 +106,18 @@ void p2pool_api::on_stop()
 
 void p2pool_api::dump_to_file_async_internal(Category category, const char* filename, Callback<void, log::Stream&>::Base&& callback)
 {
-	std::vector<char> buf(16384);
+	std::vector<char> buf(1024);
 	log::Stream s(buf.data(), buf.size());
 	callback(s);
+
+	// If the buffer was too small, try again with big enough buffer
+	if (s.m_spilled) {
+		// Assume that the second call will use no more than 2X bytes
+		buf.resize((static_cast<ptrdiff_t>(s.m_pos) + s.m_spilled) * 2 + 1);
+		s.reset(buf.data(), buf.size());
+		callback(s);
+	}
+
 	buf.resize(s.m_pos);
 
 	std::string path;

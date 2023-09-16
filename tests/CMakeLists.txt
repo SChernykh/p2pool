@@ -33,6 +33,7 @@ set(SOURCES
 	src/difficulty_type_tests.cpp
 	src/hash_tests.cpp
 	src/keccak_tests.cpp
+	src/log_tests.cpp
 	src/main.cpp
 	src/pool_block_tests.cpp
 	src/util_tests.cpp

@@ -38,9 +38,18 @@ struct Stream
 	enum params : int { BUF_SIZE = 1024 - 1 };
 
 	template<size_t N>
-	explicit FORCEINLINE Stream(char (&buf)[N]) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(N - 1) {}
+	explicit FORCEINLINE Stream(char (&buf)[N]) : m_pos(0), m_numberWidth(1), m_buf(buf), m_bufSize(N - 1), m_spilled(0) {}
 
-	FORCEINLINE Stream(void* buf, size_t size) : m_pos(0), m_numberWidth(1), m_buf(reinterpret_cast<char*>(buf)), m_bufSize(static_cast<int>(size) - 1) {}
+	FORCEINLINE Stream(void* buf, size_t size) { reset(buf, size); }
+
+	FORCEINLINE void reset(void* buf, size_t size)
+	{
+		m_pos = 0;
+		m_numberWidth = 1;
+		m_buf = reinterpret_cast<char*>(buf);
+		m_bufSize = static_cast<int>(size) - 1;
+		m_spilled = 0;
+	}
 
 	template<typename T>
 	struct Entry
@@ -70,9 +79,7 @@ struct Stream
 	{
 		static_assert(1 < base && base <= 64, "Invalid base");
 
-		const T data_with_sign = data;
-		data = abs(data);
-		const bool negative = (data != data_with_sign);
+		const bool negative = is_negative(data);
 
 		char buf[32];
 		size_t k = sizeof(buf);
@@ -98,6 +105,7 @@ struct Stream
 		const int n = static_cast<int>(n0);
 		const int pos = m_pos;
 		if (pos + n > m_bufSize) {
+			m_spilled += n;
 			return;
 		}
 		memcpy(m_buf + pos, buf, n);
@@ -111,6 +119,7 @@ struct Stream
 	int m_numberWidth;
 	char* m_buf;
 	int m_bufSize;
+	int m_spilled;
 };
 
 struct Writer : public Stream
