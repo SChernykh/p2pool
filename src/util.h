@@ -97,6 +97,12 @@ template<typename T> struct is_negative_helper<T, true>  { static FORCEINLINE bo
 
 template<typename T> FORCEINLINE bool is_negative(T x) { return is_negative_helper<T, std::is_signed<T>::value>::value(x); }
 
+template<typename T, bool is_signed> struct abs_helper {};
+template<typename T> struct abs_helper<T, false> { static FORCEINLINE T value(T x) { return x; } };
+template<typename T> struct abs_helper<T, true>  { static FORCEINLINE std::make_unsigned_t<T> value(T x) { return (x < 0) ? -x : x; } };
+
+template<typename T> FORCEINLINE std::make_unsigned_t<T> abs(T x) { return abs_helper<T, std::is_signed<T>::value>::value(x); }
+
 template<typename T, typename U>
 FORCEINLINE void writeVarint(T value, U&& callback)
 {

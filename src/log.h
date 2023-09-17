@@ -80,12 +80,11 @@ struct Stream
 		static_assert(1 < base && base <= 64, "Invalid base");
 
 		const bool negative = is_negative(data);
+		std::make_unsigned_t<T> udata = abs(data);
 
 		char buf[32];
 		size_t k = sizeof(buf);
 		int w = m_numberWidth;
-
-		std::make_unsigned_t<T> udata = static_cast<std::make_unsigned_t<T>>(data);
 
 		do {
 			buf[--k] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"[udata % base];

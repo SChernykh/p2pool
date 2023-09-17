@@ -73,4 +73,41 @@ TEST(log, pad_right)
 	ASSERT_EQ(buf[N], '\0');
 }
 
+template<typename T, bool hex>
+void check_number(T value)
+{
+	constexpr size_t N = 64;
+
+	char buf[N];
+	memset(buf, -1, N);
+	log::Stream s(buf);
+	s << log::BasedValue<T, hex ? 16 : 10>(value) << '\0';
+
+	char buf2[N];
+	memset(buf2, -1, N);
+	snprintf(buf2, N, hex ? "%llx" : (std::is_signed<T>::value ? "%lld" : "%llu"), value);
+
+	ASSERT_EQ(memcmp(buf, buf2, N), 0);
+}
+
+TEST(log, numbers)
+{
+	for (int64_t i = -1024; i <= 1024; ++i) {
+		check_number<int64_t, false>(i);
+
+		if (i >= 0) {
+			check_number<int64_t, true>(i);
+			check_number<uint64_t, false>(i);
+			check_number<uint64_t, true>(i);
+		}
+	}
+
+	check_number<int64_t, false>(std::numeric_limits<int64_t>::min());
+	check_number<int64_t, false>(std::numeric_limits<int64_t>::max());
+	check_number<int64_t, true>(std::numeric_limits<int64_t>::max());
+
+	check_number<uint64_t, false>(std::numeric_limits<uint64_t>::max());
+	check_number<uint64_t, true>(std::numeric_limits<uint64_t>::max());
+}
+
 }
