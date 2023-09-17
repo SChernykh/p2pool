@@ -1338,7 +1338,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
 
 	m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum",
-		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections, block_reward_share_percent](log::Stream& s)
+		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections, block_reward_share_percent,timestamp, this](log::Stream& s)
 		{
 			s << "{\"hashrate_15m\":" << hashrate_15m
 				<< ",\"hashrate_1h\":" << hashrate_1h
@@ -1351,7 +1351,37 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"connections\":" << connections
 				<< ",\"incoming_connections\":" << incoming_connections
 				<< ",\"block_reward_share_percent\":" << block_reward_share_percent
-				<< "}";
+				<< ",\"workers\":[";
+
+			bool first = true;
+
+			for (const StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_next)) {
+				if (!first) {
+					s << ',';
+				}
+				const difficulty_type pool_diff = m_pool->side_chain().difficulty();
+				difficulty_type diff = pool_diff;
+				if (client->m_lastJobTarget > 1) {
+					uint64_t r;
+					diff.lo = udiv128(1, 0, client->m_lastJobTarget, &r);
+					diff.hi = 0;
+					if (r) {
+						++diff.lo;
+					}
+				}
+
+				s 	<< '"' << static_cast<const char*>(client->m_addrString) << ','
+					<< (timestamp - client->m_connectedTime) << ',' 
+					<< diff << ',' 
+					<< (client->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME) << ','
+					<< (client->m_rpcId ? client->m_customUser : "not logged in") 
+					<< '"';
+
+
+				first = false;
+			}
+
+			s	<< "]}";
 		});
 }
 
