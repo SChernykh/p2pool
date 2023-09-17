@@ -22,6 +22,7 @@
 #include <fstream>
 #include <thread>
 #include <stdlib.h>
+#include <clocale>
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
@@ -62,6 +63,8 @@ public:
 		, m_stopped(false)
 	{
 		set_main_thread();
+
+		std::setlocale(LC_ALL, "en_001");
 
 		m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
 
