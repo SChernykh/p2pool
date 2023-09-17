@@ -1337,10 +1337,9 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 
 	const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
 
-	m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum",
-		[hashrate_15m, hashrate_1h, hashrate_24h, total_hashes, shares_found, shares_failed, average_effort, current_effort, connections, incoming_connections, block_reward_share_percent,timestamp, this](log::Stream& s)
-		{
-			s << "{\"hashrate_15m\":" << hashrate_15m
+	CallOnLoop(&m_loop, [=]() {
+		m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum", [=](log::Stream& s) {
+			s	<< "{\"hashrate_15m\":" << hashrate_15m
 				<< ",\"hashrate_1h\":" << hashrate_1h
 				<< ",\"hashrate_24h\":" << hashrate_24h
 				<< ",\"total_hashes\":" << total_hashes
@@ -1353,13 +1352,13 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"block_reward_share_percent\":" << block_reward_share_percent
 				<< ",\"workers\":[";
 
+			const difficulty_type pool_diff = m_pool->side_chain().difficulty();
 			bool first = true;
 
 			for (const StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_next)) {
 				if (!first) {
 					s << ',';
 				}
-				const difficulty_type pool_diff = m_pool->side_chain().difficulty();
 				difficulty_type diff = pool_diff;
 				if (client->m_lastJobTarget > 1) {
 					uint64_t r;
@@ -1371,18 +1370,18 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				}
 
 				s 	<< '"' << static_cast<const char*>(client->m_addrString) << ','
-					<< (timestamp - client->m_connectedTime) << ',' 
-					<< diff << ',' 
+					<< (timestamp - client->m_connectedTime) << ','
+					<< diff << ','
 					<< (client->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME) << ','
-					<< (client->m_rpcId ? client->m_customUser : "not logged in") 
+					<< (client->m_rpcId ? client->m_customUser : "not logged in")
 					<< '"';
-
 
 				first = false;
 			}
 
 			s	<< "]}";
 		});
+	});
 }
 
 } // namespace p2pool
