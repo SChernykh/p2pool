@@ -197,8 +197,8 @@ static bool get_custom_user(const char* s, char (&user)[N])
 		if ((c == '+') || (c == '.')) {
 			break;
 		}
-		// Limit to printable ASCII characters
-		if (c >= ' ' && c <= '~') {
+		// Limit to printable ASCII characters, also skip comma and JSON special characters
+		if (c >= ' ' && c <= '~' && c != ',' && c != '"' && c != '\\') {
 			user[len++] = c;
 		}
 		++s;
