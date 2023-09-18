@@ -86,10 +86,12 @@ async function load_data() {
 
 	let pool_hashrate = pool_stats.pool_statistics.hashRate / 1e6;
 	let pplns_duration = pool_stats.pool_statistics.pplnsWeight / pool_stats.pool_statistics.hashRate;
+	let min_payout = 0.6 * pool_stats.pool_statistics.sidechainDifficulty / pool_stats.pool_statistics.pplnsWeight;
 
 	document.getElementById("pool_hashrate").innerHTML = pool_hashrate.toFixed(3) + ' MH/s';
 	document.getElementById("pplns_duration").innerHTML = elapsedTimeStr(0, pplns_duration, 0) + ' ' + Math.floor(pplns_duration % 60) + 's';
 	document.getElementById("pool_miners").innerHTML = pool_stats.pool_statistics.miners;
+	document.getElementById("min_payout").innerHTML = min_payout.toFixed(5) + ' XMR';
 
 	let ts = Math.floor(Date.now() / 1000);
 
@@ -208,7 +210,7 @@ function toggle_menu(name) {
 <tr><td>Average effort<br><div style="text-align:center;font-size:0.9rem">last 50 blocks</div></td><td><span id="average_effort">N/A</span></td><td></td></tr>
 <tr><td>&nbsp;</td><td></td><td></td></tr>
 <tr><td>Fee</td><td>0%</td><td></td></tr>
-<tr><td>Min payout</td><td>0.0003 XMR</td><td></td></tr>
+<tr><td>Min payout</td><td><span id="min_payout">0.00027 XMR</span></td><td></td></tr>
 <tr><td>Payout scheme</td><td><a href="https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares" target="_blank">PPLNS</a></td><td></td></tr>
 <tr><td>&nbsp;</td><td></td><td></td></tr>
 <tr><td>Statistics</td><td><a href="https://p2pool.observer/" target="_blank">P2Pool observer</a></td><td></td></tr>
