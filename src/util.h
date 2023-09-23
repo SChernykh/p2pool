@@ -40,6 +40,14 @@ namespace p2pool {
 
 extern const char* VERSION;
 
+enum class SoftwareID : uint32_t {
+	P2Pool = 0,
+	GoObserver = 0x624F6F47UL,
+	Unknown = 0xFFFFFFFFUL,
+};
+
+SoftwareID get_software_id(uint32_t value);
+
 template<typename T> struct not_implemented { enum { value = 0 }; };
 
 struct nocopy_nomove

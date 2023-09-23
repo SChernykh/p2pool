@@ -60,6 +60,20 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 #endif
 " on " __DATE__ ")";
 
+SoftwareID get_software_id(uint32_t value)
+{
+	switch (value) {
+	case static_cast<uint32_t>(SoftwareID::P2Pool):
+		return SoftwareID::P2Pool;
+
+	case static_cast<uint32_t>(SoftwareID::GoObserver):
+		return SoftwareID::GoObserver;
+
+	default:
+		return SoftwareID::Unknown;
+	}
+}
+
 const raw_ip raw_ip::localhost_ipv4 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x01 };
 const raw_ip raw_ip::localhost_ipv6 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 

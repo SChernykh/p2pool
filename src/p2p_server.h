@@ -142,7 +142,7 @@ public:
 
 		uint32_t m_protocolVersion;
 		uint32_t m_SoftwareVersion;
-		uint32_t m_SoftwareID;
+		SoftwareID m_SoftwareID;
 
 		int64_t m_pingTime;
 

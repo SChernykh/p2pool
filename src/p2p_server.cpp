@@ -1272,7 +1272,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_peerListPendingRequests(0)
 	, m_protocolVersion(PROTOCOL_VERSION_1_0)
 	, m_SoftwareVersion(0)
-	, m_SoftwareID(0)
+	, m_SoftwareID(SoftwareID::P2Pool)
 	, m_pingTime(-1)
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
@@ -1385,7 +1385,7 @@ void P2PServer::P2PClient::reset()
 	m_peerListPendingRequests = 0;
 	m_protocolVersion = PROTOCOL_VERSION_1_0;
 	m_SoftwareVersion = 0;
-	m_SoftwareID = 0;
+	m_SoftwareID = SoftwareID::P2Pool;
 	m_pingTime = -1;
 	m_blockPendingRequests.clear();
 	m_lastAlive = 0;
@@ -2265,6 +2265,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		peers[0] = {};
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 8) = static_cast<uint32_t>(SoftwareID::P2Pool);
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + sizeof(raw_ip::ipv4_prefix)) = 0xFFFFFFFFU;
 		peers[0].m_port = 0xFFFF;
 
@@ -2347,11 +2348,19 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 					}
 
 					m_SoftwareVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
-					m_SoftwareID = *reinterpret_cast<uint32_t*>(ip.data + 8);
+					const uint32_t id_value = *reinterpret_cast<uint32_t*>(ip.data + 8);
+					m_SoftwareID = get_software_id(id_value);
+
 					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
 						<< " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF)
 						<< ", runs " << software_name() << " v" << (m_SoftwareVersion >> 16) << '.' << (m_SoftwareVersion & 0xFFFF)
 					);
+
+					if (m_SoftwareID == SoftwareID::Unknown) {
+						LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
+							<< "runs an unknown software with id = " << log::Hex(id_value)
+						);
+					}
 				}
 				continue;
 			}
@@ -2613,9 +2622,9 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 const char* P2PServer::P2PClient::software_name() const
 {
 	switch (m_SoftwareID) {
-	case 0:
+	case SoftwareID::P2Pool:
 		return "P2Pool";
-	case 0x624F6F47UL:
+	case SoftwareID::GoObserver:
 		return "GoObserver";
 	default:
 		return "Unknown";
