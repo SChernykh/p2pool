@@ -51,7 +51,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 			break;
 		}
 		catch (const std::exception& e) {
-			LOGWARN(1, "failed to to bind port " << i << " for ZMQ publisher, error " << e.what());
+			LOGWARN(1, "failed to to bind port " << port << " for ZMQ publisher, error " << e.what());
 		}
 	}
 
