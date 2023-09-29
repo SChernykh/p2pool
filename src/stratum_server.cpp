@@ -988,7 +988,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	StratumClient* client = share->m_client;
 
-	if ((client->m_resetCounter.load() == share->m_clientResetCounter) && (client->m_rpcId == share->m_rpcId)) {
+	if (client->m_resetCounter.load() == share->m_clientResetCounter) {
 		const bool result = server->send(client,
 			[share](uint8_t* buf, size_t buf_size)
 			{
