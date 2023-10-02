@@ -91,6 +91,14 @@ StratumServer::~StratumServer()
 {
 	shutdown_tcp();
 
+	{
+		MutexLock lock(m_blobsQueueLock);
+
+		for (BlobsData* data : m_blobsQueue) {
+			delete data;
+		}
+	}
+
 	uv_mutex_destroy(&m_blobsQueueLock);
 	uv_mutex_destroy(&m_showWorkersLock);
 	uv_mutex_destroy(&m_rngLock);
