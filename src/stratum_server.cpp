@@ -208,6 +208,28 @@ static bool get_custom_user(const char* s, char (&user)[N])
 	return (len > 0);
 }
 
+template<size_t N>
+static bool get_custom_pass(const char* s, char (&pass)[N])
+{
+	size_t len = 0;
+
+	// Find first of '+' or '.', drop non-printable characters
+	while (s && (len < N - 1)) {
+		const char c = *s;
+		if (!c) {
+			break;
+		}		
+		// Limit to printable ASCII characters, also skip comma and JSON special characters
+		if (c >= ' ' && c <= '~' && c != ',' && c != '"' && c != '\\') {
+			pass[len++] = c;
+		}
+		++s;
+	}
+	pass[len] = '\0';
+
+	return (len > 0);
+}
+
 static bool get_custom_diff(const char* s, difficulty_type& diff)
 {
 	const char* diff_str = nullptr;
@@ -236,7 +258,7 @@ static bool get_custom_diff(const char* s, difficulty_type& diff)
 	return false;
 }
 
-bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login)
+bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login, const char* password)
 {
 	if (client->m_rpcId) {
 		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " tried to login, but it's already logged in");
@@ -269,6 +291,11 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	if (get_custom_user(login, client->m_customUser)) {
 		const char* s = client->m_customUser;
 		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom user " << s);
+	}
+
+	if (get_custom_pass(password, client->m_customPass)) {
+		const char* s = client->m_customPass;
+		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom password " << s);
 	}
 
 	uint32_t job_id;
@@ -511,7 +538,8 @@ void StratumServer::show_workers()
 			<< log::pad_right("uptime", 20)
 			<< log::pad_right("difficulty", 20)
 			<< log::pad_right("hashrate", 15)
-			<< "name"
+			<< log::pad_right("login", 32)
+			<< "password"
 	);
 
 	for (const StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
@@ -528,7 +556,8 @@ void StratumServer::show_workers()
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
-				<< (c->m_rpcId ? c->m_customUser : "not logged in")
+				<< log::pad_right((c->m_rpcId ? c->m_customUser : "not logged in"), 32)
+				<< (c->m_rpcId ? c->m_customPass : "not logged in")
 		);
 		++n;
 	}
@@ -1199,7 +1228,18 @@ bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint3
 		return false;
 	}
 
-	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString());
+	if (!params.HasMember("pass")) {
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid password params ('pass' field not found)");
+		return false;
+	}
+
+	auto& password = params["pass"];
+	if (!password.IsString()) {
+		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid password params ('pass' field is not a string)");
+		return false;
+	}
+
+	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString(), password.GetString());
 }
 
 bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint32_t id)
@@ -1373,7 +1413,8 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 					<< (timestamp - client->m_connectedTime) << ','
 					<< diff << ','
 					<< (client->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME) << ','
-					<< (client->m_rpcId ? client->m_customUser : "not logged in")
+					<< (client->m_rpcId ? client->m_customUser : "not logged in")  << ','
+					<< (client->m_rpcId ? client->m_customPass : "not logged in")
 					<< '"';
 
 				first = false;

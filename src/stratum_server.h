@@ -62,6 +62,7 @@ public:
 			JOBS_SIZE = 4,
 			AUTO_DIFF_SIZE = 64,
 			CUSTOM_USER_SIZE = 32,
+			CUSTOM_PASS_SIZE = 32,
 		};
 
 		struct SavedJob {
@@ -82,13 +83,14 @@ public:
 		difficulty_type m_customDiff;
 		difficulty_type m_autoDiff;
 		char m_customUser[CUSTOM_USER_SIZE];
+		char m_customPass[CUSTOM_PASS_SIZE];
 
 		uint64_t m_lastJobTarget;
 
 		int32_t m_score;
 	};
 
-	bool on_login(StratumClient* client, uint32_t id, const char* login);
+	bool on_login(StratumClient* client, uint32_t id, const char* login, const char* password);
 	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
 	uint32_t get_random32();
 
