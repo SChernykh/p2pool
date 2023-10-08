@@ -80,9 +80,12 @@ async function load_data() {
 	let pool_stats_req = await fetch('api/pool/stats');
 	let pool_blocks_req = await fetch('api/pool/blocks');
 	let network_stats_req = await fetch('api/network/stats');
+	let latest_release_req = await fetch('api/latest_release');
+
 	let pool_stats = JSON.parse(await pool_stats_req.text());
 	let pool_blocks = JSON.parse(await pool_blocks_req.text());
 	let network_stats = JSON.parse(await network_stats_req.text());
+	let latest_release = JSON.parse(await latest_release_req.text());
 
 	let pool_hashrate = pool_stats.pool_statistics.hashRate / 1e6;
 	let pplns_duration = pool_stats.pool_statistics.pplnsWeight / pool_stats.pool_statistics.hashRate;
@@ -92,6 +95,7 @@ async function load_data() {
 	document.getElementById("pplns_duration").innerHTML = elapsedTimeStr(0, pplns_duration, 0) + ' ' + Math.floor(pplns_duration % 60) + 's';
 	document.getElementById("pool_miners").innerHTML = pool_stats.pool_statistics.miners;
 	document.getElementById("min_payout").innerHTML = min_payout.toFixed(5) + ' XMR';
+	document.getElementById("latest_release").innerHTML = '<a href="' + latest_release.html_url + '" target="_blank">' + latest_release.name + '</a>';
 
 	let ts = Math.floor(Date.now() / 1000);
 
@@ -190,6 +194,7 @@ function toggle_menu(name) {
 </head>
 <body onload="load_data();setInterval(load_data, 2000);toggle_menu(window.location.hash.substr(1));">
 <div style="font-size:3rem;text-align:center;">P2Pool</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool</div>
+<div style="font-size:1rem;text-align:center;">Latest release: <span id="latest_release"><a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">P2Pool</a></span></div>
 <br>
 <table id="main_menu" style="width:100%;margin-left:auto;margin-right:auto;table-layout:fixed;text-align:center;-ms-touch-action:none;touch-action:none;"><tr>
 <td onclick="toggle_menu('pool')" id="button_pool">Pool</td>
