@@ -198,6 +198,7 @@ private:
 	void download_missing_blocks();
 	void check_host();
 	void check_block_template();
+	void check_for_updates() const;
 	void update_peer_connections();
 	void update_peer_list();
 	void send_peer_list_request(P2PClient* client, uint64_t cur_time);

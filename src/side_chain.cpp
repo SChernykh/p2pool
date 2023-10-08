@@ -1304,6 +1304,30 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 	return true;
 }
 
+bool SideChain::p2pool_update_available() const
+{
+	constexpr uint32_t version = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+
+	difficulty_type total_p2pool_diff, newer_p2pool_diff;
+	{
+		ReadLock lock(m_sidechainLock);
+
+		const PoolBlock* cur = m_chainTip;
+
+		for (uint64_t i = 0; (i < m_chainWindowSize) && cur; ++i, cur = get_parent(cur)) {
+			if (cur->m_sidechainExtraBuf[0] == static_cast<uint32_t>(SoftwareID::P2Pool)) {
+				total_p2pool_diff += cur->m_difficulty;
+				if (cur->m_sidechainExtraBuf[1] > version) {
+					newer_p2pool_diff += cur->m_difficulty;
+				}
+			}
+		}
+	}
+
+	// Assume that a new version is out if >= 20% of hashrate is using it already
+	return newer_p2pool_diff * 5 >= total_p2pool_diff;
+}
+
 void SideChain::verify_loop(PoolBlock* block)
 {
 	// PoW is already checked at this point

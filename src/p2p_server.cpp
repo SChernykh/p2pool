@@ -1081,6 +1081,7 @@ void P2PServer::on_timer()
 	update_peer_connections();
 	check_host();
 	check_block_template();
+	check_for_updates();
 	api_update_local_stats();
 }
 
@@ -1252,6 +1253,21 @@ void P2PServer::check_block_template()
 	if (seconds_since_epoch() >= m_pool->block_template().last_updated() + 20) {
 		LOGINFO(4, "block template is 20 seconds old, updating it");
 		m_pool->update_block_template_async();
+	}
+}
+
+void P2PServer::check_for_updates() const
+{
+	if (m_timerCounter % (3600 / m_timerInterval) != 0) {
+		return;
+	}
+
+	const SideChain& s = m_pool->side_chain();
+
+	if (s.precalcFinished() && s.p2pool_update_available()) {
+		LOGINFO(0, log::LightCyan() << "********************************************************************************");
+		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit p2pool.io for more information *");
+		LOGINFO(0, log::LightCyan() << "********************************************************************************");
 	}
 }
 

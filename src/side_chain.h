@@ -82,6 +82,8 @@ public:
 	const PoolBlock* chainTip() const { return m_chainTip; }
 	bool precalcFinished() const { return m_precalcFinished.load(); }
 
+	bool p2pool_update_available() const;
+
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
