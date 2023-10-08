@@ -319,6 +319,7 @@ static void do_exit(p2pool *m_pool, const char * /* args */)
 	m_pool->stop();
 }
 
+// cppcheck-suppress constParameterCallback
 static void do_version(p2pool* m_pool, const char* /* args */)
 {
 	LOGINFO(0, log::LightCyan() << VERSION);

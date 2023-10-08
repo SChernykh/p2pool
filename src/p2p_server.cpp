@@ -1258,7 +1258,13 @@ void P2PServer::check_block_template()
 
 void P2PServer::check_for_updates(bool forced) const
 {
-	if (!forced && (m_timerCounter % (3600 / m_timerInterval) != 0)) {
+#ifdef DEV_TEST_SYNC
+	constexpr uint64_t check_interval = 60;
+#else
+	constexpr uint64_t check_interval = 3600;
+#endif
+
+	if (!forced && (m_timerCounter % (check_interval / m_timerInterval) != 0)) {
 		return;
 	}
 
