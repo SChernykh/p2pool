@@ -202,13 +202,20 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 	if (m_pool->stratum_server()) {
 		m_pool->stratum_server()->print_status();
 	}
-	if (m_pool->p2p_server()) {
-		m_pool->p2p_server()->print_status();
+
+	P2PServer* p2p = m_pool->p2p_server();
+	if (p2p) {
+		p2p->print_status();
 	}
+
 #ifdef WITH_RANDOMX
 	m_pool->print_miner_status();
 #endif
 	bkg_jobs_tracker.print_status();
+
+	if (p2p) {
+		p2p->check_for_updates(true);
+	}
 }
 
 static void do_loglevel(p2pool * /* m_pool */, const char *args)
@@ -312,9 +319,14 @@ static void do_exit(p2pool *m_pool, const char * /* args */)
 	m_pool->stop();
 }
 
-static void do_version(p2pool* /* m_pool */, const char* /* args */)
+static void do_version(p2pool* m_pool, const char* /* args */)
 {
 	LOGINFO(0, log::LightCyan() << VERSION);
+
+	const P2PServer* p2p = m_pool->p2p_server();
+	if (p2p) {
+		p2p->check_for_updates(true);
+	}
 }
 
 void ConsoleCommands::allocCallback(uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf)

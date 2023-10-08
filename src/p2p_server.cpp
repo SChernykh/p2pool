@@ -1256,15 +1256,15 @@ void P2PServer::check_block_template()
 	}
 }
 
-void P2PServer::check_for_updates() const
+void P2PServer::check_for_updates(bool forced) const
 {
-	if (m_timerCounter % (3600 / m_timerInterval) != 0) {
+	if (!forced && (m_timerCounter % (3600 / m_timerInterval) != 0)) {
 		return;
 	}
 
 	const SideChain& s = m_pool->side_chain();
 
-	if (s.precalcFinished() && s.p2pool_update_available()) {
+	if ((forced || s.precalcFinished()) && s.p2pool_update_available()) {
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
 		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit p2pool.io for more information *");
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");

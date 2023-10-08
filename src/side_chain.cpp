@@ -2160,6 +2160,8 @@ void SideChain::prune_old_blocks()
 
 				server1->show_workers_async();
 				server2->show_peers_async();
+
+				server2->check_for_updates(true);
 			}
 
 			m_pool->print_hosts();
