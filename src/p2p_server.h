@@ -261,6 +261,7 @@ private:
 	unordered_set<uint64_t> m_blockNotifyRequests;
 
 	P2PClient* m_fastestPeer;
+	std::atomic<bool> m_newP2PoolVersionDetected;
 
 	static void on_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->on_broadcast(); }
 	void on_broadcast();

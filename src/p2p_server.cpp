@@ -59,6 +59,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_peerListLastSaved(0)
 	, m_lookForMissingBlocks(true)
 	, m_fastestPeer(nullptr)
+	, m_newP2PoolVersionDetected(false)
 {
 	m_callbackBuf.resize(P2P_BUF_SIZE);
 	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE);
@@ -270,6 +271,9 @@ void P2PServer::update_peer_connections()
 	bool has_good_peers = false;
 	m_fastestPeer = nullptr;
 
+	uint64_t total_outgoing_p2pool = 0;
+	uint64_t newer_version_p2pool = 0;
+
 	unordered_set<raw_ip> connected_clients;
 
 	connected_clients.reserve(m_numConnections);
@@ -303,8 +307,16 @@ void P2PServer::update_peer_connections()
 			if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
 				m_fastestPeer = client;
 			}
+			if ((client->m_SoftwareID == SoftwareID::P2Pool) && client->m_SoftwareVersion && !client->m_isIncoming) {
+				++total_outgoing_p2pool;
+				if (client->m_SoftwareVersion > ((P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR)) {
+					++newer_version_p2pool;
+				}
+			}
 		}
 	}
+
+	m_newP2PoolVersionDetected = newer_version_p2pool * 5 > total_outgoing_p2pool;
 
 	std::vector<Peer> peer_list;
 	{
@@ -1270,7 +1282,7 @@ void P2PServer::check_for_updates(bool forced) const
 
 	const SideChain& s = m_pool->side_chain();
 
-	if ((forced || s.precalcFinished()) && s.p2pool_update_available()) {
+	if ((forced || s.precalcFinished()) && m_newP2PoolVersionDetected && s.p2pool_update_available()) {
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
 		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit p2pool.io for more information *");
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
