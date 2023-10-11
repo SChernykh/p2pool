@@ -176,6 +176,8 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		} \
 	} while (0)
 
+	curl_easy_setopt_checked(m_handle, CURLOPT_BUFFERSIZE, 102400L);
+
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt_checked(m_handle, CURLOPT_WRITEDATA, this);
 
