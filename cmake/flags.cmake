@@ -35,7 +35,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wcast-align -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
 
 	if (DEV_WITH_TSAN OR DEV_WITH_UBSAN OR DEV_WITH_ASAN)
 		set(OPTIMIZATION_FLAGS "-O2 -g")
