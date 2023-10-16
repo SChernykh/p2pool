@@ -47,7 +47,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 
 * Decentralized: no central server that can be shutdown/blocked. P2Pool uses a separate blockchain to merge mine with Monero. Pool admin can't go rogue or be pressured to do an attack on the network because there is no pool admin!
 * Permissionless: there is no one to decide who can mine on the pool and who can't.
-* Trustless: there is no pool wallet, funds are never in custody. All pool blocks pay out to miners immediately.
+* Trustless: there is no pool wallet, funds are never in custody. All pool blocks pay out to miners directly.
 * PPLNS payout scheme
 * **0% fee**
 * **0 XMR payout fee**
@@ -80,7 +80,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
-|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.2.2 recommended|v3.0 or newer
+|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.3.1 is recommended|v3.0 or newer
 
 ## How to mine on P2Pool
 
