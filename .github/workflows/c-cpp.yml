@@ -405,9 +405,9 @@ jobs:
     strategy:
       matrix:
         config:
-          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "ON", upnp: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "OFF", upnp: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, msbuild: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\", rx: "OFF", upnp: "OFF"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF"}
 
     steps:
     - name: Checkout repository
@@ -423,14 +423,22 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
-        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
+        & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
+
+    - name: Check Windows 7 compatibility
+      shell: cmd
+      run: |
+        call "${{ matrix.config.vspath }}\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64
+        dumpbin /IMPORTS build/Release/p2pool.exe > 1.txt
+        findstr /R /C:"^  *[0-9A-F][0-9A-F]* [a-zA-Z][a-zA-Z0-9]*$" 1.txt > 2.txt
+        python tests/src/check_win7.py 2.txt
 
     - name: Run RandomX tests
       if: matrix.config.rx == 'ON'
       run: |
         build/Release/p2pool.exe --test
         cd build/external/src/RandomX
-        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Release randomx-tests.vcxproj
+        & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release randomx-tests.vcxproj
         Release/randomx-tests.exe
 
     - name: Build tests
@@ -439,7 +447,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "${{ matrix.config.vs }}"
-        & "${{ matrix.config.msbuild }}msbuild" -v:m /m /p:Configuration=Debug p2pool_tests.vcxproj
+        & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool_tests.vcxproj
 
     - name: Run tests
       run: |
@@ -450,7 +458,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v3
       with:
-        name: p2pool-msbuild-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}.exe
+        name: p2pool-vs-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}.exe
         path: build/Release/p2pool.exe
 
   build-macos:
