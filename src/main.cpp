@@ -106,7 +106,26 @@ int p2pool_test()
 		return 1;
 	}
 
-	randomx_init_dataset(myDataset, myCache, 0, randomx_dataset_item_count());
+	{
+		const uint32_t numThreads = std::max(std::thread::hardware_concurrency(), 1U);
+		const uint32_t numItems = randomx_dataset_item_count();
+
+		std::vector<std::thread> threads;
+		threads.reserve(numThreads);
+
+		for (uint32_t i = 1; i < numThreads; ++i) {
+			const uint32_t a = (numItems * i) / numThreads;
+			const uint32_t b = (numItems * (i + 1)) / numThreads;
+
+			threads.emplace_back([myDataset, myCache, a, b]() { randomx_init_dataset(myDataset, myCache, a, b - a); });
+		}
+		randomx_init_dataset(myDataset, myCache, 0, numItems / numThreads);
+
+		for (std::thread& t : threads) {
+			t.join();
+		}
+	}
+
 	randomx_release_cache(myCache);
 
 	randomx_vm* myMachine = randomx_create_vm(flags, nullptr, myDataset);
