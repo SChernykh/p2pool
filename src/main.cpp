@@ -115,14 +115,21 @@ int p2pool_test()
 		return 1;
 	}
 
-	randomx_calculate_hash(myMachine, &myInput, sizeof(myInput) - 1, hash);
+	memset(hash, 0, sizeof(hash));
+	memcpy(hash, myInput, sizeof(myInput));
+
+	for (size_t i = 0; i < 100; ++i) {
+		randomx_calculate_hash(myMachine, &hash, sizeof(hash), hash);
+	}
 
 	char buf[RANDOMX_HASH_SIZE * 2 + 1] = {};
 	p2pool::log::Stream s(buf);
-	s << p2pool::log::hex_buf(hash, RANDOMX_HASH_SIZE);
+	s << p2pool::log::hex_buf(hash, RANDOMX_HASH_SIZE) << '\0';
 
-	if (memcmp(buf, "639183aae1bf4c9a35884cb46b09cad9175f04efd7684e7262a0ac1c2f0b4e3f", RANDOMX_HASH_SIZE * 2) != 0) {
-		printf("Invalid hash calculated\n");
+	constexpr char expected_hash[] = "3b5ecc2bb14f467161a04fe476b541194fba82dbbbfc7c320961f922a0294dee";
+
+	if (memcmp(buf, expected_hash, RANDOMX_HASH_SIZE * 2) != 0) {
+		printf("Invalid hash calculated: expected %s, got %s\n", expected_hash, buf);
 		return 1;
 	}
 
