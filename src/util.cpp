@@ -343,9 +343,13 @@ struct BackgroundJobTracker::Impl
 	{
 		MutexLock lock(m_lock);
 
-		auto it = m_jobs.insert({ name, 1 });
+		auto it = m_jobs.emplace(name, 1);
 		if (!it.second) {
-			++it.first->second;
+			const int32_t n = ++it.first->second;
+			// Print the warning only once as the number goes past 20
+			if (n == 20) {
+				LOGWARN(3, "Performance warning: there are " << n << " instances of " << name << " running in the background. This shouldn't be normally happening - check logs for other warnings and errors.");
+			}
 		}
 	}
 
@@ -359,8 +363,8 @@ struct BackgroundJobTracker::Impl
 			return;
 		}
 
-		--it->second;
-		if (it->second <= 0) {
+		const int32_t n = --it->second;
+		if (n <= 0) {
 			m_jobs.erase(it);
 		}
 	}
