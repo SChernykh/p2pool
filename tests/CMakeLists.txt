@@ -33,6 +33,7 @@ set(SOURCES
 	src/difficulty_type_tests.cpp
 	src/hash_tests.cpp
 	src/keccak_tests.cpp
+	src/merkle_tests.cpp
 	src/log_tests.cpp
 	src/main.cpp
 	src/pool_block_tests.cpp
@@ -50,6 +51,7 @@ set(SOURCES
 	../src/log.cpp
 	../src/memory_leak_debug.cpp
 	../src/mempool.cpp
+	../src/merkle.cpp
 	../src/miner.cpp
 	../src/p2p_server.cpp
 	../src/p2pool.cpp
