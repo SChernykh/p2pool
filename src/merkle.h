@@ -20,5 +20,6 @@
 namespace p2pool {
 
 void merkle_hash(const std::vector<hash>& hashes, hash& root);
+void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vector<hash>>& tree);
 
 } // namespace p2pool

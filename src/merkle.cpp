@@ -57,4 +57,62 @@ void merkle_hash(const std::vector<hash>& hashes, hash& root)
 	}
 }
 
+void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vector<hash>>& tree)
+{
+	const size_t count = hashes.size();
+	const uint8_t* h = hashes[0].h;
+
+	tree.clear();
+
+	if (count == 1) {
+		tree.push_back(hashes);
+	}
+	else if (count == 2) {
+		hash tmp;
+		keccak(h, HASH_SIZE * 2, tmp.h);
+
+		tree.reserve(2);
+		tree.push_back(hashes);
+		tree.emplace_back(1, tmp);
+	}
+	else {
+		size_t cnt = 1, height = 1;
+		do {
+			cnt <<= 1;
+			++height;
+		} while (cnt <= count);
+		cnt >>= 1;
+
+		tree.reserve(height);
+		tree.push_back(hashes);
+
+		tree.emplace_back(cnt);
+		{
+			std::vector<hash>& cur = tree.back();
+
+			const size_t k = cnt * 2 - count;
+			memcpy(cur.data(), h, k * HASH_SIZE);
+
+			for (size_t i = k, j = k; j < cnt; i += 2, ++j) {
+				keccak(h + i * HASH_SIZE, HASH_SIZE * 2, cur[j].h);
+			}
+		}
+
+		while (cnt > 1) {
+			cnt >>= 1;
+
+			tree.emplace_back(cnt);
+
+			const std::vector<hash>& prev = tree[tree.size() - 2];
+			std::vector<hash>& cur = tree[tree.size() - 1];
+
+			cur.resize(cnt);
+
+			for (size_t i = 0, j = 0; j < cnt; i += 2, ++j) {
+				keccak(prev[i].h, HASH_SIZE * 2, cur[j].h);
+			}
+		}
+	}
+}
+
 } // namespace p2pool
