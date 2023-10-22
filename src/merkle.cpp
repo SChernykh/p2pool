@@ -18,6 +18,7 @@
 #include "common.h"
 #include "keccak.h"
 #include "merkle.h"
+#include "keccak.h"
 
 namespace p2pool {
 
@@ -113,6 +114,83 @@ void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vec
 			}
 		}
 	}
+}
+
+bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<std::pair<bool, hash>>& proof)
+{
+	if (tree.empty()) {
+		return false;
+	}
+
+	const std::vector<hash>& hashes = tree[0];
+	const size_t count = hashes.size();
+
+	size_t index = 0;
+
+	while ((index < count) && (hashes[index] != h)) {
+		++index;
+	}
+
+	if (index >= count) {
+		return false;
+	}
+
+	proof.clear();
+
+	if (count == 1) {
+		return true;
+	}
+	else if (count == 2) {
+		proof.emplace_back(index != 0, hashes[index ^ 1]);
+	}
+	else {
+		size_t cnt = 1;
+		do { cnt <<= 1; } while (cnt <= count);
+		cnt >>= 1;
+
+		const size_t k = cnt * 2 - count;
+
+		if (index >= k) {
+			index -= k;
+			const size_t j = (index ^ 1) + k;
+			if (j >= count) {
+				return false;
+			}
+			proof.emplace_back((index & 1) != 0, hashes[j]);
+			index = (index >> 1) + k;
+		}
+
+		const size_t n = tree.size();
+
+		for (size_t i = 1; cnt >= 2; ++i, index >>= 1, cnt >>= 1) {
+			const size_t j = index ^ 1;
+			if ((i >= n) || (j >= tree[i].size())) {
+				return false;
+			}
+			proof.emplace_back((index & 1) != 0, tree[i][j]);
+		}
+	}
+
+	return true;
+}
+
+bool verify_merkle_proof(hash h, const std::vector<std::pair<bool, hash>>& proof, const hash& root)
+{
+	hash tmp[2];
+
+	for (size_t i = 0, n = proof.size(); i < n; ++i) {
+		if (proof[i].first) {
+			tmp[0] = proof[i].second;
+			tmp[1] = h;
+		}
+		else {
+			tmp[0] = h;
+			tmp[1] = proof[i].second;
+		}
+		keccak(tmp[0].h, HASH_SIZE * 2, h.h);
+	}
+
+	return (h == root);
 }
 
 } // namespace p2pool

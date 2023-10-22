@@ -69,6 +69,12 @@ TEST(merkle, root_hash)
 				ASSERT_EQ(tmp, tree[i][j]);
 			}
 		}
+
+		for (const hash& h : hashes) {
+			std::vector<std::pair<bool, hash>> proof;
+			ASSERT_TRUE(get_merkle_proof(tree, h, proof));
+			ASSERT_TRUE(verify_merkle_proof(h, proof, root));
+		}
 	};
 
 	// 1 leaf
