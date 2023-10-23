@@ -70,10 +70,21 @@ TEST(merkle, root_hash)
 			}
 		}
 
-		for (const hash& h : hashes) {
+		for (size_t i = 0, n = hashes.size(); i < n; ++i) {
+			const hash& h = hashes[i];
 			std::vector<std::pair<bool, hash>> proof;
+
 			ASSERT_TRUE(get_merkle_proof(tree, h, proof));
 			ASSERT_TRUE(verify_merkle_proof(h, proof, root));
+
+			std::vector<hash> proof2;
+			proof2.reserve(proof.size());
+
+			for (const auto& i : proof) {
+				proof2.emplace_back(i.second);
+			}
+
+			ASSERT_TRUE(verify_merkle_proof(h, proof2, i, n, root));
 		}
 	};
 

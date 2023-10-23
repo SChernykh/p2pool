@@ -193,4 +193,82 @@ bool verify_merkle_proof(hash h, const std::vector<std::pair<bool, hash>>& proof
 	return (h == root);
 }
 
+bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const hash& root)
+{
+	if (index >= count) {
+		return false;
+	}
+
+	hash tmp[2];
+
+	if (count == 1) {
+	}
+	else if (count == 2) {
+		if (proof.empty()) {
+			return false;
+		}
+
+		if (index & 1) {
+			tmp[0] = proof[0];
+			tmp[1] = h;
+		}
+		else {
+			tmp[0] = h;
+			tmp[1] = proof[0];
+		}
+
+		keccak(tmp[0].h, HASH_SIZE * 2, h.h);
+	}
+	else {
+		size_t cnt = 1;
+		do { cnt <<= 1; } while (cnt <= count);
+		cnt >>= 1;
+
+		size_t proof_index = 0;
+
+		const size_t k = cnt * 2 - count;
+
+		if (index >= k) {
+			index -= k;
+
+			if (proof_index >= proof.size()) {
+				return false;
+			}
+
+			if (index & 1) {
+				tmp[0] = proof[proof_index];
+				tmp[1] = h;
+			}
+			else {
+				tmp[0] = h;
+				tmp[1] = proof[proof_index];
+			}
+
+			keccak(tmp[0].h, HASH_SIZE * 2, h.h);
+
+			index = (index >> 1) + k;
+			++proof_index;
+		}
+
+		for (; cnt >= 2; ++proof_index, index >>= 1, cnt >>= 1) {
+			if (proof_index >= proof.size()) {
+				return false;
+			}
+
+			if (index & 1) {
+				tmp[0] = proof[proof_index];
+				tmp[1] = h;
+			}
+			else {
+				tmp[0] = h;
+				tmp[1] = proof[proof_index];
+			}
+
+			keccak(tmp[0].h, HASH_SIZE * 2, h.h);
+		}
+	}
+
+	return (h == root);
+}
+
 } // namespace p2pool
