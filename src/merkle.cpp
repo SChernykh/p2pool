@@ -19,6 +19,7 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "keccak.h"
+#include "sha256.h"
 
 namespace p2pool {
 
@@ -269,6 +270,26 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 	}
 
 	return (h == root);
+}
+
+uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
+{
+	if (n_aux_chains <= 1) {
+		return 0;
+	}
+
+	constexpr uint8_t HASH_KEY_MM_SLOT = 'm';
+
+	uint8_t buf[HASH_SIZE + sizeof(uint32_t) + 1];
+
+	memcpy(buf, &id, HASH_SIZE);
+	memcpy(buf + HASH_SIZE, &nonce, sizeof(uint32_t));
+	buf[HASH_SIZE + sizeof(uint32_t)] = HASH_KEY_MM_SLOT;
+
+	hash res;
+	sha256(buf, sizeof(buf), res.h);
+
+	return *reinterpret_cast<uint32_t*>(res.h) % n_aux_chains;
 }
 
 } // namespace p2pool

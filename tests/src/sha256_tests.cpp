@@ -16,11 +16,8 @@
  */
 
 #include "common.h"
-#include "gtest/gtest.h"
-
-extern "C" {
 #include "sha256.h"
-}
+#include "gtest/gtest.h"
 
 namespace p2pool {
 
@@ -28,7 +25,7 @@ TEST(sha256, hashing)
 {
 	auto check = [](const char* input, const char* output) {
 		hash h;
-		sha256(input, strlen(input), h.h);
+		sha256(input, static_cast<uint32_t>(strlen(input)), h.h);
 
 		char buf[128];
 		log::Stream s(buf);

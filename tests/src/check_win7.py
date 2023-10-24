@@ -272,7 +272,7 @@ for line in lines:
 	count += 1
 	api = line[29:].strip()
 	if api not in allowedAPIs:
-		print('API call "{}" is not checked for Windows 7 compatibility. Check it and then add it to the list in tests/src/check_imports.py'.format(api))
+		print('API call "{}" is not checked for Windows 7 compatibility. Check it and then add it to the list in tests/src/check_win7.py'.format(api))
 		exit_code = 1
 
 if exit_code == 0:

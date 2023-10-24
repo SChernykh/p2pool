@@ -9,6 +9,10 @@
 #ifndef SHA256_H
 #define SHA256_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*************************** HEADER FILES ***************************/
 #include <stdint.h>
 
@@ -29,5 +33,9 @@ void sha256_update(SHA256_CTX *ctx, const uint8_t* data, uint32_t len);
 void sha256_final(SHA256_CTX *ctx, uint8_t* hash);
 
 void sha256(const void* data, uint32_t len, uint8_t* hash);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif   // SHA256_H

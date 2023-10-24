@@ -224,4 +224,23 @@ TEST(merkle, tree)
 	check_full_tree();
 }
 
+TEST(merkle, aux_slot)
+{
+	hash id;
+
+	ASSERT_EQ(get_aux_slot(id, 0, 0), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 1), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 2), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 3), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 4), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 5), 1U);
+	ASSERT_EQ(get_aux_slot(id, 0, 6), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 7), 5U);
+	ASSERT_EQ(get_aux_slot(id, 0, 8), 0U);
+	ASSERT_EQ(get_aux_slot(id, 0, 9), 6U);
+
+	ASSERT_EQ(get_aux_slot(id, 0, std::numeric_limits<uint32_t>::max()), 2389612776U);
+	ASSERT_EQ(get_aux_slot(id, 1, std::numeric_limits<uint32_t>::max()), 1080669337U);
+}
+
 }

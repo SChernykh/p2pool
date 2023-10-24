@@ -149,6 +149,7 @@ endif()
 
 include_directories(src)
 include_directories(external/src)
+include_directories(external/src/crypto)
 include_directories(external/src/cryptonote)
 include_directories(${UV_INCLUDE_DIR})
 include_directories(external/src/cppzmq)
