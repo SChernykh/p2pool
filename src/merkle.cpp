@@ -231,23 +231,23 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 		if (index >= k) {
 			index -= k;
 
-			if (proof_index >= proof.size()) {
+			if (proof.empty()) {
 				return false;
 			}
 
 			if (index & 1) {
-				tmp[0] = proof[proof_index];
+				tmp[0] = proof[0];
 				tmp[1] = h;
 			}
 			else {
 				tmp[0] = h;
-				tmp[1] = proof[proof_index];
+				tmp[1] = proof[0];
 			}
 
 			keccak(tmp[0].h, HASH_SIZE * 2, h.h);
 
 			index = (index >> 1) + k;
-			++proof_index;
+			proof_index = 1;
 		}
 
 		for (; cnt >= 2; ++proof_index, index >>= 1, cnt >>= 1) {
