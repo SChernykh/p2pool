@@ -37,8 +37,10 @@ set(SOURCES
 	src/log_tests.cpp
 	src/main.cpp
 	src/pool_block_tests.cpp
+	src/sha256_tests.cpp
 	src/util_tests.cpp
 	src/wallet_tests.cpp
+	../external/src/crypto/sha256.c
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
 	../external/src/hardforks/hardforks.cpp
@@ -87,6 +89,7 @@ endif()
 
 include_directories(../src)
 include_directories(../external/src)
+include_directories(../external/src/crypto)
 include_directories(../external/src/cryptonote)
 include_directories(${UV_INCLUDE_DIR})
 include_directories(../external/src/cppzmq)

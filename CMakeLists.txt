@@ -64,6 +64,7 @@ endif()
 include(cmake/flags.cmake)
 
 set(HEADERS
+	external/src/crypto/sha256.h
 	external/src/cryptonote/crypto-ops.h
 	external/src/hardforks/hardforks.h
 	src/block_cache.h
@@ -94,6 +95,7 @@ set(HEADERS
 )
 
 set(SOURCES
+	external/src/crypto/sha256.c
 	external/src/cryptonote/crypto-ops-data.c
 	external/src/cryptonote/crypto-ops.c
 	external/src/hardforks/hardforks.cpp

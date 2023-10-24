@@ -22,7 +22,7 @@
 
 namespace p2pool {
 
-TEST(merkle, root_hash)
+TEST(merkle, tree)
 {
 	hash input[10];
 	uint8_t data[] = "data 0";
@@ -80,8 +80,8 @@ TEST(merkle, root_hash)
 			std::vector<hash> proof2;
 			proof2.reserve(proof.size());
 
-			for (const auto& i : proof) {
-				proof2.emplace_back(i.second);
+			for (const auto& p : proof) {
+				proof2.emplace_back(p.second);
 			}
 
 			ASSERT_TRUE(verify_merkle_proof(h, proof2, i, n, root));
