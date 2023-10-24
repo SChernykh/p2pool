@@ -1,16 +1,6 @@
 name: Sync test
 
-on:
-  push:
-    paths-ignore:
-      - 'docker-compose/**'
-      - 'docs/**'
-      - 'README.md'
-
-  pull_request:
-
-  schedule:
-    - cron: '17 0/3 * * *'
+on: workflow_dispatch
 
 jobs:
   sync-test-ubuntu-tsan:

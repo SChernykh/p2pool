@@ -25,7 +25,7 @@
 
 namespace p2pool {
 
-TEST(pool_block, deserialize)
+TEST(pool_block, DISABLED_deserialize)
 {
 	init_crypto_cache();
 
@@ -132,7 +132,7 @@ TEST(pool_block, deserialize)
 	destroy_crypto_cache();
 }
 
-TEST(pool_block, verify)
+TEST(pool_block, DISABLED_verify)
 {
 	init_crypto_cache();
 

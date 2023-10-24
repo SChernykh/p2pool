@@ -190,6 +190,10 @@ struct alignas(uint64_t) hash
 		return (a[0] == 0) && (a[1] == 0) && (a[2] == 0) && (a[3] == 0);
 	}
 
+	FORCEINLINE void clear() {
+		memset(h, 0, HASH_SIZE);
+	}
+
 	FORCEINLINE uint64_t* u64() { return reinterpret_cast<uint64_t*>(h); }
 	FORCEINLINE const uint64_t* u64() const { return reinterpret_cast<const uint64_t*>(h); }
 

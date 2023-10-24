@@ -121,6 +121,9 @@ struct PoolBlock
 	difficulty_type m_difficulty;
 	difficulty_type m_cumulativeDifficulty;
 
+	// Merkle proof for merge mining
+	std::vector<hash> m_merkleProof;
+
 	// Arbitrary extra data
 	uint32_t m_sidechainExtraBuf[4];
 

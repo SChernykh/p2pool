@@ -94,6 +94,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_sidechainHeight = b.m_sidechainHeight;
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
+	m_merkleProof = b.m_merkleProof;
 	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
 	m_depth = b.m_depth;
@@ -186,8 +187,11 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		p += extra_nonce_size - EXTRA_NONCE_SIZE;
 	}
 
+	// Valid for tree size = 1 (no other merge mined chains)
+	// TODO: insert mm_data and merkle root here
 	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
-	*(p++) = HASH_SIZE;
+	*(p++) = 1 + HASH_SIZE;
+	*(p++) = 0;
 	memcpy(p, m_sidechainId.h, HASH_SIZE);
 	p += HASH_SIZE;
 
@@ -241,6 +245,14 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
+
+	const uint8_t n = static_cast<uint8_t>(m_merkleProof.size());
+	data.push_back(n);
+
+	for (uint8_t i = 0; i < n; ++i) {
+		const hash& h = m_merkleProof[i];
+		data.insert(data.end(), h.h, h.h + HASH_SIZE);
+	}
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
 	data.insert(data.end(), p, p + sizeof(m_sidechainExtraBuf));

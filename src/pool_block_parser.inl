@@ -129,6 +129,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
 			outputs_blob.assign(data_begin + outputs_offset, data);
+
+			m_sidechainId.clear();
 		}
 		else {
 			// Outputs are not in the buffer and must be calculated from sidechain data
@@ -144,6 +146,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 
 			outputs_blob_size = static_cast<int>(tmp);
+
+			READ_BUF(m_sidechainId.h, HASH_SIZE);
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
@@ -180,10 +184,32 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		EXPECT_BYTE(TX_EXTRA_MERGE_MINING_TAG);
-		EXPECT_BYTE(HASH_SIZE);
 
-		const int sidechain_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
-		READ_BUF(m_sidechainId.h, HASH_SIZE);
+		uint64_t mm_field_size;
+		READ_VARINT(mm_field_size);
+
+		const int mm_field_begin = static_cast<int>(data - data_begin);
+
+		uint64_t mm_data;
+		READ_VARINT(mm_data);
+
+		if (mm_data > std::numeric_limits<uint32_t>::max()) {
+			return __LINE__;
+		}
+
+		const uint32_t mm_n_bits = 1 + (mm_data & 7);
+		const uint32_t mm_n_aux_chains = 1 + ((mm_data >> 3) & ((1 << mm_n_bits) - 1));
+		const uint32_t mm_nonce = static_cast<uint32_t>(mm_data >> (3 + mm_n_bits));
+
+		const int mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+		hash mm_root;
+		READ_BUF(mm_root.h, HASH_SIZE);
+
+		const int mm_field_end = static_cast<int>(data - data_begin);
+
+		if (static_cast<uint64_t>(mm_field_end - mm_field_begin) != mm_field_size) {
+			return __LINE__;
+		}
 
 		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
 
@@ -312,6 +338,22 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
 
+		uint8_t merkle_proof_size;
+		READ_BYTE(merkle_proof_size);
+
+		if (merkle_proof_size > 7) {
+			return __LINE__;
+		}
+
+		m_merkleProof.clear();
+		m_merkleProof.reserve(merkle_proof_size);
+
+		for (uint8_t i = 0; i < merkle_proof_size; ++i) {
+			hash h;
+			READ_BUF(h.h, HASH_SIZE);
+			m_merkleProof.emplace_back(h);
+		}
+
 		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 
 #undef READ_BYTE
@@ -347,7 +389,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		keccak_custom(
-			[nonce_offset, extra_nonce_offset, sidechain_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
+			[nonce_offset, extra_nonce_offset, mm_root_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
 			{
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
@@ -359,7 +401,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 					return 0;
 				}
 
-				k = static_cast<uint32_t>(offset - sidechain_hash_offset);
+				k = static_cast<uint32_t>(offset - mm_root_hash_offset);
 				if (k < HASH_SIZE) {
 					return 0;
 				}
@@ -388,9 +430,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		m_sideChainDataDebug.assign(sidechain_data_begin, data_end);
 #endif
 
-		if (check != m_sidechainId) {
+		const uint32_t mm_aux_slot = get_aux_slot(sidechain.consensus_hash(), mm_nonce, mm_n_aux_chains);
+
+		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, mm_root)) {
 			return __LINE__;
 		}
+
+		m_sidechainId = check;
 	}
 	catch (std::exception& e) {
 		LOGERR(0, "Exception in PoolBlock::deserialize(): " << e.what());

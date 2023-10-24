@@ -67,6 +67,7 @@ public:
 	// It's never sent over the network to avoid revealing it to the possible man in the middle
 	// Consensus ID can therefore be used as a password to create private P2Pools
 	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
+	const hash& consensus_hash() const { return m_consensusHash; }
 	uint64_t chain_window_size() const { return m_chainWindowSize; }
 	static NetworkType network_type() { return s_networkType; }
 	static uint64_t network_major_version(uint64_t height);

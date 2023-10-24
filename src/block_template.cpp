@@ -655,6 +655,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
 	sidechain_extra[3] = 0;
 
+	// Merkle proof (empty for now, fill it in when other merge-mined chains are included in the block template)
+	m_poolBlockTemplate->m_merkleProof.clear();
+
 	m_poolBlockTemplate->m_nonce = 0;
 	m_poolBlockTemplate->m_extraNonce = 0;
 	m_poolBlockTemplate->m_sidechainId = {};
@@ -691,7 +694,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
 
 	if (pool_block_debug()) {
-		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2;
+		// TODO: fix it, it will change depending on mm_data varint size
+		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 3;
 
 		memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
 		memcpy(m_fullDataBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
@@ -930,8 +934,11 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 
 	m_poolBlockTemplate->m_extraNonceSize = corrected_extra_nonce_size;
 
+	// Valid for tree size = 1 (no other merge mined chains)
+	// TODO: insert mm_data and merkle root here
 	m_minerTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
-	writeVarint(HASH_SIZE, m_minerTxExtra);
+	m_minerTxExtra.push_back(1 + HASH_SIZE);
+	m_minerTxExtra.push_back(0);
 	m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
 	// TX_EXTRA end
 
@@ -1017,7 +1024,8 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// Calculate sidechain id with this extra_nonce
 	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
-	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2;
+	// TODO: fix it, it will change depending on mm_data varint size
+	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 3;
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
@@ -1283,7 +1291,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
-	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2;
+	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 3;
 	sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
 	return m_blockTemplateBlob;
 }

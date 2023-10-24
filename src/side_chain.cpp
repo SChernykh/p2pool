@@ -102,7 +102,8 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	char buf[log::Stream::BUF_SIZE + 1];
 	log::Stream s(buf);
 
-	s << s_networkType     << '\0'
+	s << "mm"              << '\0'
+	  << s_networkType     << '\0'
 	  << m_poolName        << '\0'
 	  << m_poolPassword    << '\0'
 	  << m_targetBlockTime << '\0'
@@ -794,7 +795,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	{
 		ReadLock lock(m_sidechainLock);
 
-		auto it = m_blocksById.find(block->m_sidechainId);
+		auto it = block->m_sidechainId.empty() ? m_blocksById.end() : m_blocksById.find(block->m_sidechainId);
 		if (it != m_blocksById.end()) {
 			PoolBlock* b = it->second;
 			const size_t n = b->m_outputs.size();
