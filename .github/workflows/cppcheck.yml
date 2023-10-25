@@ -15,15 +15,10 @@ on:
 jobs:
   cppcheck-ubuntu:
 
-    timeout-minutes: 50
+    timeout-minutes: 60
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y libuv1-dev libzmq3-dev libcurl4-openssl-dev
-
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
@@ -60,7 +55,7 @@ jobs:
 
   cppcheck-windows:
 
-    timeout-minutes: 50
+    timeout-minutes: 60
     runs-on: windows-latest
 
     steps:
