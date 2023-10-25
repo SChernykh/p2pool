@@ -662,6 +662,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_extraNonce = 0;
 	m_poolBlockTemplate->m_sidechainId = {};
 
+	// TODO: fill in merkle tree data here
+	m_poolBlockTemplate->m_merkleTreeDataSize = 1;
+	m_poolBlockTemplate->m_merkleTreeData = 0;
+	m_poolBlockTemplate->m_merkleRoot = {};
+
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
 
@@ -693,9 +698,13 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
 
+	// TODO: fill in merkle tree data here
+	m_poolBlockTemplate->m_merkleTreeDataSize = 1;
+	m_poolBlockTemplate->m_merkleTreeData = 0;
+	m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
+
 	if (pool_block_debug()) {
-		// TODO: fix it, it will change depending on mm_data varint size
-		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 3;
+		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 		memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
 		memcpy(m_fullDataBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
@@ -934,11 +943,9 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 
 	m_poolBlockTemplate->m_extraNonceSize = corrected_extra_nonce_size;
 
-	// Valid for tree size = 1 (no other merge mined chains)
-	// TODO: insert mm_data and merkle root here
 	m_minerTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
-	m_minerTxExtra.push_back(1 + HASH_SIZE);
-	m_minerTxExtra.push_back(0);
+	m_minerTxExtra.push_back(static_cast<uint8_t>(m_poolBlockTemplate->m_merkleTreeDataSize + HASH_SIZE));
+	writeVarint(m_poolBlockTemplate->m_merkleTreeData, m_minerTxExtra);
 	m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
 	// TX_EXTRA end
 
@@ -1024,8 +1031,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 	// Calculate sidechain id with this extra_nonce
 	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
-	// TODO: fix it, it will change depending on mm_data varint size
-	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 3;
+	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
@@ -1291,7 +1297,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
-	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 3;
+	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 	sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
 	return m_blockTemplateBlob;
 }
@@ -1305,6 +1311,11 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
 		m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(extra_nonce);
 		m_poolBlockTemplate->m_sidechainExtraBuf[3] = extra_nonce;
+
+		// TODO: fill in merkle tree data here
+		m_poolBlockTemplate->m_merkleTreeDataSize = 1;
+		m_poolBlockTemplate->m_merkleTreeData = 0;
+		m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
 
 		if (pool_block_debug()) {
 			std::vector<uint8_t> buf = m_poolBlockTemplate->serialize_mainchain_data();

@@ -39,6 +39,9 @@ PoolBlock::PoolBlock()
 	, m_txkeyPub{}
 	, m_extraNonceSize(0)
 	, m_extraNonce(0)
+	, m_merkleTreeDataSize(1)
+	, m_merkleTreeData(0)
+	, m_merkleRoot{}
 	, m_txkeySecSeed{}
 	, m_txkeySec{}
 	, m_parent{}
@@ -85,6 +88,9 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_txkeyPub = b.m_txkeyPub;
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
+	m_merkleTreeDataSize = b.m_merkleTreeDataSize;
+	m_merkleTreeData = b.m_merkleTreeData;
+	m_merkleRoot = b.m_merkleRoot;
 	m_transactions = b.m_transactions;
 	m_minerWallet = b.m_minerWallet;
 	m_txkeySecSeed = b.m_txkeySecSeed;
@@ -187,12 +193,10 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		p += extra_nonce_size - EXTRA_NONCE_SIZE;
 	}
 
-	// Valid for tree size = 1 (no other merge mined chains)
-	// TODO: insert mm_data and merkle root here
 	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
-	*(p++) = 1 + HASH_SIZE;
-	*(p++) = 0;
-	memcpy(p, m_sidechainId.h, HASH_SIZE);
+	*(p++) = static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE);
+	writeVarint(m_merkleTreeData, [&p](const uint8_t b) { *(p++) = b; });
+	memcpy(p, m_merkleRoot.h, HASH_SIZE);
 	p += HASH_SIZE;
 
 	writeVarint(static_cast<size_t>(p - tx_extra), data);

@@ -101,6 +101,10 @@ struct PoolBlock
 	uint64_t m_extraNonceSize;
 	uint32_t m_extraNonce;
 
+	uint32_t m_merkleTreeDataSize;
+	uint64_t m_merkleTreeData;
+	hash m_merkleRoot;
+
 	// All block transaction hashes including the miner transaction hash at index 0
 	std::vector<hash> m_transactions;
 
@@ -171,6 +175,14 @@ struct PoolBlock
 	}
 
 	hash calculate_tx_key_seed() const;
+
+	FORCEINLINE void decode_merkle_tree_data(uint32_t& mm_n_aux_chains, uint32_t& mm_nonce) const
+	{
+		const uint32_t k = static_cast<uint32_t>(m_merkleTreeData);
+		const uint32_t n = 1U + (k & 7U);
+		mm_n_aux_chains = 1U + ((k >> 3U) & ((1U << n) - 1U));
+		mm_nonce = static_cast<uint32_t>(m_merkleTreeData >> (3U + n));
+	}
 };
 
 } // namespace p2pool

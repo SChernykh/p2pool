@@ -188,26 +188,19 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		uint64_t mm_field_size;
 		READ_VARINT(mm_field_size);
 
-		const int mm_field_begin = static_cast<int>(data - data_begin);
+		const uint8_t* const mm_field_begin = data;
 
-		uint64_t mm_data;
-		READ_VARINT(mm_data);
+		READ_VARINT(m_merkleTreeData);
 
-		if (mm_data > std::numeric_limits<uint32_t>::max()) {
-			return __LINE__;
-		}
+		m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
 
-		const uint32_t mm_n_bits = 1 + (mm_data & 7);
-		const uint32_t mm_n_aux_chains = 1 + ((mm_data >> 3) & ((1 << mm_n_bits) - 1));
-		const uint32_t mm_nonce = static_cast<uint32_t>(mm_data >> (3 + mm_n_bits));
+		uint32_t mm_n_aux_chains, mm_nonce;
+		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
 
 		const int mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
-		hash mm_root;
-		READ_BUF(mm_root.h, HASH_SIZE);
+		READ_BUF(m_merkleRoot.h, HASH_SIZE);
 
-		const int mm_field_end = static_cast<int>(data - data_begin);
-
-		if (static_cast<uint64_t>(mm_field_end - mm_field_begin) != mm_field_size) {
+		if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
 			return __LINE__;
 		}
 
@@ -432,7 +425,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		const uint32_t mm_aux_slot = get_aux_slot(sidechain.consensus_hash(), mm_nonce, mm_n_aux_chains);
 
-		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, mm_root)) {
+		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, m_merkleRoot)) {
 			return __LINE__;
 		}
 
