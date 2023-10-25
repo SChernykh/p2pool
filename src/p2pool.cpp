@@ -36,6 +36,7 @@
 #include "p2pool_api.h"
 #include "pool_block.h"
 #include "keccak.h"
+#include "merkle.h"
 #include <thread>
 #include <fstream>
 #include <numeric>
@@ -332,6 +333,29 @@ void p2pool::handle_miner_data(MinerData& data)
 
 		cleanup_mainchain_data(data.height);
 	}
+
+	// TODO: remove after testing
+#if 1
+	{
+		data.aux_chains.clear();
+		data.aux_chains.resize(10);
+
+		std::vector<hash> tmp(11);
+
+		uint8_t id[] = "aux0";
+		uint8_t aux_data[] = "data0";
+
+		for (int i = 0; i < 10; ++i, ++id[sizeof(id) - 2], ++aux_data[sizeof(aux_data) - 2]) {
+			keccak(id, sizeof(id) - 1, tmp[i].h);
+
+			data.aux_chains[i].unique_id = tmp[i];
+			keccak(aux_data, sizeof(aux_data) - 1, data.aux_chains[i].data.h);
+		}
+
+		tmp[10] = m_sideChain->consensus_hash();
+		find_aux_nonce(tmp, data.aux_nonce);
+	}
+#endif
 
 	data.tx_backlog.clear();
 	data.time_received = std::chrono::high_resolution_clock::now();

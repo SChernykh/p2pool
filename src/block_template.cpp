@@ -413,6 +413,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
+	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
+	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
+
 	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
 		use_old_template();
 		return;
@@ -656,20 +660,15 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
 	sidechain_extra[3] = 0;
 
-	// Merkle proof (empty for now, fill it in when other merge-mined chains are included in the block template)
-	m_poolBlockTemplate->m_merkleProof.clear();
-
 	m_poolBlockTemplate->m_nonce = 0;
 	m_poolBlockTemplate->m_extraNonce = 0;
 	m_poolBlockTemplate->m_sidechainId = {};
-
-	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
-	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
 	m_poolBlockTemplate->m_merkleRoot = {};
 
 	m_poolBlockTemplate->m_auxChains = data.aux_chains;
 	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
+
+	init_merge_mining_merkle_proof();
 
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
@@ -701,14 +700,18 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	LOGINFO(6, "blob size = " << m_fullDataBlob.size());
 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
-	init_merge_mining_merkle_root();
+	{
+		const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
+		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), data.aux_nonce, n_aux_chains);
+		m_poolBlockTemplate->m_merkleRoot = get_root_from_proof(m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
+	}
 
 	if (pool_block_debug()) {
-		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
+		const size_t merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
-		memcpy(m_blockTemplateBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
-		memcpy(m_fullDataBlob.data() + sidechain_hash_offset, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
-		memcpy(m_minerTx.data() + sidechain_hash_offset - m_minerTxOffsetInTemplate, m_poolBlockTemplate->m_sidechainId.h, HASH_SIZE);
+		memcpy(m_blockTemplateBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
+		memcpy(m_fullDataBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
+		memcpy(m_minerTx.data() + merkle_root_offset - m_minerTxOffsetInTemplate, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
 
 		const std::vector<uint8_t> mainchain_data = m_poolBlockTemplate->serialize_mainchain_data();
 		if (mainchain_data != m_blockTemplateBlob) {
@@ -1029,9 +1032,15 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		static_cast<uint8_t>(extra_nonce >> 24)
 	};
 
-	// Calculate sidechain id with this extra_nonce
-	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
-	const size_t sidechain_hash_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
+	// Calculate sidechain id and merge mining root hash with this extra_nonce
+	hash merge_mining_root;
+	{
+		const hash sidechain_id = calc_sidechain_hash(extra_nonce);
+		const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+		merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
+	}
+	const size_t merkle_root_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
@@ -1046,15 +1055,15 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 	// Slow path: O(N)
 	if (!b || pool_block_debug())
 	{
-		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf, sidechain_hash_offset, &sidechain_id](int offset) {
+		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf, merkle_root_offset, &merge_mining_root](int offset) {
 			uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(extra_nonce_offset));
 			if (k < EXTRA_NONCE_SIZE) {
 				return extra_nonce_buf[k];
 			}
 
-			k = static_cast<uint32_t>(offset - static_cast<int>(sidechain_hash_offset));
+			k = static_cast<uint32_t>(offset - static_cast<int>(merkle_root_offset));
 			if (k < HASH_SIZE) {
-				return sidechain_id.h[k];
+				return merge_mining_root.h[k];
 			}
 
 			return data[offset];
@@ -1068,7 +1077,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 
 		memcpy(tx_buf, data + N, inlen);
 		memcpy(tx_buf + extra_nonce_offset - N, extra_nonce_buf, EXTRA_NONCE_SIZE);
-		memcpy(tx_buf + sidechain_hash_offset - N, sidechain_id.h, HASH_SIZE);
+		memcpy(tx_buf + merkle_root_offset - N, merge_mining_root.h, HASH_SIZE);
 
 		uint64_t st[25];
 		memcpy(st, m_minerTxKeccakState, sizeof(st));
@@ -1368,33 +1377,42 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 	return false;
 }
 
-void BlockTemplate::init_merge_mining_merkle_root()
+void BlockTemplate::init_merge_mining_merkle_proof()
 {
 	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
 
+	m_poolBlockTemplate->m_merkleProof.clear();
+
 	if (n_aux_chains == 1) {
-		m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
 		return;
 	}
 
 	std::vector<hash> hashes(n_aux_chains);
+	std::vector<bool> used(n_aux_chains);
 
 	for (const AuxChainData& aux_data : m_poolBlockTemplate->m_auxChains) {
 		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 		hashes[aux_slot] = aux_data.data;
+		used[aux_slot] = true;
 	}
 
 	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 	hashes[aux_slot] = m_poolBlockTemplate->m_sidechainId;
+	used[aux_slot] = true;
+
+	for (bool b : used) {
+		if (!b) {
+			LOGERR(1, "aux nonce is invalid. Fix the code!");
+			break;
+		}
+	}
 
 	std::vector<std::vector<hash>> tree;
 	merkle_hash_full_tree(hashes, tree);
-	m_poolBlockTemplate->m_merkleRoot = tree.back().front();
 
 	std::vector<std::pair<bool, hash>> proof;
 	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, proof);
 
-	m_poolBlockTemplate->m_merkleProof.clear();
 	m_poolBlockTemplate->m_merkleProof.reserve(proof.size());
 
 	for (const auto& p : proof) {

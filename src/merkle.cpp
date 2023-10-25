@@ -196,15 +196,17 @@ bool verify_merkle_proof(hash h, const std::vector<std::pair<bool, hash>>& proof
 
 hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)
 {
+	if (count == 1) {
+		return h;
+	}
+
 	if (index >= count) {
 		return hash();
 	}
 
 	hash tmp[2];
 
-	if (count == 1) {
-	}
-	else if (count == 2) {
+	if (count == 2) {
 		if (proof.empty()) {
 			return hash();
 		}
