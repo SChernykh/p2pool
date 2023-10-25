@@ -132,6 +132,8 @@ private:
 
 	std::vector<uint32_t> m_knapsack;
 #endif
+
+	void init_merge_mining_merkle_root();
 };
 
 } // namespace p2pool

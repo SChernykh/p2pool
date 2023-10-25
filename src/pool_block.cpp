@@ -58,6 +58,7 @@ PoolBlock::PoolBlock()
 	, m_precalculated(false)
 	, m_localTimestamp(seconds_since_epoch())
 	, m_receivedTimestamp(0)
+	, m_auxNonce(0)
 {
 }
 
@@ -112,6 +113,9 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_localTimestamp = seconds_since_epoch();
 	m_receivedTimestamp = b.m_receivedTimestamp;
+
+	m_auxChains = b.m_auxChains;
+	m_auxNonce = b.m_auxNonce;
 
 	return *this;
 }
@@ -286,6 +290,11 @@ void PoolBlock::reset_offchain_data()
 
 	m_localTimestamp = seconds_since_epoch();
 	m_receivedTimestamp = 0;
+
+	m_auxChains.clear();
+	m_auxChains.shrink_to_fit();
+
+	m_auxNonce = 0;
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)

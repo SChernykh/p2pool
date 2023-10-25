@@ -243,4 +243,34 @@ TEST(merkle, aux_slot)
 	ASSERT_EQ(get_aux_slot(id, 1, std::numeric_limits<uint32_t>::max()), 1080669337U);
 }
 
+TEST(merkle, aux_nonce)
+{
+	std::vector<hash> aux_id;
+	uint32_t nonce;
+
+	ASSERT_TRUE(find_aux_nonce(aux_id, nonce));
+	ASSERT_EQ(nonce, 0);
+
+	uint8_t data[] = "aux0";
+
+	const uint32_t nonces[] = { 0, 0, 0, 7, 16, 56, 1, 287, 1423, 1074 };
+	hash h;
+
+	for (size_t i = 0; i < 10; ++i, ++data[sizeof(data) - 2]) {
+		keccak(data, sizeof(data) - 1, h.h);
+		aux_id.push_back(h);
+
+		ASSERT_TRUE(find_aux_nonce(aux_id, nonce));
+		ASSERT_EQ(nonce, nonces[i]);
+	}
+
+	h = aux_id.front();
+
+	aux_id.clear();
+	aux_id.push_back(h);
+	aux_id.push_back(h);
+
+	ASSERT_FALSE(find_aux_nonce(aux_id, nonce));
+}
+
 }

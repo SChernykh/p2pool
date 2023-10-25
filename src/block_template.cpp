@@ -28,6 +28,7 @@
 #include "side_chain.h"
 #include "pool_block.h"
 #include "params.h"
+#include "merkle.h"
 #include <zmq.hpp>
 #include <ctime>
 #include <numeric>
@@ -662,10 +663,13 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_extraNonce = 0;
 	m_poolBlockTemplate->m_sidechainId = {};
 
-	// TODO: fill in merkle tree data here
-	m_poolBlockTemplate->m_merkleTreeDataSize = 1;
-	m_poolBlockTemplate->m_merkleTreeData = 0;
+	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
+	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
 	m_poolBlockTemplate->m_merkleRoot = {};
+
+	m_poolBlockTemplate->m_auxChains = data.aux_chains;
+	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
 
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
@@ -697,11 +701,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	LOGINFO(6, "blob size = " << m_fullDataBlob.size());
 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
-
-	// TODO: fill in merkle tree data here
-	m_poolBlockTemplate->m_merkleTreeDataSize = 1;
-	m_poolBlockTemplate->m_merkleTreeData = 0;
-	m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
+	init_merge_mining_merkle_root();
 
 	if (pool_block_debug()) {
 		const size_t sidechain_hash_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
@@ -1312,10 +1312,10 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(extra_nonce);
 		m_poolBlockTemplate->m_sidechainExtraBuf[3] = extra_nonce;
 
-		// TODO: fill in merkle tree data here
-		m_poolBlockTemplate->m_merkleTreeDataSize = 1;
-		m_poolBlockTemplate->m_merkleTreeData = 0;
-		m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
+		const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+
+		m_poolBlockTemplate->m_merkleRoot = get_root_from_proof(m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 
 		if (pool_block_debug()) {
 			std::vector<uint8_t> buf = m_poolBlockTemplate->serialize_mainchain_data();
@@ -1366,6 +1366,40 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 
 	LOGWARN(3, "failed to submit a share: template id " << template_id << " is too old/out of range, current template id is " << m_templateId);
 	return false;
+}
+
+void BlockTemplate::init_merge_mining_merkle_root()
+{
+	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+
+	if (n_aux_chains == 1) {
+		m_poolBlockTemplate->m_merkleRoot = m_poolBlockTemplate->m_sidechainId;
+		return;
+	}
+
+	std::vector<hash> hashes(n_aux_chains);
+
+	for (const AuxChainData& aux_data : m_poolBlockTemplate->m_auxChains) {
+		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+		hashes[aux_slot] = aux_data.data;
+	}
+
+	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+	hashes[aux_slot] = m_poolBlockTemplate->m_sidechainId;
+
+	std::vector<std::vector<hash>> tree;
+	merkle_hash_full_tree(hashes, tree);
+	m_poolBlockTemplate->m_merkleRoot = tree.back().front();
+
+	std::vector<std::pair<bool, hash>> proof;
+	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, proof);
+
+	m_poolBlockTemplate->m_merkleProof.clear();
+	m_poolBlockTemplate->m_merkleProof.reserve(proof.size());
+
+	for (const auto& p : proof) {
+		m_poolBlockTemplate->m_merkleProof.push_back(p.second);
+	}
 }
 
 } // namespace p2pool

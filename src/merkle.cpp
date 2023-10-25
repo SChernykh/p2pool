@@ -194,10 +194,10 @@ bool verify_merkle_proof(hash h, const std::vector<std::pair<bool, hash>>& proof
 	return (h == root);
 }
 
-bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const hash& root)
+hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)
 {
 	if (index >= count) {
-		return false;
+		return hash();
 	}
 
 	hash tmp[2];
@@ -206,7 +206,7 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 	}
 	else if (count == 2) {
 		if (proof.empty()) {
-			return false;
+			return hash();
 		}
 
 		if (index & 1) {
@@ -233,7 +233,7 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 			index -= k;
 
 			if (proof.empty()) {
-				return false;
+				return hash();
 			}
 
 			if (index & 1) {
@@ -253,7 +253,7 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 
 		for (; cnt >= 2; ++proof_index, index >>= 1, cnt >>= 1) {
 			if (proof_index >= proof.size()) {
-				return false;
+				return hash();
 			}
 
 			if (index & 1) {
@@ -269,7 +269,12 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, s
 		}
 	}
 
-	return (h == root);
+	return h;
+}
+
+bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const hash& root)
+{
+	return get_root_from_proof(h, proof, index, count) == root;
 }
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
@@ -290,6 +295,40 @@ uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
 	sha256(buf, sizeof(buf), res.h);
 
 	return *reinterpret_cast<uint32_t*>(res.h) % n_aux_chains;
+}
+
+bool find_aux_nonce(const std::vector<hash>& aux_id, uint32_t& nonce, uint32_t max_nonce)
+{
+	const uint32_t n_aux_chains = static_cast<uint32_t>(aux_id.size());
+
+	if (n_aux_chains <= 1) {
+		nonce = 0;
+		return true;
+	}
+
+	std::vector<bool> slots;
+
+	for (uint32_t i = 0;; ++i) {
+		slots.assign(n_aux_chains, false);
+
+		uint32_t j;
+		for (j = 0; j < n_aux_chains; ++j) {
+			const uint32_t k = get_aux_slot(aux_id[j], i, n_aux_chains);
+			if (slots[k]) {
+				break;
+			}
+			slots[k] = true;
+		}
+
+		if (j >= n_aux_chains) {
+			nonce = i;
+			return true;
+		}
+
+		if (i == max_nonce) {
+			return false;
+		}
+	}
 }
 
 } // namespace p2pool

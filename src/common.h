@@ -383,6 +383,13 @@ struct TxMempoolData
 	uint64_t time_received;
 };
 
+struct AuxChainData
+{
+	hash unique_id;
+	hash data;
+	difficulty_type difficulty;
+};
+
 struct MinerData
 {
 	FORCEINLINE MinerData()
@@ -394,6 +401,7 @@ struct MinerData
 		, median_weight(0)
 		, already_generated_coins(0)
 		, median_timestamp(0)
+		, aux_nonce(0)
 	{}
 
 	uint8_t major_version;
@@ -405,6 +413,9 @@ struct MinerData
 	uint64_t already_generated_coins;
 	uint64_t median_timestamp;
 	std::vector<TxMempoolData> tx_backlog;
+
+	std::vector<AuxChainData> aux_chains;
+	uint32_t aux_nonce;
 
 	std::chrono::high_resolution_clock::time_point time_received;
 };

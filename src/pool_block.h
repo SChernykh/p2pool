@@ -148,6 +148,9 @@ struct PoolBlock
 	uint64_t m_localTimestamp;
 	uint64_t m_receivedTimestamp;
 
+	std::vector<AuxChainData> m_auxChains;
+	uint32_t m_auxNonce;
+
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
@@ -175,6 +178,15 @@ struct PoolBlock
 	}
 
 	hash calculate_tx_key_seed() const;
+
+	static FORCEINLINE uint64_t encode_merkle_tree_data(uint32_t n_aux_chains, uint32_t nonce)
+	{
+		uint32_t n_bits = 1U;
+		while (((1U << n_bits) < n_aux_chains) && (n_bits < 8)) {
+			++n_bits;
+		}
+		return (n_bits - 1U) | ((n_aux_chains - 1U) << 3U) | (static_cast<uint64_t>(nonce) << (3U + n_bits));
+	}
 
 	FORCEINLINE void decode_merkle_tree_data(uint32_t& mm_n_aux_chains, uint32_t& mm_nonce) const
 	{
