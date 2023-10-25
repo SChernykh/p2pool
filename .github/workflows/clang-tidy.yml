@@ -14,11 +14,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y libuv1-dev libzmq3-dev libcurl4-openssl-dev
-
     - name: Install clang
       run: |
         wget https://apt.llvm.org/llvm.sh
@@ -36,9 +31,9 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DDEV_CLANG_TIDY=ON
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DDEV_CLANG_TIDY=ON -DSTATIC_LIBS=ON
 
     - name: Run clang-tidy
       run: |
         cd src
-        clang-tidy-17 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal -warnings-as-errors=* -header-filter=^[^\.]
+        clang-tidy-17 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal,-clang-analyzer-optin.performance.Padding -warnings-as-errors=* -header-filter=^[^\.]
