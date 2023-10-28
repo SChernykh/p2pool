@@ -36,6 +36,59 @@ Each of the aux chains must provide a 32-byte value `unique_id` that singles it 
 
 `unique_id` is used to enforce the order in which aux hashes are added to the Merkle tree. This prevents an attack where miners can mine two versions of the same chain (for example when double spending) without any additional cost.
 
-Forked chains can choose whether to keep their `unique_id` or change it. If they keep it, it will not be possible to merge mine with the chain they forked from beause they will always be assigned the same slot in the Merkle tree.
+Forked chains can choose whether to keep their `unique_id` or change it. If they keep it, it will be impossible to merge mine with the chain they forked from beause they will always be assigned the same slot in the Merkle tree.
+
+A deterministic pseudo-random function `SHA256(unique_id|nonce|"m") % N` is applied to determine which slot is used by which chain. `nonce` is brute-forced until all `N` chains are assigned different slots. This limits `N` to no more than 15-16 in practice.
 
 Reference code: `get_aux_slot` and `find_aux_nonce` in `merkle.cpp`
+
+## Proposed RPC API
+
+P2Pool must be able to get mining jobs from merge mined chains and submit PoW solutions to them.
+
+### merge_mining_get_id
+
+Request: an empty JSON
+
+Response: a JSON containing these fields:
+Field|Description
+-|-
+`result`|`OK` or an error message
+`id`|A unique 32-byte hex-encoded value that identifies this merge mined chain.
+
+### merge_mining_get_job
+
+Request: a JSON containing these fields:
+Field|Description
+-|-
+`height`|Monero height
+`prev_id`|Hash of the previous Monero block
+`address`|A wallet address on the merge mined chain
+`aux_hash`|Merge mining job that is currently being used
+
+Response: a JSON containing these fields:
+Field|Description
+-|-
+`result`|`OK` or an error message
+`aux_blob`|A hex-encoded blob of data. Merge mined chain defines the contents of this blob. It's opaque to P2Pool and will not be changed by it.
+`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob`. Merge mined chain defines how exactly this hash is calculated. It's opaque to P2Pool.
+`aux_diff`|Mining difficulty (decimal number).
+
+If `aux_hash` is the same as in the request, all other fields will be ignored by P2Pool, so they don't have to be included in the response. Moreover, `{"result":"OK"}` response will be interpreted as a response having the same `aux_hash` as in the request. This enables an efficient polling.
+
+### merge_mining_submit_solution
+
+Request: a JSON containing these fields:
+Field|Description
+-|-
+`aux_blob`|Blob of data returned by `merge_mining_get_job`.
+`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob` - the same value that was returned by `merge_mining_get_job`.
+`blob`|Monero block template that has enough PoW to satisfy difficulty returned by `merge_mining_get_job`. It also must have a merge mining tag in tx_extra of the coinbase transaction.
+`merkle_proof`|A proof that `aux_hash` was included when calculating Merkle root hash from the merge mining tag
+
+Note that `merkle_proof` only contains a vector of 32-byte hashes for `aux_hash` to be combined with. It can be verified by running this pseudo-code and functions from `merkle.cpp` (adapt it to your codebase):
+
+`verify_merkle_proof(aux_hash, merkle_proof, get_aux_slot(unique_id, aux_nonce, n_aux_chains), n_aux_chains, merkle_root_hash)`
+
+`aux_nonce` and `n_aux_chains` can be extracted from the Merkle tree parameters (see above).
+`merkle_root_hash` can be extracted from the merge mining tag (see above).
