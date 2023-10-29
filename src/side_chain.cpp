@@ -1568,7 +1568,7 @@ void SideChain::verify(PoolBlock* block)
 		}
 
 		// Check that uncle and parent have the same ancestor (they must be on the same chain)
-		PoolBlock* tmp = parent;
+		const PoolBlock* tmp = parent;
 		while (tmp->m_sidechainHeight > uncle->m_sidechainHeight) {
 			tmp = get_parent(tmp);
 			if (!tmp) {
@@ -1591,7 +1591,7 @@ void SideChain::verify(PoolBlock* block)
 		}
 
 		bool same_chain = false;
-		PoolBlock* tmp2 = uncle;
+		const PoolBlock* tmp2 = uncle;
 		for (size_t j = 0; (j < UNCLE_BLOCK_DEPTH) && tmp && tmp2 && (tmp->m_sidechainHeight + UNCLE_BLOCK_DEPTH >= block->m_sidechainHeight); ++j) {
 			if (tmp->m_parent == tmp2->m_parent) {
 				same_chain = true;
