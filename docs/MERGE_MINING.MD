@@ -46,15 +46,17 @@ Reference code: `get_aux_slot` and `find_aux_nonce` in `merkle.cpp`
 
 P2Pool must be able to get mining jobs from merge mined chains and submit PoW solutions to them.
 
-### merge_mining_get_id
+### merge_mining_get_chain_id
 
-Request: an empty JSON
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_get_chain_id"}`
 
 Response: a JSON containing these fields:
 Field|Description
 -|-
-`result`|`OK` or an error message
-`id`|A unique 32-byte hex-encoded value that identifies this merge mined chain.
+`chain_id`|A unique 32-byte hex-encoded value that identifies this merge mined chain.
+
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"f89175d2ce8ce92eaa062eea5c433d0d70f89f5e1554c066dc27943e8cfc37b0"}}`
+Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`
 
 ### merge_mining_get_job
 

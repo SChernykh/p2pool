@@ -335,7 +335,7 @@ void p2pool::handle_miner_data(MinerData& data)
 	}
 
 	// TODO: remove after testing
-#if 1
+#if 0
 	{
 		data.aux_chains.clear();
 		data.aux_chains.resize(10);
@@ -994,7 +994,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 	rapidjson::Document doc;
 	doc.Parse(data, size);
 
-	if (!doc.IsObject() || !doc.HasMember("result")) {
+	if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_info RPC response is invalid (\"result\" not found), trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		get_info();
@@ -1071,7 +1071,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 	rapidjson::Document doc;
 	doc.Parse(data, size);
 
-	if (!doc.IsObject() || !doc.HasMember("result")) {
+	if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_version RPC response is invalid (\"result\" not found), trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		get_version();
@@ -1161,7 +1161,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	rapidjson::Document doc;
 	doc.Parse(data, size);
 
-	if (!doc.IsObject() || !doc.HasMember("result")) {
+	if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_miner_data RPC response is invalid, skipping it");
 		return;
 	}
