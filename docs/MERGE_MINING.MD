@@ -55,28 +55,34 @@ Field|Description
 -|-
 `chain_id`|A unique 32-byte hex-encoded value that identifies this merge mined chain.
 
-Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"f89175d2ce8ce92eaa062eea5c433d0d70f89f5e1554c066dc27943e8cfc37b0"}}`
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"0f28c4960d96647e77e7ab6d13b85bd16c7ca56f45df802cdc763a5e5c0c7863"}}`
+
 Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`
 
 ### merge_mining_get_job
 
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_get_job","params":{"address":"MERGE_MINED_CHAIN_ADDRESS","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","height":3000000,"prev_id":"ad505b0be8a49b89273e307106fa42133cbd804456724c5e7635bd953215d92a"}}`
+
 Request: a JSON containing these fields:
 Field|Description
 -|-
-`height`|Monero height
-`prev_id`|Hash of the previous Monero block
 `address`|A wallet address on the merge mined chain
 `aux_hash`|Merge mining job that is currently being used
+`height`|Monero height
+`prev_id`|Hash of the previous Monero block
 
 Response: a JSON containing these fields:
 Field|Description
 -|-
-`result`|`OK` or an error message
 `aux_blob`|A hex-encoded blob of data. Merge mined chain defines the contents of this blob. It's opaque to P2Pool and will not be changed by it.
-`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob`. Merge mined chain defines how exactly this hash is calculated. It's opaque to P2Pool.
 `aux_diff`|Mining difficulty (decimal number).
+`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob`. Merge mined chain defines how exactly this hash is calculated. It's opaque to P2Pool.
 
-If `aux_hash` is the same as in the request, all other fields will be ignored by P2Pool, so they don't have to be included in the response. Moreover, `{"result":"OK"}` response will be interpreted as a response having the same `aux_hash` as in the request. This enables an efficient polling.
+If `aux_hash` is the same as in the request, all other fields will be ignored by P2Pool, so they don't have to be included in the response. Moreover, empty response will be interpreted as a response having the same `aux_hash` as in the request. This enables an efficient polling.
+
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"aux_blob":"4c6f72656d20697073756d","aux_diff":123456,"aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f"}}`
+
+Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 
 ### merge_mining_submit_solution
 

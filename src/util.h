@@ -99,6 +99,25 @@ static FORCEINLINE bool from_hex(char c, T& out_value) {
 	return false;
 }
 
+static FORCEINLINE bool from_hex(const char* s, size_t len, hash& h) {
+	if (len != HASH_SIZE * 2) {
+		return false;
+	}
+
+	hash result;
+
+	for (uint32_t i = 0; i < HASH_SIZE; ++i) {
+		uint8_t d[2];
+		if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
+			return false;
+		}
+		result.h[i] = (d[0] << 4) | d[1];
+	}
+
+	h = result;
+	return true;
+}
+
 template<typename T, bool is_signed> struct is_negative_helper {};
 template<typename T> struct is_negative_helper<T, false> { static FORCEINLINE bool value(T) { return false; } };
 template<typename T> struct is_negative_helper<T, true>  { static FORCEINLINE bool value(T x) { return (x < 0); } };
