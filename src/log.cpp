@@ -245,12 +245,7 @@ private:
 							strip_colors(p, size);
 						}
 
-#ifdef _WIN32
-						DWORD k;
-						WriteConsole((severity == 1) ? hStdOut : hStdErr, p, size, &k, nullptr);
-#else
 						fwrite(p, 1, size, (severity == 1) ? stdout : stderr);
-#endif
 
 						if (m_logFile.is_open()) {
 							if (c) {
@@ -289,6 +284,9 @@ private:
 					m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
 				}
 			}
+
+			fflush(stdout);
+			fflush(stderr);
 		} while (1);
 	}
 
