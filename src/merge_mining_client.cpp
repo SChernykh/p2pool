@@ -31,6 +31,7 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 	: m_host(host)
 	, m_port(80)
 	, m_auxAddress(address)
+	, m_ping(0.0)
 	, m_pool(pool)
 	, m_loop{}
 	, m_loopThread{}
@@ -99,11 +100,16 @@ void MergeMiningClient::on_timer()
 
 void MergeMiningClient::merge_mining_get_chain_id()
 {
-	constexpr char req[] = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_chain_id\"}";
+	const std::string req = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_chain_id\"}";
 
 	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy,
-		[this](const char* data, size_t size, double) {
+		[this](const char* data, size_t size, double ping) {
 			if (parse_merge_mining_get_chain_id(data, size)) {
+				if (ping > 0.0) {
+					m_ping = ping;
+				}
+
+				// Chain ID received successfully, we can start polling for new mining jobs now
 				const int err = uv_timer_start(&m_timer, on_timer, 0, 500);
 				if (err) {
 					LOGERR(1, "failed to start timer, error " << uv_err_name(err));
@@ -167,9 +173,9 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 	  << ",\"aux_hash\":\"" << aux_hash << '"'
 	  << ",\"height\":" << height
 	  << ",\"prev_id\":\"" << prev_id << '"'
-	  << "}}\0";
+	  << "}}";
 
-	JSONRPCRequest::call(m_host, m_port, buf, std::string(), m_pool->params().m_socks5Proxy,
+	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
 		[this](const char* data, size_t size, double) {
 			parse_merge_mining_get_job(data, size);
 		},
@@ -219,7 +225,9 @@ bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size
 		return true;
 	}
 
-	if (!result.HasMember("aux_blob") || !result["aux_blob"].IsString()) {
+	std::vector<uint8_t> aux_blob;
+
+	if (!result.HasMember("aux_blob") || !result["aux_blob"].IsString() || !from_hex(result["aux_blob"].GetString(), result["aux_blob"].GetStringLength(), aux_blob)) {
 		return err("invalid aux_blob");
 	}
 
@@ -227,10 +235,77 @@ bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size
 		return err("invalid aux_diff");
 	}
 
-	m_auxBlob = result["aux_blob"].GetString();
+	m_auxBlob = std::move(aux_blob);
 	m_auxHash = h;
 	m_auxDiff.lo = result["aux_diff"].GetUint64();
 	m_auxDiff.hi = 0;
+
+	return true;
+}
+
+void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof)
+{
+	std::vector<char> buf((m_auxBlob.size() + HASH_SIZE + blob.size()) * 2 + merkle_proof.size() * (HASH_SIZE * 2 + 3) + 256);
+	log::Stream s(buf.data(), buf.size());
+
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_submit_solution\",\"params\":{"
+		<< "\"aux_blob\":\"" << log::hex_buf(m_auxBlob.data(), m_auxBlob.size()) << '"'
+		<< ",\"aux_hash\":\"" << m_auxHash << '"'
+		<< ",\"blob\":" << log::hex_buf(blob.data(), blob.size())
+		<< ",\"merkle_proof\":[";
+
+	for (size_t i = 0, n = merkle_proof.size(); i < n; ++i) {
+		if (i > 0) {
+			s << ',';
+		}
+		s << '"' << merkle_proof[i] << '"';
+	}
+
+	s << "]}}";
+
+	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
+		[this](const char* data, size_t size, double) {
+			parse_merge_mining_submit_solution(data, size);
+		},
+		[](const char* data, size_t size, double) {
+			if (size > 0) {
+				LOGERR(1, "couldn't submit merge mining solution, error " << log::const_buf(data, size));
+			}
+		}, &m_loop);
+}
+
+bool MergeMiningClient::parse_merge_mining_submit_solution(const char* data, size_t size)
+{
+	auto err = [](const char* msg) {
+		LOGWARN(1, "merge_mining_submit_solution RPC call failed: " << msg);
+		return false;
+	};
+
+	rapidjson::Document doc;
+
+	if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
+		return err("parsing failed");
+	}
+
+	if (doc.HasMember("error")) {
+		return err(doc["error"].IsString() ? doc["error"].GetString() : "an unknown error occurred");
+	}
+
+	const auto& result = doc["result"];
+
+	if (!result.IsObject()) {
+		return err("couldn't parse result");
+	}
+
+	if (!result.HasMember("status") || !result["status"].IsString()) {
+		return err("invalid status");
+	}
+
+	const char* status = result["status"].GetString();
+	LOGINFO(0, log::LightGreen() << "merge_mining_submit_solution: " << status);
+
+	// Get new mining job
+	on_timer();
 
 	return true;
 }

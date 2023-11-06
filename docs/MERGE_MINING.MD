@@ -100,3 +100,12 @@ Note that `merkle_proof` only contains a vector of 32-byte hashes for `aux_hash`
 
 `aux_nonce` and `n_aux_chains` can be extracted from the Merkle tree parameters (see above).
 `merkle_root_hash` can be extracted from the merge mining tag (see above).
+
+Response: a JSON containing these fields:
+Field|Description
+-|-
+`status`|Block submit status
+
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"status":"accepted"}}`
+
+Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`

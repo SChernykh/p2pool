@@ -29,6 +29,8 @@ public:
 	MergeMiningClient(p2pool* pool, const std::string& host, const std::string& address);
 	~MergeMiningClient();
 
+	void merge_mining_submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof);
+
 private:
 	static void loop(void* data);
 
@@ -41,15 +43,18 @@ private:
 	void merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& address, const hash& aux_hash);
 	bool parse_merge_mining_get_job(const char* data, size_t size);
 
+	bool parse_merge_mining_submit_solution(const char* data, size_t size);
+
 	std::string m_host;
 	uint32_t m_port;
 
 	std::string m_auxAddress;
-	std::string m_auxBlob;
+	std::vector<uint8_t> m_auxBlob;
 	hash m_auxHash;
 	difficulty_type m_auxDiff;
 
 	hash m_chainID;
+	double m_ping;
 
 	p2pool* m_pool;
 

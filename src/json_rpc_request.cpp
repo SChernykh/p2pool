@@ -499,7 +499,9 @@ void Call(const std::string& address, int port, const std::string& req, const st
 		});
 
 	if (!result) {
-		LOGERR(1, "JSON RPC \"" << req << "\" failed");
+		static constexpr char err[] = "CallOnLoop failed";
+		LOGERR(1, err);
+		(*close_cb)(err, sizeof(err) - 1, 0.0);
 	}
 }
 

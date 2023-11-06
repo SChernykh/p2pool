@@ -118,6 +118,25 @@ static FORCEINLINE bool from_hex(const char* s, size_t len, hash& h) {
 	return true;
 }
 
+static FORCEINLINE bool from_hex(const char* s, size_t len, std::vector<uint8_t>& data) {
+	if (len % 2) {
+		return false;
+	}
+
+	std::vector<uint8_t> result(len / 2);
+
+	for (uint32_t i = 0; i < HASH_SIZE; ++i) {
+		uint8_t d[2];
+		if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
+			return false;
+		}
+		result[i] = (d[0] << 4) | d[1];
+	}
+
+	data = std::move(result);
+	return true;
+}
+
 template<typename T, bool is_signed> struct is_negative_helper {};
 template<typename T> struct is_negative_helper<T, false> { static FORCEINLINE bool value(T) { return false; } };
 template<typename T> struct is_negative_helper<T, true>  { static FORCEINLINE bool value(T x) { return (x < 0); } };
