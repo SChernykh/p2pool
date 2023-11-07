@@ -51,7 +51,7 @@ static const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 #pragma comment(lib, "Dbghelp.lib")
 
-LONG WINAPI UnhandledExceptionFilter(_In_ _EXCEPTION_POINTERS*)
+LONG WINAPI UnhandledExceptionFilter(_In_ _EXCEPTION_POINTERS* exception_pointers)
 {
 	constexpr size_t MAX_FRAMES = 32;
 
@@ -70,7 +70,9 @@ LONG WINAPI UnhandledExceptionFilter(_In_ _EXCEPTION_POINTERS*)
 
 	const HANDLE h = GetCurrentProcess();
 
-	fprintf(stderr, "\n\nUnhandled exception at:\n");
+	const uint32_t code = (exception_pointers && exception_pointers->ExceptionRecord) ? exception_pointers->ExceptionRecord->ExceptionCode : 0;
+
+	fprintf(stderr, "\n\nUnhandled exception %X at:\n", code);
 	fflush(stderr);
 
 	for (size_t j = 0; j < MAX_FRAMES; ++j) {
@@ -86,7 +88,7 @@ LONG WINAPI UnhandledExceptionFilter(_In_ _EXCEPTION_POINTERS*)
 	fflush(stderr);
 
 	// Normal logging might be broken at this point, but try to log it anyway
-	LOGERR(0, "Unhandled exception at:");
+	LOGERR(0, "Unhandled exception " << log::Hex(code) << " at:");
 
 	for (size_t j = 0; j < MAX_FRAMES; ++j) {
 		const DWORD64 address = reinterpret_cast<DWORD64>(stack_trace[j]);
