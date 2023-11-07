@@ -18,7 +18,7 @@
 #include "common.h"
 
 // Simple memory leak detector for Windows users, works best in RelWithDebInfo configuration.
-#if defined(_WIN32) && defined(DEV_TRACK_MEMORY)
+#if defined(_WIN32) && defined(DEV_TRACK_MEMORY) && defined(_MSC_VER) && !defined(NDEBUG)
 
 #include "uv_util.h"
 #include <atomic>
@@ -270,8 +270,6 @@ void memory_tracking_start()
 	// Trigger std::ostream initialization to avoid reporting it as leaks
 	std::cout << "Memory leak detection = " << 1 << std::endl;
 
-	SymInitialize(GetCurrentProcess(), NULL, TRUE);
-
 	using namespace p2pool;
 
 	uv_replace_allocator(malloc_hook, realloc_hook, calloc_hook, free_hook);
@@ -306,8 +304,6 @@ bool memory_tracking_stop()
 	else {
 		printf("No memory leaks detected\n\n");
 	}
-
-	SymCleanup(h);
 
 	return (total_leaks == 0);
 }

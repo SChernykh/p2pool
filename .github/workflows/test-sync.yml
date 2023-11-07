@@ -339,13 +339,15 @@ jobs:
         & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool.vcxproj
 
     - name: Run p2pool
+      shell: cmd
       run: |
+        call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64
         cd build/Debug
         mkdir data
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 1"
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 2"
-        Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 3"
-        ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        start python ../../tests/src/stratum_dummy.py 1
+        start python ../../tests/src/stratum_dummy.py 2
+        start python ../../tests/src/stratum_dummy.py 3
+        p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
     - name: Check p2pool.log
       run: |

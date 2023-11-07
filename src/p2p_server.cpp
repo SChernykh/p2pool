@@ -34,8 +34,8 @@
 LOG_CATEGORY(P2PServer)
 
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
-static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", ""};
-static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "" };
+static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "main.gupax.io", "" };
+static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "mini.gupax.io", "" };
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
