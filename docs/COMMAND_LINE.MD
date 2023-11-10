@@ -29,6 +29,7 @@
 --no-upnp            Disable UPnP port forwarding
 --no-igd             An alias for --no-upnp
 --upnp-stratum       Port forward Stratum port (it's not forwarded by default)
+--merge-mine         IP:port and wallet address for another blockchain to merge mine with
 --version            Print p2pool's version and build details
 ```
 
@@ -49,4 +50,10 @@ In this example, you have local Monero host running on ports 18081/18083 (RPC/zm
 
 ```
 p2pool.exe --host 127.0.0.1 --host xmr1.rs.me --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --host xmr3.rs.me --wallet YOUR_WALLET_ADDRESS
+```
+
+### Merge mining
+
+```
+p2pool.exe --wallet YOUR_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
 ```

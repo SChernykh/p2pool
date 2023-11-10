@@ -53,6 +53,16 @@ struct Params
 
 	std::vector<Host> m_hosts;
 
+	struct MergeMiningHost
+	{
+		MergeMiningHost(const char* host, const char* wallet) : m_host(host), m_wallet(wallet) {}
+
+		std::string m_host;
+		std::string m_wallet;
+	};
+
+	std::vector<MergeMiningHost> m_mergeMiningHosts;
+
 	bool m_lightMode = false;
 	Wallet m_wallet{ nullptr };
 	std::string m_stratumAddresses;

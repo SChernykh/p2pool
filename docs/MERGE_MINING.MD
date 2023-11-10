@@ -86,6 +86,8 @@ Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 
 ### merge_mining_submit_solution
 
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"]}}`
+
 Request: a JSON containing these fields:
 Field|Description
 -|-

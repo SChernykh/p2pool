@@ -62,6 +62,7 @@ void p2pool_usage()
 		"--no-igd             An alias for --no-upnp\n"
 		"--upnp-stratum       Port forward Stratum port (it's not forwarded by default)\n"
 #endif
+		"--merge-mine         IP:port and wallet address for another blockchain to merge mine with"
 		"--version            Print p2pool's version and build details\n"
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"

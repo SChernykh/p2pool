@@ -113,7 +113,7 @@ void TCPServer::parse_address_list_internal(const std::string& address_list, Cal
 				}
 			}
 
-			const int port = strtol(address.substr(k2 + 1).c_str(), nullptr, 10);
+			const uint32_t port = std::stoul(address.substr(k2 + 1), nullptr, 10);
 			if ((port > 0) && (port < 65536)) {
 				callback(is_v6, address, ip, port);
 			}

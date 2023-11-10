@@ -189,6 +189,12 @@ Params::Params(int argc, char* const argv[])
 		}
 #endif
 
+		if ((strcmp(argv[i], "--merge-mine") == 0) && (i + 2 < argc)) {
+			m_mergeMiningHosts.emplace_back(argv[i + 1], argv[i + 2]);
+			i += 2;
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

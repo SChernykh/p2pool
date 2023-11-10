@@ -27,10 +27,10 @@ LOG_CATEGORY(MergeMiningClient)
 
 namespace p2pool {
 
-MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, const std::string& address)
+MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, const std::string& wallet)
 	: m_host(host)
 	, m_port(80)
-	, m_auxAddress(address)
+	, m_auxWallet(wallet)
 	, m_ping(0.0)
 	, m_pool(pool)
 	, m_loop{}
@@ -42,7 +42,7 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 	const size_t k = host.find_last_of(':');
 	if (k != std::string::npos) {
 		m_host = host.substr(0, k);
-		m_port = strtoul(host.substr(k + 1).c_str(), nullptr, 10);
+		m_port = std::stoul(host.substr(k + 1), nullptr, 10);
 	}
 
 	if (m_host.empty() || (m_port == 0) || (m_port >= 65536)) {
@@ -95,7 +95,7 @@ MergeMiningClient::~MergeMiningClient()
 void MergeMiningClient::on_timer()
 {
 	MinerData data = m_pool->miner_data();
-	merge_mining_get_job(data.height, data.prev_id, m_auxAddress, m_auxHash);
+	merge_mining_get_job(data.height, data.prev_id, m_auxWallet, m_auxHash);
 }
 
 void MergeMiningClient::merge_mining_get_chain_id()
@@ -157,7 +157,7 @@ bool MergeMiningClient::parse_merge_mining_get_chain_id(const char* data, size_t
 	return true;
 }
 
-void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& address, const hash& aux_hash)
+void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& wallet, const hash& aux_hash)
 {
 	if (m_getJobRunning) {
 		return;
@@ -169,7 +169,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 	log::Stream s(buf);
 
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_job\",\"params\":{"
-	  << "\"address\":\"" << address << '"'
+	  << "\"address\":\"" << wallet << '"'
 	  << ",\"aux_hash\":\"" << aux_hash << '"'
 	  << ",\"height\":" << height
 	  << ",\"prev_id\":\"" << prev_id << '"'

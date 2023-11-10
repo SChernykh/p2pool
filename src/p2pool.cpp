@@ -37,6 +37,7 @@
 #include "pool_block.h"
 #include "keccak.h"
 #include "merkle.h"
+#include "merge_mining_client.h"
 #include <thread>
 #include <fstream>
 #include <numeric>
@@ -186,6 +187,11 @@ p2pool::~p2pool()
 	}
 #endif
 
+	for (const MergeMiningClient* c : m_mergeMiningClients) {
+		delete c;
+	}
+	m_mergeMiningClients.clear();
+
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_rwlock_destroy(&m_ZMQReaderLock);
@@ -332,6 +338,25 @@ void p2pool::handle_miner_data(MinerData& data)
 		m_mainchainByHash[c1.id] = c1;
 
 		cleanup_mainchain_data(data.height);
+	}
+
+	data.aux_chains.clear();
+
+	if (!m_mergeMiningClients.empty()) {
+		data.aux_chains.reserve(m_mergeMiningClients.size());
+
+		std::vector<hash> tmp;
+		tmp.reserve(m_mergeMiningClients.size());
+
+		for (const MergeMiningClient* c : m_mergeMiningClients) {
+			data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
+			tmp.emplace_back(c->aux_data());
+		}
+
+		if (!find_aux_nonce(tmp, data.aux_nonce)) {
+			LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");
+			data.aux_chains.clear();
+		}
 	}
 
 	// TODO: remove after testing
@@ -840,6 +865,10 @@ void p2pool::download_block_headers(uint64_t current_height)
 						}
 					}
 
+					for (const auto& h : m_params->m_mergeMiningHosts) {
+						m_mergeMiningClients.push_back(new MergeMiningClient(this, h.m_host, h.m_wallet));
+					}
+
 					m_startupFinished = true;
 				}
 			}
@@ -1136,11 +1165,10 @@ void p2pool::get_miner_data(bool retry)
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;
 					get_miner_data();
+					return;
 				}
 			}
-			else {
-				m_getMinerDataPending = false;
-			}
+			m_getMinerDataPending = false;
 		});
 }
 

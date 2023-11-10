@@ -42,18 +42,6 @@ FORCEINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[N])
 template<typename T>
 FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
 {
-	// TODO: remove after testing
-#if 0
-	if (inlen > 100) {
-		printf("\nkeccak_custom %d", inlen);
-		for (int i = 0; i < inlen; ++i) {
-			if ((i & 31) == 0) printf("\n");
-			printf("%02X ", static_cast<uint8_t>(in(i)));
-		}
-		printf("\n");
-	}
-#endif
-
 	uint64_t st[25] = {};
 
 	const int rsiz = sizeof(st) == mdlen ? KeccakParams::HASH_DATA_AREA : 200 - 2 * mdlen;

@@ -385,6 +385,8 @@ struct TxMempoolData
 
 struct AuxChainData
 {
+	FORCEINLINE AuxChainData(const hash& _id, const hash& _data, const difficulty_type& _difficulty) : unique_id(_id), data(_data), difficulty(_difficulty) {}
+
 	hash unique_id;
 	hash data;
 	difficulty_type difficulty;

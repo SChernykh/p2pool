@@ -33,6 +33,7 @@ class Miner;
 class ConsoleCommands;
 class p2pool_api;
 class ZMQReader;
+class MergeMiningClient;
 struct PoolBlock;
 
 class p2pool : public MinerCallbackHandler, public nocopy_nomove
@@ -225,6 +226,8 @@ private:
 
 	mutable uv_rwlock_t m_ZMQReaderLock;
 	ZMQReader* m_ZMQReader = nullptr;
+
+	std::vector<MergeMiningClient*> m_mergeMiningClients;
 
 	hash m_getMinerDataHash;
 	bool m_getMinerDataPending = false;
