@@ -123,9 +123,10 @@ static FORCEINLINE bool from_hex(const char* s, size_t len, std::vector<uint8_t>
 		return false;
 	}
 
-	std::vector<uint8_t> result(len / 2);
+	len /= 2;
+	std::vector<uint8_t> result(len);
 
-	for (uint32_t i = 0; i < HASH_SIZE; ++i) {
+	for (uint32_t i = 0; i < len; ++i) {
 		uint8_t d[2];
 		if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
 			return false;

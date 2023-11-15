@@ -73,6 +73,7 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 		uv_loop_close(&m_loop);
 		throw std::exception();
 	}
+	m_timer.data = this;
 
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
