@@ -69,6 +69,10 @@ private:
 
 	bool m_getJobRunning;
 
+#ifdef DEV_TEST_SYNC
+	uint32_t m_getJobCounter;
+#endif
+
 	uv_async_t m_shutdownAsync;
 
 	static void on_shutdown(uv_async_t* async)

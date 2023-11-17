@@ -346,12 +346,14 @@ void p2pool::handle_miner_data(MinerData& data)
 		data.aux_chains.reserve(m_mergeMiningClients.size());
 
 		std::vector<hash> tmp;
-		tmp.reserve(m_mergeMiningClients.size());
+		tmp.reserve(m_mergeMiningClients.size() + 1);
 
 		for (const MergeMiningClient* c : m_mergeMiningClients) {
 			data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
-			tmp.emplace_back(c->aux_data());
+			tmp.emplace_back(c->aux_id());
 		}
+
+		tmp.emplace_back(m_sideChain->consensus_hash());
 
 		if (!find_aux_nonce(tmp, data.aux_nonce)) {
 			LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");

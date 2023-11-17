@@ -1,6 +1,13 @@
 name: Sync test
 
-on: workflow_dispatch
+on:
+  push:
+    paths-ignore:
+      - 'docker-compose/**'
+      - 'docs/**'
+      - 'README.md'
+
+  pull_request:
 
 jobs:
   sync-test-ubuntu-tsan:
@@ -57,7 +64,10 @@ jobs:
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
-        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        python ../tests/src/mm_server.py 8000 id0 data0 &
+        python ../tests/src/mm_server.py 8001 id1 data1 &
+        python ../tests/src/mm_server.py 8002 id2 data2 &
+        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -142,7 +152,10 @@ jobs:
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
-        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        python ../tests/src/mm_server.py 8000 id0 data0 &
+        python ../tests/src/mm_server.py 8001 id1 data1 &
+        python ../tests/src/mm_server.py 8002 id2 data2 &
+        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -188,7 +201,10 @@ jobs:
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
-        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        python ../tests/src/mm_server.py 8000 id0 data0 &
+        python ../tests/src/mm_server.py 8001 id1 data1 &
+        python ../tests/src/mm_server.py 8002 id2 data2 &
+        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -234,7 +250,10 @@ jobs:
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
-        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        python ../tests/src/mm_server.py 8000 id0 data0 &
+        python ../tests/src/mm_server.py 8001 id1 data1 &
+        python ../tests/src/mm_server.py 8002 id2 data2 &
+        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -302,7 +321,10 @@ jobs:
         python3 ../tests/src/stratum_dummy.py 1 &
         python3 ../tests/src/stratum_dummy.py 2 &
         python3 ../tests/src/stratum_dummy.py 3 &
-        ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        python3 ../tests/src/mm_server.py 8000 id0 data0 &
+        python3 ../tests/src/mm_server.py 8001 id1 data1 &
+        python3 ../tests/src/mm_server.py 8002 id2 data2 &
+        ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -347,7 +369,10 @@ jobs:
         start python ../../tests/src/stratum_dummy.py 1
         start python ../../tests/src/stratum_dummy.py 2
         start python ../../tests/src/stratum_dummy.py 3
-        p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        start python ../../tests/src/mm_server.py 8000 id0 data0 &
+        start python ../../tests/src/mm_server.py 8001 id1 data1 &
+        start python ../../tests/src/mm_server.py 8002 id2 data2 &
+        p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -390,7 +415,10 @@ jobs:
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 1"
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 2"
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 3"
-        ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        Start-Process python -ArgumentList "../../tests/src/mm_server.py 8000 id0 data0"
+        Start-Process python -ArgumentList "../../tests/src/mm_server.py 8001 id1 data1"
+        Start-Process python -ArgumentList "../../tests/src/mm_server.py 8002 id2 data2"
+        ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |

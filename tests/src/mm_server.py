@@ -2,6 +2,13 @@ import http.server
 import socketserver
 import json
 
+chain_id = ''
+aux_blob = ''
+aux_diff = 1000
+aux_hash = ''
+
+counter = 0
+
 class Server(http.server.BaseHTTPRequestHandler):
 	def do_POST(self):
 		length = int(self.headers['content-length'])
@@ -16,9 +23,16 @@ class Server(http.server.BaseHTTPRequestHandler):
 		response = {'jsonrpc':'2.0','id':'0'}
 
 		if request['method'] == 'merge_mining_get_chain_id':
-			response['result'] = {'chain_id':'0f28c4960d96647e77e7ab6d13b85bd16c7ca56f45df802cdc763a5e5c0c7863'}
+			response['result'] = {'chain_id':chain_id}
 		elif request['method'] == 'merge_mining_get_job':
-			response['result'] = {'aux_blob':'4c6f72656d20697073756d','aux_diff':123456,'aux_hash':'f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f'}
+			global counter
+			counter += 1
+			s = aux_blob + '_' + str(counter // 10)
+			aux_hash = hashlib.sha256(s.encode('utf-8')).hexdigest()
+			if aux_hash != request['params']['aux_hash']:
+				response['result'] = {'aux_blob':s.encode('utf-8').hex(),'aux_diff':aux_diff,'aux_hash':aux_hash}
+			else:
+				response['result'] = {}
 		elif request['method'] == 'merge_mining_submit_solution':
 			response['result'] = {'status':'accepted'}
         
@@ -26,5 +40,13 @@ class Server(http.server.BaseHTTPRequestHandler):
 		print(response)
 		self.wfile.write(response.encode('utf-8'))
         
-httpd = socketserver.TCPServer(('', 8000), Server)
-httpd.serve_forever()
+if __name__ == "__main__":
+	from sys import argv
+	import hashlib
+
+	port = int(argv[1])
+	chain_id = hashlib.sha256(argv[2].encode('utf-8')).hexdigest()
+	aux_blob = argv[3];
+
+	httpd = socketserver.TCPServer(('', port), Server)
+	httpd.serve_forever()

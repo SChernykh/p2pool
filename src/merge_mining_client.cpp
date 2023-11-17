@@ -37,6 +37,9 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 	, m_loopThread{}
 	, m_timer{}
 	, m_getJobRunning(false)
+#ifdef DEV_TEST_SYNC
+	, m_getJobCounter(0)
+#endif
 	, m_shutdownAsync{}
 {
 	const size_t k = host.find_last_of(':');
@@ -110,6 +113,9 @@ void MergeMiningClient::merge_mining_get_chain_id()
 					m_ping = ping;
 				}
 
+				LOGINFO(1, m_host << ':' << m_port << " uses chain_id " << log::LightCyan() << m_chainID);
+				LOGINFO(1, m_host << ':' << m_port << " ping is " << m_ping << " ms");
+
 				// Chain ID received successfully, we can start polling for new mining jobs now
 				const int err = uv_timer_start(&m_timer, on_timer, 0, 500);
 				if (err) {
@@ -117,9 +123,9 @@ void MergeMiningClient::merge_mining_get_chain_id()
 				}
 			}
 		},
-		[](const char* data, size_t size, double) {
+		[this](const char* data, size_t size, double) {
 			if (size > 0) {
-				LOGERR(1, "couldn't get merge mining id, error " << log::const_buf(data, size));
+				LOGERR(1, "couldn't get merge mining id from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
 		}, &m_loop);
 }
@@ -160,6 +166,14 @@ bool MergeMiningClient::parse_merge_mining_get_chain_id(const char* data, size_t
 
 void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& wallet, const hash& aux_hash)
 {
+#ifdef DEV_TEST_SYNC
+	if (++m_getJobCounter > 100) {
+		LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
+		m_pool->stop();
+		return;
+	}
+#endif
+
 	if (m_getJobRunning) {
 		return;
 	}
@@ -182,7 +196,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 		},
 		[this](const char* data, size_t size, double) {
 			if (size > 0) {
-				LOGERR(1, "couldn't get merge mining job, error " << log::const_buf(data, size));
+				LOGERR(1, "couldn't get merge mining job from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
 			m_getJobRunning = false;
 		}, &m_loop);
@@ -268,9 +282,9 @@ void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>&
 		[this](const char* data, size_t size, double) {
 			parse_merge_mining_submit_solution(data, size);
 		},
-		[](const char* data, size_t size, double) {
+		[this](const char* data, size_t size, double) {
 			if (size > 0) {
-				LOGERR(1, "couldn't submit merge mining solution, error " << log::const_buf(data, size));
+				LOGERR(1, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
 		}, &m_loop);
 }
