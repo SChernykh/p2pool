@@ -31,9 +31,9 @@ public:
 
 	void merge_mining_submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof);
 
-	FORCEINLINE const hash& aux_id() const { return m_chainID; }
-	FORCEINLINE const hash& aux_data() const { return m_auxHash; }
-	FORCEINLINE const difficulty_type& aux_diff() const { return m_auxDiff; }
+	FORCEINLINE hash aux_id() const { ReadLock lock(m_lock); return m_chainID; }
+	FORCEINLINE hash aux_data() const { ReadLock lock(m_lock); return m_auxHash; }
+	FORCEINLINE difficulty_type aux_diff() const { ReadLock lock(m_lock); return m_auxDiff; }
 
 private:
 	static void loop(void* data);
@@ -51,6 +51,8 @@ private:
 
 	std::string m_host;
 	uint32_t m_port;
+
+	mutable uv_rwlock_t m_lock;
 
 	std::string m_auxWallet;
 	std::vector<uint8_t> m_auxBlob;

@@ -78,6 +78,8 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 	}
 	m_timer.data = this;
 
+	uv_rwlock_init_checked(&m_lock);
+
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
@@ -93,13 +95,15 @@ MergeMiningClient::~MergeMiningClient()
 	uv_async_send(&m_shutdownAsync);
 	uv_thread_join(&m_loopThread);
 
+	uv_rwlock_destroy(&m_lock);
+
 	LOGINFO(1, "stopped");
 }
 
 void MergeMiningClient::on_timer()
 {
 	MinerData data = m_pool->miner_data();
-	merge_mining_get_job(data.height, data.prev_id, m_auxWallet, m_auxHash);
+	merge_mining_get_job(data.height, data.prev_id, m_auxWallet, aux_data());
 }
 
 void MergeMiningClient::merge_mining_get_chain_id()
@@ -108,6 +112,8 @@ void MergeMiningClient::merge_mining_get_chain_id()
 
 	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy,
 		[this](const char* data, size_t size, double ping) {
+			WriteLock lock(m_lock);
+
 			if (parse_merge_mining_get_chain_id(data, size)) {
 				if (ping > 0.0) {
 					m_ping = ping;
@@ -192,6 +198,8 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 
 	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
 		[this](const char* data, size_t size, double) {
+			WriteLock lock(m_lock);
+
 			parse_merge_mining_get_job(data, size);
 		},
 		[this](const char* data, size_t size, double) {
@@ -260,6 +268,8 @@ bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size
 
 void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof)
 {
+	ReadLock lock(m_lock);
+
 	std::vector<char> buf((m_auxBlob.size() + HASH_SIZE + blob.size()) * 2 + merkle_proof.size() * (HASH_SIZE * 2 + 3) + 256);
 	log::Stream s(buf.data(), buf.size());
 
