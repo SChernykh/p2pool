@@ -108,6 +108,7 @@ void Miner::on_block(const BlockTemplate& block)
 
 	const uint32_t extra_nonce = static_cast<uint32_t>(m_rng() >> 32);
 	j.m_blobSize = block.get_hashing_blob(extra_nonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_auxDiff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
+	j.m_auxChains = block.get_aux_chains(j.m_templateId);
 
 	const uint64_t next_full_nonce = (static_cast<uint64_t>(extra_nonce) << 32) | std::numeric_limits<uint32_t>::max();
 	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.exchange(next_full_nonce));
@@ -208,7 +209,7 @@ void Miner::run(WorkerData* data)
 
 		if (first) {
 			first = false;
-			memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
+			job[index] = miner->m_job[miner->m_jobIndex];
 
 			const uint64_t full_nonce = miner->m_fullNonce.fetch_sub(1);
 			job[index].set_nonce(static_cast<uint32_t>(full_nonce), static_cast<uint32_t>(full_nonce >> 32));
@@ -218,7 +219,7 @@ void Miner::run(WorkerData* data)
 
 		const Job& j = job[index];
 		index ^= 1;
-		memcpy(&job[index], &miner->m_job[miner->m_jobIndex], sizeof(Job));
+		job[index] = miner->m_job[miner->m_jobIndex];
 
 		const uint64_t full_nonce = miner->m_fullNonce.fetch_sub(1);
 		job[index].set_nonce(static_cast<uint32_t>(full_nonce), static_cast<uint32_t>(full_nonce >> 32));
@@ -241,7 +242,11 @@ void Miner::run(WorkerData* data)
 		}
 
 		if (j.m_auxDiff.check_pow(h)) {
-			// TODO
+			for (const AuxChainData& aux_data : j.m_auxChains) {
+				if (aux_data.difficulty.check_pow(h)) {
+					m_pool->submit_aux_block_async(aux_data, j.m_templateId, j.m_nonce, j.m_extraNonce);
+				}
+			}
 		}
 
 		if (j.m_sidechainDiff.check_pow(h)) {

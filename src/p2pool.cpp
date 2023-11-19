@@ -136,6 +136,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_mutex_init_checked(&m_minerLock);
 #endif
 	uv_mutex_init_checked(&m_submitBlockDataLock);
+	uv_mutex_init_checked(&m_submitAuxBlockDataLock);
 
 	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
 
@@ -200,6 +201,7 @@ p2pool::~p2pool()
 	uv_mutex_destroy(&m_minerLock);
 #endif
 	uv_mutex_destroy(&m_submitBlockDataLock);
+	uv_mutex_destroy(&m_submitAuxBlockDataLock);
 
 	delete m_api;
 	delete m_sideChain;
@@ -586,6 +588,17 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
 	}
+}
+
+void p2pool::submit_aux_block_async(const AuxChainData& aux_data, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+{
+	// TODO
+	MutexLock lock(m_submitAuxBlockDataLock);
+
+	(void)aux_data;
+	(void)template_id;
+	(void)nonce;
+	(void)extra_nonce;
 }
 
 bool init_signals(p2pool* pool, bool init);

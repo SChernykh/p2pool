@@ -401,7 +401,11 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (aux_diff.check_pow(resultHash)) {
-			// TODO
+			for (const AuxChainData& aux_data : block.get_aux_chains(template_id)) {
+				if (aux_data.difficulty.check_pow(resultHash)) {
+					m_pool->submit_aux_block_async(aux_data, template_id, nonce, extra_nonce);
+				}
+			}
 		}
 
 		SubmittedShare* share;

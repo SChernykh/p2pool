@@ -76,6 +76,7 @@ private:
 		size_t m_nonceOffset = 0;
 		uint32_t m_nonce = 0;
 		uint32_t m_extraNonce = 0;
+		std::vector<AuxChainData> m_auxChains = {};
 
 		void set_nonce(uint32_t nonce, uint32_t extra_nonce);
 	};

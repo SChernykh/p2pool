@@ -1293,6 +1293,22 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 	return blob_size;
 }
 
+std::vector<AuxChainData> BlockTemplate::get_aux_chains(const uint32_t template_id) const
+{
+	ReadLock lock(m_lock);
+
+	if (template_id != m_templateId) {
+		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
+		if (old && (template_id == old->m_templateId)) {
+			return old->get_aux_chains(template_id);
+		}
+
+		return {};
+	}
+
+	return m_poolBlockTemplate->m_auxChains;
+}
+
 std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const
 {
 	ReadLock lock(m_lock);

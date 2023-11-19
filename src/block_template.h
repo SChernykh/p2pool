@@ -48,6 +48,8 @@ public:
 	uint32_t get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 	uint32_t get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 
+	std::vector<AuxChainData> get_aux_chains(const uint32_t template_id) const;
+
 	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const;
 
 	FORCEINLINE uint64_t height() const { return m_height; }
