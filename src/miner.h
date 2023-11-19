@@ -69,6 +69,7 @@ private:
 		uint32_t m_blobSize = 0;
 		uint32_t m_templateId = 0;
 		difficulty_type m_diff = {};
+		difficulty_type m_auxDiff = {};
 		difficulty_type m_sidechainDiff = {};
 		uint64_t m_height = 0;
 		uint64_t m_sidechainHeight = 0;

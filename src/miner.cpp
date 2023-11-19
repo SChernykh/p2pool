@@ -107,7 +107,7 @@ void Miner::on_block(const BlockTemplate& block)
 	hash seed;
 
 	const uint32_t extra_nonce = static_cast<uint32_t>(m_rng() >> 32);
-	j.m_blobSize = block.get_hashing_blob(extra_nonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
+	j.m_blobSize = block.get_hashing_blob(extra_nonce, j.m_blob, j.m_height, j.m_sidechainHeight, j.m_diff, j.m_auxDiff, j.m_sidechainDiff, seed, j.m_nonceOffset, j.m_templateId);
 
 	const uint64_t next_full_nonce = (static_cast<uint64_t>(extra_nonce) << 32) | std::numeric_limits<uint32_t>::max();
 	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.exchange(next_full_nonce));
@@ -238,6 +238,10 @@ void Miner::run(WorkerData* data)
 		if (j.m_diff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "worker thread " << data->m_index << '/' << data->m_count << " found a mainchain block at height " << j.m_height << ", submitting it");
 			m_pool->submit_block_async(j.m_templateId, j.m_nonce, j.m_extraNonce);
+		}
+
+		if (j.m_auxDiff.check_pow(h)) {
+			// TODO
 		}
 
 		if (j.m_sidechainDiff.check_pow(h)) {

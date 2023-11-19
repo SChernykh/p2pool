@@ -51,6 +51,7 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	, m_prevId{}
 	, m_height(0)
 	, m_difficulty{}
+	, m_auxDifficulty{}
 	, m_seedHash{}
 	, m_timestamp(0)
 	, m_poolBlockTemplate(new PoolBlock())
@@ -133,6 +134,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_prevId = b.m_prevId;
 	m_height = b.m_height.load();
 	m_difficulty = b.m_difficulty;
+	m_auxDifficulty = b.m_auxDifficulty;
 	m_seedHash = b.m_seedHash;
 	m_timestamp = b.m_timestamp;
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
@@ -1155,7 +1157,7 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 	}
 }
 
-bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& sidechain_difficulty) const
+bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty) const
 {
 	ReadLock lock(m_lock);
 
@@ -1163,6 +1165,7 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& heigh
 		height = m_height;
 		sidechain_height = m_poolBlockTemplate->m_sidechainHeight;
 		mainchain_difficulty = m_difficulty;
+		aux_diff = m_auxDifficulty;
 		sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 		return true;
 	}
@@ -1170,19 +1173,20 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& heigh
 	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		return old->get_difficulties(template_id, height, sidechain_height, mainchain_difficulty, sidechain_difficulty);
+		return old->get_difficulties(template_id, height, sidechain_height, mainchain_difficulty, aux_diff, sidechain_difficulty);
 	}
 
 	return false;
 }
 
-uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const
+uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id == m_templateId) {
 		height = m_height;
 		difficulty = m_difficulty;
+		aux_diff = m_auxDifficulty;
 		sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 		seed_hash = m_seedHash;
 		nonce_offset = m_nonceOffset;
@@ -1193,19 +1197,20 @@ uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t ex
 	const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		return old->get_hashing_blob(template_id, extra_nonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
+		return old->get_hashing_blob(template_id, extra_nonce, blob, height, difficulty, aux_diff, sidechain_difficulty, seed_hash, nonce_offset);
 	}
 
 	return 0;
 }
 
-uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
+uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
 {
 	ReadLock lock(m_lock);
 
 	height = m_height;
 	sidechain_height = m_poolBlockTemplate->m_sidechainHeight;
 	difficulty = m_difficulty;
+	aux_diff = m_auxDifficulty;
 	sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 	seed_hash = m_seedHash;
 	nonce_offset = m_nonceOffset;
@@ -1243,7 +1248,7 @@ uint32_t BlockTemplate::get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* b
 	return static_cast<uint32_t>(p - blob);
 }
 
-uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
+uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
 {
 	blobs.clear();
 
@@ -1258,6 +1263,7 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 
 	height = m_height;
 	difficulty = m_difficulty;
+	aux_diff = m_auxDifficulty;
 	sidechain_difficulty = m_poolBlockTemplate->m_difficulty;
 	seed_hash = m_seedHash;
 	nonce_offset = m_nonceOffset;
@@ -1382,6 +1388,7 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
 
 	m_poolBlockTemplate->m_merkleProof.clear();
+	m_auxDifficulty = diff_max;
 
 	if (n_aux_chains == 1) {
 		return;
@@ -1394,6 +1401,10 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 		hashes[aux_slot] = aux_data.data;
 		used[aux_slot] = true;
+
+		if (aux_data.difficulty < m_auxDifficulty) {
+			m_auxDifficulty = aux_data.difficulty;
+		}
 	}
 
 	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);

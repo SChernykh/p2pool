@@ -128,6 +128,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	blobs_data->m_extraNonceStart = extra_nonce_start;
 
 	difficulty_type difficulty;
+	difficulty_type aux_diff;
 	difficulty_type sidechain_difficulty;
 	size_t nonce_offset;
 
@@ -135,7 +136,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	// Even if they do, they'll be added to the beginning of the list and will get their block template in on_login()
 	// We'll iterate through the list backwards so when we get to the beginning and run out of extra_nonce values, it'll be only new clients left
 	blobs_data->m_numClientsExpected = num_connections;
-	blobs_data->m_blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+	blobs_data->m_blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, aux_diff, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
 
 	// Integrity checks
 	if (blobs_data->m_blobSize < 76) {
@@ -168,6 +169,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	}
 
 	blobs_data->m_target = std::max(difficulty.target(), sidechain_difficulty.target());
+	blobs_data->m_target = std::max(blobs_data->m_target, aux_diff.target());
 
 	{
 		MutexLock lock(m_blobsQueueLock);
@@ -256,14 +258,16 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	uint8_t hashing_blob[128];
 	uint64_t height, sidechain_height;
 	difficulty_type difficulty;
+	difficulty_type aux_diff;
 	difficulty_type sidechain_difficulty;
 	hash seed_hash;
 	size_t nonce_offset;
 	uint32_t template_id;
 
-	const size_t blob_size = m_pool->block_template().get_hashing_blob(extra_nonce, hashing_blob, height, sidechain_height, difficulty, sidechain_difficulty, seed_hash, nonce_offset, template_id);
+	const size_t blob_size = m_pool->block_template().get_hashing_blob(extra_nonce, hashing_blob, height, sidechain_height, difficulty, aux_diff, sidechain_difficulty, seed_hash, nonce_offset, template_id);
 
 	uint64_t target = std::max(difficulty.target(), sidechain_difficulty.target());
+	target = std::max(target, aux_diff.target());
 
 	if (get_custom_diff(login, client->m_customDiff)) {
 		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom difficulty " << client->m_customDiff);
@@ -377,9 +381,9 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	if (found) {
 		BlockTemplate& block = m_pool->block_template();
 		uint64_t height, sidechain_height;
-		difficulty_type mainchain_diff, sidechain_diff;
+		difficulty_type mainchain_diff, aux_diff, sidechain_diff;
 
-		if (!block.get_difficulties(template_id, height, sidechain_height, mainchain_diff, sidechain_diff)) {
+		if (!block.get_difficulties(template_id, height, sidechain_height, mainchain_diff, aux_diff, sidechain_diff)) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " got a stale share");
 			return send(client,
 				[id](uint8_t* buf, size_t buf_size)
@@ -394,6 +398,10 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 			const char* s = client->m_customUser;
 			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block at height " << height << ", submitting it");
 			m_pool->submit_block_async(template_id, nonce, extra_nonce);
+		}
+
+		if (aux_diff.check_pow(resultHash)) {
+			// TODO
 		}
 
 		SubmittedShare* share;
@@ -881,11 +889,12 @@ void StratumServer::on_share_found(uv_work_t* req)
 		uint8_t blob[128];
 		uint64_t height;
 		difficulty_type difficulty;
+		difficulty_type aux_diff;
 		difficulty_type sidechain_difficulty;
 		hash seed_hash;
 		size_t nonce_offset;
 
-		const uint32_t blob_size = pool->block_template().get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, sidechain_difficulty, seed_hash, nonce_offset);
+		const uint32_t blob_size = pool->block_template().get_hashing_blob(share->m_templateId, share->m_extraNonce, blob, height, difficulty, aux_diff, sidechain_difficulty, seed_hash, nonce_offset);
 		if (!blob_size) {
 			LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " got a stale share");
 			share->m_result = SubmittedShare::Result::STALE;

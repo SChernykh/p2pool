@@ -64,11 +64,11 @@ TEST(block_template, DISABLED_update)
 
 	std::vector<uint8_t> blobs;
 	uint64_t height;
-	difficulty_type diff, sidechain_diff;
+	difficulty_type diff, aux_diff, sidechain_diff;
 	hash seed_hash;
 	size_t nonce_offset;
 	uint32_t template_id;
-	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);
@@ -99,7 +99,7 @@ TEST(block_template, DISABLED_update)
 		ASSERT_GE(*reinterpret_cast<const uint64_t*>(b->m_transactions[i].h), 256);
 	}
 
-	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);
