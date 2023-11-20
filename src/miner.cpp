@@ -244,7 +244,7 @@ void Miner::run(WorkerData* data)
 		if (j.m_auxDiff.check_pow(h)) {
 			for (const AuxChainData& aux_data : j.m_auxChains) {
 				if (aux_data.difficulty.check_pow(h)) {
-					m_pool->submit_aux_block_async(aux_data, j.m_templateId, j.m_nonce, j.m_extraNonce);
+					m_pool->submit_aux_block(aux_data.unique_id, j.m_templateId, j.m_nonce, j.m_extraNonce);
 				}
 			}
 		}

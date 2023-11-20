@@ -136,7 +136,6 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_mutex_init_checked(&m_minerLock);
 #endif
 	uv_mutex_init_checked(&m_submitBlockDataLock);
-	uv_mutex_init_checked(&m_submitAuxBlockDataLock);
 
 	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
 
@@ -201,7 +200,6 @@ p2pool::~p2pool()
 	uv_mutex_destroy(&m_minerLock);
 #endif
 	uv_mutex_destroy(&m_submitBlockDataLock);
-	uv_mutex_destroy(&m_submitAuxBlockDataLock);
 
 	delete m_api;
 	delete m_sideChain;
@@ -590,15 +588,37 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 	}
 }
 
-void p2pool::submit_aux_block_async(const AuxChainData& aux_data, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
-	// TODO
-	MutexLock lock(m_submitAuxBlockDataLock);
+	size_t nonce_offset = 0;
+	size_t extra_nonce_offset = 0;
+	size_t sidechain_id_offset = 0;
+	hash sidechain_id;
 
-	(void)aux_data;
-	(void)template_id;
-	(void)nonce;
-	(void)extra_nonce;
+	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
+
+	if (blob.empty()) {
+		LOGWARN(3, "submit_aux_block: block template blob not found");
+		return;
+	}
+
+	uint8_t* p = blob.data();
+	memcpy(p + nonce_offset, &nonce, NONCE_SIZE);
+	memcpy(p + extra_nonce_offset, &extra_nonce, EXTRA_NONCE_SIZE);
+	memcpy(p + sidechain_id_offset, sidechain_id.h, HASH_SIZE);
+
+	for (MergeMiningClient* c : m_mergeMiningClients) {
+		if (chain_id == c->aux_id()) {
+			std::vector<hash> proof;
+			if (m_blockTemplate->get_aux_proof(template_id, c->aux_data(), proof)) {
+				c->merge_mining_submit_solution(blob, proof);
+			}
+			else {
+				LOGWARN(3, "submit_aux_block: failed to get merkle proof");
+			}
+			return;
+		}
+	}
 }
 
 bool init_signals(p2pool* pool, bool init);
