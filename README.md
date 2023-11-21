@@ -244,7 +244,7 @@ cmake ..
 make -j$(nproc)
 ```
 
-### [Arch Linux](https://archlinux.org/packages/community/x86_64/p2pool/)
+### [Arch Linux](https://archlinux.org/packages/extra/x86_64/p2pool/)
 
 ```
 pacman -S p2pool
