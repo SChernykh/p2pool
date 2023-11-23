@@ -87,7 +87,7 @@ public:
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 	void submit_block_async(std::vector<uint8_t>&& blob);
 
-	void submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	void submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const;
 
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 

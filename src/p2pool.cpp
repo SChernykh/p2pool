@@ -588,7 +588,7 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 	}
 }
 
-void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const
 {
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
