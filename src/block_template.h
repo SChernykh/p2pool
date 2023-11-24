@@ -110,11 +110,11 @@ private:
 
 	// Temp vectors, will be cleaned up after use and skipped in copy constructor/assignment operators
 	std::vector<uint8_t> m_minerTx;
-	uint64_t m_minerTxKeccakState[25];
+	std::array<uint64_t, 25> m_minerTxKeccakState;
 	size_t m_minerTxKeccakStateInputLength;
 
 	std::vector<uint8_t> m_sidechainHashBlob;
-	uint64_t m_sidechainHashKeccakState[25];
+	std::array<uint64_t, 25> m_sidechainHashKeccakState;
 	size_t m_sidechainHashInputLength;
 
 	std::vector<uint8_t> m_blockHeader;

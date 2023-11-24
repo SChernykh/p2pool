@@ -140,10 +140,10 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	*m_poolBlockTemplate = *b.m_poolBlockTemplate;
 	m_finalReward = b.m_finalReward.load();
 
-	memcpy(m_minerTxKeccakState, b.m_minerTxKeccakState, sizeof(m_minerTxKeccakState));
+	m_minerTxKeccakState = b.m_minerTxKeccakState;
 	m_minerTxKeccakStateInputLength = b.m_minerTxKeccakStateInputLength;
 
-	memcpy(m_sidechainHashKeccakState, b.m_sidechainHashKeccakState, sizeof(m_sidechainHashKeccakState));
+	m_sidechainHashKeccakState = b.m_sidechainHashKeccakState;
 	m_sidechainHashInputLength = b.m_sidechainHashInputLength;
 
 	m_minerTx.clear();
@@ -680,7 +680,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_sidechainHashBlob.insert(m_sidechainHashBlob.end(), consensus_id.begin(), consensus_id.end());
 
 	{
-		memset(m_sidechainHashKeccakState, 0, sizeof(m_sidechainHashKeccakState));
+		m_sidechainHashKeccakState = {};
 
 		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - EXTRA_NONCE_SIZE;
 		if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
@@ -734,7 +734,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		}
 	}
 
-	memset(m_minerTxKeccakState, 0, sizeof(m_minerTxKeccakState));
+	m_minerTxKeccakState = {};
 
 	const size_t extra_nonce_offset = m_extraNonceOffsetInTemplate - m_minerTxOffsetInTemplate;
 	if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
@@ -1005,15 +1005,14 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 		memcpy(buf, m_sidechainHashBlob.data() + N, size - N);
 		memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
 
-		uint64_t st[25];
-		memcpy(st, m_sidechainHashKeccakState, sizeof(st));
+		std::array<uint64_t, 25> st = m_sidechainHashKeccakState;
 		keccak_finish(buf, inlen, st);
 
-		if (pool_block_debug() && (memcmp(st, result.h, HASH_SIZE) != 0)) {
+		if (pool_block_debug() && (memcmp(st.data(), result.h, HASH_SIZE) != 0)) {
 			LOGERR(1, "calc_sidechain_hash fast path is broken. Fix the code!");
 		}
 
-		memcpy(result.h, st, HASH_SIZE);
+		memcpy(result.h, st.data(), HASH_SIZE);
 	}
 
 	return result;
@@ -1081,15 +1080,14 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		memcpy(tx_buf + extra_nonce_offset - N, extra_nonce_buf, EXTRA_NONCE_SIZE);
 		memcpy(tx_buf + merkle_root_offset - N, merge_mining_root.h, HASH_SIZE);
 
-		uint64_t st[25];
-		memcpy(st, m_minerTxKeccakState, sizeof(st));
+		std::array<uint64_t, 25> st = m_minerTxKeccakState;
 		keccak_finish(tx_buf, inlen, st);
 
-		if (pool_block_debug() && (memcmp(st, full_hash.h, HASH_SIZE) != 0)) {
+		if (pool_block_debug() && (memcmp(st.data(), full_hash.h, HASH_SIZE) != 0)) {
 			LOGERR(1, "calc_miner_tx_hash fast path is broken. Fix the code!");
 		}
 
-		memcpy(hashes, st, HASH_SIZE);
+		memcpy(hashes, st.data(), HASH_SIZE);
 	}
 
 	// 2. Base RCT, single 0 byte in miner tx

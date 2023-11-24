@@ -24,25 +24,25 @@ enum KeccakParams {
 	ROUNDS = 24,
 };
 
-void keccakf(uint64_t (&st)[25]);
-void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25]);
-void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25]);
+void keccakf(std::array<uint64_t, 25> &st);
+void keccak_step(const uint8_t* &in, int &inlen, std::array<uint64_t, 25>& st);
+void keccak_finish(const uint8_t* in, int inlen, std::array<uint64_t, 25>& st);
 
 template<size_t N>
 FORCEINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[N])
 {
 	static_assert((N == 32) || (N == 200), "invalid size");
 
-	uint64_t st[25] = {};
+	std::array<uint64_t, 25> st = {};
 	keccak_step(in, inlen, st);
 	keccak_finish(in, inlen, st);
-	memcpy(md, st, N);
+	memcpy(md, st.data(), N);
 }
 
 template<typename T>
 FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
 {
-	uint64_t st[25] = {};
+	std::array<uint64_t, 25> st = {};
 
 	const int rsiz = sizeof(st) == mdlen ? KeccakParams::HASH_DATA_AREA : 200 - 2 * mdlen;
 	const int rsizw = rsiz / 8;
@@ -77,7 +77,7 @@ FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
 
 	keccakf(st);
 
-	memcpy(md, st, mdlen);
+	memcpy(md, st.data(), mdlen);
 }
 
 } // namespace p2pool

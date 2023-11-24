@@ -36,7 +36,7 @@ static const uint64_t keccakf_rndc[24] =
 	0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 };
 
-NOINLINE void keccakf(uint64_t (&st)[25])
+NOINLINE void keccakf(std::array<uint64_t, 25>& st)
 {
 	for (int round = 0; round < KeccakParams::ROUNDS; ++round) {
 		uint64_t bc[5];
@@ -115,7 +115,7 @@ NOINLINE void keccakf(uint64_t (&st)[25])
 	}
 }
 
-NOINLINE void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25])
+NOINLINE void keccak_step(const uint8_t* &in, int &inlen, std::array<uint64_t, 25>& st)
 {
 	constexpr int rsiz = KeccakParams::HASH_DATA_AREA;
 	constexpr int rsizw = rsiz / 8;
@@ -128,7 +128,7 @@ NOINLINE void keccak_step(const uint8_t* &in, int &inlen, uint64_t (&st)[25])
 	}
 }
 
-NOINLINE void keccak_finish(const uint8_t* in, int inlen, uint64_t (&st)[25])
+NOINLINE void keccak_finish(const uint8_t* in, int inlen, std::array<uint64_t, 25>& st)
 {
 	constexpr int rsiz = KeccakParams::HASH_DATA_AREA;
 	constexpr int rsizw = rsiz / 8;
