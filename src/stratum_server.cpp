@@ -375,7 +375,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 	}
 
 	if (found) {
-		BlockTemplate& block = m_pool->block_template();
+		const BlockTemplate& block = m_pool->block_template();
 		uint64_t height, sidechain_height;
 		difficulty_type mainchain_diff, sidechain_diff;
 
