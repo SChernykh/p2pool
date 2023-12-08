@@ -1434,7 +1434,7 @@ void P2PServer::P2PClient::reset()
 
 bool P2PServer::P2PClient::on_connect()
 {
-	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	const P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	if (!server) {
 		return false;
