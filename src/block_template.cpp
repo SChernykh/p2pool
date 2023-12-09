@@ -1290,9 +1290,13 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 
 bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
+	const uint64_t received_timestamp = microseconds_since_epoch();
+
 	WriteLock lock(m_lock);
 
 	if (template_id == m_templateId) {
+		m_poolBlockTemplate->m_receivedTimestamp = received_timestamp;
+
 		m_poolBlockTemplate->m_nonce = nonce;
 		m_poolBlockTemplate->m_extraNonce = extra_nonce;
 		m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(extra_nonce);
