@@ -42,7 +42,7 @@
 
 LOG_CATEGORY(SideChain)
 
-static constexpr uint64_t MIN_DIFFICULTY = 100000;
+static constexpr uint64_t MIN_DIFFICULTY = 1000;
 static constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
