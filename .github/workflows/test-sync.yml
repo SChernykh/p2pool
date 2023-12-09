@@ -67,7 +67,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
-        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -155,7 +155,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
-        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        MSAN_OPTIONS="halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -204,7 +204,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
-        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -253,7 +253,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
-        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -324,7 +324,7 @@ jobs:
         python3 ../tests/src/mm_server.py 8000 id0 data0 &
         python3 ../tests/src/mm_server.py 8001 id1 data1 &
         python3 ../tests/src/mm_server.py 8002 id2 data2 &
-        ./p2pool --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -372,7 +372,7 @@ jobs:
         start python ../../tests/src/mm_server.py 8000 id0 data0 &
         start python ../../tests/src/mm_server.py 8001 id1 data1 &
         start python ../../tests/src/mm_server.py 8002 id2 data2 &
-        p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        p2pool.exe ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
@@ -418,7 +418,7 @@ jobs:
         Start-Process python -ArgumentList "../../tests/src/mm_server.py 8000 id0 data0"
         Start-Process python -ArgumentList "../../tests/src/mm_server.py 8001 id1 data1"
         Start-Process python -ArgumentList "../../tests/src/mm_server.py 8002 id2 data2"
-        ./p2pool.exe --host xmrnode.facspro.net --rpc-port 18089 --zmq-port 18084 --host xmr2.rs.me --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
+        ./p2pool.exe ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
       run: |
