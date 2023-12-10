@@ -387,6 +387,10 @@ struct AuxChainData
 {
 	FORCEINLINE AuxChainData(const hash& _id, const hash& _data, const difficulty_type& _difficulty) : unique_id(_id), data(_data), difficulty(_difficulty) {}
 
+	FORCEINLINE bool operator==(const AuxChainData& rhs) const {
+		return (unique_id == rhs.unique_id) && (data == rhs.data) && (difficulty == rhs.difficulty);
+	}
+
 	hash unique_id;
 	hash data;
 	difficulty_type difficulty;

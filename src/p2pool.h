@@ -84,6 +84,8 @@ public:
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
 
+	void update_aux_data(const hash& chain_id);
+
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 	void submit_block_async(std::vector<uint8_t>&& blob);
 
@@ -230,6 +232,7 @@ private:
 	mutable uv_rwlock_t m_ZMQReaderLock;
 	ZMQReader* m_ZMQReader = nullptr;
 
+	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<MergeMiningClient*> m_mergeMiningClients;
 
 	hash m_getMinerDataHash;

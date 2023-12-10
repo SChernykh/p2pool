@@ -198,9 +198,19 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 
 	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
 		[this](const char* data, size_t size, double) {
-			WriteLock lock(m_lock);
+			bool changed = false;
+			hash chain_id;
 
-			parse_merge_mining_get_job(data, size);
+			{
+				WriteLock lock(m_lock);
+				if (parse_merge_mining_get_job(data, size, changed)) {
+					chain_id = m_chainID;
+				}
+			}
+
+			if (changed && !chain_id.empty()) {
+				m_pool->update_aux_data(chain_id);
+			}
 		},
 		[this](const char* data, size_t size, double) {
 			if (size > 0) {
@@ -210,7 +220,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 		}, &m_loop);
 }
 
-bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size)
+bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size, bool& changed)
 {
 	auto err = [](const char* msg) {
 		LOGWARN(1, "merge_mining_get_job RPC call failed: " << msg);
@@ -263,6 +273,8 @@ bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size
 	m_auxDiff.lo = result["aux_diff"].GetUint64();
 	m_auxDiff.hi = 0;
 
+	changed = true;
+
 	return true;
 }
 
@@ -276,7 +288,7 @@ void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>&
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_submit_solution\",\"params\":{"
 		<< "\"aux_blob\":\"" << log::hex_buf(m_auxBlob.data(), m_auxBlob.size()) << '"'
 		<< ",\"aux_hash\":\"" << m_auxHash << '"'
-		<< ",\"blob\":" << log::hex_buf(blob.data(), blob.size())
+		<< ",\"blob\":\"" << log::hex_buf(blob.data(), blob.size()) << '"'
 		<< ",\"merkle_proof\":[";
 
 	for (size_t i = 0, n = merkle_proof.size(); i < n; ++i) {

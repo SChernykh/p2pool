@@ -131,6 +131,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_rwlock_init_checked(&m_ZMQReaderLock);
+	uv_rwlock_init_checked(&m_mergeMiningClientsLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
 #ifdef WITH_RANDOMX
 	uv_mutex_init_checked(&m_minerLock);
@@ -187,14 +188,19 @@ p2pool::~p2pool()
 	}
 #endif
 
-	for (const MergeMiningClient* c : m_mergeMiningClients) {
-		delete c;
+	{
+		WriteLock lock(m_mergeMiningClientsLock);
+
+		for (const MergeMiningClient* c : m_mergeMiningClients) {
+			delete c;
+		}
+		m_mergeMiningClients.clear();
 	}
-	m_mergeMiningClients.clear();
 
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_rwlock_destroy(&m_ZMQReaderLock);
+	uv_rwlock_destroy(&m_mergeMiningClientsLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
 #ifdef WITH_RANDOMX
 	uv_mutex_destroy(&m_minerLock);
@@ -340,26 +346,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		cleanup_mainchain_data(data.height);
 	}
 
-	data.aux_chains.clear();
-
-	if (!m_mergeMiningClients.empty()) {
-		data.aux_chains.reserve(m_mergeMiningClients.size());
-
-		std::vector<hash> tmp;
-		tmp.reserve(m_mergeMiningClients.size() + 1);
-
-		for (const MergeMiningClient* c : m_mergeMiningClients) {
-			data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
-			tmp.emplace_back(c->aux_id());
-		}
-
-		tmp.emplace_back(m_sideChain->consensus_hash());
-
-		if (!find_aux_nonce(tmp, data.aux_nonce)) {
-			LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");
-			data.aux_chains.clear();
-		}
-	}
+	update_aux_data(hash());
 
 	// TODO: remove after testing
 #if 0
@@ -540,6 +527,56 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	m_zmqLastActive = seconds_since_epoch();
 }
 
+void p2pool::update_aux_data(const hash& chain_id)
+{
+	{
+		WriteLock lock(m_minerDataLock);
+
+		MinerData& data = m_minerData;
+
+		const std::vector<AuxChainData> old_data = data.aux_chains;
+		data.aux_chains.clear();
+
+		{
+			ReadLock lock2(m_mergeMiningClientsLock);
+
+			if (!m_mergeMiningClients.empty()) {
+				data.aux_chains.reserve(m_mergeMiningClients.size());
+
+				std::vector<hash> tmp;
+				tmp.reserve(m_mergeMiningClients.size() + 1);
+
+				for (const MergeMiningClient* c : m_mergeMiningClients) {
+					data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
+					tmp.emplace_back(c->aux_id());
+				}
+
+				tmp.emplace_back(m_sideChain->consensus_hash());
+
+				if (!find_aux_nonce(tmp, data.aux_nonce)) {
+					LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");
+					data.aux_chains.clear();
+				}
+			}
+		}
+
+		if (old_data == data.aux_chains) {
+			return;
+		}
+	}
+
+	if (!chain_id.empty()) {
+		LOGINFO(4, "New aux data from chain " << chain_id);
+	}
+
+	if (!is_main_thread()) {
+		update_block_template_async();
+	}
+	else {
+		update_block_template();
+	}
+}
+
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
 	{
@@ -590,6 +627,8 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 
 void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const
 {
+	LOGINFO(3, "submit_aux_block: template id = " << template_id << ", chain_id = " << chain_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
 	size_t sidechain_id_offset = 0;
@@ -606,6 +645,8 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 	memcpy(p + nonce_offset, &nonce, NONCE_SIZE);
 	memcpy(p + extra_nonce_offset, &extra_nonce, EXTRA_NONCE_SIZE);
 	memcpy(p + sidechain_id_offset, sidechain_id.h, HASH_SIZE);
+
+	ReadLock lock(m_mergeMiningClientsLock);
 
 	for (MergeMiningClient* c : m_mergeMiningClients) {
 		if (chain_id == c->aux_id()) {
@@ -900,8 +941,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 						}
 					}
 
-					for (const auto& h : m_params->m_mergeMiningHosts) {
-						m_mergeMiningClients.push_back(new MergeMiningClient(this, h.m_host, h.m_wallet));
+					{
+						WriteLock lock(m_mergeMiningClientsLock);
+
+						m_mergeMiningClients.clear();
+
+						for (const auto& h : m_params->m_mergeMiningHosts) {
+							m_mergeMiningClients.push_back(new MergeMiningClient(this, h.m_host, h.m_wallet));
+						}
 					}
 
 					m_startupFinished = true;

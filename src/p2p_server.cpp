@@ -364,7 +364,7 @@ void P2PServer::update_peer_connections()
 		peer_list.pop_back();
 	}
 
-	if (!has_good_peers && ((m_timerCounter % 10) == 0)) {
+	if (!has_good_peers && ((m_timerCounter % 10) == 0) && (SideChain::network_type() == NetworkType::Mainnet)) {
 		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
 		load_peer_list();
 		if (m_peerListMonero.empty()) {

@@ -1321,7 +1321,7 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, const hash& h, std
 	}
 
 	std::vector<std::pair<bool, hash>> t;
-	if (!get_merkle_proof(m_poolBlockTemplate->m_merkleTree, m_poolBlockTemplate->m_sidechainId, t)) {
+	if (!get_merkle_proof(m_poolBlockTemplate->m_merkleTree, h, t)) {
 		return false;
 	}
 

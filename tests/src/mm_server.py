@@ -14,7 +14,7 @@ class Server(http.server.BaseHTTPRequestHandler):
 		length = int(self.headers['content-length'])
 		request = self.rfile.read(length)
 		print(request.decode('utf-8'))
-		request = json.loads(request)
+		request = json.loads(request.decode('utf-8'))
 
 		self.send_response(200)
 		self.send_header('Content-type', 'application/json')
