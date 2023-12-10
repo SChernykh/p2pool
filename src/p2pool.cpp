@@ -631,10 +631,10 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
-	size_t sidechain_id_offset = 0;
-	hash sidechain_id;
+	size_t merkle_root_offset = 0;
+	hash merge_mining_root;
 
-	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
+	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root);
 
 	if (blob.empty()) {
 		LOGWARN(3, "submit_aux_block: block template blob not found");
@@ -644,7 +644,7 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 	uint8_t* p = blob.data();
 	memcpy(p + nonce_offset, &nonce, NONCE_SIZE);
 	memcpy(p + extra_nonce_offset, &extra_nonce, EXTRA_NONCE_SIZE);
-	memcpy(p + sidechain_id_offset, sidechain_id.h, HASH_SIZE);
+	memcpy(p + merkle_root_offset, merge_mining_root.h, HASH_SIZE);
 
 	ReadLock lock(m_mergeMiningClientsLock);
 
@@ -699,18 +699,18 @@ void p2pool::submit_block() const
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
-	size_t sidechain_id_offset = 0;
-	hash sidechain_id;
+	size_t merkle_root_offset = 0;
+	hash merge_mining_root;
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root);
 
 		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
 			<< ", template id = " << submit_data.template_id
 			<< ", nonce = " << submit_data.nonce
 			<< ", extra_nonce = " << submit_data.extra_nonce
-			<< ", id = " << sidechain_id);
+			<< ", mm_root = " << merge_mining_root);
 
 		if (submit_data.blob.empty()) {
 			LOGERR(0, "submit_block: couldn't find block template with id " << submit_data.template_id);
@@ -741,8 +741,8 @@ void p2pool::submit_block() const
 			b = submit_data.extra_nonce & 255;
 			submit_data.extra_nonce >>= 8;
 		}
-		else if (sidechain_id_offset && sidechain_id_offset <= i && i < sidechain_id_offset + HASH_SIZE) {
-			b = sidechain_id.h[i - sidechain_id_offset];
+		else if (merkle_root_offset && merkle_root_offset <= i && i < merkle_root_offset + HASH_SIZE) {
+			b = merge_mining_root.h[i - merkle_root_offset];
 		}
 		else {
 			b = submit_data.blob[i];
@@ -755,7 +755,7 @@ void p2pool::submit_block() const
 	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy,
-		[height, diff, template_id, nonce, extra_nonce, sidechain_id, is_external](const char* data, size_t size, double)
+		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const char* data, size_t size, double)
 		{
 			rapidjson::Document doc;
 			if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
@@ -782,7 +782,7 @@ void p2pool::submit_block() const
 					LOGWARN(3, "submit_block (external blob): daemon returned error: " << (error_msg ? error_msg : "unknown error"));
 				}
 				else {
-					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce << ", id = " << sidechain_id);
+					LOGERR(0, "submit_block: daemon returned error: '" << (error_msg ? error_msg : "unknown error") << "', template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce << ", mm_root = " << merge_mining_root);
 				}
 				return;
 			}

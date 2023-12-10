@@ -1335,27 +1335,32 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, const hash& h, std
 	return true;
 }
 
-std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& sidechain_id_offset, hash& sidechain_id) const
+std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_block_template_blob(template_id, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, sidechain_id_offset, sidechain_id);
+			return old->get_block_template_blob(template_id, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root);
 		}
 
 		nonce_offset = 0;
 		extra_nonce_offset = 0;
-		sidechain_id_offset = 0;
-		sidechain_id = {};
+		merkle_root_offset = 0;
+		merge_mining_root = {};
 		return std::vector<uint8_t>();
 	}
 
 	nonce_offset = m_nonceOffset;
 	extra_nonce_offset = m_extraNonceOffsetInTemplate;
-	sidechain_id_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
-	sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
+
+	const hash sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
+	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+	merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
+
+	merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 	return m_blockTemplateBlob;
 }
 
