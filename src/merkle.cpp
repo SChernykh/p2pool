@@ -117,7 +117,7 @@ void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vec
 	}
 }
 
-bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<std::pair<bool, hash>>& proof)
+bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof)
 {
 	if (tree.empty()) {
 		return false;
@@ -142,7 +142,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 		return true;
 	}
 	else if (count == 2) {
-		proof.emplace_back(index != 0, hashes[index ^ 1]);
+		proof.emplace_back(hashes[index ^ 1]);
 	}
 	else {
 		size_t cnt = 1;
@@ -157,7 +157,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 			if (j >= count) {
 				return false;
 			}
-			proof.emplace_back((index & 1) != 0, hashes[j]);
+			proof.emplace_back(hashes[j]);
 			index = (index >> 1) + k;
 		}
 
@@ -168,30 +168,11 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 			if ((i >= n) || (j >= tree[i].size())) {
 				return false;
 			}
-			proof.emplace_back((index & 1) != 0, tree[i][j]);
+			proof.emplace_back(tree[i][j]);
 		}
 	}
 
 	return true;
-}
-
-bool verify_merkle_proof(hash h, const std::vector<std::pair<bool, hash>>& proof, const hash& root)
-{
-	hash tmp[2];
-
-	for (size_t i = 0, n = proof.size(); i < n; ++i) {
-		if (proof[i].first) {
-			tmp[0] = proof[i].second;
-			tmp[1] = h;
-		}
-		else {
-			tmp[0] = h;
-			tmp[1] = proof[i].second;
-		}
-		keccak(tmp[0].h, HASH_SIZE * 2, h.h);
-	}
-
-	return (h == root);
 }
 
 hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)

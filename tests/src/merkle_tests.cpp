@@ -73,19 +73,10 @@ TEST(merkle, tree)
 
 		for (size_t i = 0, n = hashes.size(); i < n; ++i) {
 			const hash& h = hashes[i];
-			std::vector<std::pair<bool, hash>> proof;
+			std::vector<hash> proof;
 
 			ASSERT_TRUE(get_merkle_proof(tree, h, proof));
-			ASSERT_TRUE(verify_merkle_proof(h, proof, root));
-
-			std::vector<hash> proof2;
-			proof2.reserve(proof.size());
-
-			for (const auto& p : proof) {
-				proof2.emplace_back(p.second);
-			}
-
-			ASSERT_TRUE(verify_merkle_proof(h, proof2, i, n, root));
+			ASSERT_TRUE(verify_merkle_proof(h, proof, i, n, root));
 		}
 	};
 

@@ -348,29 +348,6 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	update_aux_data(hash());
 
-	// TODO: remove after testing
-#if 0
-	{
-		data.aux_chains.clear();
-		data.aux_chains.resize(10);
-
-		std::vector<hash> tmp(11);
-
-		uint8_t id[] = "aux0";
-		uint8_t aux_data[] = "data0";
-
-		for (int i = 0; i < 10; ++i, ++id[sizeof(id) - 2], ++aux_data[sizeof(aux_data) - 2]) {
-			keccak(id, sizeof(id) - 1, tmp[i].h);
-
-			data.aux_chains[i].unique_id = tmp[i];
-			keccak(aux_data, sizeof(aux_data) - 1, data.aux_chains[i].data.h);
-		}
-
-		tmp[10] = m_sideChain->consensus_hash();
-		find_aux_nonce(tmp, data.aux_nonce);
-	}
-#endif
-
 	data.tx_backlog.clear();
 	data.time_received = std::chrono::high_resolution_clock::now();
 	{
@@ -651,12 +628,25 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 	for (MergeMiningClient* c : m_mergeMiningClients) {
 		if (chain_id == c->aux_id()) {
 			std::vector<hash> proof;
-			if (m_blockTemplate->get_aux_proof(template_id, c->aux_data(), proof)) {
+			const hash aux_hash = c->aux_data();
+
+			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, aux_hash, proof)) {
+				if (pool_block_debug()) {
+					const MinerData data = miner_data();
+					const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
+					const uint32_t index = get_aux_slot(c->aux_id(), data.aux_nonce, n_aux_chains);
+
+					if (!verify_merkle_proof(aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
+						LOGERR(0, "submit_aux_block: verify_merkle_proof failed for chain_id " << chain_id);
+					}
+				}
+
 				c->merge_mining_submit_solution(blob, proof);
 			}
 			else {
-				LOGWARN(3, "submit_aux_block: failed to get merkle proof");
+				LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);
 			}
+
 			return;
 		}
 	}

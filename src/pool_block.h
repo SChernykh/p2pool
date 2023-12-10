@@ -151,8 +151,6 @@ struct PoolBlock
 	std::vector<AuxChainData> m_auxChains;
 	uint32_t m_auxNonce;
 
-	std::vector<std::vector<hash>> m_merkleTree;
-
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 

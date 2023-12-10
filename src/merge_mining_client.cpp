@@ -313,8 +313,8 @@ void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>&
 
 bool MergeMiningClient::parse_merge_mining_submit_solution(const char* data, size_t size)
 {
-	auto err = [](const char* msg) {
-		LOGWARN(1, "merge_mining_submit_solution RPC call failed: " << msg);
+	auto err = [this](const char* msg) {
+		LOGWARN(1, "merge_mining_submit_solution to " << m_host << ':' << m_port << " failed: " << msg);
 		return false;
 	};
 
@@ -339,7 +339,7 @@ bool MergeMiningClient::parse_merge_mining_submit_solution(const char* data, siz
 	}
 
 	const char* status = result["status"].GetString();
-	LOGINFO(0, log::LightGreen() << "merge_mining_submit_solution: " << status);
+	LOGINFO(0, log::LightGreen() << "merge_mining_submit_solution to " << m_host << ':' << m_port << ": " << status);
 
 	// Get new mining job
 	on_timer();

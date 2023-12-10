@@ -1307,32 +1307,50 @@ std::vector<AuxChainData> BlockTemplate::get_aux_chains(const uint32_t template_
 	return m_poolBlockTemplate->m_auxChains;
 }
 
-bool BlockTemplate::get_aux_proof(const uint32_t template_id, const hash& h, std::vector<hash>& proof) const
+bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_aux_proof(template_id, h, proof);
+			return old->get_aux_proof(template_id, extra_nonce, h, proof);
 		}
 
 		return false;
 	}
 
-	std::vector<std::pair<bool, hash>> t;
-	if (!get_merkle_proof(m_poolBlockTemplate->m_merkleTree, h, t)) {
+	bool found = false;
+
+	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
+	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+
+	std::vector<hash> hashes(n_aux_chains);
+
+	for (const AuxChainData& aux_data : m_poolBlockTemplate->m_auxChains) {
+		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+		hashes[aux_slot] = aux_data.data;
+
+		if (aux_data.data == h) {
+			found = true;
+		}
+	}
+
+	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
+	hashes[aux_slot] = sidechain_id;
+
+	if (sidechain_id == h) {
+		found = true;
+	}
+
+	if (!found) {
 		return false;
 	}
 
-	proof.clear();
-	proof.reserve(proof.size());
+	std::vector<std::vector<hash>> tree;
+	merkle_hash_full_tree(hashes, tree);
 
-	for (const auto& k : t) {
-		proof.emplace_back(k.second);
-	}
-
-	return true;
+	return get_merkle_proof(tree, h, proof);
 }
 
 std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root) const
@@ -1465,16 +1483,10 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 		}
 	}
 
-	merkle_hash_full_tree(hashes, m_poolBlockTemplate->m_merkleTree);
+	std::vector<std::vector<hash>> tree;
+	merkle_hash_full_tree(hashes, tree);
 
-	std::vector<std::pair<bool, hash>> proof;
-	get_merkle_proof(m_poolBlockTemplate->m_merkleTree, m_poolBlockTemplate->m_sidechainId, proof);
-
-	m_poolBlockTemplate->m_merkleProof.reserve(proof.size());
-
-	for (const auto& p : proof) {
-		m_poolBlockTemplate->m_merkleProof.push_back(p.second);
-	}
+	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof);
 }
 
 } // namespace p2pool

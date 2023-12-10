@@ -101,7 +101,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_sidechainHeight = b.m_sidechainHeight;
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
-	m_merkleTree = b.m_merkleTree;
 	m_merkleProof = b.m_merkleProof;
 	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
@@ -296,9 +295,6 @@ void PoolBlock::reset_offchain_data()
 	m_auxChains.shrink_to_fit();
 
 	m_auxNonce = 0;
-
-	m_merkleTree.clear();
-	m_merkleTree.shrink_to_fit();
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)
