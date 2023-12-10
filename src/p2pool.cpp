@@ -346,16 +346,17 @@ void p2pool::handle_miner_data(MinerData& data)
 		cleanup_mainchain_data(data.height);
 	}
 
-	update_aux_data(hash());
-
 	data.tx_backlog.clear();
 	data.time_received = std::chrono::high_resolution_clock::now();
 	{
 		WriteLock lock(m_minerDataLock);
+		data.aux_chains = m_minerData.aux_chains;
+		data.aux_nonce = m_minerData.aux_nonce;
 		m_minerData = data;
 	}
 	m_updateSeed = true;
 	update_median_timestamp();
+	update_aux_data(hash());
 
 	const Params::Host& host = current_host();
 
@@ -506,40 +507,40 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 void p2pool::update_aux_data(const hash& chain_id)
 {
+	MinerData data;
+	{
+		ReadLock lock(m_mergeMiningClientsLock);
+
+		if (!m_mergeMiningClients.empty()) {
+			data.aux_chains.reserve(m_mergeMiningClients.size());
+
+			std::vector<hash> tmp;
+			tmp.reserve(m_mergeMiningClients.size() + 1);
+
+			for (const MergeMiningClient* c : m_mergeMiningClients) {
+				data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
+				tmp.emplace_back(c->aux_id());
+			}
+
+			tmp.emplace_back(m_sideChain->consensus_hash());
+
+			if (!find_aux_nonce(tmp, data.aux_nonce)) {
+				LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");
+				data.aux_chains.clear();
+			}
+		}
+	}
+
 	{
 		WriteLock lock(m_minerDataLock);
 
-		MinerData& data = m_minerData;
-
-		const std::vector<AuxChainData> old_data = data.aux_chains;
-		data.aux_chains.clear();
-
-		{
-			ReadLock lock2(m_mergeMiningClientsLock);
-
-			if (!m_mergeMiningClients.empty()) {
-				data.aux_chains.reserve(m_mergeMiningClients.size());
-
-				std::vector<hash> tmp;
-				tmp.reserve(m_mergeMiningClients.size() + 1);
-
-				for (const MergeMiningClient* c : m_mergeMiningClients) {
-					data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
-					tmp.emplace_back(c->aux_id());
-				}
-
-				tmp.emplace_back(m_sideChain->consensus_hash());
-
-				if (!find_aux_nonce(tmp, data.aux_nonce)) {
-					LOGERR(1, "Failed to find the aux nonce for merge mining. Merge mining will be off this round.");
-					data.aux_chains.clear();
-				}
-			}
-		}
-
-		if (old_data == data.aux_chains) {
+		if ((m_minerData.aux_nonce == data.aux_nonce) && (m_minerData.aux_chains == data.aux_chains)) {
 			return;
 		}
+
+		m_minerData.aux_chains = data.aux_chains;
+		m_minerData.aux_nonce = data.aux_nonce;
+		LOGINFO(5, "update_aux_data: n_aux_chains = " << m_minerData.aux_chains.size() << ", aux_nonce = " << m_minerData.aux_nonce);
 	}
 
 	if (!chain_id.empty()) {
