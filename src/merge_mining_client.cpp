@@ -37,9 +37,6 @@ MergeMiningClient::MergeMiningClient(p2pool* pool, const std::string& host, cons
 	, m_loopThread{}
 	, m_timer{}
 	, m_getJobRunning(false)
-#ifdef DEV_TEST_SYNC
-	, m_getJobCounter(0)
-#endif
 	, m_shutdownAsync{}
 {
 	const size_t k = host.find_last_of(':');
@@ -172,14 +169,6 @@ bool MergeMiningClient::parse_merge_mining_get_chain_id(const char* data, size_t
 
 void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& wallet, const hash& aux_hash)
 {
-#ifdef DEV_TEST_SYNC
-	if (++m_getJobCounter > 100) {
-		LOGINFO(0, log::LightGreen() << "[DEV] Synchronization finished successfully, stopping P2Pool now");
-		m_pool->stop();
-		return;
-	}
-#endif
-
 	if (m_getJobRunning) {
 		return;
 	}
