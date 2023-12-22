@@ -55,7 +55,8 @@ public:
 	void get_missing_blocks(unordered_set<hash>& missing_blocks) const;
 
 	PoolBlock* find_block(const hash& id) const;
-	void watch_mainchain_block(const ChainMain& data, const hash& possible_id);
+	PoolBlock* find_block_by_merkle_root(const hash& merkle_root) const;
+	void watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root);
 
 	const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
 	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
@@ -117,6 +118,7 @@ private:
 	std::atomic<PoolBlock*> m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
+	unordered_map<hash, PoolBlock*> m_blocksByMerkleRoot;
 
 	uv_mutex_t m_seenWalletsLock;
 	unordered_map<hash, uint64_t> m_seenWallets;
@@ -142,7 +144,7 @@ private:
 	difficulty_type m_curDifficulty;
 
 	ChainMain m_watchBlock;
-	hash m_watchBlockSidechainId;
+	hash m_watchBlockMerkleRoot;
 
 	struct PrecalcJob
 	{

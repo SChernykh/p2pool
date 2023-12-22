@@ -456,7 +456,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	}
 	update_median_timestamp();
 
-	hash sidechain_id;
+	hash merkle_root;
 	if (extra) {
 		const size_t n = strlen(extra);
 		if (n >= HASH_SIZE * 2) {
@@ -464,10 +464,10 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 			for (size_t i = 0; i < HASH_SIZE; ++i) {
 				uint8_t d[2];
 				if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
-					sidechain_id = {};
+					merkle_root = {};
 					break;
 				}
-				sidechain_id.h[i] = (d[0] << 4) | d[1];
+				merkle_root.h[i] = (d[0] << 4) | d[1];
 			}
 		}
 	}
@@ -477,8 +477,8 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 		", timestamp = " << log::Gray() << data.timestamp << log::NoColor() << 
 		", reward = " << log::Gray() << log::XMRAmount(data.reward));
 
-	if (!sidechain_id.empty()) {
-		const PoolBlock* block = side_chain().find_block(sidechain_id);
+	if (!merkle_root.empty()) {
+		const PoolBlock* block = side_chain().find_block_by_merkle_root(merkle_root);
 		if (block) {
 			const Wallet& w = params().m_wallet;
 
@@ -496,7 +496,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 			api_update_block_found(&data, block);
 		}
 		else {
-			side_chain().watch_mainchain_block(data, sidechain_id);
+			side_chain().watch_mainchain_block(data, merkle_root);
 		}
 	}
 

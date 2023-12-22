@@ -129,8 +129,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
 			outputs_blob.assign(data_begin + outputs_offset, data);
-
-			m_sidechainId.clear();
 		}
 		else {
 			// Outputs are not in the buffer and must be calculated from sidechain data
@@ -146,8 +144,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 
 			outputs_blob_size = static_cast<int>(tmp);
-
-			READ_BUF(m_sidechainId.h, HASH_SIZE);
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR

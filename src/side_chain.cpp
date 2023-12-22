@@ -636,13 +636,13 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			}
 		}
 
-		if (block.m_sidechainId == m_watchBlockSidechainId) {
+		if (block.m_merkleRoot == m_watchBlockMerkleRoot) {
 			const Wallet& w = m_pool->params().m_wallet;
 
 			const char* who = (block.m_minerWallet == w) ? "you" : "someone else in this p2pool";
 			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << m_watchBlock.height << " was mined by " << who << BLOCK_FOUND);
 
-			m_watchBlockSidechainId = {};
+			m_watchBlockMerkleRoot = {};
 			data = m_watchBlock;
 			block_found = true;
 
@@ -702,6 +702,7 @@ bool SideChain::add_block(const PoolBlock& block)
 	}
 
 	m_blocksByHeight[new_block->m_sidechainHeight].push_back(new_block);
+	m_blocksByMerkleRoot.insert({ new_block->m_merkleRoot, new_block });
 
 	update_depths(new_block);
 
@@ -734,11 +735,23 @@ PoolBlock* SideChain::find_block(const hash& id) const
 	return nullptr;
 }
 
-void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_id)
+PoolBlock* SideChain::find_block_by_merkle_root(const hash& merkle_root) const
+{
+	ReadLock lock(m_sidechainLock);
+
+	auto it = m_blocksByMerkleRoot.find(merkle_root);
+	if (it != m_blocksByMerkleRoot.end()) {
+		return it->second;
+	}
+
+	return nullptr;
+}
+
+void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root)
 {
 	WriteLock lock(m_sidechainLock);
 	m_watchBlock = data;
-	m_watchBlockSidechainId = possible_id;
+	m_watchBlockMerkleRoot = possible_merkle_root;
 }
 
 const PoolBlock* SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
@@ -2104,6 +2117,15 @@ void SideChain::prune_old_blocks()
 					else {
 						LOGERR(1, "m_blocksByHeight and m_blocksById are inconsistent at height " << height << ". Fix the code!");
 					}
+
+					auto it3 = m_blocksByMerkleRoot.find(block->m_merkleRoot);
+					if (it3 != m_blocksByMerkleRoot.end()) {
+						m_blocksByMerkleRoot.erase(it2);
+					}
+					else {
+						LOGERR(1, "m_blocksByHeight and m_blocksByMerkleRoot are inconsistent at height " << height << ". Fix the code!");
+					}
+
 					return true;
 				}
 				return false;
