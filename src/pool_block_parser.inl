@@ -129,6 +129,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
 			outputs_blob.assign(data_begin + outputs_offset, data);
+
+			m_sidechainId.clear();
 		}
 		else {
 			// Outputs are not in the buffer and must be calculated from sidechain data
@@ -144,6 +146,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 
 			outputs_blob_size = static_cast<int>(tmp);
+
+			// Required by sidechain.get_outputs_blob() to speed up repeated broadcasts from different peers
+			READ_BUF(m_sidechainId.h, HASH_SIZE);
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
@@ -415,6 +420,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			},
 			static_cast<int>(size + outputs_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
 
+		if (m_sidechainId.empty()) {
+			m_sidechainId = check;
+		}
+		else if (m_sidechainId != check) {
+			return __LINE__;
+		}
+
 #if POOL_BLOCK_DEBUG
 		m_sideChainDataDebug.assign(sidechain_data_begin, data_end);
 #endif
@@ -424,8 +436,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, m_merkleRoot)) {
 			return __LINE__;
 		}
-
-		m_sidechainId = check;
 	}
 	catch (std::exception& e) {
 		LOGERR(0, "Exception in PoolBlock::deserialize(): " << e.what());

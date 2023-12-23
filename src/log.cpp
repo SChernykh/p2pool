@@ -110,7 +110,7 @@ class Worker
 public:
 	enum params : int
 	{
-		SLOT_SIZE = 1024,
+		SLOT_SIZE = log::Stream::BUF_SIZE + 1,
 		BUF_SIZE = SLOT_SIZE * 8192,
 	};
 

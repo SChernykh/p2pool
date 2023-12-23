@@ -810,6 +810,7 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	writeVarint(total_reward, data->pruned_blob);
 	writeVarint(outputs_blob_size, data->pruned_blob);
+	data->pruned_blob.insert(data->pruned_blob.end(), block.m_sidechainId.h, block.m_sidechainId.h + HASH_SIZE);
 
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 
@@ -888,6 +889,32 @@ void P2PServer::on_broadcast()
 
 	if (broadcast_queue.empty()) {
 		return;
+	}
+
+	if (pool_block_debug()) {
+		for (Broadcast* data : broadcast_queue) {
+			if (!data->compact_blob.empty()) {
+				PoolBlock check;
+				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), nullptr, true);
+				if (result != 0) {
+					LOGERR(1, "compact blob broadcast is broken, error " << result);
+				}
+			}
+			{
+				PoolBlock check;
+				const int result = check.deserialize(data->pruned_blob.data(), data->pruned_blob.size(), m_pool->side_chain(), nullptr, false);
+				if (result != 0) {
+					LOGERR(1, "pruned blob broadcast is broken, error " << result);
+				}
+			}
+			{
+				PoolBlock check;
+				const int result = check.deserialize(data->blob.data(), data->blob.size(), m_pool->side_chain(), nullptr, false);
+				if (result != 0) {
+					LOGERR(1, "full blob broadcast is broken, error " << result);
+				}
+			}
+		}
 	}
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
