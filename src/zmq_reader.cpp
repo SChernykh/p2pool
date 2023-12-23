@@ -210,6 +210,7 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	}
 
 	char buf[64];
+	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
 	s << "inproc://p2pool-connect-mon-" << id << '\0';
 	++id;

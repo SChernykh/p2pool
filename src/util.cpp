@@ -213,6 +213,7 @@ NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 std::ostream& operator<<(std::ostream& s, const difficulty_type& d)
 {
 	char buf[log::Stream::BUF_SIZE + 1];
+	// cppcheck-suppress uninitvar
 	log::Stream s1(buf);
 	s1 << d << '\0';
 	s << buf;
@@ -251,6 +252,7 @@ std::istream& operator>>(std::istream& s, difficulty_type& diff)
 std::ostream& operator<<(std::ostream& s, const hash& h)
 {
 	char buf[log::Stream::BUF_SIZE + 1];
+	// cppcheck-suppress uninitvar
 	log::Stream s1(buf);
 	s1 << h << '\0';
 	s << buf;
@@ -401,6 +403,7 @@ struct BackgroundJobTracker::Impl
 		}
 
 		char buf[log::Stream::BUF_SIZE + 1];
+		// cppcheck-suppress uninitvar
 		log::Stream s(buf);
 		for (const auto& job : m_jobs) {
 			s << '\n' << job.first << " (" << job.second << ')';
