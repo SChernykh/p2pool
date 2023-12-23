@@ -337,8 +337,9 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
 		memcpy(h, tmp.h, HASH_SIZE);
 
-		merkle_hash(m_transactions, tmp);
-		memcpy(blob + blob_size, tmp.h, HASH_SIZE);
+		root_hash tmp_root;
+		merkle_hash(m_transactions, tmp_root);
+		memcpy(blob + blob_size, tmp_root.h, HASH_SIZE);
 	}
 	blob_size += HASH_SIZE;
 

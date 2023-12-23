@@ -456,7 +456,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	}
 	update_median_timestamp();
 
-	hash merkle_root;
+	root_hash merkle_root;
 	if (extra) {
 		const size_t n = strlen(extra);
 		if (n >= HASH_SIZE * 2) {
@@ -610,7 +610,7 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
 	size_t merkle_root_offset = 0;
-	hash merge_mining_root;
+	root_hash merge_mining_root;
 
 	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root);
 

@@ -201,8 +201,16 @@ struct alignas(uint64_t) hash
 	friend std::istream& operator>>(std::istream& s, hash& d);
 };
 
+struct root_hash : public hash
+{
+	FORCEINLINE root_hash() : hash() {}
+	explicit FORCEINLINE root_hash(const hash& h) : hash(h) {}
+};
+
 static_assert(sizeof(hash) == HASH_SIZE, "struct hash has invalid size, check your compiler options");
+static_assert(sizeof(root_hash) == HASH_SIZE, "struct root_hash has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<hash>::value, "struct hash is not a POD, check your compiler options");
+static_assert(std::is_standard_layout<root_hash>::value, "struct root_hash is not a POD, check your compiler options");
 
 struct
 #ifdef __GNUC__

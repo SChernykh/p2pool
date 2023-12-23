@@ -32,7 +32,7 @@ TEST(merkle, tree)
 		keccak(data, sizeof(data) - 1, input[i].h);
 	}
 
-	hash root;
+	root_hash root;
 	std::vector<hash> hashes(1, input[0]);
 
 	auto check_full_tree = [&hashes, &root]() {

@@ -23,13 +23,13 @@
 
 namespace p2pool {
 
-void merkle_hash(const std::vector<hash>& hashes, hash& root)
+void merkle_hash(const std::vector<hash>& hashes, root_hash& root)
 {
 	const size_t count = hashes.size();
 	const uint8_t* h = hashes[0].h;
 
 	if (count == 1) {
-		root = hashes[0];
+		root = root_hash(hashes[0]);
 	}
 	else if (count == 2) {
 		keccak(h, HASH_SIZE * 2, root.h);
@@ -175,21 +175,21 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 	return true;
 }
 
-hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)
+root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)
 {
 	if (count == 1) {
-		return h;
+		return root_hash(h);
 	}
 
 	if (index >= count) {
-		return hash();
+		return root_hash();
 	}
 
 	hash tmp[2];
 
 	if (count == 2) {
 		if (proof.empty()) {
-			return hash();
+			return root_hash();
 		}
 
 		if (index & 1) {
@@ -216,7 +216,7 @@ hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, s
 			index -= k;
 
 			if (proof.empty()) {
-				return hash();
+				return root_hash();
 			}
 
 			if (index & 1) {
@@ -236,7 +236,7 @@ hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, s
 
 		for (; cnt >= 2; ++proof_index, index >>= 1, cnt >>= 1) {
 			if (proof_index >= proof.size()) {
-				return hash();
+				return root_hash();
 			}
 
 			if (index & 1) {
@@ -252,10 +252,10 @@ hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, s
 		}
 	}
 
-	return h;
+	return root_hash(h);
 }
 
-bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const hash& root)
+bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root)
 {
 	return get_root_from_proof(h, proof, index, count) == root;
 }

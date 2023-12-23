@@ -103,7 +103,7 @@ struct PoolBlock
 
 	uint32_t m_merkleTreeDataSize;
 	uint64_t m_merkleTreeData;
-	hash m_merkleRoot;
+	root_hash m_merkleRoot;
 
 	// All block transaction hashes including the miner transaction hash at index 0
 	std::vector<hash> m_transactions;

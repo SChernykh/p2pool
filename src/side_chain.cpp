@@ -63,7 +63,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_poolName(pool_name ? pool_name : "default")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
-	, m_chainWindowSize(2160)
+	, m_chainWindowSize(216)
 	, m_unclePenalty(20)
 	, m_precalcFinished(false)
 #ifdef DEV_TEST_SYNC
@@ -735,7 +735,7 @@ PoolBlock* SideChain::find_block(const hash& id) const
 	return nullptr;
 }
 
-PoolBlock* SideChain::find_block_by_merkle_root(const hash& merkle_root) const
+PoolBlock* SideChain::find_block_by_merkle_root(const root_hash& merkle_root) const
 {
 	ReadLock lock(m_sidechainLock);
 
@@ -2120,7 +2120,7 @@ void SideChain::prune_old_blocks()
 
 					auto it3 = m_blocksByMerkleRoot.find(block->m_merkleRoot);
 					if (it3 != m_blocksByMerkleRoot.end()) {
-						m_blocksByMerkleRoot.erase(it2);
+						m_blocksByMerkleRoot.erase(it3);
 					}
 					else {
 						LOGERR(1, "m_blocksByHeight and m_blocksByMerkleRoot are inconsistent at height " << height << ". Fix the code!");

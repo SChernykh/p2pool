@@ -378,6 +378,15 @@ struct hash<p2pool::hash>
 	}
 };
 
+template<>
+struct hash<p2pool::root_hash>
+{
+	FORCEINLINE size_t operator()(const p2pool::root_hash& value) const noexcept
+	{
+		return hash_bytes(value.h, p2pool::HASH_SIZE);
+	}
+};
+
 template<size_t N>
 struct hash<std::array<uint8_t, N>>
 {
