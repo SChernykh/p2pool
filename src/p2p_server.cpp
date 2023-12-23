@@ -2453,6 +2453,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 	memcpy(id.h, buf, HASH_SIZE);
 
 	m_broadcastedHashes[m_broadcastedHashesIndex++ % array_size(&P2PClient::m_broadcastedHashes)] = id;
+	m_lastBroadcastTimestamp = seconds_since_epoch();
 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
