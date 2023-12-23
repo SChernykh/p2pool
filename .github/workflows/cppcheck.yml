@@ -53,6 +53,12 @@ jobs:
         name: errors_full-linux
         path: cppcheck/errors_full.txt
 
+    - name: Archive checkers report
+      uses: actions/upload-artifact@v3
+      with:
+        name: checkers_report-linux
+        path: cppcheck/checkers_report.txt
+
   cppcheck-windows:
 
     timeout-minutes: 60
@@ -94,3 +100,9 @@ jobs:
       with:
         name: errors_full-windows
         path: cppcheck/errors_full.txt
+
+    - name: Archive checkers report
+      uses: actions/upload-artifact@v3
+      with:
+        name: checkers_report-windows
+        path: cppcheck/checkers_report.txt
