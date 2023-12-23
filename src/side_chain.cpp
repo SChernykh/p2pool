@@ -100,6 +100,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	LOGINFO(1, "generating consensus ID");
 
 	char buf[log::Stream::BUF_SIZE + 1];
+	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
 
 	s << "mm"              << '\0'

@@ -1518,6 +1518,7 @@ void p2pool::api_update_stats_mod()
 	}
 
 	char last_block_found_buf[log::Stream::BUF_SIZE + 1];
+	// cppcheck-suppress uninitvar
 	log::Stream s(last_block_found_buf);
 	s << last_block_found_hash << '\0';
 	memcpy(last_block_found_buf + 4, "...", 4);

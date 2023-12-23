@@ -249,6 +249,7 @@ template<> struct Stream::Entry<hash>
 			buf[i * 2 + 0] = "0123456789abcdef"[data.h[i] >> 4];
 			buf[i * 2 + 1] = "0123456789abcdef"[data.h[i] & 15];
 		}
+		// cppcheck-suppress uninitvar
 		wrapper->writeBuf(buf, sizeof(buf));
 	}
 };
@@ -458,6 +459,7 @@ struct log::Stream::Entry<PadRight<T>>
 	static NOINLINE void put(PadRight<T>&& data, Stream* wrapper)
 	{
 		char buf[log::Stream::BUF_SIZE + 1];
+		// cppcheck-suppress uninitvar
 		log::Stream s(buf);
 		s << data.m_value;
 

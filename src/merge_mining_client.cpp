@@ -176,6 +176,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 	m_getJobRunning = true;
 
 	char buf[log::Stream::BUF_SIZE + 1];
+	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
 
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_job\",\"params\":{"
