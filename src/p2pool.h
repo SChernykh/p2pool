@@ -235,6 +235,10 @@ private:
 	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<MergeMiningClient*> m_mergeMiningClients;
 
+	mutable uv_rwlock_t m_auxIdLock;
+	std::vector<hash> m_auxId;
+	uint32_t m_auxNonce = 0;
+
 	hash m_getMinerDataHash;
 	bool m_getMinerDataPending = false;
 
