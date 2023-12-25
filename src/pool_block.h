@@ -23,7 +23,8 @@
 #ifdef _DEBUG
 #define POOL_BLOCK_DEBUG 1
 #else
-#define POOL_BLOCK_DEBUG 0
+// TODO set it to 0 before release
+#define POOL_BLOCK_DEBUG 1
 #endif
 
 namespace p2pool {

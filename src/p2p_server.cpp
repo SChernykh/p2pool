@@ -1968,7 +1968,7 @@ bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const 
 
 bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 {
-	P2PServer* server = static_cast<P2PServer*>(m_owner);
+	const P2PServer* server = static_cast<P2PServer*>(m_owner);
 	server->check_event_loop_thread(__func__);
 
 	uint8_t challenge[CHALLENGE_SIZE];
