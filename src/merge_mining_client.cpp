@@ -136,7 +136,7 @@ void MergeMiningClient::merge_mining_get_chain_id()
 bool MergeMiningClient::parse_merge_mining_get_chain_id(const char* data, size_t size)
 {
 	auto err = [this](const char* msg) {
-		LOGWARN(1, "merge_mining_get_chain_id RPC call failed: " << msg << ". Trying again in 1 second.");
+		LOGWARN(3, "merge_mining_get_chain_id RPC call failed: " << msg << ". Trying again in 1 second.");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		merge_mining_get_chain_id();
 		return false;
@@ -150,6 +150,10 @@ bool MergeMiningClient::parse_merge_mining_get_chain_id(const char* data, size_t
 
 	if (doc.HasMember("error")) {
 		return err(doc["error"].IsString() ? doc["error"].GetString() : "an unknown error occurred");
+	}
+
+	if (!doc.HasMember("result")) {
+		return err("\"result\" field not found");
 	}
 
 	const auto& result = doc["result"];
@@ -204,7 +208,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 		},
 		[this](const char* data, size_t size, double) {
 			if (size > 0) {
-				LOGERR(1, "couldn't get merge mining job from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
+				LOGERR(3, "couldn't get merge mining job from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
 			m_getJobRunning = false;
 		}, &m_loop);
@@ -213,7 +217,7 @@ void MergeMiningClient::merge_mining_get_job(uint64_t height, const hash& prev_i
 bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size, bool& changed)
 {
 	auto err = [](const char* msg) {
-		LOGWARN(1, "merge_mining_get_job RPC call failed: " << msg);
+		LOGWARN(3, "merge_mining_get_job RPC call failed: " << msg);
 		return false;
 	};
 
@@ -225,6 +229,10 @@ bool MergeMiningClient::parse_merge_mining_get_job(const char* data, size_t size
 
 	if (doc.HasMember("error")) {
 		return err(doc["error"].IsString() ? doc["error"].GetString() : "an unknown error occurred");
+	}
+
+	if (!doc.HasMember("result")) {
+		return err("\"result\" field not found");
 	}
 
 	const auto& result = doc["result"];
@@ -296,7 +304,7 @@ void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>&
 		},
 		[this](const char* data, size_t size, double) {
 			if (size > 0) {
-				LOGERR(1, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
+				LOGERR(3, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
 		}, &m_loop);
 }
@@ -304,7 +312,7 @@ void MergeMiningClient::merge_mining_submit_solution(const std::vector<uint8_t>&
 bool MergeMiningClient::parse_merge_mining_submit_solution(const char* data, size_t size)
 {
 	auto err = [this](const char* msg) {
-		LOGWARN(1, "merge_mining_submit_solution to " << m_host << ':' << m_port << " failed: " << msg);
+		LOGWARN(3, "merge_mining_submit_solution to " << m_host << ':' << m_port << " failed: " << msg);
 		return false;
 	};
 
@@ -316,6 +324,10 @@ bool MergeMiningClient::parse_merge_mining_submit_solution(const char* data, siz
 
 	if (doc.HasMember("error")) {
 		return err(doc["error"].IsString() ? doc["error"].GetString() : "an unknown error occurred");
+	}
+
+	if (!doc.HasMember("result")) {
+		return err("\"result\" field not found");
 	}
 
 	const auto& result = doc["result"];
