@@ -18,14 +18,16 @@ jobs:
     strategy:
       matrix:
         config:
-          - {arch: x86_64, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
-          - {arch: aarch64, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
+          - {arch: x86_64, branch: latest-stable, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
+          - {arch: aarch64, branch: latest-stable, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
+          - {arch: riscv64, branch: edge, flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
 
     steps:
     - name: Setup Alpine Linux
       uses: jirutka/setup-alpine@v1
       with:
         arch: ${{ matrix.config.arch }}
+        branch: ${{ matrix.config.branch }}
 
     - name: Install dependencies
       shell: alpine.sh --root {0}
