@@ -66,8 +66,10 @@ def render():
             w_list = w.split(",")
             w_list[1] = humanfriendly.format_timespan(int(w_list[1]))
             w_list[2] = human_numbers(int(w_list[2]))
-            w_list[3] = human_numbers(int(w_list[3]))
             workers_concat.append(w_list)
+        workers_concat = sorted(workers_concat, key=lambda x: int(x[3]), reverse=True)
+        for w in workers_concat:
+            w[3] = human_numbers(int(w[3]))
         return render_template(
             "index.html",
             my_bday=my_bday,
