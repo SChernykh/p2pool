@@ -60,6 +60,14 @@ def render():
             network_stats = json.loads(reader.read())
         with open("/data/local/stratum", "r") as reader:
             local_stats = json.loads(reader.read())
+        workers = local_stats["workers"][:30] # limit workers output list
+        workers_concat = []
+        for w in workers:
+            w_list = w.split(",")
+            w_list[1] = humanfriendly.format_timespan(int(w_list[1]))
+            w_list[2] = human_numbers(int(w_list[2]))
+            w_list[3] = human_numbers(int(w_list[3]))
+            workers_concat.append(w_list)
         return render_template(
             "index.html",
             my_bday=my_bday,
@@ -67,6 +75,7 @@ def render():
             pool_stats=pool_stats,
             network_stats=network_stats,
             local_stats=local_stats,
+            workers=workers_concat,
         )
     except Exception as e:
         return render_template("oops.html", error=str(e))
