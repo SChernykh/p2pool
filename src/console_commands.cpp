@@ -1,6 +1,6 @@
 /*
  * This file is part of the Monero P2Pool <https://github.com/SChernykh/p2pool>
- * Copyright (c) 2021-2023 SChernykh <https://github.com/SChernykh>
+ * Copyright (c) 2021-2024 SChernykh <https://github.com/SChernykh>
  * Copyright (c) 2021 hyc <https://github.com/hyc>
  *
  * This program is free software: you can redistribute it and/or modify

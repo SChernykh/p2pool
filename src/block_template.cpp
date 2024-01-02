@@ -1,6 +1,6 @@
 /*
  * This file is part of the Monero P2Pool <https://github.com/SChernykh/p2pool>
- * Copyright (c) 2021-2023 SChernykh <https://github.com/SChernykh>
+ * Copyright (c) 2021-2024 SChernykh <https://github.com/SChernykh>
  * Portions Copyright (c) 2012-2013 The Cryptonote developers
  * Portions Copyright (c) 2014-2021 The Monero Project
  * Portions Copyright (c) 2021 XMRig <https://github.com/xmrig>
