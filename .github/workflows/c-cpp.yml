@@ -586,7 +586,7 @@ jobs:
         os:
           - name: freebsd
             architecture: x86-64
-            version: '12.4'
+            version: '13.2'
             host: ubuntu-22.04
 
     steps:
@@ -596,7 +596,7 @@ jobs:
         submodules: recursive
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.19.0
+      uses: cross-platform-actions/action@v0.22.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
@@ -659,7 +659,7 @@ jobs:
         submodules: recursive
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.19.0
+      uses: cross-platform-actions/action@v0.22.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
