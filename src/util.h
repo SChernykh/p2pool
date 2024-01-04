@@ -35,7 +35,7 @@
 namespace p2pool {
 
 #define P2POOL_VERSION_MAJOR 3
-#define P2POOL_VERSION_MINOR 9
+#define P2POOL_VERSION_MINOR 10
 #define P2POOL_VERSION_PATCH 0
 
 extern const char* VERSION;
