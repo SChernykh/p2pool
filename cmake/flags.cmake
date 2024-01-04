@@ -1,6 +1,6 @@
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -35,7 +35,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wstrict-overflow=2 -Wundef -Wformat=2 -Wpointer-arith -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wundef -Wformat=2 -Wpointer-arith -Werror")
+
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.5.0)
+		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")
+	endif()
 
 	if (DEV_WITH_TSAN OR DEV_WITH_UBSAN OR DEV_WITH_ASAN)
 		set(OPTIMIZATION_FLAGS "-Og -g")

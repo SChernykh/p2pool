@@ -19,7 +19,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4623 5026 5027)
+#pragma warning(disable : 4623 5026 5027 5262)
 #endif
 
 #define ROBIN_HOOD_MALLOC(size) p2pool::malloc_hook(size)
@@ -60,27 +60,15 @@ struct nocopy_nomove
 };
 
 template<typename T>
-struct ScopeGuard
+struct ScopeGuard : public nocopy_nomove
 {
 	explicit FORCEINLINE ScopeGuard(T&& handler) : m_handler(std::move(handler)) {}
 	FORCEINLINE ~ScopeGuard() { m_handler(); }
 
 	T m_handler;
-
-	// Disable copying/moving of ScopeGuard objects
-
-	// We can't declare copy constructor as explicitly deleted because of copy elision semantics
-	// Just leave it without definition and it'll fail when linking if someone tries to copy a ScopeGuard object
-	ScopeGuard(const ScopeGuard&);
-
-private:
-	ScopeGuard& operator=(const ScopeGuard&) = delete;
-	ScopeGuard& operator=(ScopeGuard&&) = delete;
 };
 
-template<typename T> FORCEINLINE ScopeGuard<T> on_scope_leave(T&& handler) { return ScopeGuard<T>(std::move(handler)); }
-
-#define ON_SCOPE_LEAVE(...) auto CONCAT(scope_guard_, __LINE__) = on_scope_leave(__VA_ARGS__);
+#define ON_SCOPE_LEAVE(...) auto CONCAT(scope_guard_, __LINE__) = ScopeGuard{ __VA_ARGS__ };
 
 struct MinerCallbackHandler
 {

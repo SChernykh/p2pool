@@ -115,8 +115,9 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11}
-          - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12}
+          - {os: ubuntu-20.04, c: gcc-7, cpp: g++-7, flags: "-Wno-lto-type-mismatch"}
+          - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11, flags: ""}
+          - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
 
     steps:
     - name: Install dependencies
@@ -134,7 +135,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='-flto=2' -DCMAKE_CXX_FLAGS='-flto=2'
+        cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -flto=2' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -flto=2'
         make -j$(nproc)
 
     - name: Run RandomX tests
@@ -147,7 +148,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='-flto=2' -DCMAKE_CXX_FLAGS='-flto=2'
+        cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -flto=2' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -flto=2'
         make -j$(nproc)
 
     - name: Run tests
