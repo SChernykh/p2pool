@@ -238,7 +238,9 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_txkeySecSeed = m_consensusHash;
 		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
-		get_shares(&block, shares);
+		if (!get_shares(&block, shares)) {
+			LOGERR(6, "fill_sidechain_data: get_shares failed");
+		}
 		return;
 	}
 
@@ -332,7 +334,9 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_cumulativeDifficulty += it->second->m_difficulty;
 	}
 
-	get_shares(&block, shares);
+	if (!get_shares(&block, shares)) {
+		LOGERR(6, "fill_sidechain_data: get_shares failed");
+	}
 }
 
 P2PServer* SideChain::p2pServer() const
@@ -661,8 +665,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		m_pool->api_update_block_found(&data, &block);
 	}
 
-	add_block(block);
-	return true;
+	return add_block(block);
 }
 
 bool SideChain::add_block(const PoolBlock& block)
@@ -929,7 +932,9 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	std::vector<MinerShare> shares;
 	uint64_t bh = 0;
 	if (tip) {
-		get_shares(tip, shares, &bh, true);
+		if (!get_shares(tip, shares, &bh, true)) {
+			LOGERR(6, "print_status: get_shares failed");
+		}
 	}
 
 	const uint64_t window_size = (tip && bh) ? (tip->m_sidechainHeight - bh + 1U) : m_chainWindowSize;

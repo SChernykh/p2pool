@@ -31,17 +31,17 @@ public:
 	TCPServer(int default_backlog, allocate_client_callback allocate_new_client);
 	virtual ~TCPServer();
 
-	bool connect_to_peer(bool is_v6, const char* ip, int port);
+	[[nodiscard]] bool connect_to_peer(bool is_v6, const char* ip, int port);
 
 	void drop_connections_async() { if (m_finished.load() == 0) { uv_async_send(&m_dropConnectionsAsync); } }
 	void shutdown_tcp();
 	virtual void print_status();
 
-	uv_loop_t* get_loop() { return &m_loop; }
+	[[nodiscard]] uv_loop_t* get_loop() { return &m_loop; }
 
-	virtual int external_listen_port() const { return m_listenPort; }
+	[[nodiscard]] virtual int external_listen_port() const { return m_listenPort; }
 
-	bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
+	[[nodiscard]] bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
 
 	void ban(bool is_v6, raw_ip ip, uint64_t seconds);
@@ -55,9 +55,9 @@ public:
 		virtual size_t size() const = 0;
 
 		virtual void reset();
-		virtual bool on_connect() = 0;
-		virtual bool on_read(char* data, uint32_t size) = 0;
-		bool on_proxy_handshake(char* data, uint32_t size);
+		[[nodiscard]] virtual bool on_connect() = 0;
+		[[nodiscard]] virtual bool on_read(char* data, uint32_t size) = 0;
+		[[nodiscard]] bool on_proxy_handshake(char* data, uint32_t size);
 		virtual void on_read_failed(int /*err*/) {}
 		virtual void on_disconnected() {}
 
@@ -116,17 +116,17 @@ public:
 
 	std::multimap<size_t, WriteBuf*> m_writeBuffers;
 
-	WriteBuf* get_write_buffer(size_t size_hint);
+	[[nodiscard]] WriteBuf* get_write_buffer(size_t size_hint);
 	void return_write_buffer(WriteBuf* buf);
 
 	template<typename T>
 	FORCEINLINE static void parse_address_list(const std::string& address_list, T&& callback)
 	{
-		return parse_address_list_internal(address_list, Callback<void, bool, const std::string&, const std::string&, int>::Derived<T>(std::move(callback)));
+		parse_address_list_internal(address_list, Callback<void, bool, const std::string&, const std::string&, int>::Derived<T>(std::move(callback)));
 	}
 
 	template<typename T>
-	FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback))); }
+	[[nodiscard]] FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback))); }
 
 private:
 	static void on_new_connection(uv_stream_t* server, int status);
@@ -136,9 +136,9 @@ private:
 	void on_new_client(uv_stream_t* server);
 	void on_new_client(uv_stream_t* server, Client* client);
 
-	bool connect_to_peer(Client* client);
+	[[nodiscard]] bool connect_to_peer(Client* client);
 
-	bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback);
+	[[nodiscard]] bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback);
 
 	allocate_client_callback m_allocateNewClient;
 
@@ -195,7 +195,7 @@ protected:
 	uv_mutex_t m_bansLock;
 	unordered_map<raw_ip, std::chrono::steady_clock::time_point> m_bans;
 
-	bool is_banned(bool is_v6, raw_ip ip);
+	[[nodiscard]] bool is_banned(bool is_v6, raw_ip ip);
 
 	unordered_set<raw_ip> m_pendingConnections;
 

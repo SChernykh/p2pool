@@ -46,52 +46,52 @@ public:
 
 	void fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
 
-	bool incoming_block_seen(const PoolBlock& block);
+	[[nodiscard]] bool incoming_block_seen(const PoolBlock& block);
 	void forget_incoming_block(const PoolBlock& block);
 	void cleanup_incoming_blocks();
 
-	bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
-	bool add_block(const PoolBlock& block);
+	[[nodiscard]] bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
+	[[nodiscard]] bool add_block(const PoolBlock& block);
 	void get_missing_blocks(unordered_set<hash>& missing_blocks) const;
 
-	PoolBlock* find_block(const hash& id) const;
-	PoolBlock* find_block_by_merkle_root(const root_hash& merkle_root) const;
+	[[nodiscard]] PoolBlock* find_block(const hash& id) const;
+	[[nodiscard]] PoolBlock* find_block_by_merkle_root(const root_hash& merkle_root) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root);
 
-	const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
-	bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
+	[[nodiscard]] const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
+	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
 
 	void print_status(bool obtain_sidechain_lock = true) const;
-	double get_reward_share(const Wallet& w) const;
+	[[nodiscard]] double get_reward_share(const Wallet& w) const;
 
 	// Consensus ID can be used to spawn independent P2Pools with their own sidechains
 	// It's never sent over the network to avoid revealing it to the possible man in the middle
 	// Consensus ID can therefore be used as a password to create private P2Pools
-	const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
-	const hash& consensus_hash() const { return m_consensusHash; }
-	uint64_t chain_window_size() const { return m_chainWindowSize; }
-	static NetworkType network_type() { return s_networkType; }
-	static uint64_t network_major_version(uint64_t height);
-	FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
-	difficulty_type total_hashes() const;
-	uint64_t block_time() const { return m_targetBlockTime; }
-	uint64_t miner_count();
-	uint64_t last_updated() const;
-	bool is_default() const;
-	bool is_mini() const;
-	uint64_t bottom_height(const PoolBlock* tip) const;
+	[[nodiscard]] const std::vector<uint8_t>& consensus_id() const { return m_consensusId; }
+	[[nodiscard]] const hash& consensus_hash() const { return m_consensusHash; }
+	[[nodiscard]] uint64_t chain_window_size() const { return m_chainWindowSize; }
+	[[nodiscard]] static NetworkType network_type() { return s_networkType; }
+	[[nodiscard]] static uint64_t network_major_version(uint64_t height);
+	[[nodiscard]] FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
+	[[nodiscard]] difficulty_type total_hashes() const;
+	[[nodiscard]] uint64_t block_time() const { return m_targetBlockTime; }
+	[[nodiscard]] uint64_t miner_count();
+	[[nodiscard]] uint64_t last_updated() const;
+	[[nodiscard]] bool is_default() const;
+	[[nodiscard]] bool is_mini() const;
+	[[nodiscard]] uint64_t bottom_height(const PoolBlock* tip) const;
 
-	const PoolBlock* chainTip() const { return m_chainTip; }
-	bool precalcFinished() const { return m_precalcFinished.load(); }
+	[[nodiscard]] const PoolBlock* chainTip() const { return m_chainTip; }
+	[[nodiscard]] bool precalcFinished() const { return m_precalcFinished.load(); }
 
-	bool p2pool_update_available() const;
+	[[nodiscard]] bool p2pool_update_available() const;
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
 #endif
 
-	static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
+	[[nodiscard]] static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
 private:
 	p2pool* m_pool;
@@ -99,20 +99,20 @@ private:
 	static NetworkType s_networkType;
 
 private:
-	bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
-	bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
+	[[nodiscard]] bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
+	[[nodiscard]] bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(const PoolBlock* block);
-	PoolBlock* get_parent(const PoolBlock* block) const;
+	[[nodiscard]] PoolBlock* get_parent(const PoolBlock* block) const;
 
 	// Checks if "candidate" has longer (higher difficulty) chain than "block"
-	bool is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative) const;
+	[[nodiscard]] bool is_longer_chain(const PoolBlock* block, const PoolBlock* candidate, bool& is_alternative) const;
 	void update_depths(PoolBlock* block);
 	void prune_old_blocks();
 
-	bool load_config(const std::string& filename);
-	bool check_config() const;
+	[[nodiscard]] bool load_config(const std::string& filename);
+	[[nodiscard]] bool check_config() const;
 
 	mutable uv_rwlock_t m_sidechainLock;
 	std::atomic<PoolBlock*> m_chainTip;

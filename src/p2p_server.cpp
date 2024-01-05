@@ -241,7 +241,9 @@ void P2PServer::connect_to_peers(const std::string& peer_list)
 		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
 			if (!m_pool->params().m_dns || resolve_host(ip, is_v6)) {
-				connect_to_peer(is_v6, ip.c_str(), port);
+				if (!connect_to_peer(is_v6, ip.c_str(), port)) {
+					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
+				}
 			}
 		});
 }
@@ -1214,7 +1216,9 @@ void P2PServer::download_missing_blocks()
 			auto it = m_cachedBlocks->find(id);
 			if (it != m_cachedBlocks->end()) {
 				LOGINFO(5, "using cached block for id = " << id);
-				client->handle_incoming_block_async(it->second);
+				if (!client->handle_incoming_block_async(it->second)) {
+					LOGERR(5, "download_missing_blocks: handle_incoming_block_async failed");
+				}
 				continue;
 			}
 		}
@@ -2645,7 +2649,9 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 			auto it = server->m_cachedBlocks->find(id);
 			if (it != server->m_cachedBlocks->end()) {
 				LOGINFO(5, "using cached block for id = " << id);
-				handle_incoming_block_async(it->second);
+				if (!handle_incoming_block_async(it->second)) {
+					LOGERR(5, "post_handle_incoming_block: handle_incoming_block_async failed");
+				}
 				continue;
 			}
 		}

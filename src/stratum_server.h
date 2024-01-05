@@ -45,12 +45,12 @@ public:
 		virtual size_t size() const override { return sizeof(StratumClient); }
 
 		void reset() override;
-		bool on_connect() override;
-		bool on_read(char* data, uint32_t size) override;
+		[[nodiscard]] bool on_connect() override;
+		[[nodiscard]] bool on_read(char* data, uint32_t size) override;
 
-		bool process_request(char* data, uint32_t size);
-		bool process_login(rapidjson::Document& doc, uint32_t id);
-		bool process_submit(rapidjson::Document& doc, uint32_t id);
+		[[nodiscard]] bool process_request(char* data, uint32_t size);
+		[[nodiscard]] bool process_login(rapidjson::Document& doc, uint32_t id);
+		[[nodiscard]] bool process_submit(rapidjson::Document& doc, uint32_t id);
 
 		alignas(8) char m_stratumReadBuf[STRATUM_BUF_SIZE];
 
@@ -88,9 +88,9 @@ public:
 		int32_t m_score;
 	};
 
-	bool on_login(StratumClient* client, uint32_t id, const char* login);
-	bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
-	uint32_t get_random32();
+	[[nodiscard]] bool on_login(StratumClient* client, uint32_t id, const char* login);
+	[[nodiscard]] bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
+	[[nodiscard]] uint32_t get_random32();
 
 	void print_status() override;
 	void show_workers_async();
@@ -98,7 +98,7 @@ public:
 	void reset_share_counters();
 
 private:
-	const char* get_log_category() const override;
+	[[nodiscard]] const char* get_log_category() const override;
 
 	void print_stratum_status() const;
 	void update_auto_diff(StratumClient* client, const uint64_t timestamp, const uint64_t hashes);
