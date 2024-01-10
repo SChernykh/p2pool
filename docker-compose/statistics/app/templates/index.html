@@ -64,6 +64,29 @@
                     <td>Block reward share</td>
                     <td>{{ local_stats["block_reward_share_percent"] }}%</td>
                   </tr>
+                  <tr>
+                    <td>Workers
+                      <h6 class="card-subtitle text-muted" style="font-size:80%;">(note: limited to the first 30 workers)</h6>
+                    </td>
+                    <td>
+                      <table style="font-size:65%;">
+                        <tr>
+                          <th>IP:Port</th>
+                          <th>Uptime</th>
+                          <th>Difficulty</th>
+                          <th>Hashrate</th>
+                          <th>Name</th>
+                        </tr>
+                        {% for w in workers %}
+                        <tr>
+                          {% for w_detail in w %}
+                          <td>{{ w_detail }}</td>
+                          {% endfor %}
+                        </tr>
+                        {% endfor %}
+                      </table> 
+                    </td>
+                  </tr> 
                 </tbody>
               </table>
             </div>
