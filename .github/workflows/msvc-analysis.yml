@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -45,7 +45,7 @@ jobs:
       #   run: cmake --build ${{ env.build }}
 
       - name: Initialize MSVC Code Analysis
-        uses: microsoft/msvc-code-analysis-action@24c285ab36952c9e9182f4b78dfafbac38a7e5ee
+        uses: microsoft/msvc-code-analysis-action@96315324a485db21449515180214ecb78c16a1c5
         # Provide a unique ID to access the sarif output path
         id: run-analysis
         with:
@@ -56,13 +56,13 @@ jobs:
 
       # Upload SARIF file to GitHub Code Scanning Alerts
       - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.run-analysis.outputs.sarif }}
 
       # Upload SARIF file as an Artifact to download and view
       - name: Upload SARIF as an Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sarif-file
           path: ${{ steps.run-analysis.outputs.sarif }}

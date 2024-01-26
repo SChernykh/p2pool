@@ -20,12 +20,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Checkout cppcheck
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: danmar/cppcheck
         path: cppcheck-main
@@ -48,7 +48,7 @@ jobs:
         ./run.sh
 
     - name: Archive full error list
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: errors_full-linux
         path: cppcheck/errors_full.txt
@@ -66,12 +66,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Checkout cppcheck
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: danmar/cppcheck
         path: cppcheck-main
@@ -96,7 +96,7 @@ jobs:
         ./run.cmd
 
     - name: Archive full error list
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: errors_full-windows
         path: cppcheck/errors_full.txt
