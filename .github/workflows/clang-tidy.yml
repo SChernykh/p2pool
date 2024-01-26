@@ -23,12 +23,12 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 17
-        sudo apt-get install -y clang-tidy-17
-        clang-tidy-17 --verify-config
+        sudo ./llvm.sh 18
+        sudo apt-get install -y clang-tidy-18
+        clang-tidy-18 --verify-config
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -36,9 +36,9 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DDEV_CLANG_TIDY=ON
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DDEV_CLANG_TIDY=ON
 
     - name: Run clang-tidy
       run: |
         cd src
-        clang-tidy-17 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal -warnings-as-errors=* -header-filter=^[^\.]
+        clang-tidy-18 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal,-clang-diagnostic-nan-infinity-disabled -warnings-as-errors=* -header-filter=^[^\.]
