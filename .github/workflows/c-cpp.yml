@@ -160,7 +160,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: p2pool-${{ matrix.config.os }}
+        name: p2pool-${{ matrix.config.os }}-${{ matrix.config.c }}
         path: build/p2pool
 
   build-ubuntu-static-libs:
