@@ -41,6 +41,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")
 	endif()
 
+	if (DISABLE_WARNINGS)
+		set(WARNING_FLAGS "-w")
+	endif()
+
 	if (DEV_WITH_TSAN OR DEV_WITH_UBSAN OR DEV_WITH_ASAN)
 		set(OPTIMIZATION_FLAGS "-Og -g")
 	else()
@@ -76,8 +80,17 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(SECURITY_FLAGS "/GS /guard:cf")
 	set(OPTIMIZATION_FLAGS "/O2 /Oi /Ob2 /Ot /DNDEBUG /GL")
 
-	set(CMAKE_C_FLAGS_DEBUG "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Od /Ob0 /Zi /MTd /fsanitize=address")
-	set(CMAKE_CXX_FLAGS_DEBUG "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Od /Ob0 /Zi /MTd /fsanitize=address")
+	if (DISABLE_WARNINGS)
+		set(WARNING_FLAGS "/W0")
+	endif()
+
+	set(CMAKE_C_FLAGS_DEBUG "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Od /Ob0 /Zi /MTd")
+	set(CMAKE_CXX_FLAGS_DEBUG "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} /Od /Ob0 /Zi /MTd")
+
+	if (DEV_WITH_ASAN)
+		set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /fsanitize=address")
+		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address")
+	endif()
 
 	set(CMAKE_C_FLAGS_RELEASE "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} ${OPTIMIZATION_FLAGS} /MT")
 	set(CMAKE_CXX_FLAGS_RELEASE "${GENERAL_FLAGS} ${WARNING_FLAGS} ${SECURITY_FLAGS} ${OPTIMIZATION_FLAGS} /MT")
@@ -99,6 +112,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
+
+	if (DISABLE_WARNINGS)
+		set(WARNING_FLAGS "-w")
+	endif()
 
 	if (DEV_WITH_MSAN)
 		set(OPTIMIZATION_FLAGS "-Og -g")

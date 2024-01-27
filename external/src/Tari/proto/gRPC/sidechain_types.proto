@@ -1,0 +1,77 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+package tari.rpc;
+
+import "types.proto";
+
+message SideChainFeature {
+    oneof side_chain_feature {
+        ValidatorNodeRegistration validator_node_registration = 1;
+        TemplateRegistration template_registration = 2;
+        ConfidentialOutputData confidential_output = 3;
+    }
+}
+
+message ValidatorNodeRegistration {
+    bytes public_key = 1;
+    Signature signature = 2;
+}
+
+message TemplateRegistration {
+    bytes author_public_key = 1;
+    Signature author_signature = 2;
+    string template_name = 3;
+    uint32 template_version = 4;
+    TemplateType template_type = 5;
+    BuildInfo build_info = 6;
+    bytes binary_sha = 7;
+    string binary_url = 8;
+}
+
+message ConfidentialOutputData {
+    bytes claim_public_key = 1;
+}
+
+message TemplateType {
+    oneof template_type {
+        WasmInfo wasm = 1;
+        FlowInfo flow = 2;
+        ManifestInfo manifest = 3;
+    }
+}
+
+message WasmInfo {
+    uint32 abi_version = 1;
+}
+
+message FlowInfo {
+}
+
+message ManifestInfo {
+}
+
+message BuildInfo {
+    string repo_url = 1;
+    bytes commit_hash = 2;
+}

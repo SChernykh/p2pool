@@ -1,0 +1,144 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+package tari.rpc;
+
+/// An unsigned range interface to more accurately represent Rust native Range's
+message Range {
+    uint64 min = 1;
+    uint64 max = 2;
+}
+
+/// An Empty placeholder for endpoints without request parameters
+message Empty {}
+
+/// Define an interface for block height
+message BlockHeight {
+    uint64 block_height = 1;
+}
+
+// Define the explicit Signature implementation for the Minotari base layer. A different signature scheme can be
+// employed by redefining this type.
+message Signature {
+    bytes public_nonce = 1;
+    bytes signature = 2;
+}
+
+// Define the explicit ComAndPubSignature implementation for the Minotari base layer. A different signature scheme can be
+// employed by redefining this type.
+message ComAndPubSignature {
+    bytes ephemeral_commitment = 1;
+    bytes ephemeral_pubkey = 2;
+    bytes u_a = 3;
+    bytes u_x = 4;
+    bytes u_y = 5;
+}
+
+// Define the explicit CommitmentSignature implementation for the Minotari base layer. A different signature scheme can be
+// employed by redefining this type
+message CommitmentSignature {
+    bytes public_nonce = 1;
+    bytes u = 2;
+    bytes v = 3;
+}
+
+/// PoW Algorithm constants
+message PowAlgorithmConstants {
+    uint64 min_difficulty = 2;
+    uint64 max_difficulty = 3;
+    uint64 target_time = 4;
+}
+
+/// Weight params
+message WeightParams {
+    uint64 kernel_weight = 1;
+    uint64 input_weight = 2;
+    uint64 output_weight = 3;
+    uint64 features_and_scripts_bytes_per_gram = 4;
+}
+
+/// Output version
+message OutputsVersion {
+    Range outputs = 1;
+    Range features = 2;
+}
+
+/// Output types
+enum OutputType {
+    STANDARD = 0;
+    COINBASE = 1;
+    BURN = 2;
+    VALIDATOR_NODE_REGISTRATION = 3;
+    CODE_TEMPLATE_REGISTRATION = 4;
+}
+
+/// Range proof types
+enum RangeProofType {
+    BULLETPROOF_PLUS = 0;
+    REVEALED_VALUE = 1;
+}
+
+message PermittedRangeProofs {
+    OutputType output_type = 1;
+    repeated RangeProofType range_proof_types = 2;
+}
+
+/// Range proof
+message RangeProof {
+    bytes proof_bytes = 1;
+}
+
+/// Consensus Constants response
+message ConsensusConstants {
+    uint64 coinbase_min_maturity = 1;
+    uint32 blockchain_version = 2;
+    uint64 future_time_limit = 3;
+    uint64 difficulty_block_window = 5;
+    uint64 max_block_transaction_weight = 7;
+    uint64 pow_algo_count = 8;
+    uint64 median_timestamp_count = 9;
+    uint64 emission_initial = 10;
+    repeated uint64 emission_decay = 11;
+    uint64 emission_tail = 12;
+    uint64 min_sha3x_pow_difficulty = 13;
+    uint64 block_weight_inputs = 14;
+    uint64 block_weight_outputs = 15;
+    uint64 block_weight_kernels = 16;
+    uint64 faucet_value = 17;
+    uint64 max_script_byte_size = 18;
+    uint64 validator_node_validity_period = 19;
+    uint64 effective_from_height = 20;
+    Range valid_blockchain_version_range = 21;
+    uint64 max_randomx_seed_height = 22;
+    map<uint32, PowAlgorithmConstants> proof_of_work = 23;
+    WeightParams transaction_weight = 24;
+    Range input_version_range = 26;
+    OutputsVersion output_version_range = 27;
+    Range kernel_version_range = 28;
+    repeated OutputType permitted_output_types = 29;
+    uint64 epoch_length = 30;
+    uint64 validator_node_registration_min_deposit_amount = 31;
+    uint64 validator_node_registration_min_lock_height = 32;
+    uint64 validator_node_registration_shuffle_interval_epoch = 33;
+    repeated PermittedRangeProofs permitted_range_proof_types = 34;
+}

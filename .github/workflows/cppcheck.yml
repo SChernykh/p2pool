@@ -22,7 +22,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
 
     - name: Checkout cppcheck
       uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
 
     - name: Checkout cppcheck
       uses: actions/checkout@v4

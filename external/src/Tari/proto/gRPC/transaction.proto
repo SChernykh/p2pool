@@ -1,0 +1,182 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+package tari.rpc;
+
+import "types.proto";
+import "sidechain_types.proto";
+
+// The transaction kernel tracks the excess for a given transaction. For an explanation of what the excess is, and
+// why it is necessary, refer to the
+// [Mimblewimble TLU post](https://tlu.tarilabs.com/protocols/mimblewimble-1/sources/PITCHME.link.html?highlight=mimblewimble#mimblewimble).
+// The kernel also tracks other transaction metadata, such as the lock height for the transaction (i.e. the earliest
+// this transaction can be mined) and the transaction fee, in cleartext.
+message TransactionKernel {
+    // Options for a kernel's structure or use
+    uint32 features = 1;
+    /// Fee originally included in the transaction this proof is for (in MicroMinotari)
+    uint64 fee = 2;
+    // This kernel is not valid earlier than lock_height blocks
+    // The max lock_height of all *inputs* to this transaction
+    uint64 lock_height = 3;
+    // Remainder of the sum of all transaction commitments. If the transaction
+    // is well formed, amounts components should sum to zero and the excess
+    // is hence a valid public key.
+    bytes excess = 6;
+    // The signature proving the excess is a valid public key, which signs
+    // the transaction fee.
+    Signature excess_sig = 7;
+    // The hash of the kernel, as it appears in the MMR
+    bytes hash = 8;
+    // Version
+    uint32 version = 9;
+    // Optional burned commitment
+    bytes burn_commitment = 10;
+}
+
+// A transaction input.
+//
+// Primarily a reference to an output being spent by the transaction.
+message TransactionInput {
+    // The features of the output being spent. We will check maturity for all outputs.
+    OutputFeatures features = 1;
+    // The commitment referencing the output being spent.
+    bytes commitment = 2;
+    // Hash of the input, as it appears in the MMR
+    bytes hash = 3;
+    // The serialised script
+    bytes script = 4;
+    // The script input data, if any
+    bytes input_data = 5;
+    // A signature with k_s, signing the script, input data, and mined height
+    ComAndPubSignature script_signature = 7;
+    // The offset public key, K_O
+    bytes sender_offset_public_key = 8;
+    // The hash of the output this input is spending
+    bytes output_hash = 9;
+    // Covenant
+    bytes covenant = 10;
+    // Version
+    uint32 version = 11;
+    // The encrypted data
+    bytes encrypted_data = 12;
+    // The minimum value of the commitment that is proven by the range proof (in MicroMinotari)
+    uint64 minimum_value_promise = 13;
+    // The metadata signature for output this input is spending
+    ComAndPubSignature metadata_signature = 14;
+    // The rangeproof hash for output this input is spending
+    bytes rangeproof_hash = 15;
+}
+
+// Output for a transaction, defining the new ownership of coins that are being transferred. The commitment is a
+// blinded value for the output while the range proof guarantees the commitment includes a positive value without
+// overflow and the ownership of the private key.
+message TransactionOutput {
+    // Options for an output's structure or use
+    OutputFeatures features = 1;
+    // The homomorphic commitment representing the output amount
+    bytes commitment = 2;
+    // A proof that the commitment is in the right range
+    RangeProof range_proof = 3;
+    // The hash of the output, as it appears in the MMR
+    bytes hash = 4;
+    // Tari script serialised script
+    bytes script = 5;
+    // Tari script offset public key, K_O
+    bytes sender_offset_public_key = 6;
+    // Metadata signature with the homomorphic commitment private values (amount and blinding factor) and the sender
+    // offset private key
+    ComAndPubSignature metadata_signature = 7;
+    // Covenant
+    bytes covenant = 8;
+    // Version
+    uint32 version = 9;
+    // Encrypted Pedersen commitment openings (value and mask) for the output
+    bytes encrypted_data = 10;
+    // The minimum value of the commitment that is proven by the range proof (in MicroMinotari)
+    uint64 minimum_value_promise = 11;
+}
+
+// Options for UTXOs
+message OutputFeatures {
+    // Version
+    uint32 version = 1;
+    // The type of output, eg Coinbase, all of which have different consensus rules
+    uint32 output_type = 2;
+    // The maturity of the specific UTXO. This is the min lock height at which an UTXO can be spend. Coinbase UTXO
+    // require a min maturity of the Coinbase_lock_height, this should be checked on receiving new blocks.
+    uint64 maturity = 3;
+    // Additional arbitrary info in coinbase transactions supplied by miners
+    bytes coinbase_extra = 4;
+    // Features that are specific to a side chain
+    SideChainFeature sidechain_feature = 5;
+    // The type of range proof used in the output
+    uint32 range_proof_type = 6;
+}
+
+// The components of the block or transaction. The same struct can be used for either, since in Mimblewimble,
+// cut-through means that blocks and transactions have the same structure. The inputs, outputs and kernels should
+// be sorted by their Blake2b-256bit digest hash
+message AggregateBody {
+    // List of inputs spent by the transaction.
+    repeated TransactionInput inputs = 1;
+    // List of outputs the transaction produces.
+    repeated TransactionOutput outputs = 2;
+    // Kernels contain the excesses and their signatures for transaction
+    repeated TransactionKernel kernels = 3;
+}
+
+// A transaction which consists of a kernel offset and an aggregate body made up of inputs, outputs and kernels.
+message Transaction {
+    bytes offset = 1;
+    AggregateBody body = 2;
+    bytes script_offset = 3;
+}
+
+message UnblindedOutput {
+    // Value of the output
+    uint64 value = 1;
+    // Spending key of the output
+    bytes spending_key = 2;
+    // Options for an output's structure or use
+    OutputFeatures features = 3;
+    // Tari script serialised script
+    bytes script = 4;
+    // Tari script input data for spending
+    bytes input_data = 5;
+    // Tari script private key
+    bytes script_private_key = 7;
+    // Tari script offset pubkey, K_O
+    bytes sender_offset_public_key = 8;
+    // UTXO signature with the script offset private key, k_O
+    ComAndPubSignature metadata_signature = 9;
+    // The minimum height the script allows this output to be spent
+    uint64 script_lock_height = 10;
+    // Covenant
+    bytes covenant = 11;
+    // Encrypted data
+    bytes encrypted_data = 12;
+    // The minimum value of the commitment that is proven by the range proof (in MicroMinotari)
+    uint64 minimum_value_promise = 13;
+}
+

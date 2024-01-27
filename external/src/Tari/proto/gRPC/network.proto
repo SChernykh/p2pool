@@ -1,0 +1,93 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+package tari.rpc;
+
+import "google/protobuf/timestamp.proto";
+
+message NodeIdentity {
+    bytes public_key = 1;
+    repeated string public_addresses = 2;
+    bytes node_id = 3;
+}
+
+message Peer {
+    /// Public key of the peer
+    bytes public_key =1;
+    /// NodeId of the peer
+    bytes node_id =2;
+    /// Peer's addresses
+    repeated Address addresses = 3;
+    /// Last connection attempt to peer
+    uint64 last_connection = 4;
+    /// Flags for the peer.
+    uint32 flags = 5;
+    uint64 banned_until= 6;
+    string banned_reason= 7;
+    uint64 offline_at = 8;
+    /// Features supported by the peer
+    uint32 features = 9;
+    /// used as information for more efficient protocol negotiation.
+    repeated bytes supported_protocols = 11;
+    /// User agent advertised by the peer
+    string user_agent = 12;
+}
+
+enum ConnectivityStatus {
+    Initializing = 0;
+    Online = 1;
+    Degraded = 2;
+    Offline = 3;
+}
+
+message NetworkStatusResponse {
+    ConnectivityStatus status = 1;
+    uint32 avg_latency_ms = 2;
+    uint32 num_node_connections = 3;
+}
+
+message Address{
+    bytes address =1;
+    string last_seen = 2;
+    uint32 connection_attempts = 3;
+    uint64 avg_latency = 5;
+}
+
+message ListConnectedPeersResponse {
+    repeated Peer connected_peers = 1;
+}
+
+message SoftwareUpdate {
+    bool has_update = 1;
+    string version = 2;
+    string sha = 3;
+    string download_url = 4;
+}
+
+message GetIdentityRequest { }
+
+message GetIdentityResponse {
+    bytes public_key = 1;
+    string public_address = 2;
+    bytes node_id = 3;
+}

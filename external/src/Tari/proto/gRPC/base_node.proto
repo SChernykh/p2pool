@@ -1,0 +1,488 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+import "types.proto";
+import "transaction.proto";
+import "block.proto";
+import "network.proto";
+import "sidechain_types.proto";
+
+package tari.rpc;
+
+// The gRPC interface for interacting with the base node.
+service BaseNode {
+    // Lists headers in the current best chain
+    rpc ListHeaders(ListHeadersRequest) returns (stream BlockHeaderResponse);
+    // Get header by hash
+    rpc GetHeaderByHash(GetHeaderByHashRequest) returns (BlockHeaderResponse);
+    // Returns blocks in the current best chain. Currently only supports querying by height
+    rpc GetBlocks(GetBlocksRequest) returns (stream HistoricalBlock);
+    // Returns the block timing for the chain heights
+    rpc GetBlockTiming(HeightRequest) returns (BlockTimingResponse);
+    // Returns the network Constants
+    rpc GetConstants(BlockHeight) returns (ConsensusConstants);
+    // Returns Block Sizes
+    rpc GetBlockSize (BlockGroupRequest) returns (BlockGroupResponse);
+    // Returns Block Fees
+    rpc GetBlockFees (BlockGroupRequest) returns (BlockGroupResponse);
+    // Get Version
+    rpc GetVersion(Empty) returns (StringValue);
+    // Check for new updates
+    rpc CheckForUpdates(Empty) returns (SoftwareUpdate);
+    // Get coins in circulation
+    rpc GetTokensInCirculation(GetBlocksRequest) returns (stream ValueAtHeightResponse);
+    // Get network difficulties
+    rpc GetNetworkDifficulty(HeightRequest) returns (stream NetworkDifficultyResponse);
+    // Get the block template
+    rpc GetNewBlockTemplate(NewBlockTemplateRequest) returns (NewBlockTemplateResponse);
+    // Construct a new block from a provided template
+    rpc GetNewBlock(NewBlockTemplate) returns (GetNewBlockResult);
+    // Construct a new block and header blob from a provided template
+    rpc GetNewBlockBlob(NewBlockTemplate) returns (GetNewBlockBlobResult);
+    // Submit a new block for propagation
+    rpc SubmitBlock(Block) returns (SubmitBlockResponse);
+    // Submit a new mined block blob for propagation
+    rpc SubmitBlockBlob(BlockBlobRequest) returns (SubmitBlockResponse);
+    // Submit a transaction for propagation
+    rpc SubmitTransaction(SubmitTransactionRequest) returns (SubmitTransactionResponse);
+    // Get the base node sync information
+    rpc GetSyncInfo(Empty) returns (SyncInfoResponse);
+    // Get the base node sync information
+    rpc GetSyncProgress(Empty) returns (SyncProgressResponse);
+    // Get the base node tip information
+    rpc GetTipInfo(Empty) returns (TipInfoResponse);
+    // Search for blocks containing the specified kernels
+    rpc SearchKernels(SearchKernelsRequest) returns (stream HistoricalBlock);
+    // Search for blocks containing the specified commitments
+    rpc SearchUtxos(SearchUtxosRequest) returns (stream HistoricalBlock);
+    // Fetch any utxos that exist in the main chain
+    rpc FetchMatchingUtxos(FetchMatchingUtxosRequest) returns (stream FetchMatchingUtxosResponse);
+    // get all peers from the base node
+    rpc GetPeers(GetPeersRequest) returns (stream GetPeersResponse);
+    rpc GetMempoolTransactions(GetMempoolTransactionsRequest) returns (stream GetMempoolTransactionsResponse);
+    rpc TransactionState(TransactionStateRequest) returns (TransactionStateResponse);
+    // This returns the node's network identity
+    rpc Identify (Empty) returns (NodeIdentity);
+    // Get Base Node network connectivity status
+    rpc GetNetworkStatus(Empty) returns (NetworkStatusResponse);
+    // List currently connected peers
+    rpc ListConnectedPeers(Empty) returns (ListConnectedPeersResponse);
+    // Get mempool stats
+    rpc GetMempoolStats(Empty) returns (MempoolStatsResponse);
+    // Get VNs
+    rpc GetActiveValidatorNodes(GetActiveValidatorNodesRequest) returns (stream GetActiveValidatorNodesResponse);
+    rpc GetShardKey(GetShardKeyRequest) returns (GetShardKeyResponse);
+    // Get templates
+    rpc GetTemplateRegistrations(GetTemplateRegistrationsRequest) returns (stream GetTemplateRegistrationResponse);
+    rpc GetSideChainUtxos(GetSideChainUtxosRequest) returns (stream GetSideChainUtxosResponse);
+}
+
+message GetAssetMetadataRequest {
+    bytes asset_public_key = 1;
+}
+
+message GetAssetMetadataResponse {
+    string name = 2;
+    string description =3;
+    string image = 4;
+    bytes owner_commitment = 5;
+    OutputFeatures features = 6;
+    uint64 mined_height = 7;
+    bytes mined_in_block = 8;
+}
+
+message ListAssetRegistrationsRequest {
+    uint64 offset = 2;
+    uint64 count = 3;
+}
+
+message ListAssetRegistrationsResponse {
+    bytes asset_public_key = 1;
+    bytes unique_id = 2;
+    bytes owner_commitment = 3;
+    uint64 mined_height = 4;
+    bytes mined_in_block = 5;
+    OutputFeatures features = 6;
+    bytes script = 7;
+}
+
+message GetTokensRequest {
+    bytes asset_public_key = 1;
+    // Optionally get a set of specific unique_ids
+    repeated bytes unique_ids = 2;
+}
+
+message GetTokensResponse {
+    bytes unique_id = 1;
+    bytes asset_public_key = 2;
+    bytes owner_commitment = 3;
+    bytes mined_in_block = 4;
+    uint64 mined_height = 5;
+    OutputFeatures features = 6;
+    bytes script = 7;
+}
+
+message SubmitBlockResponse {
+    bytes block_hash = 1;
+}
+
+message BlockBlobRequest{
+    bytes header_blob = 1;
+    bytes body_blob = 2;
+}
+
+/// return type of GetTipInfo
+message TipInfoResponse {
+    MetaData metadata = 1;
+    bool initial_sync_achieved = 2;
+    BaseNodeState base_node_state = 3;
+}
+
+enum BaseNodeState{
+    START_UP = 0;
+    HEADER_SYNC = 1;
+    HORIZON_SYNC = 2;
+    CONNECTING = 3;
+    BLOCK_SYNC = 4;
+    LISTENING = 5;
+    SYNC_FAILED = 6;
+}
+
+/// return type of GetNewBlockTemplate
+message NewBlockTemplateResponse {
+    NewBlockTemplate new_block_template = 1;
+    bool initial_sync_achieved = 3;
+    MinerData miner_data = 4;
+}
+
+/// return type of NewBlockTemplateRequest
+message NewBlockTemplateRequest{
+    PowAlgo algo = 1;
+    //This field should be moved to optional once optional keyword is standard
+    uint64 max_weight = 2;
+}
+
+// Network difficulty response
+message NetworkDifficultyResponse {
+    uint64 difficulty = 1;
+    uint64 estimated_hash_rate = 2;
+    uint64 height = 3;
+    uint64 timestamp = 4;
+    uint64 pow_algo = 5;
+    uint64 sha3x_estimated_hash_rate = 6;
+    uint64 randomx_estimated_hash_rate = 7;
+}
+
+// A generic single value response for a specific height
+message ValueAtHeightResponse {
+    uint64 value= 1;
+    uint64 height = 2;
+}
+
+// A generic uint value
+message IntegerValue {
+    uint64 value = 1;
+}
+
+// A generic String value
+message StringValue {
+    string value = 1;
+}
+
+/// GetBlockSize / GetBlockFees Request
+/// Either the starting and ending heights OR the from_tip param must be specified
+message BlockGroupRequest {
+    // The height from the chain tip (optional)
+    uint64 from_tip = 1;
+    // The starting height (optional)
+    uint64 start_height = 2;
+    // The ending height (optional)
+    uint64 end_height = 3;
+    /// The type of calculation required (optional)
+    /// Defaults to median
+    /// median, mean, quartile, quantile
+    CalcType calc_type = 4;
+}
+
+/// GetBlockSize / GetBlockFees  Response
+message BlockGroupResponse {
+    repeated double value = 1;
+    CalcType calc_type = 2;
+}
+
+enum CalcType {
+    MEAN = 0;
+    MEDIAN = 1;
+    QUANTILE = 2;
+    QUARTILE = 3;
+}
+
+// The request used for querying a function that requires a height, either between 2 points or from the chain tip
+// If start_height and end_height are set and > 0, they take precedence, otherwise from_tip is used
+message HeightRequest {
+    // The height from the chain tip (optional)
+    uint64 from_tip = 1;
+    // The starting height (optional)
+    uint64 start_height = 2;
+    // The ending height (optional)
+    uint64 end_height = 3;
+}
+
+// The return type of the rpc GetBlockTiming
+message BlockTimingResponse {
+    uint64 max = 1;
+    uint64 min = 2;
+    double avg = 3;
+}
+
+// Request that returns a header based by hash
+message GetHeaderByHashRequest {
+    // The hash of the block header
+    bytes hash = 1;
+}
+
+
+message BlockHeaderResponse {
+    // The block header
+    BlockHeader header = 1;
+    // The number of blocks from the tip of this block (a.k.a depth)
+    uint64 confirmations = 2;
+    // The block reward i.e mining reward + fees
+    uint64 reward = 3;
+    // Achieved difficulty
+    uint64 difficulty = 4;
+    // The number of transactions contained in the block
+    uint32 num_transactions = 5;
+}
+
+// The request used for querying headers from the base node. The parameters `from_height` and `num_headers` can be used
+// to page through the current best chain.
+message ListHeadersRequest {
+    // The height to start at. Depending on sorting, will either default to use the tip or genesis block, for `SORTING_DESC`
+    // and `SORTING_ASC` respectively, if a value is not provided. The first header returned will be at this height
+    // followed by `num_headers` - 1 headers in the direction specified by `sorting`. If greater than the current tip,
+    // the current tip will be used.
+    uint64 from_height = 1;
+    // The number of headers to return. If not specified, it will default to 10
+    uint64 num_headers = 2;
+    // The ordering to return the headers in. If not specified will default to SORTING_DESC. Note that if `from_height`
+    // is not specified or is 0, if `sorting` is SORTING_DESC, the tip will be used as `from_height`, otherwise the
+    // block at height 0 will be used.
+    Sorting sorting = 3;
+}
+
+// The request used for querying blocks in the base node's current best chain. Currently only querying by height is
+// available. Multiple blocks may be queried.e.g. [189092,100023,122424]. The order in which they are returned is not
+// guaranteed.
+message GetBlocksRequest {
+  repeated uint64 heights = 1;
+}
+
+// The return type of the rpc GetBlocks. Blocks are not guaranteed to be returned in the order requested.
+message GetBlocksResponse {
+    repeated HistoricalBlock blocks = 1;
+}
+
+enum Sorting {
+    SORTING_DESC = 0;
+    SORTING_ASC = 1;
+}
+
+message MetaData {
+    // The current chain height, or the block number of the longest valid chain, or `None` if there is no chain
+    uint64 height_of_longest_chain = 1;
+    // The block hash of the current tip of the longest valid chain, or `None` for an empty chain
+    bytes best_block = 2;
+    // This is the min height this node can provide complete blocks for. A 0 here means this node is archival and can provide complete blocks for every height.
+    uint64 pruned_height = 6;
+    // The current geometric mean of the pow of the chain tip, or `None` if there is no chain
+    bytes accumulated_difficulty = 5;
+}
+
+message SyncInfoResponse {
+    uint64 tip_height = 1;
+    uint64 local_height = 2;
+    repeated bytes peer_node_id = 3;
+}
+
+message SyncProgressResponse {
+    uint64 tip_height = 1;
+    uint64 local_height = 2;
+    SyncState state = 3;
+}
+
+enum SyncState {
+    STARTUP = 0;
+    HEADER_STARTING = 1;
+    HEADER = 2;
+    BLOCK_STARTING = 3;
+    BLOCK = 4;
+    DONE = 5;
+}
+
+// This is the message that is returned for a miner after it asks for a new block.
+message GetNewBlockResult{
+    // This is the header hash of the completed block
+    bytes block_hash = 1;
+    // This is the completed block
+    Block block = 2;
+    bytes merge_mining_hash =3;
+}
+
+// This is the message that is returned for a miner after it asks for a new block.
+message GetNewBlockBlobResult{
+    // This is the header hash of the completed block
+    bytes block_hash = 1;
+    // This is the completed block's header
+    bytes header = 2;
+    // This is the completed block's body
+    bytes block_body = 3;
+    bytes merge_mining_hash =4;
+    bytes utxo_mr = 5;
+}
+
+// This is mining data for the miner asking for a new block
+message MinerData{
+    PowAlgo algo = 1;
+    uint64 target_difficulty = 2;
+    uint64 reward = 3;
+//    bytes merge_mining_hash =4;
+    uint64 total_fees = 5;
+}
+
+// This is the request type for the Search Kernels rpc
+message SearchKernelsRequest{
+    repeated Signature signatures = 1;
+}
+
+// This is the request type for the Search Utxo rpc
+message SearchUtxosRequest{
+    repeated bytes commitments = 1;
+}
+
+message FetchMatchingUtxosRequest {
+    repeated bytes hashes = 1;
+}
+
+message FetchMatchingUtxosResponse {
+    TransactionOutput output = 1;
+}
+
+// This is the request type of the get all peers rpc call
+message GetPeersResponse{
+    Peer peer = 1;
+}
+
+message GetPeersRequest{}
+
+message SubmitTransactionRequest {
+    Transaction transaction  = 1;
+}
+
+message SubmitTransactionResponse {
+    SubmitTransactionResult result =1;
+}
+
+enum SubmitTransactionResult {
+    NONE = 0;
+    ACCEPTED = 1;
+    NOT_PROCESSABLE_AT_THIS_TIME = 2;
+    ALREADY_MINED =  3;
+    REJECTED = 4;
+
+}
+
+message GetMempoolTransactionsRequest {
+
+}
+
+message GetMempoolTransactionsResponse {
+    Transaction transaction = 1;
+}
+
+message TransactionStateRequest {
+    Signature excess_sig  = 1;
+}
+
+message TransactionStateResponse {
+    TransactionLocation result =1;
+}
+
+enum TransactionLocation {
+    UNKNOWN = 0;
+    MEMPOOL = 1;
+    MINED = 2;
+    NOT_STORED = 3;
+}
+
+message MempoolStatsResponse {
+    uint64 unconfirmed_txs = 2;
+    uint64 reorg_txs = 3;
+    uint64 unconfirmed_weight = 4;
+}
+
+message GetActiveValidatorNodesRequest {
+    uint64 height = 1;
+}
+
+message GetActiveValidatorNodesResponse {
+    bytes shard_key = 1;
+    bytes public_key = 2;
+}
+
+message GetShardKeyRequest {
+    uint64 height = 1;
+    bytes public_key = 2;
+}
+
+message GetShardKeyResponse {
+    bytes shard_key = 1;
+    bool found = 2;
+}
+
+message GetTemplateRegistrationsRequest {
+    bytes start_hash = 1;
+    uint64 count = 2;
+}
+
+message GetTemplateRegistrationResponse {
+    bytes utxo_hash = 1;
+    TemplateRegistration registration = 2;
+}
+
+message BlockInfo {
+    uint64 height = 1;
+    bytes hash = 2;
+    bytes next_block_hash = 3;
+}
+
+message GetSideChainUtxosRequest {
+    bytes start_hash = 1;
+    uint64 count = 2;
+}
+
+message GetSideChainUtxosResponse {
+    BlockInfo block_info = 1;
+    repeated TransactionOutput outputs = 2;
+}
+

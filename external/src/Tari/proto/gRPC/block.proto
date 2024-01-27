@@ -1,0 +1,137 @@
+// Copyright 2020. The Tari Project
+//
+// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+// following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+// disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
+// following disclaimer in the documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+// products derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+// USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+syntax = "proto3";
+
+package tari.rpc;
+
+import "transaction.proto";
+
+// The BlockHeader contains all the metadata for the block, including proof of work, a link to the previous block
+// and the transaction kernels.
+message BlockHeader {
+    // The hash of the block
+    bytes hash = 1;
+    // Version of the block
+    uint32 version = 2;
+    // Height of this block since the genesis block (height 0)
+    uint64 height = 3;
+    // Hash of the block previous to this in the chain.
+    bytes prev_hash = 4;
+    // Timestamp at which the block was built.
+    uint64 timestamp = 5;
+    // This is the UTXO merkle root of the outputs
+    // This is calculated as Hash (txo MMR root  || roaring bitmap hash of UTXO indices)
+    bytes output_mr = 6;
+    // This is the MMR root of the kernels
+    bytes kernel_mr = 8;
+    // This is the Merkle root of the inputs in this block
+    bytes input_mr = 9;
+    // Total accumulated sum of kernel offsets since genesis block. We can derive the kernel offset sum for *this*
+    // block from the total kernel offset of the previous block header.
+    bytes total_kernel_offset = 10;
+    // Nonce increment used to mine this block.
+    uint64 nonce = 11;
+    // Proof of work metadata
+    ProofOfWork pow = 12;
+    // Kernel MMR size
+    uint64 kernel_mmr_size = 13;
+    // Output MMR size
+    uint64 output_mmr_size = 14;
+    // Sum of script offsets for all kernels in this block.
+    bytes total_script_offset = 15;
+    // Merkle root of validator nodes
+    bytes validator_node_mr = 16;
+    // Validator size
+    uint64 validator_node_size = 17;
+}
+
+// The proof of work data structure that is included in the block header.
+message ProofOfWork {
+    // The algorithm used to mine this block
+    //   0 = Monero
+    //   1 = Sha3X
+    uint64 pow_algo = 1;
+    // Supplemental proof of work data. For example for Sha3x, this would be empty (only the block header is
+    // required), but for Monero merge mining we need the Monero block header and RandomX seed hash.
+    bytes pow_data = 4;
+}
+
+//This is used to request the which pow algo should be used with the block template
+message PowAlgo {
+    // The permitted pow algorithms
+    enum PowAlgos {
+        POW_ALGOS_RANDOMX = 0;    // Accessible as `grpc::pow_algo::PowAlgos::Randomx`
+        POW_ALGOS_SHA3X = 1;      // Accessible as `grpc::pow_algo::PowAlgos::Sha3x`
+    }
+    // The pow algo to use
+    PowAlgos pow_algo = 1;
+}
+
+
+// A Minotari block. Blocks are linked together into a blockchain.
+message Block {
+    // The BlockHeader contains all the metadata for the block, including proof of work, a link to the previous block
+    // and the transaction kernels.
+    BlockHeader header = 1;
+    // The components of the block or transaction. The same struct can be used for either, since in Mimblewimble,
+    // blocks consist of inputs, outputs and kernels, rather than transactions.
+    AggregateBody body = 2;
+}
+
+// The representation of a historical block in the blockchain. It is essentially identical to a protocol-defined
+// block but contains some extra metadata that clients such as Block Explorers will find interesting.
+message HistoricalBlock {
+    // The number of blocks that have been mined since this block, including this one. The current tip will have one
+    // confirmation.
+    uint64 confirmations = 1;
+    // The underlying block
+    Block block = 2;
+}
+
+
+// The NewBlockHeaderTemplate is used for the construction of a new mine-able block. It contains all the metadata for the block that the Base Node is able to complete on behalf of a Miner.
+message NewBlockHeaderTemplate {
+    // Version of the block
+    uint32 version = 1;
+    // Height of this block since the genesis block (height 0)
+    uint64 height = 2;
+    // Hash of the block previous to this in the chain.
+    bytes prev_hash = 3;
+    // Total accumulated sum of kernel offsets since genesis block. We can derive the kernel offset sum for *this*
+    // block from the total kernel offset of the previous block header.
+    bytes total_kernel_offset = 4;
+    // Proof of work metadata
+    ProofOfWork pow = 5;
+    // Sum of script offsets for all kernels in this block.
+    bytes total_script_offset = 7;
+}
+
+// The new block template is used constructing a new partial block, allowing a miner to added the coinbase utxo and as a final step the Base node to add the MMR roots to the header.
+message NewBlockTemplate {
+    // The NewBlockHeaderTemplate is used for the construction of a new mineable block. It contains all the metadata for
+    // the block that the Base Node is able to complete on behalf of a Miner.
+    NewBlockHeaderTemplate header = 1;
+    // This flag indicates if the inputs, outputs and kernels have been sorted internally, that is, the sort() method
+    // has been called. This may be false even if all components are sorted.
+    AggregateBody body = 2;
+}
+
