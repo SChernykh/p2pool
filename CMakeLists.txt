@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(p2pool)
 
 message(STATUS "Build environment:
@@ -23,9 +23,7 @@ option(DEV_WITH_ASAN "[Developer only] Compile with address sanitizer" OFF)
 option(DEV_CLANG_TIDY "[Developer only] Compile for clang-tidy" OFF)
 option(DEV_TRACK_MEMORY "[Developer only] Track memory allocations" OFF)
 
-if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
-endif()
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 
 add_subdirectory(external/src/protobuf)
 set(LIBS ${LIBS} libprotobuf)

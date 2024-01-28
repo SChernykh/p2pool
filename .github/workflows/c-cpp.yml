@@ -115,7 +115,7 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, c: gcc, cpp: g++, flags: ""}
+          - {os: ubuntu-20.04, c: gcc-8, cpp: g++-8, flags: "-Wno-lto-type-mismatch"}
           - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11, flags: ""}
           - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
 

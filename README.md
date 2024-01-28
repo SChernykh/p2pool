@@ -230,7 +230,9 @@ PAUSE
 ## Build instructions
 Only 64-bit builds are supported, in particular ARMv7 or older CPUs are not supported. The reason is that RandomX hashing algorithm is too slow in 32-bit mode, and P2Pool needs to check new blocks very fast to keep up with other nodes.
 
-Please see the relevant instructions for your platform:
+### Prerequisites
+- cmake >= 3.10
+- C++ compiler with full C++17 support. GCC-8, Clang-13 and MSVC-2019 have been tested and confirmed to work, older compilers may fail to build P2Pool.
 
 ### Ubuntu 20.04
 
