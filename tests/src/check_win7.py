@@ -259,6 +259,8 @@ allowedAPIs = {
 	"InitializeSecurityDescriptor",
 	"BCryptGenRandom",
 	"GetConsoleCP",
+	"DeleteFileW",
+	"GetTempPathW",
 }
 
 f = open(sys.argv[1], 'r')
