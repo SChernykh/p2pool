@@ -4461,6 +4461,7 @@ class GetNewBlockBlobResult final : public ::google::protobuf::Message
     kBlockBodyFieldNumber = 3,
     kMergeMiningHashFieldNumber = 4,
     kUtxoMrFieldNumber = 5,
+    kTariUniqueIdFieldNumber = 6,
   };
   // bytes block_hash = 1;
   void clear_block_hash() ;
@@ -4542,12 +4543,28 @@ class GetNewBlockBlobResult final : public ::google::protobuf::Message
   std::string* _internal_mutable_utxo_mr();
 
   public:
+  // bytes tari_unique_id = 6;
+  void clear_tari_unique_id() ;
+  const std::string& tari_unique_id() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_tari_unique_id(Arg_&& arg, Args_... args);
+  std::string* mutable_tari_unique_id();
+  PROTOBUF_NODISCARD std::string* release_tari_unique_id();
+  void set_allocated_tari_unique_id(std::string* value);
+
+  private:
+  const std::string& _internal_tari_unique_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_tari_unique_id(
+      const std::string& value);
+  std::string* _internal_mutable_tari_unique_id();
+
+  public:
   // @@protoc_insertion_point(class_scope:tari.rpc.GetNewBlockBlobResult)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      3, 5, 0,
+      3, 6, 0,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -4568,6 +4585,7 @@ class GetNewBlockBlobResult final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr block_body_;
     ::google::protobuf::internal::ArenaStringPtr merge_mining_hash_;
     ::google::protobuf::internal::ArenaStringPtr utxo_mr_;
+    ::google::protobuf::internal::ArenaStringPtr tari_unique_id_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -9959,6 +9977,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
   enum : int {
     kBlockHashFieldNumber = 1,
     kMergeMiningHashFieldNumber = 3,
+    kTariUniqueIdFieldNumber = 4,
     kBlockFieldNumber = 2,
   };
   // bytes block_hash = 1;
@@ -9993,6 +10012,22 @@ class GetNewBlockResult final : public ::google::protobuf::Message
   std::string* _internal_mutable_merge_mining_hash();
 
   public:
+  // bytes tari_unique_id = 4;
+  void clear_tari_unique_id() ;
+  const std::string& tari_unique_id() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_tari_unique_id(Arg_&& arg, Args_... args);
+  std::string* mutable_tari_unique_id();
+  PROTOBUF_NODISCARD std::string* release_tari_unique_id();
+  void set_allocated_tari_unique_id(std::string* value);
+
+  private:
+  const std::string& _internal_tari_unique_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_tari_unique_id(
+      const std::string& value);
+  std::string* _internal_mutable_tari_unique_id();
+
+  public:
   // .tari.rpc.Block block = 2;
   bool has_block() const;
   void clear_block() ;
@@ -10013,7 +10048,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 1,
+      2, 4, 1,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -10033,6 +10068,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr block_hash_;
     ::google::protobuf::internal::ArenaStringPtr merge_mining_hash_;
+    ::google::protobuf::internal::ArenaStringPtr tari_unique_id_;
     ::tari::rpc::Block* block_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -13947,6 +13983,56 @@ inline void GetNewBlockResult::set_allocated_merge_mining_hash(std::string* valu
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.merge_mining_hash)
 }
 
+// bytes tari_unique_id = 4;
+inline void GetNewBlockResult::clear_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.ClearToEmpty();
+}
+inline const std::string& GetNewBlockResult::tari_unique_id() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockResult.tari_unique_id)
+  return _internal_tari_unique_id();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void GetNewBlockResult::set_tari_unique_id(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNewBlockResult.tari_unique_id)
+}
+inline std::string* GetNewBlockResult::mutable_tari_unique_id() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_tari_unique_id();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockResult.tari_unique_id)
+  return _s;
+}
+inline const std::string& GetNewBlockResult::_internal_tari_unique_id() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.tari_unique_id_.Get();
+}
+inline void GetNewBlockResult::_internal_set_tari_unique_id(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.Set(value, GetArena());
+}
+inline std::string* GetNewBlockResult::_internal_mutable_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _impl_.tari_unique_id_.Mutable( GetArena());
+}
+inline std::string* GetNewBlockResult::release_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockResult.tari_unique_id)
+  return _impl_.tari_unique_id_.Release();
+}
+inline void GetNewBlockResult::set_allocated_tari_unique_id(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.tari_unique_id_.IsDefault()) {
+          _impl_.tari_unique_id_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.tari_unique_id)
+}
+
 // -------------------------------------------------------------------
 
 // GetNewBlockBlobResult
@@ -14199,6 +14285,56 @@ inline void GetNewBlockBlobResult::set_allocated_utxo_mr(std::string* value) {
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockBlobResult.utxo_mr)
+}
+
+// bytes tari_unique_id = 6;
+inline void GetNewBlockBlobResult::clear_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.ClearToEmpty();
+}
+inline const std::string& GetNewBlockBlobResult::tari_unique_id() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockBlobResult.tari_unique_id)
+  return _internal_tari_unique_id();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void GetNewBlockBlobResult::set_tari_unique_id(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNewBlockBlobResult.tari_unique_id)
+}
+inline std::string* GetNewBlockBlobResult::mutable_tari_unique_id() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_tari_unique_id();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockBlobResult.tari_unique_id)
+  return _s;
+}
+inline const std::string& GetNewBlockBlobResult::_internal_tari_unique_id() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.tari_unique_id_.Get();
+}
+inline void GetNewBlockBlobResult::_internal_set_tari_unique_id(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.Set(value, GetArena());
+}
+inline std::string* GetNewBlockBlobResult::_internal_mutable_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _impl_.tari_unique_id_.Mutable( GetArena());
+}
+inline std::string* GetNewBlockBlobResult::release_tari_unique_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockBlobResult.tari_unique_id)
+  return _impl_.tari_unique_id_.Release();
+}
+inline void GetNewBlockBlobResult::set_allocated_tari_unique_id(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_unique_id_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.tari_unique_id_.IsDefault()) {
+          _impl_.tari_unique_id_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockBlobResult.tari_unique_id)
 }
 
 // -------------------------------------------------------------------

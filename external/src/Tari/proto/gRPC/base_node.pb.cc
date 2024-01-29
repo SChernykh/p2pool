@@ -477,6 +477,9 @@ inline constexpr GetNewBlockBlobResult::Impl_::Impl_(
         utxo_mr_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
+        tari_unique_id_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
         _cached_size_{0} {}
 
 template <typename>
@@ -1099,6 +1102,9 @@ inline constexpr GetNewBlockResult::Impl_::Impl_(
         merge_mining_hash_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
+        tari_unique_id_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
         block_{nullptr} {}
 
 template <typename>
@@ -1503,8 +1509,10 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.block_hash_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.block_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.merge_mining_hash_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.tari_unique_id_),
         ~0u,
         0,
+        ~0u,
         ~0u,
         ~0u,  // no _has_bits_
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _internal_metadata_),
@@ -1519,6 +1527,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _impl_.block_body_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _impl_.merge_mining_hash_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _impl_.utxo_mr_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _impl_.tari_unique_id_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::MinerData, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::MinerData, _internal_metadata_),
         ~0u,  // no _extensions_
@@ -1782,31 +1791,31 @@ static const ::_pbi::MigrationSchema
         {297, -1, -1, sizeof(::tari::rpc::MetaData)},
         {309, -1, -1, sizeof(::tari::rpc::SyncInfoResponse)},
         {320, -1, -1, sizeof(::tari::rpc::SyncProgressResponse)},
-        {331, 342, -1, sizeof(::tari::rpc::GetNewBlockResult)},
-        {345, -1, -1, sizeof(::tari::rpc::GetNewBlockBlobResult)},
-        {358, 370, -1, sizeof(::tari::rpc::MinerData)},
-        {374, -1, -1, sizeof(::tari::rpc::SearchKernelsRequest)},
-        {383, -1, -1, sizeof(::tari::rpc::SearchUtxosRequest)},
-        {392, -1, -1, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
-        {401, 410, -1, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
-        {411, 420, -1, sizeof(::tari::rpc::GetPeersResponse)},
-        {421, -1, -1, sizeof(::tari::rpc::GetPeersRequest)},
-        {429, 438, -1, sizeof(::tari::rpc::SubmitTransactionRequest)},
-        {439, -1, -1, sizeof(::tari::rpc::SubmitTransactionResponse)},
-        {448, -1, -1, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
-        {456, 465, -1, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
-        {466, 475, -1, sizeof(::tari::rpc::TransactionStateRequest)},
-        {476, -1, -1, sizeof(::tari::rpc::TransactionStateResponse)},
-        {485, -1, -1, sizeof(::tari::rpc::MempoolStatsResponse)},
-        {496, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
-        {505, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
-        {515, -1, -1, sizeof(::tari::rpc::GetShardKeyRequest)},
-        {525, -1, -1, sizeof(::tari::rpc::GetShardKeyResponse)},
-        {535, -1, -1, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
-        {545, 555, -1, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
-        {557, -1, -1, sizeof(::tari::rpc::BlockInfo)},
-        {568, -1, -1, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
-        {578, 588, -1, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
+        {331, 343, -1, sizeof(::tari::rpc::GetNewBlockResult)},
+        {347, -1, -1, sizeof(::tari::rpc::GetNewBlockBlobResult)},
+        {361, 373, -1, sizeof(::tari::rpc::MinerData)},
+        {377, -1, -1, sizeof(::tari::rpc::SearchKernelsRequest)},
+        {386, -1, -1, sizeof(::tari::rpc::SearchUtxosRequest)},
+        {395, -1, -1, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
+        {404, 413, -1, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
+        {414, 423, -1, sizeof(::tari::rpc::GetPeersResponse)},
+        {424, -1, -1, sizeof(::tari::rpc::GetPeersRequest)},
+        {432, 441, -1, sizeof(::tari::rpc::SubmitTransactionRequest)},
+        {442, -1, -1, sizeof(::tari::rpc::SubmitTransactionResponse)},
+        {451, -1, -1, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
+        {459, 468, -1, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
+        {469, 478, -1, sizeof(::tari::rpc::TransactionStateRequest)},
+        {479, -1, -1, sizeof(::tari::rpc::TransactionStateResponse)},
+        {488, -1, -1, sizeof(::tari::rpc::MempoolStatsResponse)},
+        {499, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
+        {508, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
+        {518, -1, -1, sizeof(::tari::rpc::GetShardKeyRequest)},
+        {528, -1, -1, sizeof(::tari::rpc::GetShardKeyResponse)},
+        {538, -1, -1, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
+        {548, 558, -1, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
+        {560, -1, -1, sizeof(::tari::rpc::BlockInfo)},
+        {571, -1, -1, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
+        {581, 591, -1, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_GetAssetMetadataRequest_default_instance_._instance,
@@ -1932,132 +1941,134 @@ const char descriptor_table_protodef_base_5fnode_2eproto[] ABSL_ATTRIBUTE_SECTIO
     "\002 \001(\004\022\024\n\014peer_node_id\030\003 \003(\014\"d\n\024SyncProgr"
     "essResponse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014local"
     "_height\030\002 \001(\004\022\"\n\005state\030\003 \001(\0162\023.tari.rpc."
-    "SyncState\"b\n\021GetNewBlockResult\022\022\n\nblock_"
+    "SyncState\"z\n\021GetNewBlockResult\022\022\n\nblock_"
     "hash\030\001 \001(\014\022\036\n\005block\030\002 \001(\0132\017.tari.rpc.Blo"
-    "ck\022\031\n\021merge_mining_hash\030\003 \001(\014\"{\n\025GetNewB"
-    "lockBlobResult\022\022\n\nblock_hash\030\001 \001(\014\022\016\n\006he"
-    "ader\030\002 \001(\014\022\022\n\nblock_body\030\003 \001(\014\022\031\n\021merge_"
-    "mining_hash\030\004 \001(\014\022\017\n\007utxo_mr\030\005 \001(\014\"k\n\tMi"
-    "nerData\022\037\n\004algo\030\001 \001(\0132\021.tari.rpc.PowAlgo"
-    "\022\031\n\021target_difficulty\030\002 \001(\004\022\016\n\006reward\030\003 "
-    "\001(\004\022\022\n\ntotal_fees\030\005 \001(\004\"\?\n\024SearchKernels"
-    "Request\022\'\n\nsignatures\030\001 \003(\0132\023.tari.rpc.S"
-    "ignature\")\n\022SearchUtxosRequest\022\023\n\013commit"
-    "ments\030\001 \003(\014\"+\n\031FetchMatchingUtxosRequest"
-    "\022\016\n\006hashes\030\001 \003(\014\"I\n\032FetchMatchingUtxosRe"
-    "sponse\022+\n\006output\030\001 \001(\0132\033.tari.rpc.Transa"
-    "ctionOutput\"0\n\020GetPeersResponse\022\034\n\004peer\030"
-    "\001 \001(\0132\016.tari.rpc.Peer\"\021\n\017GetPeersRequest"
-    "\"F\n\030SubmitTransactionRequest\022*\n\013transact"
-    "ion\030\001 \001(\0132\025.tari.rpc.Transaction\"N\n\031Subm"
-    "itTransactionResponse\0221\n\006result\030\001 \001(\0162!."
-    "tari.rpc.SubmitTransactionResult\"\037\n\035GetM"
-    "empoolTransactionsRequest\"L\n\036GetMempoolT"
-    "ransactionsResponse\022*\n\013transaction\030\001 \001(\013"
-    "2\025.tari.rpc.Transaction\"B\n\027TransactionSt"
-    "ateRequest\022\'\n\nexcess_sig\030\001 \001(\0132\023.tari.rp"
-    "c.Signature\"I\n\030TransactionStateResponse\022"
-    "-\n\006result\030\001 \001(\0162\035.tari.rpc.TransactionLo"
-    "cation\"^\n\024MempoolStatsResponse\022\027\n\017unconf"
-    "irmed_txs\030\002 \001(\004\022\021\n\treorg_txs\030\003 \001(\004\022\032\n\022un"
-    "confirmed_weight\030\004 \001(\004\"0\n\036GetActiveValid"
-    "atorNodesRequest\022\016\n\006height\030\001 \001(\004\"H\n\037GetA"
-    "ctiveValidatorNodesResponse\022\021\n\tshard_key"
-    "\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014\"8\n\022GetShardKe"
-    "yRequest\022\016\n\006height\030\001 \001(\004\022\022\n\npublic_key\030\002"
-    " \001(\014\"7\n\023GetShardKeyResponse\022\021\n\tshard_key"
-    "\030\001 \001(\014\022\r\n\005found\030\002 \001(\010\"D\n\037GetTemplateRegi"
-    "strationsRequest\022\022\n\nstart_hash\030\001 \001(\014\022\r\n\005"
-    "count\030\002 \001(\004\"j\n\037GetTemplateRegistrationRe"
-    "sponse\022\021\n\tutxo_hash\030\001 \001(\014\0224\n\014registratio"
-    "n\030\002 \001(\0132\036.tari.rpc.TemplateRegistration\""
-    "B\n\tBlockInfo\022\016\n\006height\030\001 \001(\004\022\014\n\004hash\030\002 \001"
-    "(\014\022\027\n\017next_block_hash\030\003 \001(\014\"=\n\030GetSideCh"
-    "ainUtxosRequest\022\022\n\nstart_hash\030\001 \001(\014\022\r\n\005c"
-    "ount\030\002 \001(\004\"r\n\031GetSideChainUtxosResponse\022"
-    "\'\n\nblock_info\030\001 \001(\0132\023.tari.rpc.BlockInfo"
-    "\022,\n\007outputs\030\002 \003(\0132\033.tari.rpc.Transaction"
-    "Output*\200\001\n\rBaseNodeState\022\014\n\010START_UP\020\000\022\017"
-    "\n\013HEADER_SYNC\020\001\022\020\n\014HORIZON_SYNC\020\002\022\016\n\nCON"
-    "NECTING\020\003\022\016\n\nBLOCK_SYNC\020\004\022\r\n\tLISTENING\020\005"
-    "\022\017\n\013SYNC_FAILED\020\006*<\n\010CalcType\022\010\n\004MEAN\020\000\022"
-    "\n\n\006MEDIAN\020\001\022\014\n\010QUANTILE\020\002\022\014\n\010QUARTILE\020\003*"
-    ",\n\007Sorting\022\020\n\014SORTING_DESC\020\000\022\017\n\013SORTING_"
-    "ASC\020\001*b\n\tSyncState\022\013\n\007STARTUP\020\000\022\023\n\017HEADE"
-    "R_STARTING\020\001\022\n\n\006HEADER\020\002\022\022\n\016BLOCK_STARTI"
-    "NG\020\003\022\t\n\005BLOCK\020\004\022\010\n\004DONE\020\005*t\n\027SubmitTrans"
-    "actionResult\022\010\n\004NONE\020\000\022\014\n\010ACCEPTED\020\001\022 \n\034"
-    "NOT_PROCESSABLE_AT_THIS_TIME\020\002\022\021\n\rALREAD"
-    "Y_MINED\020\003\022\014\n\010REJECTED\020\004*J\n\023TransactionLo"
-    "cation\022\013\n\007UNKNOWN\020\000\022\013\n\007MEMPOOL\020\001\022\t\n\005MINE"
-    "D\020\002\022\016\n\nNOT_STORED\020\0032\377\024\n\010BaseNode\022L\n\013List"
-    "Headers\022\034.tari.rpc.ListHeadersRequest\032\035."
-    "tari.rpc.BlockHeaderResponse0\001\022R\n\017GetHea"
-    "derByHash\022 .tari.rpc.GetHeaderByHashRequ"
-    "est\032\035.tari.rpc.BlockHeaderResponse\022D\n\tGe"
-    "tBlocks\022\032.tari.rpc.GetBlocksRequest\032\031.ta"
-    "ri.rpc.HistoricalBlock0\001\022H\n\016GetBlockTimi"
-    "ng\022\027.tari.rpc.HeightRequest\032\035.tari.rpc.B"
-    "lockTimingResponse\022C\n\014GetConstants\022\025.tar"
-    "i.rpc.BlockHeight\032\034.tari.rpc.ConsensusCo"
-    "nstants\022I\n\014GetBlockSize\022\033.tari.rpc.Block"
-    "GroupRequest\032\034.tari.rpc.BlockGroupRespon"
-    "se\022I\n\014GetBlockFees\022\033.tari.rpc.BlockGroup"
-    "Request\032\034.tari.rpc.BlockGroupResponse\0224\n"
-    "\nGetVersion\022\017.tari.rpc.Empty\032\025.tari.rpc."
-    "StringValue\022<\n\017CheckForUpdates\022\017.tari.rp"
-    "c.Empty\032\030.tari.rpc.SoftwareUpdate\022W\n\026Get"
-    "TokensInCirculation\022\032.tari.rpc.GetBlocks"
-    "Request\032\037.tari.rpc.ValueAtHeightResponse"
-    "0\001\022V\n\024GetNetworkDifficulty\022\027.tari.rpc.He"
-    "ightRequest\032#.tari.rpc.NetworkDifficulty"
-    "Response0\001\022\\\n\023GetNewBlockTemplate\022!.tari"
-    ".rpc.NewBlockTemplateRequest\032\".tari.rpc."
-    "NewBlockTemplateResponse\022F\n\013GetNewBlock\022"
-    "\032.tari.rpc.NewBlockTemplate\032\033.tari.rpc.G"
-    "etNewBlockResult\022N\n\017GetNewBlockBlob\022\032.ta"
-    "ri.rpc.NewBlockTemplate\032\037.tari.rpc.GetNe"
-    "wBlockBlobResult\022=\n\013SubmitBlock\022\017.tari.r"
-    "pc.Block\032\035.tari.rpc.SubmitBlockResponse\022"
-    "L\n\017SubmitBlockBlob\022\032.tari.rpc.BlockBlobR"
-    "equest\032\035.tari.rpc.SubmitBlockResponse\022\\\n"
-    "\021SubmitTransaction\022\".tari.rpc.SubmitTran"
-    "sactionRequest\032#.tari.rpc.SubmitTransact"
-    "ionResponse\022:\n\013GetSyncInfo\022\017.tari.rpc.Em"
-    "pty\032\032.tari.rpc.SyncInfoResponse\022B\n\017GetSy"
-    "ncProgress\022\017.tari.rpc.Empty\032\036.tari.rpc.S"
-    "yncProgressResponse\0228\n\nGetTipInfo\022\017.tari"
-    ".rpc.Empty\032\031.tari.rpc.TipInfoResponse\022L\n"
-    "\rSearchKernels\022\036.tari.rpc.SearchKernelsR"
-    "equest\032\031.tari.rpc.HistoricalBlock0\001\022H\n\013S"
-    "earchUtxos\022\034.tari.rpc.SearchUtxosRequest"
-    "\032\031.tari.rpc.HistoricalBlock0\001\022a\n\022FetchMa"
-    "tchingUtxos\022#.tari.rpc.FetchMatchingUtxo"
-    "sRequest\032$.tari.rpc.FetchMatchingUtxosRe"
-    "sponse0\001\022C\n\010GetPeers\022\031.tari.rpc.GetPeers"
-    "Request\032\032.tari.rpc.GetPeersResponse0\001\022m\n"
-    "\026GetMempoolTransactions\022\'.tari.rpc.GetMe"
-    "mpoolTransactionsRequest\032(.tari.rpc.GetM"
-    "empoolTransactionsResponse0\001\022Y\n\020Transact"
-    "ionState\022!.tari.rpc.TransactionStateRequ"
-    "est\032\".tari.rpc.TransactionStateResponse\022"
-    "3\n\010Identify\022\017.tari.rpc.Empty\032\026.tari.rpc."
-    "NodeIdentity\022D\n\020GetNetworkStatus\022\017.tari."
-    "rpc.Empty\032\037.tari.rpc.NetworkStatusRespon"
-    "se\022K\n\022ListConnectedPeers\022\017.tari.rpc.Empt"
-    "y\032$.tari.rpc.ListConnectedPeersResponse\022"
-    "B\n\017GetMempoolStats\022\017.tari.rpc.Empty\032\036.ta"
-    "ri.rpc.MempoolStatsResponse\022p\n\027GetActive"
-    "ValidatorNodes\022(.tari.rpc.GetActiveValid"
-    "atorNodesRequest\032).tari.rpc.GetActiveVal"
-    "idatorNodesResponse0\001\022J\n\013GetShardKey\022\034.t"
-    "ari.rpc.GetShardKeyRequest\032\035.tari.rpc.Ge"
-    "tShardKeyResponse\022r\n\030GetTemplateRegistra"
-    "tions\022).tari.rpc.GetTemplateRegistration"
-    "sRequest\032).tari.rpc.GetTemplateRegistrat"
-    "ionResponse0\001\022^\n\021GetSideChainUtxos\022\".tar"
-    "i.rpc.GetSideChainUtxosRequest\032#.tari.rp"
-    "c.GetSideChainUtxosResponse0\001b\006proto3"
+    "ck\022\031\n\021merge_mining_hash\030\003 \001(\014\022\026\n\016tari_un"
+    "ique_id\030\004 \001(\014\"\223\001\n\025GetNewBlockBlobResult\022"
+    "\022\n\nblock_hash\030\001 \001(\014\022\016\n\006header\030\002 \001(\014\022\022\n\nb"
+    "lock_body\030\003 \001(\014\022\031\n\021merge_mining_hash\030\004 \001"
+    "(\014\022\017\n\007utxo_mr\030\005 \001(\014\022\026\n\016tari_unique_id\030\006 "
+    "\001(\014\"k\n\tMinerData\022\037\n\004algo\030\001 \001(\0132\021.tari.rp"
+    "c.PowAlgo\022\031\n\021target_difficulty\030\002 \001(\004\022\016\n\006"
+    "reward\030\003 \001(\004\022\022\n\ntotal_fees\030\005 \001(\004\"\?\n\024Sear"
+    "chKernelsRequest\022\'\n\nsignatures\030\001 \003(\0132\023.t"
+    "ari.rpc.Signature\")\n\022SearchUtxosRequest\022"
+    "\023\n\013commitments\030\001 \003(\014\"+\n\031FetchMatchingUtx"
+    "osRequest\022\016\n\006hashes\030\001 \003(\014\"I\n\032FetchMatchi"
+    "ngUtxosResponse\022+\n\006output\030\001 \001(\0132\033.tari.r"
+    "pc.TransactionOutput\"0\n\020GetPeersResponse"
+    "\022\034\n\004peer\030\001 \001(\0132\016.tari.rpc.Peer\"\021\n\017GetPee"
+    "rsRequest\"F\n\030SubmitTransactionRequest\022*\n"
+    "\013transaction\030\001 \001(\0132\025.tari.rpc.Transactio"
+    "n\"N\n\031SubmitTransactionResponse\0221\n\006result"
+    "\030\001 \001(\0162!.tari.rpc.SubmitTransactionResul"
+    "t\"\037\n\035GetMempoolTransactionsRequest\"L\n\036Ge"
+    "tMempoolTransactionsResponse\022*\n\013transact"
+    "ion\030\001 \001(\0132\025.tari.rpc.Transaction\"B\n\027Tran"
+    "sactionStateRequest\022\'\n\nexcess_sig\030\001 \001(\0132"
+    "\023.tari.rpc.Signature\"I\n\030TransactionState"
+    "Response\022-\n\006result\030\001 \001(\0162\035.tari.rpc.Tran"
+    "sactionLocation\"^\n\024MempoolStatsResponse\022"
+    "\027\n\017unconfirmed_txs\030\002 \001(\004\022\021\n\treorg_txs\030\003 "
+    "\001(\004\022\032\n\022unconfirmed_weight\030\004 \001(\004\"0\n\036GetAc"
+    "tiveValidatorNodesRequest\022\016\n\006height\030\001 \001("
+    "\004\"H\n\037GetActiveValidatorNodesResponse\022\021\n\t"
+    "shard_key\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014\"8\n\022G"
+    "etShardKeyRequest\022\016\n\006height\030\001 \001(\004\022\022\n\npub"
+    "lic_key\030\002 \001(\014\"7\n\023GetShardKeyResponse\022\021\n\t"
+    "shard_key\030\001 \001(\014\022\r\n\005found\030\002 \001(\010\"D\n\037GetTem"
+    "plateRegistrationsRequest\022\022\n\nstart_hash\030"
+    "\001 \001(\014\022\r\n\005count\030\002 \001(\004\"j\n\037GetTemplateRegis"
+    "trationResponse\022\021\n\tutxo_hash\030\001 \001(\014\0224\n\014re"
+    "gistration\030\002 \001(\0132\036.tari.rpc.TemplateRegi"
+    "stration\"B\n\tBlockInfo\022\016\n\006height\030\001 \001(\004\022\014\n"
+    "\004hash\030\002 \001(\014\022\027\n\017next_block_hash\030\003 \001(\014\"=\n\030"
+    "GetSideChainUtxosRequest\022\022\n\nstart_hash\030\001"
+    " \001(\014\022\r\n\005count\030\002 \001(\004\"r\n\031GetSideChainUtxos"
+    "Response\022\'\n\nblock_info\030\001 \001(\0132\023.tari.rpc."
+    "BlockInfo\022,\n\007outputs\030\002 \003(\0132\033.tari.rpc.Tr"
+    "ansactionOutput*\200\001\n\rBaseNodeState\022\014\n\010STA"
+    "RT_UP\020\000\022\017\n\013HEADER_SYNC\020\001\022\020\n\014HORIZON_SYNC"
+    "\020\002\022\016\n\nCONNECTING\020\003\022\016\n\nBLOCK_SYNC\020\004\022\r\n\tLI"
+    "STENING\020\005\022\017\n\013SYNC_FAILED\020\006*<\n\010CalcType\022\010"
+    "\n\004MEAN\020\000\022\n\n\006MEDIAN\020\001\022\014\n\010QUANTILE\020\002\022\014\n\010QU"
+    "ARTILE\020\003*,\n\007Sorting\022\020\n\014SORTING_DESC\020\000\022\017\n"
+    "\013SORTING_ASC\020\001*b\n\tSyncState\022\013\n\007STARTUP\020\000"
+    "\022\023\n\017HEADER_STARTING\020\001\022\n\n\006HEADER\020\002\022\022\n\016BLO"
+    "CK_STARTING\020\003\022\t\n\005BLOCK\020\004\022\010\n\004DONE\020\005*t\n\027Su"
+    "bmitTransactionResult\022\010\n\004NONE\020\000\022\014\n\010ACCEP"
+    "TED\020\001\022 \n\034NOT_PROCESSABLE_AT_THIS_TIME\020\002\022"
+    "\021\n\rALREADY_MINED\020\003\022\014\n\010REJECTED\020\004*J\n\023Tran"
+    "sactionLocation\022\013\n\007UNKNOWN\020\000\022\013\n\007MEMPOOL\020"
+    "\001\022\t\n\005MINED\020\002\022\016\n\nNOT_STORED\020\0032\377\024\n\010BaseNod"
+    "e\022L\n\013ListHeaders\022\034.tari.rpc.ListHeadersR"
+    "equest\032\035.tari.rpc.BlockHeaderResponse0\001\022"
+    "R\n\017GetHeaderByHash\022 .tari.rpc.GetHeaderB"
+    "yHashRequest\032\035.tari.rpc.BlockHeaderRespo"
+    "nse\022D\n\tGetBlocks\022\032.tari.rpc.GetBlocksReq"
+    "uest\032\031.tari.rpc.HistoricalBlock0\001\022H\n\016Get"
+    "BlockTiming\022\027.tari.rpc.HeightRequest\032\035.t"
+    "ari.rpc.BlockTimingResponse\022C\n\014GetConsta"
+    "nts\022\025.tari.rpc.BlockHeight\032\034.tari.rpc.Co"
+    "nsensusConstants\022I\n\014GetBlockSize\022\033.tari."
+    "rpc.BlockGroupRequest\032\034.tari.rpc.BlockGr"
+    "oupResponse\022I\n\014GetBlockFees\022\033.tari.rpc.B"
+    "lockGroupRequest\032\034.tari.rpc.BlockGroupRe"
+    "sponse\0224\n\nGetVersion\022\017.tari.rpc.Empty\032\025."
+    "tari.rpc.StringValue\022<\n\017CheckForUpdates\022"
+    "\017.tari.rpc.Empty\032\030.tari.rpc.SoftwareUpda"
+    "te\022W\n\026GetTokensInCirculation\022\032.tari.rpc."
+    "GetBlocksRequest\032\037.tari.rpc.ValueAtHeigh"
+    "tResponse0\001\022V\n\024GetNetworkDifficulty\022\027.ta"
+    "ri.rpc.HeightRequest\032#.tari.rpc.NetworkD"
+    "ifficultyResponse0\001\022\\\n\023GetNewBlockTempla"
+    "te\022!.tari.rpc.NewBlockTemplateRequest\032\"."
+    "tari.rpc.NewBlockTemplateResponse\022F\n\013Get"
+    "NewBlock\022\032.tari.rpc.NewBlockTemplate\032\033.t"
+    "ari.rpc.GetNewBlockResult\022N\n\017GetNewBlock"
+    "Blob\022\032.tari.rpc.NewBlockTemplate\032\037.tari."
+    "rpc.GetNewBlockBlobResult\022=\n\013SubmitBlock"
+    "\022\017.tari.rpc.Block\032\035.tari.rpc.SubmitBlock"
+    "Response\022L\n\017SubmitBlockBlob\022\032.tari.rpc.B"
+    "lockBlobRequest\032\035.tari.rpc.SubmitBlockRe"
+    "sponse\022\\\n\021SubmitTransaction\022\".tari.rpc.S"
+    "ubmitTransactionRequest\032#.tari.rpc.Submi"
+    "tTransactionResponse\022:\n\013GetSyncInfo\022\017.ta"
+    "ri.rpc.Empty\032\032.tari.rpc.SyncInfoResponse"
+    "\022B\n\017GetSyncProgress\022\017.tari.rpc.Empty\032\036.t"
+    "ari.rpc.SyncProgressResponse\0228\n\nGetTipIn"
+    "fo\022\017.tari.rpc.Empty\032\031.tari.rpc.TipInfoRe"
+    "sponse\022L\n\rSearchKernels\022\036.tari.rpc.Searc"
+    "hKernelsRequest\032\031.tari.rpc.HistoricalBlo"
+    "ck0\001\022H\n\013SearchUtxos\022\034.tari.rpc.SearchUtx"
+    "osRequest\032\031.tari.rpc.HistoricalBlock0\001\022a"
+    "\n\022FetchMatchingUtxos\022#.tari.rpc.FetchMat"
+    "chingUtxosRequest\032$.tari.rpc.FetchMatchi"
+    "ngUtxosResponse0\001\022C\n\010GetPeers\022\031.tari.rpc"
+    ".GetPeersRequest\032\032.tari.rpc.GetPeersResp"
+    "onse0\001\022m\n\026GetMempoolTransactions\022\'.tari."
+    "rpc.GetMempoolTransactionsRequest\032(.tari"
+    ".rpc.GetMempoolTransactionsResponse0\001\022Y\n"
+    "\020TransactionState\022!.tari.rpc.Transaction"
+    "StateRequest\032\".tari.rpc.TransactionState"
+    "Response\0223\n\010Identify\022\017.tari.rpc.Empty\032\026."
+    "tari.rpc.NodeIdentity\022D\n\020GetNetworkStatu"
+    "s\022\017.tari.rpc.Empty\032\037.tari.rpc.NetworkSta"
+    "tusResponse\022K\n\022ListConnectedPeers\022\017.tari"
+    ".rpc.Empty\032$.tari.rpc.ListConnectedPeers"
+    "Response\022B\n\017GetMempoolStats\022\017.tari.rpc.E"
+    "mpty\032\036.tari.rpc.MempoolStatsResponse\022p\n\027"
+    "GetActiveValidatorNodes\022(.tari.rpc.GetAc"
+    "tiveValidatorNodesRequest\032).tari.rpc.Get"
+    "ActiveValidatorNodesResponse0\001\022J\n\013GetSha"
+    "rdKey\022\034.tari.rpc.GetShardKeyRequest\032\035.ta"
+    "ri.rpc.GetShardKeyResponse\022r\n\030GetTemplat"
+    "eRegistrations\022).tari.rpc.GetTemplateReg"
+    "istrationsRequest\032).tari.rpc.GetTemplate"
+    "RegistrationResponse0\001\022^\n\021GetSideChainUt"
+    "xos\022\".tari.rpc.GetSideChainUtxosRequest\032"
+    "#.tari.rpc.GetSideChainUtxosResponse0\001b\006"
+    "proto3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_base_5fnode_2eproto_deps[5] =
     {
@@ -2071,7 +2082,7 @@ static ::absl::once_flag descriptor_table_base_5fnode_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_base_5fnode_2eproto = {
     false,
     false,
-    7757,
+    7806,
     descriptor_table_protodef_base_5fnode_2eproto,
     "base_node.proto",
     &descriptor_table_base_5fnode_2eproto_once,
@@ -8993,7 +9004,8 @@ inline PROTOBUF_NDEBUG_INLINE GetNewBlockResult::Impl_::Impl_(
       : _has_bits_{from._has_bits_},
         _cached_size_{0},
         block_hash_(arena, from.block_hash_),
-        merge_mining_hash_(arena, from.merge_mining_hash_) {}
+        merge_mining_hash_(arena, from.merge_mining_hash_),
+        tari_unique_id_(arena, from.tari_unique_id_) {}
 
 GetNewBlockResult::GetNewBlockResult(
     ::google::protobuf::Arena* arena,
@@ -9016,7 +9028,8 @@ inline PROTOBUF_NDEBUG_INLINE GetNewBlockResult::Impl_::Impl_(
     ::google::protobuf::Arena* arena)
       : _cached_size_{0},
         block_hash_(arena),
-        merge_mining_hash_(arena) {}
+        merge_mining_hash_(arena),
+        tari_unique_id_(arena) {}
 
 inline void GetNewBlockResult::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -9031,6 +9044,7 @@ inline void GetNewBlockResult::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
   _impl_.block_hash_.Destroy();
   _impl_.merge_mining_hash_.Destroy();
+  _impl_.tari_unique_id_.Destroy();
   delete _impl_.block_;
   _impl_.~Impl_();
 }
@@ -9058,6 +9072,7 @@ PROTOBUF_NOINLINE void GetNewBlockResult::Clear() {
 
   _impl_.block_hash_.ClearToEmpty();
   _impl_.merge_mining_hash_.ClearToEmpty();
+  _impl_.tari_unique_id_.ClearToEmpty();
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
     ABSL_DCHECK(_impl_.block_ != nullptr);
@@ -9075,15 +9090,15 @@ const char* GetNewBlockResult::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 1, 0, 2> GetNewBlockResult::_table_ = {
+const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_._has_bits_),
     0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
+    4, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
+    4294967280,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
+    4,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_GetNewBlockResult_default_instance_._instance,
@@ -9092,7 +9107,9 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> GetNewBlockResult::_table_ = {
     ::_pbi::TcParser::GetTable<::tari::rpc::GetNewBlockResult>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
+    // bytes tari_unique_id = 4;
+    {::_pbi::TcParser::FastBS1,
+     {34, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.tari_unique_id_)}},
     // bytes block_hash = 1;
     {::_pbi::TcParser::FastBS1,
      {10, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.block_hash_)}},
@@ -9113,6 +9130,9 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> GetNewBlockResult::_table_ = {
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // bytes merge_mining_hash = 3;
     {PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.merge_mining_hash_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
+    // bytes tari_unique_id = 4;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.tari_unique_id_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::Block>()},
@@ -9146,6 +9166,12 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> GetNewBlockResult::_table_ = {
     target = stream->WriteBytesMaybeAliased(3, _s, target);
   }
 
+  // bytes tari_unique_id = 4;
+  if (!this->_internal_tari_unique_id().empty()) {
+    const std::string& _s = this->_internal_tari_unique_id();
+    target = stream->WriteBytesMaybeAliased(4, _s, target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -9175,6 +9201,12 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> GetNewBlockResult::_table_ = {
                                     this->_internal_merge_mining_hash());
   }
 
+  // bytes tari_unique_id = 4;
+  if (!this->_internal_tari_unique_id().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
+                                    this->_internal_tari_unique_id());
+  }
+
   // .tari.rpc.Block block = 2;
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
@@ -9200,6 +9232,9 @@ void GetNewBlockResult::MergeImpl(::google::protobuf::MessageLite& to_msg, const
   }
   if (!from._internal_merge_mining_hash().empty()) {
     _this->_internal_set_merge_mining_hash(from._internal_merge_mining_hash());
+  }
+  if (!from._internal_tari_unique_id().empty()) {
+    _this->_internal_set_tari_unique_id(from._internal_tari_unique_id());
   }
   cached_has_bits = from._impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
@@ -9234,6 +9269,7 @@ void GetNewBlockResult::InternalSwap(GetNewBlockResult* PROTOBUF_RESTRICT other)
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.block_hash_, &other->_impl_.block_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.merge_mining_hash_, &other->_impl_.merge_mining_hash_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.tari_unique_id_, &other->_impl_.tari_unique_id_, arena);
   swap(_impl_.block_, other->_impl_.block_);
 }
 
@@ -9261,6 +9297,7 @@ inline PROTOBUF_NDEBUG_INLINE GetNewBlockBlobResult::Impl_::Impl_(
         block_body_(arena, from.block_body_),
         merge_mining_hash_(arena, from.merge_mining_hash_),
         utxo_mr_(arena, from.utxo_mr_),
+        tari_unique_id_(arena, from.tari_unique_id_),
         _cached_size_{0} {}
 
 GetNewBlockBlobResult::GetNewBlockBlobResult(
@@ -9283,6 +9320,7 @@ inline PROTOBUF_NDEBUG_INLINE GetNewBlockBlobResult::Impl_::Impl_(
         block_body_(arena),
         merge_mining_hash_(arena),
         utxo_mr_(arena),
+        tari_unique_id_(arena),
         _cached_size_{0} {}
 
 inline void GetNewBlockBlobResult::SharedCtor(::_pb::Arena* arena) {
@@ -9300,6 +9338,7 @@ inline void GetNewBlockBlobResult::SharedDtor() {
   _impl_.block_body_.Destroy();
   _impl_.merge_mining_hash_.Destroy();
   _impl_.utxo_mr_.Destroy();
+  _impl_.tari_unique_id_.Destroy();
   _impl_.~Impl_();
 }
 
@@ -9329,6 +9368,7 @@ PROTOBUF_NOINLINE void GetNewBlockBlobResult::Clear() {
   _impl_.block_body_.ClearToEmpty();
   _impl_.merge_mining_hash_.ClearToEmpty();
   _impl_.utxo_mr_.ClearToEmpty();
+  _impl_.tari_unique_id_.ClearToEmpty();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -9340,15 +9380,15 @@ const char* GetNewBlockBlobResult::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<3, 5, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
+const ::_pbi::TcParseTable<3, 6, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
-    5, 56,  // max_field_number, fast_idx_mask
+    6, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967264,  // skipmap
+    4294967232,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    5,  // num_field_entries
+    6,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     &_GetNewBlockBlobResult_default_instance_._instance,
@@ -9373,7 +9413,9 @@ const ::_pbi::TcParseTable<3, 5, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
     // bytes utxo_mr = 5;
     {::_pbi::TcParser::FastBS1,
      {42, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockBlobResult, _impl_.utxo_mr_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // bytes tari_unique_id = 6;
+    {::_pbi::TcParser::FastBS1,
+     {50, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockBlobResult, _impl_.tari_unique_id_)}},
     {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
@@ -9392,6 +9434,9 @@ const ::_pbi::TcParseTable<3, 5, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
     // bytes utxo_mr = 5;
     {PROTOBUF_FIELD_OFFSET(GetNewBlockBlobResult, _impl_.utxo_mr_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
+    // bytes tari_unique_id = 6;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockBlobResult, _impl_.tari_unique_id_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
   }},
   // no aux_entries
@@ -9434,6 +9479,12 @@ const ::_pbi::TcParseTable<3, 5, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
   if (!this->_internal_utxo_mr().empty()) {
     const std::string& _s = this->_internal_utxo_mr();
     target = stream->WriteBytesMaybeAliased(5, _s, target);
+  }
+
+  // bytes tari_unique_id = 6;
+  if (!this->_internal_tari_unique_id().empty()) {
+    const std::string& _s = this->_internal_tari_unique_id();
+    target = stream->WriteBytesMaybeAliased(6, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -9483,6 +9534,12 @@ const ::_pbi::TcParseTable<3, 5, 0, 0, 2> GetNewBlockBlobResult::_table_ = {
                                     this->_internal_utxo_mr());
   }
 
+  // bytes tari_unique_id = 6;
+  if (!this->_internal_tari_unique_id().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
+                                    this->_internal_tari_unique_id());
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -9510,6 +9567,9 @@ void GetNewBlockBlobResult::MergeImpl(::google::protobuf::MessageLite& to_msg, c
   if (!from._internal_utxo_mr().empty()) {
     _this->_internal_set_utxo_mr(from._internal_utxo_mr());
   }
+  if (!from._internal_tari_unique_id().empty()) {
+    _this->_internal_set_tari_unique_id(from._internal_tari_unique_id());
+  }
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -9534,6 +9594,7 @@ void GetNewBlockBlobResult::InternalSwap(GetNewBlockBlobResult* PROTOBUF_RESTRIC
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.block_body_, &other->_impl_.block_body_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.merge_mining_hash_, &other->_impl_.merge_mining_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.utxo_mr_, &other->_impl_.utxo_mr_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.tari_unique_id_, &other->_impl_.tari_unique_id_, arena);
 }
 
 ::google::protobuf::Metadata GetNewBlockBlobResult::GetMetadata() const {
