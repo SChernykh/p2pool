@@ -115,7 +115,7 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, c: gcc-8, cpp: g++-8, flags: "-Wno-lto-type-mismatch"}
+          - {os: ubuntu-20.04, c: gcc-7, cpp: g++-7, flags: "-Wno-lto-type-mismatch"}
           - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11, flags: ""}
           - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
 
@@ -579,7 +579,7 @@ jobs:
 
   build-freebsd:
 
-    timeout-minutes: 120
+    timeout-minutes: 75
     runs-on: ${{ matrix.os.host }}
 
     strategy:
@@ -647,7 +647,7 @@ jobs:
 
   build-openbsd:
 
-    timeout-minutes: 120
+    timeout-minutes: 75
     runs-on: ${{ matrix.os.host }}
 
     strategy:

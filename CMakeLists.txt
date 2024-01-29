@@ -25,9 +25,6 @@ option(DEV_TRACK_MEMORY "[Developer only] Track memory allocations" OFF)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 
-add_subdirectory(external/src/protobuf)
-set(LIBS ${LIBS} libprotobuf)
-
 add_subdirectory(external/src/Tari)
 set(LIBS ${LIBS} Tari_gRPC)
 
@@ -177,7 +174,7 @@ include_directories(external/src/robin-hood-hashing/src/include)
 if (WITH_UPNP)
 	include_directories(external/src/miniupnp/miniupnpc/include)
 endif()
-include_directories(external/src/protobuf/src)
+include_directories(external/src/protobuf-c)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp)

@@ -2,26 +2,29 @@ cmake_minimum_required(VERSION 3.10)
 project(Tari_gRPC)
 
 set(HEADERS
-	proto/gRPC/base_node.pb.h
-	proto/gRPC/block.pb.h
-	proto/gRPC/network.pb.h
-	proto/gRPC/sidechain_types.pb.h
-	proto/gRPC/transaction.pb.h
-	proto/gRPC/types.pb.h
+	../protobuf-c/protobuf-c/protobuf-c.h
+	proto/gRPC/google/protobuf/timestamp.pb-c.h
+	proto/gRPC/base_node.pb-c.h
+	proto/gRPC/block.pb-c.h
+	proto/gRPC/network.pb-c.h
+	proto/gRPC/sidechain_types.pb-c.h
+	proto/gRPC/transaction.pb-c.h
+	proto/gRPC/types.pb-c.h
 	proto.h
 )
 
 set(SOURCES
-	proto/gRPC/base_node.pb.cc
-	proto/gRPC/block.pb.cc
-	proto/gRPC/network.pb.cc
-	proto/gRPC/sidechain_types.pb.cc
-	proto/gRPC/transaction.pb.cc
-	proto/gRPC/types.pb.cc
+	../protobuf-c/protobuf-c/protobuf-c.c
+	proto/gRPC/google/protobuf/timestamp.pb-c.c
+	proto/gRPC/base_node.pb-c.c
+	proto/gRPC/block.pb-c.c
+	proto/gRPC/network.pb-c.c
+	proto/gRPC/sidechain_types.pb-c.c
+	proto/gRPC/transaction.pb-c.c
+	proto/gRPC/types.pb-c.c
 )
 
-include_directories(../protobuf/src)
-include_directories(../protobuf/third_party/abseil-cpp)
+include_directories(../protobuf-c)
 
 set(DISABLE_WARNINGS ON)
 
