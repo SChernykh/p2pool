@@ -283,7 +283,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				if (shares) {
 					const MinerShare* src = &s[0];
 					std::pair<hash, hash>* dst = shares;
-					std::pair<hash, hash>* e = shares + N;
+					const std::pair<hash, hash>* e = shares + N;
 
 					for (; dst < e; ++src, ++dst) {
 						const Wallet* w = src->m_wallet;
