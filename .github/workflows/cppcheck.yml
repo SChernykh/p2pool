@@ -54,7 +54,7 @@ jobs:
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: checkers_report-linux
         path: cppcheck/checkers_report.txt
@@ -102,7 +102,7 @@ jobs:
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: checkers_report-windows
         path: cppcheck/checkers_report.txt
