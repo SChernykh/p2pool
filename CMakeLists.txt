@@ -205,8 +205,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang
 	find_library(UV_LIBRARY_DEBUG NAMES uv libuv.a)
 	find_library(UV_LIBRARY NAMES uv libuv.a)
 	if (WIN32)
-		find_library(CURL_LIBRARY_DEBUG NAMES libcurl.a PATHS "external/src/curl/lib/.libs" NO_DEFAULT_PATH)
-		find_library(CURL_LIBRARY NAMES libcurl.a PATHS "external/src/curl/lib/.libs" NO_DEFAULT_PATH)
+		find_library(CURL_LIBRARY_DEBUG NAMES libcurl.a PATHS "external/src/curl/lib" NO_DEFAULT_PATH)
+		find_library(CURL_LIBRARY NAMES libcurl.a PATHS "external/src/curl/lib" NO_DEFAULT_PATH)
 	else()
 		if (CURL_LIBRARIES)
 			set(CURL_LIBRARY_DEBUG ${CURL_LIBRARIES})
@@ -371,7 +371,7 @@ if (STATIC_BINARY OR STATIC_LIBS)
 	target_link_libraries(${CMAKE_PROJECT_NAME}
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"
 		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv.a"
-		"${CMAKE_SOURCE_DIR}/external/src/curl/lib/.libs/libcurl.a"
+		"${CMAKE_SOURCE_DIR}/external/src/curl/lib/libcurl.a"
 		${STATIC_LIBS}
 	)
 else()
