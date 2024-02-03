@@ -64,6 +64,13 @@ p2pool::p2pool(int argc, char* argv[])
 	LOGINFO(1, log::LightCyan() << VERSION);
 
 	Params* p = new Params(argc, argv);
+
+	if (!p->valid()) {
+		LOGERR(1, "Invalid or missing command line. Try \"p2pool --help\".");
+		delete p;
+		throw std::exception();
+	}
+
 	m_params = p;
 
 #ifdef WITH_UPNP
