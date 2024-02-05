@@ -199,7 +199,7 @@ p2pool::~p2pool()
 	{
 		WriteLock lock(m_mergeMiningClientsLock);
 
-		for (const MergeMiningClient* c : m_mergeMiningClients) {
+		for (const IMergeMiningClient* c : m_mergeMiningClients) {
 			delete c;
 		}
 		m_mergeMiningClients.clear();
@@ -527,9 +527,13 @@ void p2pool::update_aux_data(const hash& chain_id)
 
 			aux_id.reserve(m_mergeMiningClients.size() + 1);
 
-			for (const MergeMiningClient* c : m_mergeMiningClients) {
-				data.aux_chains.emplace_back(c->aux_id(), c->aux_data(), c->aux_diff());
-				aux_id.emplace_back(c->aux_id());
+			IMergeMiningClient::ChainParameters params;
+
+			for (const IMergeMiningClient* c : m_mergeMiningClients) {
+				if (c->get_params(params)) {
+					data.aux_chains.emplace_back(params.aux_id, params.aux_hash, params.aux_diff);
+					aux_id.emplace_back(params.aux_id);
+				}
 			}
 			aux_id.emplace_back(m_sideChain->consensus_hash());
 		}
@@ -646,23 +650,28 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 
 	ReadLock lock(m_mergeMiningClientsLock);
 
-	for (MergeMiningClient* c : m_mergeMiningClients) {
-		if (chain_id == c->aux_id()) {
-			std::vector<hash> proof;
-			const hash aux_hash = c->aux_data();
+	IMergeMiningClient::ChainParameters params;
 
-			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, aux_hash, proof)) {
+	for (IMergeMiningClient* c : m_mergeMiningClients) {
+		if (!c->get_params(params)) {
+			continue;
+		}
+
+		if (chain_id == params.aux_id) {
+			std::vector<hash> proof;
+
+			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, params.aux_hash, proof)) {
 				if (pool_block_debug()) {
 					const MinerData data = miner_data();
 					const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
-					const uint32_t index = get_aux_slot(c->aux_id(), data.aux_nonce, n_aux_chains);
+					const uint32_t index = get_aux_slot(params.aux_id, data.aux_nonce, n_aux_chains);
 
-					if (!verify_merkle_proof(aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
+					if (!verify_merkle_proof(params.aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
 						LOGERR(0, "submit_aux_block: verify_merkle_proof failed for chain_id " << chain_id);
 					}
 				}
 
-				c->merge_mining_submit_solution(blob, proof);
+				c->submit_solution(blob, proof);
 			}
 			else {
 				LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);
@@ -958,7 +967,10 @@ void p2pool::download_block_headers(uint64_t current_height)
 						m_mergeMiningClients.clear();
 
 						for (const auto& h : m_params->m_mergeMiningHosts) {
-							m_mergeMiningClients.push_back(new MergeMiningClient(this, h.m_host, h.m_wallet));
+							IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet);
+							if (c) {
+								m_mergeMiningClients.push_back(c);
+							}
 						}
 					}
 

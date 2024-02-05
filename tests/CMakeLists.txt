@@ -54,6 +54,7 @@ set(SOURCES
 	../src/memory_leak_debug.cpp
 	../src/mempool.cpp
 	../src/merge_mining_client.cpp
+	../src/merge_mining_client_json_rpc.cpp
 	../src/merkle.cpp
 	../src/miner.cpp
 	../src/p2p_server.cpp

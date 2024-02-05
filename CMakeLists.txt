@@ -85,6 +85,7 @@ set(HEADERS
 	src/log.h
 	src/mempool.h
 	src/merge_mining_client.h
+	src/merge_mining_client_json_rpc.h
 	src/merkle.h
 	src/p2p_server.h
 	src/p2pool.h
@@ -118,6 +119,7 @@ set(SOURCES
 	src/memory_leak_debug.cpp
 	src/mempool.cpp
 	src/merge_mining_client.cpp
+	src/merge_mining_client_json_rpc.cpp
 	src/merkle.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp
