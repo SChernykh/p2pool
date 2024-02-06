@@ -36,7 +36,7 @@ public:
 	static IMergeMiningClient* create(p2pool* pool, const std::string& host, const std::string& wallet) noexcept;
 	virtual ~IMergeMiningClient() {}
 
-	virtual bool get_params(ChainParameters& out_params) const = 0;
+	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;
 	virtual void submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) = 0;
 };
 

@@ -28,7 +28,7 @@ public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	TCPServer(int default_backlog, allocate_client_callback allocate_new_client);
+	TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy);
 	virtual ~TCPServer();
 
 	[[nodiscard]] bool connect_to_peer(bool is_v6, const char* ip, int port);

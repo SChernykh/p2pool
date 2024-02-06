@@ -23,7 +23,7 @@ static thread_local const char* log_category_prefix = "TCPServer ";
 
 namespace p2pool {
 
-TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client)
+TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy)
 	: m_allocateNewClient(allocate_new_client)
 	, m_defaultBacklog(default_backlog)
 	, m_loopThread{}
@@ -31,6 +31,7 @@ TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_
 #ifdef WITH_UPNP
 	, m_portMapping(0)
 #endif
+	, m_socks5Proxy(socks5Proxy)
 	, m_socks5ProxyV6(false)
 	, m_socks5ProxyIP{}
 	, m_socks5ProxyPort(-1)
@@ -72,6 +73,18 @@ TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_
 	m_connectedClientsList = m_allocateNewClient();
 	m_connectedClientsList->m_next = m_connectedClientsList;
 	m_connectedClientsList->m_prev = m_connectedClientsList;
+
+	if (!m_socks5Proxy.empty()) {
+		parse_address_list(m_socks5Proxy,
+			[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
+			{
+				if (!str_to_ip(is_v6, ip.c_str(), m_socks5ProxyIP)) {
+					PANIC_STOP();
+				}
+				m_socks5ProxyV6 = is_v6;
+				m_socks5ProxyPort = port;
+			});
+	}
 }
 
 TCPServer::~TCPServer()

@@ -86,6 +86,7 @@ set(HEADERS
 	src/mempool.h
 	src/merge_mining_client.h
 	src/merge_mining_client_json_rpc.h
+	src/merge_mining_client_tari.h
 	src/merkle.h
 	src/p2p_server.h
 	src/p2pool.h
@@ -120,6 +121,7 @@ set(SOURCES
 	src/mempool.cpp
 	src/merge_mining_client.cpp
 	src/merge_mining_client_json_rpc.cpp
+	src/merge_mining_client_tari.cpp
 	src/merkle.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp

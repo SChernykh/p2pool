@@ -35,7 +35,7 @@ static constexpr int DEFAULT_BACKLOG = 1;
 namespace p2pool {
 
 ConsoleCommands::ConsoleCommands(p2pool* pool)
-	: TCPServer(DEFAULT_BACKLOG, ConsoleClient::allocate)
+	: TCPServer(DEFAULT_BACKLOG, ConsoleClient::allocate, std::string())
 	, m_pool(pool)
 	, m_tty{}
 	, m_stdin_pipe{}

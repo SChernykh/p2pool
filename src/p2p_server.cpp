@@ -44,7 +44,7 @@ static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 namespace p2pool {
 
 P2PServer::P2PServer(p2pool* pool)
-	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate)
+	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy)
 	, m_pool(pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
 	, m_cacheLoaded(false)
@@ -70,19 +70,6 @@ P2PServer::P2PServer(p2pool* pool)
 	m_peerId = m_rng();
 
 	const Params& params = pool->params();
-
-	if (!params.m_socks5Proxy.empty()) {
-		parse_address_list(params.m_socks5Proxy,
-			[this](bool is_v6, const std::string& /*address*/, const std::string& ip, int port)
-			{
-				if (!str_to_ip(is_v6, ip.c_str(), m_socks5ProxyIP)) {
-					PANIC_STOP();
-				}
-				m_socks5ProxyV6 = is_v6;
-				m_socks5ProxyPort = port;
-			});
-		m_socks5Proxy = params.m_socks5Proxy;
-	}
 
 	set_max_outgoing_peers(params.m_maxOutgoingPeers);
 	set_max_incoming_peers(params.m_maxIncomingPeers);

@@ -55,6 +55,7 @@ set(SOURCES
 	../src/mempool.cpp
 	../src/merge_mining_client.cpp
 	../src/merge_mining_client_json_rpc.cpp
+	../src/merge_mining_client_tari.cpp
 	../src/merkle.cpp
 	../src/miner.cpp
 	../src/p2p_server.cpp
@@ -96,6 +97,7 @@ include_directories(../external/src/cryptonote)
 include_directories(${UV_INCLUDE_DIR})
 include_directories(../external/src/cppzmq)
 include_directories(${ZMQ_INCLUDE_DIR})
+include_directories(../external/src/protobuf-c)
 include_directories(../external/src/RandomX/src)
 include_directories(../external/src/rapidjson/include)
 include_directories(../external/src/robin-hood-hashing/src/include)
