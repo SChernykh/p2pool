@@ -25,6 +25,7 @@
 [submodule "external/src/miniupnp"]
 	path = external/src/miniupnp
 	url = https://github.com/SChernykh/miniupnp
-[submodule "external/src/protobuf-c"]
-	path = external/src/protobuf-c
-	url = https://github.com/SChernykh/protobuf-c
+[submodule "external/src/grpc"]
+	path = external/src/grpc
+	url = https://github.com/SChernykh/grpc
+	branch = v1.61.x

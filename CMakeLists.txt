@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(p2pool)
 
+include(cmake/standard.cmake)
+
 message(STATUS "Build environment:
     System processor: ${CMAKE_SYSTEM_PROCESSOR}
     C compiler:       ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})
@@ -24,6 +26,8 @@ option(DEV_CLANG_TIDY "[Developer only] Compile for clang-tidy" OFF)
 option(DEV_TRACK_MEMORY "[Developer only] Track memory allocations" OFF)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
+
+include(cmake/grpc.cmake)
 
 add_subdirectory(external/src/Tari)
 set(LIBS ${LIBS} Tari_gRPC)
@@ -178,7 +182,6 @@ include_directories(external/src/robin-hood-hashing/src/include)
 if (WITH_UPNP)
 	include_directories(external/src/miniupnp/miniupnpc/include)
 endif()
-include_directories(external/src/protobuf-c)
 
 if (WIN32)
 	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp)
@@ -371,6 +374,8 @@ if (STATIC_BINARY OR STATIC_LIBS)
 	if (HAVE_RES_QUERY AND HAVE_RESOLV_LIB)
 		set(STATIC_LIBS ${STATIC_LIBS} resolv)
 	endif()
+
+	set(STATIC_LIBS ${STATIC_LIBS} Tari_gRPC grpc grpc++ libprotobuf)
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"

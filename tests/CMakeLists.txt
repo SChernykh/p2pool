@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(p2pool_tests)
 
+include(cmake/standard.cmake)
+
 option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")

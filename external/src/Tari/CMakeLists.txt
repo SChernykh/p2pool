@@ -2,32 +2,50 @@ cmake_minimum_required(VERSION 3.10)
 project(Tari_gRPC)
 
 set(HEADERS
-	../protobuf-c/protobuf-c/protobuf-c.h
-	proto/gRPC/google/protobuf/timestamp.pb-c.h
-	proto/gRPC/base_node.pb-c.h
-	proto/gRPC/block.pb-c.h
-	proto/gRPC/network.pb-c.h
-	proto/gRPC/sidechain_types.pb-c.h
-	proto/gRPC/transaction.pb-c.h
-	proto/gRPC/types.pb-c.h
+	proto/gRPC/base_node.pb.h
+	proto/gRPC/block.pb.h
+	proto/gRPC/network.pb.h
+	proto/gRPC/sidechain_types.pb.h
+	proto/gRPC/transaction.pb.h
+	proto/gRPC/types.pb.h
+	proto/gRPC/base_node.grpc.pb.h
+	proto/gRPC/block.grpc.pb.h
+	proto/gRPC/network.grpc.pb.h
+	proto/gRPC/sidechain_types.grpc.pb.h
+	proto/gRPC/transaction.grpc.pb.h
+	proto/gRPC/types.grpc.pb.h
 	proto.h
 )
 
 set(SOURCES
-	../protobuf-c/protobuf-c/protobuf-c.c
-	proto/gRPC/google/protobuf/timestamp.pb-c.c
-	proto/gRPC/base_node.pb-c.c
-	proto/gRPC/block.pb-c.c
-	proto/gRPC/network.pb-c.c
-	proto/gRPC/sidechain_types.pb-c.c
-	proto/gRPC/transaction.pb-c.c
-	proto/gRPC/types.pb-c.c
+	proto/gRPC/base_node.pb.cc
+	proto/gRPC/block.pb.cc
+	proto/gRPC/network.pb.cc
+	proto/gRPC/sidechain_types.pb.cc
+	proto/gRPC/transaction.pb.cc
+	proto/gRPC/types.pb.cc
+	proto/gRPC/base_node.grpc.pb.cc
+	proto/gRPC/block.grpc.pb.cc
+	proto/gRPC/network.grpc.pb.cc
+	proto/gRPC/sidechain_types.grpc.pb.cc
+	proto/gRPC/transaction.grpc.pb.cc
+	proto/gRPC/types.grpc.pb.cc
 )
 
-include_directories(../protobuf-c)
+include_directories(../grpc/third_party/protobuf/src)
+include_directories(../grpc/include)
+include_directories(../grpc/third_party/abseil-cpp)
 
 set(DISABLE_WARNINGS ON)
 
-include(../../../cmake/flags.cmake)
+if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /W0 /O1 /Ob2 /Oi /Os /Oy /MP /GL /MT")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W0 /O1 /Ob2 /Oi /Os /Oy /MP /GL /MT")
+else()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -w")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -w")
+endif()
 
 add_library(Tari_gRPC ${HEADERS} ${SOURCES})

@@ -109,7 +109,7 @@ jobs:
 
   build-ubuntu:
 
-    timeout-minutes: 10
+    timeout-minutes: 60
     runs-on: ${{ matrix.config.os }}
 
     strategy:
@@ -165,7 +165,7 @@ jobs:
 
   build-ubuntu-static-libs:
 
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     strategy:
@@ -320,14 +320,14 @@ jobs:
 
   build-windows-msys2:
 
-    timeout-minutes: 45
+    timeout-minutes: 60
     runs-on: windows-latest
 
     strategy:
       matrix:
         config:
-          - {c: "gcc", cxx: "g++", flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes"}
-          - {c: "clang", cxx: "clang++", flags: "-flto -ffunction-sections -fuse-ld=lld -Wno-unused-command-line-argument"}
+          - {c: "gcc", cxx: "g++", flags: "-ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes"}
+          - {c: "clang", cxx: "clang++", flags: "-fuse-ld=lld -Wno-unused-command-line-argument"}
 
     defaults:
       run:
@@ -372,7 +372,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON -DOPENSSL_NO_ASM=ON -DWITH_LTO=OFF
         make -j$(nproc)
 
     - name: Run RandomX tests
@@ -402,7 +402,7 @@ jobs:
 
   build-windows-msbuild:
 
-    timeout-minutes: 20
+    timeout-minutes: 60
     runs-on: windows-${{ matrix.config.os }}
 
     strategy:
