@@ -12,7 +12,7 @@ on:
 jobs:
   sync-test-ubuntu-tsan:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     steps:
@@ -83,7 +83,7 @@ jobs:
           build/data/
 
   sync-test-ubuntu-msan:
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     steps:
@@ -172,7 +172,7 @@ jobs:
 
   sync-test-ubuntu-ubsan:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     steps:
@@ -221,7 +221,7 @@ jobs:
 
   sync-test-ubuntu-asan:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     steps:
@@ -270,7 +270,7 @@ jobs:
 
   sync-test-macos:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: macos-11
 
     steps:
@@ -341,7 +341,7 @@ jobs:
 
   sync-test-windows-debug-asan:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: windows-2022
 
     steps:
@@ -389,7 +389,7 @@ jobs:
 
   sync-test-windows-leaks:
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: windows-2022
 
     steps:

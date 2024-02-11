@@ -18,17 +18,23 @@
 #include "common.h"
 #include "merge_mining_client.h"
 #include "merge_mining_client_json_rpc.h"
+
+#ifndef P2POOL_UNIT_TESTS
 #include "merge_mining_client_tari.h"
+#endif
 
 namespace p2pool {
 
 IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& host, const std::string& wallet) noexcept
 {
 	try {
+#ifndef P2POOL_UNIT_TESTS
 		if (host.find(MergeMiningClientTari::TARI_PREFIX) == 0) {
 			return new MergeMiningClientTari(pool, host, wallet);
 		}
-		else {
+		else
+#endif
+		{
 			return new MergeMiningClientJSON_RPC(pool, host, wallet);
 		}
 	}

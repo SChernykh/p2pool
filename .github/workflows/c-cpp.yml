@@ -12,7 +12,7 @@ on:
 jobs:
   build-alpine-static:
 
-    timeout-minutes: 75
+    timeout-minutes: 120
     runs-on: ubuntu-22.04
 
     strategy:
@@ -243,7 +243,7 @@ jobs:
 
   build-ubuntu-aarch64:
 
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ${{ matrix.config.os }}
 
     strategy:
@@ -466,7 +466,7 @@ jobs:
 
   build-macos:
 
-    timeout-minutes: 20
+    timeout-minutes: 60
     runs-on: macos-11
 
     steps:
@@ -532,7 +532,7 @@ jobs:
 
   build-macos-aarch64:
 
-    timeout-minutes: 20
+    timeout-minutes: 60
     runs-on: macos-11
 
     steps:

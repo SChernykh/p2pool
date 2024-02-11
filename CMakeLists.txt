@@ -27,6 +27,10 @@ option(DEV_TRACK_MEMORY "[Developer only] Track memory allocations" OFF)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+	set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION 10.0)
+endif()
+
 include(cmake/grpc.cmake)
 
 add_subdirectory(external/src/Tari)
