@@ -425,7 +425,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Check Windows 7 compatibility
@@ -449,7 +449,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DDEV_WITH_ASAN=ON
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_WITH_ASAN=ON
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool_tests.vcxproj
 
     - name: Run tests

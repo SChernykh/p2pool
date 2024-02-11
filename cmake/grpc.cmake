@@ -36,7 +36,7 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -w")
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+if ((CMAKE_C_COMPILER_ID MATCHES MSVC) OR (CMAKE_CXX_COMPILER_ID MATCHES MSVC))
 	include_directories(external/src/common)
 endif()
 
