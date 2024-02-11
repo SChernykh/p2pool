@@ -55,7 +55,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_TSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DWITH_LTO=OFF -DSTATIC_LIBS=ON
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run p2pool
       run: |
@@ -143,7 +143,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -Wl,-rpath /tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument -fuse-ld=lld-17 -fno-omit-frame-pointer -g' -DDEV_TEST_SYNC=ON -DDEV_WITH_MSAN=ON -DWITH_LTO=OFF -DSTATIC_LIBS=ON
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run p2pool
       run: |
@@ -192,7 +192,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_UBSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DWITH_LTO=OFF
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run p2pool
       run: |
@@ -241,7 +241,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DWITH_LTO=OFF
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run p2pool
       run: |
@@ -312,7 +312,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DWITH_LTO=OFF -DSTATIC_LIBS=ON -DDEV_TEST_SYNC=ON
-        make -j3
+        make -j3 p2pool
 
     - name: Run p2pool
       run: |

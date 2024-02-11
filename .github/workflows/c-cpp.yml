@@ -71,13 +71,15 @@ jobs:
         mkdir build
         cd build
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON -DARCH_ID=${{ matrix.config.arch }}
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run RandomX tests
       shell: alpine.sh {0}
       run: |
-        build/p2pool --test
-        build/external/src/RandomX/randomx-tests
+        cd build
+        ./p2pool --test
+        make -j$(nproc) randomx-tests
+        external/src/RandomX/randomx-tests
 
     - name: Build tests
       shell: alpine.sh {0}
@@ -115,7 +117,7 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, c: gcc-7, cpp: g++-7, flags: "-Wno-lto-type-mismatch"}
+          - {os: ubuntu-20.04, c: gcc-8, cpp: g++-8, flags: "-Wno-lto-type-mismatch"}
           - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11, flags: ""}
           - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
 
@@ -136,12 +138,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -flto=2' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -flto=2'
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run RandomX tests
       run: |
-        build/p2pool --test
-        build/external/src/RandomX/randomx-tests
+        cd build
+        ./p2pool --test
+        make -j$(nproc) randomx-tests
+        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -214,12 +218,14 @@ jobs:
         mkdir build
         cd build
         cmake ..  -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run RandomX tests
       run: |
-        build/p2pool --test
-        build/external/src/RandomX/randomx-tests
+        cd build
+        ./p2pool --test
+        make -j$(nproc) randomx-tests
+        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -291,12 +297,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64_toolchain.cmake -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=aarch64
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run RandomX tests
       run: |
-        qemu-aarch64 -L /usr/aarch64-linux-gnu build/p2pool --test
-        qemu-aarch64 -L /usr/aarch64-linux-gnu build/external/src/RandomX/randomx-tests
+        cd build
+        qemu-aarch64 -L /usr/aarch64-linux-gnu p2pool --test
+        make -j$(nproc) randomx-tests
+        qemu-aarch64 -L /usr/aarch64-linux-gnu external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -379,12 +387,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON -DOPENSSL_NO_ASM=ON -DWITH_LTO=OFF
-        make -j$(nproc)
+        make -j$(nproc) p2pool
 
     - name: Run RandomX tests
       run: |
-        build/p2pool.exe --test
-        build/external/src/RandomX/randomx-tests.exe
+        cd build
+        ./p2pool.exe --test
+        make -j$(nproc) randomx-tests
+        external/src/RandomX/randomx-tests.exe
 
     - name: Build tests
       run: |
@@ -509,12 +519,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-flto" -DCMAKE_CXX_FLAGS="-flto" -DSTATIC_LIBS=ON
-        make -j3
+        make -j3 p2pool
 
     - name: Run RandomX tests
       run: |
-        build/p2pool --test
-        build/external/src/RandomX/randomx-tests
+        cd build
+        ./p2pool --test
+        make -j3 randomx-tests
+        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -575,7 +587,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-target arm64-apple-macos-11" -DCMAKE_CXX_FLAGS="-target arm64-apple-macos-11" -DSTATIC_LIBS=ON -DWITH_LTO=OFF -DARCH_ID=aarch64
-        make -j3
+        make -j3 p2pool
 
     - name: Archive binary
       uses: actions/upload-artifact@v4
@@ -634,8 +646,9 @@ jobs:
           mkdir build
           cd build
           cmake .. -DCMAKE_C_FLAGS='-flto' -DCMAKE_CXX_FLAGS='-flto' -DSTATIC_LIBS=ON
-          make -j2
+          make -j2 p2pool
           ./p2pool --test
+          make -j2 randomx-tests
           external/src/RandomX/randomx-tests
           cd ../tests
           mkdir build
@@ -686,7 +699,7 @@ jobs:
           sudo pkg_add -I cmake libuv zeromq curl
           mkdir build && cd build
           cmake ..
-          make -j2
+          make -j2 p2pool
           cd ../tests
           mkdir build && cd build
           cmake ..

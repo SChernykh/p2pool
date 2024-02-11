@@ -232,7 +232,7 @@ Only 64-bit builds are supported, in particular ARMv7 or older CPUs are not supp
 
 ### Prerequisites
 - cmake >= 3.10
-- C++ compiler with C++17 support. GCC-7, Clang-13 and MSVC-2019 have been tested and confirmed to work, older compilers may fail to build P2Pool.
+- C++ compiler with C++17 support. GCC-8, Clang-13 and MSVC-2019 have been tested and confirmed to work, older compilers may fail to build P2Pool.
 
 ### Ubuntu 20.04
 
