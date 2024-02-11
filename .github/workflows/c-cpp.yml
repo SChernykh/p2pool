@@ -343,7 +343,13 @@ jobs:
       uses: eine/setup-msys2@v2
       with:
         update: true
-        install: mingw-w64-x86_64-toolchain mingw-w64-x86_64-clang mingw-w64-x86_64-lld mingw-w64-x86_64-cmake make
+        install: mingw-w64-x86_64-toolchain mingw-w64-x86_64-clang mingw-w64-x86_64-lld mingw-w64-x86_64-cmake make git
+
+    - name: Apply patch
+      if: matrix.config.c == 'clang'
+      run: |
+        cd /
+        git apply --verbose --ignore-whitespace --directory=mingw64/include/c++/`ls mingw64/include/c++`/ /d/a/p2pool/p2pool/patches/msys2/typeinfo.patch
 
     - name: Build libcurl
       run: |
