@@ -12,7 +12,7 @@ on:
 jobs:
   build-alpine-static:
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ubuntu-22.04
 
     strategy:
@@ -597,7 +597,7 @@ jobs:
 
   build-freebsd:
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{ matrix.os.host }}
 
     strategy:
@@ -666,7 +666,7 @@ jobs:
 
   build-openbsd:
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{ matrix.os.host }}
 
     strategy:
