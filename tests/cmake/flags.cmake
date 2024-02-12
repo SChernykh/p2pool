@@ -1,14 +1,15 @@
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+if (ARCH_ID MATCHES "^(aarch64|arm64|armv8-a)$")
+	set(ARMv8 1)
+endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
 	set(WARNING_FLAGS "-Wall -Wextra")
-	set(OPTIMIZATION_FLAGS "-Ofast -s -flto -fuse-linker-plugin")
+	set(OPTIMIZATION_FLAGS "-Ofast -s")
+
+	if (WITH_LTO)
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto -fuse-linker-plugin")
+	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
@@ -48,7 +49,11 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
-	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants -flto")
+	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
+
+	if (WITH_LTO)
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto")
+	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")

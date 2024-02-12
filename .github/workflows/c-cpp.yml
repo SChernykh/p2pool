@@ -550,8 +550,8 @@ jobs:
 
   build-macos-aarch64:
 
-    timeout-minutes: 60
-    runs-on: macos-11
+    timeout-minutes: 30
+    runs-on: macos-14
 
     steps:
     - name: Checkout repository
@@ -588,6 +588,27 @@ jobs:
         cd build
         cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-target arm64-apple-macos-11" -DCMAKE_CXX_FLAGS="-target arm64-apple-macos-11" -DSTATIC_LIBS=ON -DWITH_LTO=OFF -DARCH_ID=aarch64
         make -j3 p2pool
+
+    - name: Run RandomX tests
+      run: |
+        cd build
+        ./p2pool --test
+        make -j3 randomx-tests
+        external/src/RandomX/randomx-tests
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-target arm64-apple-macos-11" -DCMAKE_CXX_FLAGS="-target arm64-apple-macos-11" -DSTATIC_LIBS=ON -DWITH_LTO=OFF -DARCH_ID=aarch64
+        make -j3
+
+    - name: Run tests
+      run: |
+        cd tests/build
+        gunzip *.gz
+        ./p2pool_tests
 
     - name: Archive binary
       uses: actions/upload-artifact@v4
