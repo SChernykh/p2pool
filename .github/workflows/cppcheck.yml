@@ -79,7 +79,7 @@ jobs:
     - name: Build cppcheck
       run: |
         cd cppcheck-main
-        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64
+        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe" -v:m /m /p:Configuration=Release /p:Platform=x64
 
     - name: Setup cmake
       uses: lukka/get-cmake@latest

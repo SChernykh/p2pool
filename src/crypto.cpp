@@ -219,8 +219,8 @@ public:
 		{
 			WriteLock lock(derivations_lock);
 
-			DerivationEntry& entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, t }).first->second;
-			entry.add_view_tag(static_cast<uint32_t>(output_index << 8) | view_tag);
+			auto entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, t }).first;
+			entry->second.add_view_tag(static_cast<uint32_t>(output_index << 8) | view_tag);
 		}
 
 		return true;

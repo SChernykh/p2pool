@@ -28,7 +28,7 @@ env:
 jobs:
   analyze:
     name: Analyze
-    timeout-minutes: 60
+    timeout-minutes: 180
     runs-on: windows-latest
 
     steps:
