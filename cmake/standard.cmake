@@ -11,3 +11,7 @@ if(NOT ARCH_ID)
   endif()
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" ARCH_ID)
 endif()
+
+if (ARCH_ID MATCHES "^(aarch64|arm64|armv8-a)$")
+	set(ARMv8 1)
+endif()

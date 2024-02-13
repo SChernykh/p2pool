@@ -24,21 +24,11 @@ set(CARES_SHARED OFF CACHE BOOL "Build as a shared library")
 set(CARES_INSTALL OFF CACHE BOOL "Create installation targets (chain builders may want to disable this)")
 set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build tools")
 
-if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /W0 /O1 /Ob2 /Oi /Os /Oy /MP /MT /GL")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W0 /O1 /Ob2 /Oi /Os /Oy /MP /MT /GL")
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /W0 /Ob1 /Ot /Zi /MP /MT")
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /W0 /Ob1 /Ot /Zi /MP /MT")
-else()
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -w")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -w")
-endif()
-
 if ((CMAKE_C_COMPILER_ID MATCHES MSVC) OR (CMAKE_CXX_COMPILER_ID MATCHES MSVC))
 	include_directories(external/src/common)
 endif()
+
+add_definitions(-DPROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0)
 
 add_subdirectory(external/src/grpc)
 set(LIBS ${LIBS} grpc grpc++ libprotobuf)

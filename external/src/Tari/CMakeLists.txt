@@ -36,8 +36,6 @@ include_directories(../grpc/third_party/protobuf/src)
 include_directories(../grpc/include)
 include_directories(../grpc/third_party/abseil-cpp)
 
-set(DISABLE_WARNINGS ON)
-
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")

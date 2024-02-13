@@ -1,7 +1,3 @@
-if (ARCH_ID MATCHES "^(aarch64|arm64|armv8-a)$")
-	set(ARMv8 1)
-endif()
-
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
 

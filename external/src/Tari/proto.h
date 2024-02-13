@@ -2,9 +2,6 @@
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
-#elif __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wundef"
 #endif
 
 #include "proto/gRPC/base_node.pb.h"
@@ -29,6 +26,4 @@
 
 #ifdef _MSC_VER
 #pragma warning(pop)
-#elif __GNUC__
-#pragma GCC diagnostic pop
 #endif
