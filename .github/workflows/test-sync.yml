@@ -54,7 +54,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_TSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DWITH_LTO=OFF -DSTATIC_LIBS=ON
+        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_TSAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_C_FLAGS='-fsanitize=thread -Og -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-fsanitize=thread -Og -fno-omit-frame-pointer -g' -DWITH_LTO=OFF -DSTATIC_LIBS=ON
         make -j$(nproc) p2pool
 
     - name: Run p2pool
@@ -240,7 +240,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DWITH_LTO=OFF
+        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_C_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DCMAKE_CXX_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DWITH_LTO=OFF
         make -j$(nproc) p2pool
 
     - name: Run p2pool

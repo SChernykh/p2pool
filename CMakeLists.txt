@@ -37,7 +37,6 @@ if (WITH_GRPC)
 	include(cmake/grpc.cmake)
 
 	add_subdirectory(external/src/Tari)
-	set(LIBS ${LIBS} Tari_gRPC)
 endif()
 
 if (WITH_RANDOMX)
@@ -397,6 +396,10 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		${STATIC_LIBS}
 	)
 else()
+	if (WITH_GRPC)
+		set(LIBS ${LIBS} Tari_gRPC grpc grpc++ libprotobuf)
+	endif()
+
 	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
 endif()
 

@@ -4,7 +4,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(OPTIMIZATION_FLAGS "-Ofast -s")
 
 	if (WITH_LTO)
-		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto -fuse-linker-plugin")
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto=auto -fuse-linker-plugin")
 	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")

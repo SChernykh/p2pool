@@ -34,7 +34,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	endif()
 
 	if (WITH_LTO)
-		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto -fuse-linker-plugin")
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto=auto -fuse-linker-plugin")
 	endif()
 
 	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
