@@ -16,6 +16,7 @@ option(STATIC_LIBS "Link libuv and libzmq statically" OFF)
 option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned off, p2pool will rely on monerod for verifying RandomX hashes" ON)
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
+option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
@@ -31,10 +32,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION 10.0)
 endif()
 
-include(cmake/grpc.cmake)
+if (WITH_GRPC)
+	add_definitions(-DWITH_GRPC)
+	include(cmake/grpc.cmake)
 
-add_subdirectory(external/src/Tari)
-set(LIBS ${LIBS} Tari_gRPC)
+	add_subdirectory(external/src/Tari)
+	set(LIBS ${LIBS} Tari_gRPC)
+endif()
 
 if (WITH_RANDOMX)
 	add_definitions(-DWITH_RANDOMX)
@@ -94,7 +98,6 @@ set(HEADERS
 	src/mempool.h
 	src/merge_mining_client.h
 	src/merge_mining_client_json_rpc.h
-	src/merge_mining_client_tari.h
 	src/merkle.h
 	src/p2p_server.h
 	src/p2pool.h
@@ -129,7 +132,6 @@ set(SOURCES
 	src/mempool.cpp
 	src/merge_mining_client.cpp
 	src/merge_mining_client_json_rpc.cpp
-	src/merge_mining_client_tari.cpp
 	src/merkle.cpp
 	src/p2p_server.cpp
 	src/p2pool.cpp
@@ -148,6 +150,11 @@ set(SOURCES
 if (WITH_RANDOMX)
 	set(HEADERS ${HEADERS} src/miner.h)
 	set(SOURCES ${SOURCES} src/miner.cpp)
+endif()
+
+if (WITH_GRPC)
+	set(HEADERS ${HEADERS} src/merge_mining_client_tari.h)
+	set(SOURCES ${SOURCES} src/merge_mining_client_tari.cpp)
 endif()
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${HEADERS})
@@ -379,7 +386,9 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS ${STATIC_LIBS} resolv)
 	endif()
 
-	set(STATIC_LIBS ${STATIC_LIBS} Tari_gRPC grpc grpc++ libprotobuf)
+	if (WITH_GRPC)
+		set(STATIC_LIBS ${STATIC_LIBS} Tari_gRPC grpc grpc++ libprotobuf)
+	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"

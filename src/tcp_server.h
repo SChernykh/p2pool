@@ -42,6 +42,8 @@ public:
 	[[nodiscard]] virtual int external_listen_port() const { return m_listenPort; }
 
 	[[nodiscard]] bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
+	[[nodiscard]] bool connect_to_peer(Client* client);
+
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
 
 	void ban(bool is_v6, raw_ip ip, uint64_t seconds);
@@ -135,8 +137,6 @@ private:
 	static void on_connect(uv_connect_t* req, int status);
 	void on_new_client(uv_stream_t* server);
 	void on_new_client(uv_stream_t* server, Client* client);
-
-	[[nodiscard]] bool connect_to_peer(Client* client);
 
 	[[nodiscard]] bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback);
 

@@ -424,9 +424,10 @@ jobs:
     strategy:
       matrix:
         config:
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF"}
 
     steps:
     - name: Checkout repository
@@ -441,7 +442,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }}
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }} -DWITH_GRPC=${{ matrix.config.grpc }}
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Check Windows 7 compatibility
@@ -477,7 +478,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: p2pool-vs-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}.exe
+        name: p2pool-vs-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}-grpc-${{ matrix.config.grpc }}.exe
         path: build/Release/p2pool.exe
 
   build-macos:

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "tcp_server.h"
+#include "Tari/proto.h"
 
 namespace p2pool {
 
@@ -26,7 +27,7 @@ class p2pool;
 class MergeMiningClientTari : public IMergeMiningClient, public nocopy_nomove
 {
 public:
-	MergeMiningClientTari(p2pool* pool, const std::string& host, const std::string& wallet);
+	MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet);
 	~MergeMiningClientTari();
 
 	bool get_params(ChainParameters& out_params) const override;
@@ -35,48 +36,61 @@ public:
 	static constexpr char TARI_PREFIX[] = "tari://";
 
 private:
-	struct gRPC_Server : public TCPServer
-	{
-		explicit gRPC_Server(const std::string& socks5Proxy);
-		~gRPC_Server();
-
-		[[nodiscard]] bool start(bool use_dns, const std::string& host, int port);
-
-		void on_shutdown() override;
-
-		[[nodiscard]] const char* get_log_category() const override;
-
-		std::string m_host;
-		int m_port;
-	} *m_server;
-
-	struct gRPC_Client : public TCPServer::Client
-	{
-		gRPC_Client();
-		~gRPC_Client() {}
-
-		static Client* allocate() { return new gRPC_Client(); }
-		virtual size_t size() const override { return sizeof(gRPC_Client); }
-
-		void reset() override;
-		[[nodiscard]] bool on_connect() override;
-		[[nodiscard]] bool on_read(char* data, uint32_t size) override;
-		void on_read_failed(int err) override;
-		void on_disconnected() override;
-
-		char m_buf[1024];
-		std::vector<char> m_data;
-	};
-
-	std::string m_host;
-	uint32_t m_port;
+	void merge_mining_get_chain_id();
 
 	mutable uv_rwlock_t m_lock;
 	ChainParameters m_chainParams;
 
 	std::string m_auxWallet;
-
 	p2pool* m_pool;
+
+private:
+	static constexpr uint64_t BUF_SIZE = 16384;
+
+	struct TariClient;
+
+	struct TariServer : public TCPServer
+	{
+		explicit TariServer(const std::string& socks5Proxy);
+		~TariServer() {}
+
+		[[nodiscard]] bool start();
+		[[nodiscard]] bool connect_upstream(TariClient* downstream);
+
+		void on_shutdown() override;
+
+		[[nodiscard]] const char* get_log_category() const override;
+
+		bool m_TariNodeIsV6;
+		std::string m_TariNodeHost;
+		int m_TariNodePort;
+
+		int m_internalPort;
+	} *m_server;
+
+	const std::string m_hostStr;
+
+	tari::rpc::BaseNode::Stub* m_TariNode;
+
+	struct TariClient : public TCPServer::Client
+	{
+		TariClient();
+		~TariClient() {}
+
+		static Client* allocate() { return new TariClient(); }
+		virtual size_t size() const override { return sizeof(TariClient); }
+
+		void reset() override;
+		[[nodiscard]] bool on_connect() override;
+		[[nodiscard]] bool on_read(char* data, uint32_t size) override;
+
+		char m_buf[BUF_SIZE];
+
+		bool is_paired() const { return m_pairedClient && (m_pairedClient->m_resetCounter == m_pairedClientSavedResetCounter); }
+
+		TariClient* m_pairedClient;
+		uint32_t m_pairedClientSavedResetCounter;
+	};
 };
 
 } // namespace p2pool

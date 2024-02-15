@@ -554,9 +554,9 @@ bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>
 		PANIC_STOP();
 	}
 
-	if (bytes_written == 0) {
-		LOGWARN(1, "send callback wrote 0 bytes, nothing to do");
-		return true;
+	if (!bytes_written) {
+		LOGWARN(1, "send callback failed");
+		return false;
 	}
 
 	WriteBuf* buf = get_write_buffer(bytes_written);

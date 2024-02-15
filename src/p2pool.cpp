@@ -42,12 +42,6 @@
 #include <fstream>
 #include <numeric>
 
-#define GRPC_TEST 0
-
-#if GRPC_TEST
-#include "Tari/proto.h"
-#endif
-
 LOG_CATEGORY(P2Pool)
 
 constexpr int BLOCK_HEADERS_REQUIRED = 720;
@@ -67,34 +61,6 @@ p2pool::p2pool(int argc, char* argv[])
 	, m_startTime(seconds_since_epoch())
 	, m_lastMinerDataReceived(0)
 {
-#if GRPC_TEST
-	{
-		using namespace tari::rpc;
-		BaseNode::Stub stub(grpc::CreateChannel("127.0.0.1:18142", grpc::InsecureChannelCredentials()));
-
-		grpc::Status status;
-
-		NewBlockTemplateResponse response;
-		{
-			grpc::ClientContext context;
-			NewBlockTemplateRequest request;
-			PowAlgo* algo = new PowAlgo();
-			algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
-			request.clear_algo();
-			request.set_allocated_algo(algo);
-			request.set_max_weight(1);
-			status = stub.GetNewBlockTemplate(&context, request, &response);
-		}
-
-		GetNewBlockResult response2;
-		grpc::ClientContext context2;
-		status = stub.GetNewBlock(&context2, response.new_block_template(), &response2);
-
-		const std::string& s = response2.tari_unique_id();
-		LOGINFO(0, "Tari unique_id = " << log::hex_buf(s.data(), s.size()));
-	}
-#endif
-
 	LOGINFO(1, log::LightCyan() << VERSION);
 
 	Params* p = new Params(argc, argv);
