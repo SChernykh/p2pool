@@ -36,9 +36,7 @@ public:
 	static constexpr char TARI_PREFIX[] = "tari://";
 
 private:
-	void merge_mining_get_chain_id();
-
-	mutable uv_rwlock_t m_lock;
+	mutable uv_rwlock_t m_chainParamsLock;
 	ChainParameters m_chainParams;
 
 	std::string m_auxWallet;
@@ -85,12 +83,22 @@ private:
 		[[nodiscard]] bool on_read(char* data, uint32_t size) override;
 
 		char m_buf[BUF_SIZE];
+		std::vector<uint8_t> m_pendingData;
 
 		bool is_paired() const { return m_pairedClient && (m_pairedClient->m_resetCounter == m_pairedClientSavedResetCounter); }
 
 		TariClient* m_pairedClient;
 		uint32_t m_pairedClientSavedResetCounter;
 	};
+
+	uv_thread_t m_worker;
+
+	uv_mutex_t m_workerLock;
+	uv_cond_t m_workerCond;
+	std::atomic<uint32_t> m_workerStop;
+
+	static void run_wrapper(void* arg);
+	void run();
 };
 
 } // namespace p2pool
