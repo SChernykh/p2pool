@@ -2346,8 +2346,8 @@ void SideChain::launch_precalc(const PoolBlock* block)
 				{
 					MutexLock lock2(m_precalcJobsMutex);
 					m_precalcJobs.push_back(job);
+					uv_cond_signal(&m_precalcJobsCond);
 				}
-				uv_cond_signal(&m_precalcJobsCond);
 			}
 		}
 	}

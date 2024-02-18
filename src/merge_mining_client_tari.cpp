@@ -93,7 +93,10 @@ MergeMiningClientTari::~MergeMiningClientTari()
 	LOGINFO(1, "stopping");
 
 	m_workerStop.exchange(1);
-	uv_cond_signal(&m_workerCond);
+	{
+		MutexLock lock(m_workerLock);
+		uv_cond_signal(&m_workerCond);
+	}
 	uv_thread_join(&m_worker);
 
 	m_server->shutdown_tcp();
@@ -137,7 +140,11 @@ void MergeMiningClientTari::run()
 {
 	LOGINFO(1, "worker thread ready");
 
-	do {
+	using namespace std::chrono;
+
+	for (;;) {
+		const auto t1 = high_resolution_clock::now();
+
 		MutexLock lock(m_workerLock);
 
 		LOGINFO(6, "Getting new block template from Tari node");
@@ -179,7 +186,17 @@ void MergeMiningClientTari::run()
 		}
 
 		LOGINFO(6, "Tari height = " << response2.block().header().height());
-	} while ((uv_cond_timedwait(&m_workerCond, &m_workerLock, 500'000'000) == UV_ETIMEDOUT) && (m_workerStop.load() == 0));
+
+		if (m_workerStop.load() != 0) {
+			return;
+		}
+
+		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
+
+		if (uv_cond_timedwait(&m_workerCond, &m_workerLock, timeout) != UV_ETIMEDOUT) {
+			return;
+		}
+	}
 }
 
 // TariServer and TariClient are simply a proxy from a localhost TCP port to the external Tari node
@@ -293,6 +310,8 @@ bool MergeMiningClientTari::TariClient::on_connect()
 		return server->connect_upstream(this);
 	}
 	else {
+		// The outgoing connection is ready now
+		// Check if the incoming connection (downstream) has already sent something that needs to be relayed
 		TariClient* downstream = m_pairedClient;
 		downstream->m_pairedClient = this;
 		downstream->m_pairedClientSavedResetCounter = m_resetCounter;
