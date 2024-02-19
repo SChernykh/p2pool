@@ -187,13 +187,9 @@ void MergeMiningClientTari::run()
 
 		LOGINFO(6, "Tari height = " << response2.block().header().height());
 
-		if (m_workerStop.load() != 0) {
-			return;
-		}
-
 		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
 
-		if (uv_cond_timedwait(&m_workerCond, &m_workerLock, timeout) != UV_ETIMEDOUT) {
+		if ((m_workerStop.load() != 0) || (uv_cond_timedwait(&m_workerCond, &m_workerLock, timeout) != UV_ETIMEDOUT)) {
 			return;
 		}
 	}
