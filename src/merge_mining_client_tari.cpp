@@ -185,7 +185,11 @@ void MergeMiningClientTari::run()
 			}
 		}
 
-		LOGINFO(6, "Tari height = " << response2.block().header().height());
+		LOGINFO(6, "Tari block template: height = " << response.new_block_template().header().height()
+			<< ", diff = " << response.miner_data().target_difficulty()
+			<< ", reward = " << response.miner_data().reward()
+			<< ", fees = " << response.miner_data().total_fees()
+		);
 
 		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
 

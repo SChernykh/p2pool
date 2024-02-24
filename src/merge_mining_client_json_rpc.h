@@ -27,7 +27,7 @@ class MergeMiningClientJSON_RPC : public IMergeMiningClient
 {
 public:
 	MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet);
-	~MergeMiningClientJSON_RPC();
+	~MergeMiningClientJSON_RPC() override;
 
 	bool get_params(ChainParameters& out_params) const override;
 	void submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) override;

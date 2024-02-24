@@ -28,7 +28,7 @@ class MergeMiningClientTari : public IMergeMiningClient, public nocopy_nomove
 {
 public:
 	MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet);
-	~MergeMiningClientTari();
+	~MergeMiningClientTari() override;
 
 	bool get_params(ChainParameters& out_params) const override;
 	void submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) override;
