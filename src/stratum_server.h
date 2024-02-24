@@ -32,14 +32,14 @@ class StratumServer : public TCPServer
 {
 public:
 	explicit StratumServer(p2pool *pool);
-	~StratumServer();
+	~StratumServer() override;
 
 	void on_block(const BlockTemplate& block);
 
 	struct StratumClient : public Client
 	{
 		StratumClient();
-		FORCEINLINE ~StratumClient() {}
+		FORCEINLINE ~StratumClient() override {}
 
 		static Client* allocate() { return new StratumClient(); }
 		virtual size_t size() const override { return sizeof(StratumClient); }

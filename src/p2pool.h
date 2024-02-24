@@ -39,7 +39,7 @@ class p2pool : public MinerCallbackHandler, public nocopy_nomove
 {
 public:
 	p2pool(int argc, char* argv[]);
-	~p2pool();
+	~p2pool() override;
 
 	int run();
 

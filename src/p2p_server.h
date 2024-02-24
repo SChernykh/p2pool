@@ -59,7 +59,7 @@ public:
 	};
 
 	explicit P2PServer(p2pool *pool);
-	~P2PServer();
+	~P2PServer() override;
 
 	void add_cached_block(const PoolBlock& block);
 	void clear_cached_blocks();
@@ -72,7 +72,7 @@ public:
 	struct P2PClient : public Client
 	{
 		P2PClient();
-		~P2PClient();
+		~P2PClient() override;
 
 		static Client* allocate() { return new P2PClient(); }
 		virtual size_t size() const override { return sizeof(P2PClient); }

@@ -48,7 +48,7 @@ class RandomX_Hasher : public RandomX_Hasher_Base
 {
 public:
 	explicit RandomX_Hasher(p2pool* pool);
-	~RandomX_Hasher();
+	~RandomX_Hasher() override;
 
 	void set_seed_async(const hash& seed) override;
 	void set_seed(const hash& seed);
@@ -98,7 +98,7 @@ class RandomX_Hasher_RPC : public RandomX_Hasher_Base
 {
 public:
 	explicit RandomX_Hasher_RPC(p2pool* pool);
-	~RandomX_Hasher_RPC();
+	~RandomX_Hasher_RPC() override;
 
 	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool force_light_mode) override;
 
