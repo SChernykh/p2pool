@@ -28,12 +28,12 @@ class ConsoleCommands : public TCPServer
 {
 public:
 	explicit ConsoleCommands(p2pool* pool);
-	~ConsoleCommands();
+	~ConsoleCommands() override;
 
 	struct ConsoleClient : public Client
 	{
 		ConsoleClient() : Client(m_consoleReadBuf, sizeof(m_consoleReadBuf)) {}
-		~ConsoleClient() {}
+		~ConsoleClient() override {}
 
 		static Client* allocate() { return new ConsoleClient(); }
 
