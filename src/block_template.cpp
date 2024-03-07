@@ -322,22 +322,18 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	}
 
 	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
-	size_t total_mempool_transactions;
-	{
-		m_mempoolTxs.clear();
+	m_mempoolTxs.clear();
 
-		ReadLock mempool_lock(mempool.m_lock);
+	const uint64_t cur_time = seconds_since_epoch();
+	size_t total_mempool_transactions = 0;
 
-		total_mempool_transactions = mempool.m_transactions.size();
+	mempool.iterate([this, cur_time, &total_mempool_transactions](const hash&, const TxMempoolData& tx) {
+		++total_mempool_transactions;
 
-		const uint64_t cur_time = seconds_since_epoch();
-
-		for (auto& it : mempool.m_transactions) {
-			if ((cur_time > it.second.time_received + 5) || (it.second.fee >= HIGH_FEE_VALUE)) {
-				m_mempoolTxs.emplace_back(it.second);
-			}
+		if ((cur_time > tx.time_received + 5) || (tx.fee >= HIGH_FEE_VALUE)) {
+			m_mempoolTxs.emplace_back(tx);
 		}
-	}
+	});
 
 	// Safeguard for busy mempool moments
 	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit

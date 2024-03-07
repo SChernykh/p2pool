@@ -34,7 +34,23 @@ public:
 	void add(const TxMempoolData& tx);
 	void swap(std::vector<TxMempoolData>& transactions);
 
-public:
+	size_t size() const
+	{
+		ReadLock lock(m_lock);
+		return m_transactions.size();
+	}
+
+	template<typename T>
+	void iterate(T&& callback) const
+	{
+		ReadLock lock(m_lock);
+
+		for (const auto& it : m_transactions) {
+			callback(it.first, it.second);
+		}
+	}
+
+private:
 	mutable uv_rwlock_t m_lock;
 	unordered_map<hash, TxMempoolData> m_transactions;
 };
