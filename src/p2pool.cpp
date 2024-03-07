@@ -379,7 +379,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\ndifficulty              = " << data.difficulty <<
 		"\nmedian_weight           = " << data.median_weight <<
 		"\nalready_generated_coins = " << data.already_generated_coins <<
-		"\ntransactions            = " << m_mempool->m_transactions.size() <<
+		"\ntransactions            = " << m_mempool->size() <<
 		"\n---------------------------------------------------------------------------------------------------------------"
 	);
 
