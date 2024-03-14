@@ -67,6 +67,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
+        sudo sysctl vm.mmap_rnd_bits=28
         TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
@@ -155,6 +156,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
+        sudo sysctl vm.mmap_rnd_bits=28
         MSAN_OPTIONS="halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
@@ -204,6 +206,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
+        sudo sysctl vm.mmap_rnd_bits=28
         UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
@@ -253,6 +256,7 @@ jobs:
         python ../tests/src/mm_server.py 8000 id0 data0 &
         python ../tests/src/mm_server.py 8001 id1 data1 &
         python ../tests/src/mm_server.py 8002 id2 data2 &
+        sudo sysctl vm.mmap_rnd_bits=28
         ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool ${{ secrets.TESTNET_NODE_PARAMS }} --wallet 9y9HUSpSZX7j2J5UUngX5nCRezR6mZfLmL2D5JXpmPjYVDCPCCcw6Tab2R55xqPTN2FoQEEDmz99TVdy9EW74mqMUw5xRun --data-api data --local-api --merge-mine 127.0.0.1:8000 test0 --merge-mine 127.0.0.1:8001 test1 --merge-mine 127.0.0.1:8002 test2 --loglevel 6
 
     - name: Check p2pool.log
