@@ -97,14 +97,14 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 17
+        sudo ./llvm.sh 18
 
     - name: Build libcxx_msan
       run: |
-        git clone --depth=1 https://github.com/llvm/llvm-project -b release/17.x
+        git clone --depth=1 https://github.com/llvm/llvm-project -b release/18.x
         cd llvm-project
         mkdir build
-        cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DLLVM_USE_SANITIZER=MemoryWithOrigins
+        cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DLLVM_USE_SANITIZER=MemoryWithOrigins -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
         ninja -C build cxx cxxabi
         cd build
         mkdir /tmp/libcxx_msan
@@ -119,7 +119,7 @@ jobs:
     - name: Build libcurl
       run: |
         cd external/src/curl
-        cmake . -DCMAKE_C_COMPILER=clang-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
+        cmake . -DCMAKE_C_COMPILER=clang-18 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DBUILD_CURL_EXE=OFF -DBUILD_SHARED_LIBS=OFF -DCURL_ZLIB=OFF -DCURL_DISABLE_ALTSVC=ON -DCURL_DISABLE_COOKIES=ON -DCURL_DISABLE_DOH=ON -DCURL_DISABLE_GETOPTIONS=ON -DCURL_DISABLE_HSTS=ON -DCURL_DISABLE_LIBCURL_OPTION=ON -DCURL_DISABLE_MIME=ON -DCURL_DISABLE_NETRC=ON -DCURL_DISABLE_NTLM=ON -DCURL_DISABLE_PARSEDATE=ON -DCURL_DISABLE_PROGRESS_METER=ON -DCURL_DISABLE_SHUFFLE_DNS=ON -DCURL_DISABLE_SOCKETPAIR=ON -DCURL_DISABLE_VERBOSE_STRINGS=ON -DHTTP_ONLY=ON -DCURL_ENABLE_SSL=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DENABLE_UNIX_SOCKETS=OFF
         make -j$(nproc)
         cd lib && mkdir .libs && cp libcurl.a .libs
 
@@ -128,7 +128,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER=clang-18 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -136,14 +136,14 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -Og -fno-omit-frame-pointer -g -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
         make -j$(nproc)
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -Wl,-rpath /tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument -fuse-ld=lld-17 -fno-omit-frame-pointer -g' -DDEV_TEST_SYNC=ON -DDEV_WITH_MSAN=ON -DWITH_LTO=OFF -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -fno-omit-frame-pointer -g' -DCMAKE_CXX_FLAGS='-nostdinc++ -nostdlib++ -fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -isystem /tmp/libcxx_msan/include/c++/v1 -L/tmp/libcxx_msan/lib -Wl,-rpath /tmp/libcxx_msan/lib -lc++ -lc++abi -Wno-unused-command-line-argument -fuse-ld=lld-18 -fno-omit-frame-pointer -g' -DDEV_TEST_SYNC=ON -DDEV_WITH_MSAN=ON -DWITH_LTO=OFF -DSTATIC_LIBS=ON
         make -j$(nproc)
 
     - name: Run p2pool
