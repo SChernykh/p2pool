@@ -335,7 +335,7 @@ jobs:
       matrix:
         config:
           - {c: "gcc", cxx: "g++", flags: "-ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes"}
-          - {c: "clang", cxx: "clang++", flags: "-fuse-ld=lld -Wno-unused-command-line-argument"}
+          - {c: "clang", cxx: "clang++", flags: "-fuse-ld=lld -Wno-unused-command-line-argument -Wno-nan-infinity-disabled"}
 
     defaults:
       run:
