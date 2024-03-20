@@ -326,7 +326,7 @@ jobs:
       matrix:
         config:
           - {c: "gcc", cxx: "g++", flags: "-flto=2 -fuse-linker-plugin -ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes"}
-          - {c: "clang", cxx: "clang++", flags: "-flto -ffunction-sections -fuse-ld=lld -Wno-unused-command-line-argument -Wno-nan-infinity-disabled"}
+          - {c: "clang", cxx: "clang++", flags: "-ffunction-sections -fuse-ld=lld -Wno-unused-command-line-argument -Wno-nan-infinity-disabled"}
 
     defaults:
       run:
@@ -371,7 +371,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON
+        cmake .. -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON -DWITH_LTO=OFF
         make -j$(nproc)
 
     - name: Run RandomX tests
