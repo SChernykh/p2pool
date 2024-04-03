@@ -33,6 +33,8 @@ static constexpr uint64_t AUTO_DIFF_TARGET_TIME = 30;
 // Use short target format (4 bytes) for diff <= 4 million
 static constexpr uint64_t TARGET_4_BYTES_LIMIT = std::numeric_limits<uint64_t>::max() / 4000001;
 
+static constexpr uint64_t AUTODIFF_START = std::numeric_limits<uint64_t>::max() / 500001;
+
 static constexpr int32_t BAD_SHARE_POINTS = -5;
 static constexpr int32_t GOOD_SHARE_POINTS = 1;
 static constexpr int32_t BAN_THRESHOLD_POINTS = -15;
@@ -271,7 +273,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	}
 	else if (m_autoDiff) {
 		// Limit autodiff to 4000000 for maximum compatibility
-		target = std::max(target, TARGET_4_BYTES_LIMIT);
+		target = std::max(std::max(target, AUTODIFF_START), TARGET_4_BYTES_LIMIT);
 	}
 
 	if (get_custom_user(login, client->m_customUser)) {
@@ -764,7 +766,9 @@ void StratumServer::on_blobs_ready()
 				target = std::max(target, client->m_autoDiff.target());
 			}
 			else {
-				// Not enough shares from the client yet, cut diff in half every 16 seconds
+				// Not enough shares from the client yet, start with 500k diff and cut diff in half every 16 seconds
+				target = std::max(target, AUTODIFF_START);
+
 				const uint64_t num_halvings = (cur_time - client->m_connectedTime) / 16;
 				constexpr uint64_t max_target = (std::numeric_limits<uint64_t>::max() / MIN_DIFF) + 1;
 				for (uint64_t i = 0; (i < num_halvings) && (target < max_target); ++i) {
