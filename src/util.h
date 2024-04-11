@@ -26,7 +26,7 @@
 #define ROBIN_HOOD_CALLOC(count, size) p2pool::calloc_hook((count), (size))
 #define ROBIN_HOOD_FREE(ptr) p2pool::free_hook(ptr)
 
-#include "robin_hood.h"
+#include <robin_hood.h>
 
 #ifdef _MSC_VER
 #pragma warning(pop)
