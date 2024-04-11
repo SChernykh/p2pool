@@ -2527,6 +2527,8 @@ class ConsensusConstants final :
     kValidatorNodeRegistrationMinDepositAmountFieldNumber = 31,
     kValidatorNodeRegistrationMinLockHeightFieldNumber = 32,
     kValidatorNodeRegistrationShuffleIntervalEpochFieldNumber = 33,
+    kInflationBipsFieldNumber = 35,
+    kTailEpochLengthFieldNumber = 36,
     kBlockchainVersionFieldNumber = 2,
   };
   // repeated uint64 emission_decay = 11;
@@ -2744,10 +2746,10 @@ class ConsensusConstants final :
   void _internal_set_emission_initial(::uint64_t value);
 
   public:
-  // uint64 emission_tail = 12;
-  void clear_emission_tail() ;
-  ::uint64_t emission_tail() const;
-  void set_emission_tail(::uint64_t value);
+  // uint64 emission_tail = 12 [deprecated = true];
+  [[deprecated]]  void clear_emission_tail() ;
+  [[deprecated]] ::uint64_t emission_tail() const;
+  [[deprecated]] void set_emission_tail(::uint64_t value);
 
   private:
   ::uint64_t _internal_emission_tail() const;
@@ -2884,6 +2886,26 @@ class ConsensusConstants final :
   void _internal_set_validator_node_registration_shuffle_interval_epoch(::uint64_t value);
 
   public:
+  // uint64 inflation_bips = 35;
+  void clear_inflation_bips() ;
+  ::uint64_t inflation_bips() const;
+  void set_inflation_bips(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_inflation_bips() const;
+  void _internal_set_inflation_bips(::uint64_t value);
+
+  public:
+  // uint64 tail_epoch_length = 36;
+  void clear_tail_epoch_length() ;
+  ::uint64_t tail_epoch_length() const;
+  void set_tail_epoch_length(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_tail_epoch_length() const;
+  void _internal_set_tail_epoch_length(::uint64_t value);
+
+  public:
   // uint32 blockchain_version = 2;
   void clear_blockchain_version() ;
   ::uint32_t blockchain_version() const;
@@ -2900,7 +2922,7 @@ class ConsensusConstants final :
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      5, 31, 8,
+      5, 33, 8,
       0, 7>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -2954,6 +2976,8 @@ class ConsensusConstants final :
     ::uint64_t validator_node_registration_min_deposit_amount_;
     ::uint64_t validator_node_registration_min_lock_height_;
     ::uint64_t validator_node_registration_shuffle_interval_epoch_;
+    ::uint64_t inflation_bips_;
+    ::uint64_t tail_epoch_length_;
     ::uint32_t blockchain_version_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -4324,7 +4348,7 @@ inline ::google::protobuf::RepeatedField<::uint64_t>* ConsensusConstants::_inter
   return &_impl_.emission_decay_;
 }
 
-// uint64 emission_tail = 12;
+// uint64 emission_tail = 12 [deprecated = true];
 inline void ConsensusConstants::clear_emission_tail() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   _impl_.emission_tail_ = ::uint64_t{0u};
@@ -5245,6 +5269,52 @@ inline ::google::protobuf::RepeatedPtrField<::tari::rpc::PermittedRangeProofs>*
 ConsensusConstants::_internal_mutable_permitted_range_proof_types() {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
   return &_impl_.permitted_range_proof_types_;
+}
+
+// uint64 inflation_bips = 35;
+inline void ConsensusConstants::clear_inflation_bips() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.inflation_bips_ = ::uint64_t{0u};
+}
+inline ::uint64_t ConsensusConstants::inflation_bips() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ConsensusConstants.inflation_bips)
+  return _internal_inflation_bips();
+}
+inline void ConsensusConstants::set_inflation_bips(::uint64_t value) {
+  _internal_set_inflation_bips(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ConsensusConstants.inflation_bips)
+}
+inline ::uint64_t ConsensusConstants::_internal_inflation_bips() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.inflation_bips_;
+}
+inline void ConsensusConstants::_internal_set_inflation_bips(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.inflation_bips_ = value;
+}
+
+// uint64 tail_epoch_length = 36;
+inline void ConsensusConstants::clear_tail_epoch_length() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tail_epoch_length_ = ::uint64_t{0u};
+}
+inline ::uint64_t ConsensusConstants::tail_epoch_length() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ConsensusConstants.tail_epoch_length)
+  return _internal_tail_epoch_length();
+}
+inline void ConsensusConstants::set_tail_epoch_length(::uint64_t value) {
+  _internal_set_tail_epoch_length(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ConsensusConstants.tail_epoch_length)
+}
+inline ::uint64_t ConsensusConstants::_internal_tail_epoch_length() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.tail_epoch_length_;
+}
+inline void ConsensusConstants::_internal_set_tail_epoch_length(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.tail_epoch_length_ = value;
 }
 
 #ifdef __GNUC__

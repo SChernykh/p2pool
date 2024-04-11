@@ -171,6 +171,22 @@ class BaseNode final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockRaw(context, request, cq));
     }
+    // Construct a new block from a provided template
+    virtual ::grpc::Status GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>> AsyncGetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>>(AsyncGetNewBlockWithCoinbasesRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockWithCoinbasesRaw(context, request, cq));
+    }
+    // Construct a new block from a provided template
+    virtual ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>> AsyncGetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>>(AsyncGetNewBlockTemplateWithCoinbasesRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(context, request, cq));
+    }
     // Construct a new block and header blob from a provided template
     virtual ::grpc::Status GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::tari::rpc::GetNewBlockBlobResult* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockBlobResult>> AsyncGetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) {
@@ -389,6 +405,12 @@ class BaseNode final {
       // Construct a new block from a provided template
       virtual void GetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Construct a new block from a provided template
+      virtual void GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Construct a new block from a provided template
+      virtual void GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       // Construct a new block and header blob from a provided template
       virtual void GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response, ::grpc::ClientUnaryReactor* reactor) = 0;
@@ -475,6 +497,10 @@ class BaseNode final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::NewBlockTemplateResponse>* PrepareAsyncGetNewBlockTemplateRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplateRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockBlobResult>* AsyncGetNewBlockBlobRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::GetNewBlockBlobResult>* PrepareAsyncGetNewBlockBlobRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::tari::rpc::SubmitBlockResponse>* AsyncSubmitBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::Block& request, ::grpc::CompletionQueue* cq) = 0;
@@ -627,6 +653,20 @@ class BaseNode final {
     }
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockRaw(context, request, cq));
+    }
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>> AsyncGetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>>(AsyncGetNewBlockWithCoinbasesRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockWithCoinbasesRaw(context, request, cq));
+    }
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>> AsyncGetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>>(AsyncGetNewBlockTemplateWithCoinbasesRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>> PrepareAsyncGetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>>(PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(context, request, cq));
     }
     ::grpc::Status GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::tari::rpc::GetNewBlockBlobResult* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockBlobResult>> AsyncGetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) {
@@ -816,6 +856,10 @@ class BaseNode final {
       void GetNewBlockTemplate(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplateRequest* request, ::tari::rpc::NewBlockTemplateResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void GetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) override;
       void GetNewBlock(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) override;
+      void GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)>) override;
+      void GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) override;
       void GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response, std::function<void(::grpc::Status)>) override;
       void GetNewBlockBlob(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response, ::grpc::ClientUnaryReactor* reactor) override;
       void SubmitBlock(::grpc::ClientContext* context, const ::tari::rpc::Block* request, ::tari::rpc::SubmitBlockResponse* response, std::function<void(::grpc::Status)>) override;
@@ -891,6 +935,10 @@ class BaseNode final {
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::NewBlockTemplateResponse>* PrepareAsyncGetNewBlockTemplateRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplateRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* AsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockBlobResult>* AsyncGetNewBlockBlobRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockBlobResult>* PrepareAsyncGetNewBlockBlobRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::tari::rpc::SubmitBlockResponse>* AsyncSubmitBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::Block& request, ::grpc::CompletionQueue* cq) override;
@@ -954,6 +1002,8 @@ class BaseNode final {
     const ::grpc::internal::RpcMethod rpcmethod_GetNetworkDifficulty_;
     const ::grpc::internal::RpcMethod rpcmethod_GetNewBlockTemplate_;
     const ::grpc::internal::RpcMethod rpcmethod_GetNewBlock_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetNewBlockWithCoinbases_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetNewBlockTemplateWithCoinbases_;
     const ::grpc::internal::RpcMethod rpcmethod_GetNewBlockBlob_;
     const ::grpc::internal::RpcMethod rpcmethod_SubmitBlock_;
     const ::grpc::internal::RpcMethod rpcmethod_SubmitBlockBlob_;
@@ -1008,6 +1058,10 @@ class BaseNode final {
     virtual ::grpc::Status GetNewBlockTemplate(::grpc::ServerContext* context, const ::tari::rpc::NewBlockTemplateRequest* request, ::tari::rpc::NewBlockTemplateResponse* response);
     // Construct a new block from a provided template
     virtual ::grpc::Status GetNewBlock(::grpc::ServerContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response);
+    // Construct a new block from a provided template
+    virtual ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response);
+    // Construct a new block from a provided template
+    virtual ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response);
     // Construct a new block and header blob from a provided template
     virtual ::grpc::Status GetNewBlockBlob(::grpc::ServerContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response);
     // Submit a new block for propagation
@@ -1308,12 +1362,52 @@ class BaseNode final {
     }
   };
   template <class BaseClass>
+  class WithAsyncMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodAsync(13);
+    }
+    ~WithAsyncMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNewBlockWithCoinbases(::grpc::ServerContext* context, ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::GetNewBlockResult>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodAsync(14);
+    }
+    ~WithAsyncMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNewBlockTemplateWithCoinbases(::grpc::ServerContext* context, ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::GetNewBlockResult>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithAsyncMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodAsync(13);
+      ::grpc::Service::MarkMethodAsync(15);
     }
     ~WithAsyncMethod_GetNewBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1324,7 +1418,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetNewBlockBlob(::grpc::ServerContext* context, ::tari::rpc::NewBlockTemplate* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::GetNewBlockBlobResult>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(15, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1333,7 +1427,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodAsync(14);
+      ::grpc::Service::MarkMethodAsync(16);
     }
     ~WithAsyncMethod_SubmitBlock() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1344,7 +1438,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitBlock(::grpc::ServerContext* context, ::tari::rpc::Block* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::SubmitBlockResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(16, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1353,7 +1447,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodAsync(15);
+      ::grpc::Service::MarkMethodAsync(17);
     }
     ~WithAsyncMethod_SubmitBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1364,7 +1458,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitBlockBlob(::grpc::ServerContext* context, ::tari::rpc::BlockBlobRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::SubmitBlockResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(15, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(17, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1373,7 +1467,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodAsync(16);
+      ::grpc::Service::MarkMethodAsync(18);
     }
     ~WithAsyncMethod_SubmitTransaction() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1384,7 +1478,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitTransaction(::grpc::ServerContext* context, ::tari::rpc::SubmitTransactionRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::SubmitTransactionResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(16, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(18, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1393,7 +1487,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodAsync(17);
+      ::grpc::Service::MarkMethodAsync(19);
     }
     ~WithAsyncMethod_GetSyncInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1404,7 +1498,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSyncInfo(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::SyncInfoResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(17, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(19, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1413,7 +1507,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodAsync(18);
+      ::grpc::Service::MarkMethodAsync(20);
     }
     ~WithAsyncMethod_GetSyncProgress() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1424,7 +1518,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSyncProgress(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::SyncProgressResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(18, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(20, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1433,7 +1527,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodAsync(19);
+      ::grpc::Service::MarkMethodAsync(21);
     }
     ~WithAsyncMethod_GetTipInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1444,7 +1538,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetTipInfo(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::TipInfoResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(19, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(21, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1453,7 +1547,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodAsync(20);
+      ::grpc::Service::MarkMethodAsync(22);
     }
     ~WithAsyncMethod_SearchKernels() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1464,7 +1558,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSearchKernels(::grpc::ServerContext* context, ::tari::rpc::SearchKernelsRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::HistoricalBlock>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(20, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(22, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1473,7 +1567,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodAsync(21);
+      ::grpc::Service::MarkMethodAsync(23);
     }
     ~WithAsyncMethod_SearchUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1484,7 +1578,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSearchUtxos(::grpc::ServerContext* context, ::tari::rpc::SearchUtxosRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::HistoricalBlock>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(21, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(23, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1493,7 +1587,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodAsync(22);
+      ::grpc::Service::MarkMethodAsync(24);
     }
     ~WithAsyncMethod_FetchMatchingUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1504,7 +1598,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestFetchMatchingUtxos(::grpc::ServerContext* context, ::tari::rpc::FetchMatchingUtxosRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::FetchMatchingUtxosResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(22, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(24, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1513,7 +1607,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetPeers() {
-      ::grpc::Service::MarkMethodAsync(23);
+      ::grpc::Service::MarkMethodAsync(25);
     }
     ~WithAsyncMethod_GetPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1524,7 +1618,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetPeers(::grpc::ServerContext* context, ::tari::rpc::GetPeersRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::GetPeersResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(23, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(25, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1533,7 +1627,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodAsync(24);
+      ::grpc::Service::MarkMethodAsync(26);
     }
     ~WithAsyncMethod_GetMempoolTransactions() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1544,7 +1638,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetMempoolTransactions(::grpc::ServerContext* context, ::tari::rpc::GetMempoolTransactionsRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::GetMempoolTransactionsResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(24, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(26, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1553,7 +1647,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_TransactionState() {
-      ::grpc::Service::MarkMethodAsync(25);
+      ::grpc::Service::MarkMethodAsync(27);
     }
     ~WithAsyncMethod_TransactionState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1564,7 +1658,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestTransactionState(::grpc::ServerContext* context, ::tari::rpc::TransactionStateRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::TransactionStateResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(25, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(27, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1573,7 +1667,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_Identify() {
-      ::grpc::Service::MarkMethodAsync(26);
+      ::grpc::Service::MarkMethodAsync(28);
     }
     ~WithAsyncMethod_Identify() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1584,7 +1678,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestIdentify(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::NodeIdentity>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(26, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(28, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1593,7 +1687,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodAsync(27);
+      ::grpc::Service::MarkMethodAsync(29);
     }
     ~WithAsyncMethod_GetNetworkStatus() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1604,7 +1698,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetNetworkStatus(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::NetworkStatusResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(27, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(29, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1613,7 +1707,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodAsync(28);
+      ::grpc::Service::MarkMethodAsync(30);
     }
     ~WithAsyncMethod_ListConnectedPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1624,7 +1718,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestListConnectedPeers(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::ListConnectedPeersResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(28, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(30, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1633,7 +1727,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodAsync(29);
+      ::grpc::Service::MarkMethodAsync(31);
     }
     ~WithAsyncMethod_GetMempoolStats() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1644,7 +1738,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetMempoolStats(::grpc::ServerContext* context, ::tari::rpc::Empty* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::MempoolStatsResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(29, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(31, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1653,7 +1747,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodAsync(30);
+      ::grpc::Service::MarkMethodAsync(32);
     }
     ~WithAsyncMethod_GetActiveValidatorNodes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1664,7 +1758,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetActiveValidatorNodes(::grpc::ServerContext* context, ::tari::rpc::GetActiveValidatorNodesRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::GetActiveValidatorNodesResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(30, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(32, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1673,7 +1767,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodAsync(31);
+      ::grpc::Service::MarkMethodAsync(33);
     }
     ~WithAsyncMethod_GetShardKey() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1684,7 +1778,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetShardKey(::grpc::ServerContext* context, ::tari::rpc::GetShardKeyRequest* request, ::grpc::ServerAsyncResponseWriter< ::tari::rpc::GetShardKeyResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(31, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(33, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1693,7 +1787,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodAsync(32);
+      ::grpc::Service::MarkMethodAsync(34);
     }
     ~WithAsyncMethod_GetTemplateRegistrations() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1704,7 +1798,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetTemplateRegistrations(::grpc::ServerContext* context, ::tari::rpc::GetTemplateRegistrationsRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::GetTemplateRegistrationResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(32, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(34, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1713,7 +1807,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodAsync(33);
+      ::grpc::Service::MarkMethodAsync(35);
     }
     ~WithAsyncMethod_GetSideChainUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1724,10 +1818,10 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSideChainUtxos(::grpc::ServerContext* context, ::tari::rpc::GetSideChainUtxosRequest* request, ::grpc::ServerAsyncWriter< ::tari::rpc::GetSideChainUtxosResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(33, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(35, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_ListHeaders<WithAsyncMethod_GetHeaderByHash<WithAsyncMethod_GetBlocks<WithAsyncMethod_GetBlockTiming<WithAsyncMethod_GetConstants<WithAsyncMethod_GetBlockSize<WithAsyncMethod_GetBlockFees<WithAsyncMethod_GetVersion<WithAsyncMethod_CheckForUpdates<WithAsyncMethod_GetTokensInCirculation<WithAsyncMethod_GetNetworkDifficulty<WithAsyncMethod_GetNewBlockTemplate<WithAsyncMethod_GetNewBlock<WithAsyncMethod_GetNewBlockBlob<WithAsyncMethod_SubmitBlock<WithAsyncMethod_SubmitBlockBlob<WithAsyncMethod_SubmitTransaction<WithAsyncMethod_GetSyncInfo<WithAsyncMethod_GetSyncProgress<WithAsyncMethod_GetTipInfo<WithAsyncMethod_SearchKernels<WithAsyncMethod_SearchUtxos<WithAsyncMethod_FetchMatchingUtxos<WithAsyncMethod_GetPeers<WithAsyncMethod_GetMempoolTransactions<WithAsyncMethod_TransactionState<WithAsyncMethod_Identify<WithAsyncMethod_GetNetworkStatus<WithAsyncMethod_ListConnectedPeers<WithAsyncMethod_GetMempoolStats<WithAsyncMethod_GetActiveValidatorNodes<WithAsyncMethod_GetShardKey<WithAsyncMethod_GetTemplateRegistrations<WithAsyncMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > AsyncService;
+  typedef WithAsyncMethod_ListHeaders<WithAsyncMethod_GetHeaderByHash<WithAsyncMethod_GetBlocks<WithAsyncMethod_GetBlockTiming<WithAsyncMethod_GetConstants<WithAsyncMethod_GetBlockSize<WithAsyncMethod_GetBlockFees<WithAsyncMethod_GetVersion<WithAsyncMethod_CheckForUpdates<WithAsyncMethod_GetTokensInCirculation<WithAsyncMethod_GetNetworkDifficulty<WithAsyncMethod_GetNewBlockTemplate<WithAsyncMethod_GetNewBlock<WithAsyncMethod_GetNewBlockWithCoinbases<WithAsyncMethod_GetNewBlockTemplateWithCoinbases<WithAsyncMethod_GetNewBlockBlob<WithAsyncMethod_SubmitBlock<WithAsyncMethod_SubmitBlockBlob<WithAsyncMethod_SubmitTransaction<WithAsyncMethod_GetSyncInfo<WithAsyncMethod_GetSyncProgress<WithAsyncMethod_GetTipInfo<WithAsyncMethod_SearchKernels<WithAsyncMethod_SearchUtxos<WithAsyncMethod_FetchMatchingUtxos<WithAsyncMethod_GetPeers<WithAsyncMethod_GetMempoolTransactions<WithAsyncMethod_TransactionState<WithAsyncMethod_Identify<WithAsyncMethod_GetNetworkStatus<WithAsyncMethod_ListConnectedPeers<WithAsyncMethod_GetMempoolStats<WithAsyncMethod_GetActiveValidatorNodes<WithAsyncMethod_GetShardKey<WithAsyncMethod_GetTemplateRegistrations<WithAsyncMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_ListHeaders : public BaseClass {
    private:
@@ -2060,18 +2154,72 @@ class BaseNode final {
       ::grpc::CallbackServerContext* /*context*/, const ::tari::rpc::NewBlockTemplate* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithCallbackMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response) { return this->GetNewBlockWithCoinbases(context, request, response); }));}
+    void SetMessageAllocatorFor_GetNewBlockWithCoinbases(
+        ::grpc::MessageAllocator< ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(13);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNewBlockWithCoinbases(
+      ::grpc::CallbackServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodCallback(14,
+          new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response) { return this->GetNewBlockTemplateWithCoinbases(context, request, response); }));}
+    void SetMessageAllocatorFor_GetNewBlockTemplateWithCoinbases(
+        ::grpc::MessageAllocator< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(14);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNewBlockTemplateWithCoinbases(
+      ::grpc::CallbackServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithCallbackMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodCallback(13,
+      ::grpc::Service::MarkMethodCallback(15,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::NewBlockTemplate, ::tari::rpc::GetNewBlockBlobResult>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockBlobResult* response) { return this->GetNewBlockBlob(context, request, response); }));}
     void SetMessageAllocatorFor_GetNewBlockBlob(
         ::grpc::MessageAllocator< ::tari::rpc::NewBlockTemplate, ::tari::rpc::GetNewBlockBlobResult>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(13);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(15);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::NewBlockTemplate, ::tari::rpc::GetNewBlockBlobResult>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2092,13 +2240,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodCallback(14,
+      ::grpc::Service::MarkMethodCallback(16,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Block, ::tari::rpc::SubmitBlockResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Block* request, ::tari::rpc::SubmitBlockResponse* response) { return this->SubmitBlock(context, request, response); }));}
     void SetMessageAllocatorFor_SubmitBlock(
         ::grpc::MessageAllocator< ::tari::rpc::Block, ::tari::rpc::SubmitBlockResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(14);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(16);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Block, ::tari::rpc::SubmitBlockResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2119,13 +2267,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodCallback(15,
+      ::grpc::Service::MarkMethodCallback(17,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::BlockBlobRequest, ::tari::rpc::SubmitBlockResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::BlockBlobRequest* request, ::tari::rpc::SubmitBlockResponse* response) { return this->SubmitBlockBlob(context, request, response); }));}
     void SetMessageAllocatorFor_SubmitBlockBlob(
         ::grpc::MessageAllocator< ::tari::rpc::BlockBlobRequest, ::tari::rpc::SubmitBlockResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(15);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(17);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::BlockBlobRequest, ::tari::rpc::SubmitBlockResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2146,13 +2294,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodCallback(16,
+      ::grpc::Service::MarkMethodCallback(18,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::SubmitTransactionRequest, ::tari::rpc::SubmitTransactionResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::SubmitTransactionRequest* request, ::tari::rpc::SubmitTransactionResponse* response) { return this->SubmitTransaction(context, request, response); }));}
     void SetMessageAllocatorFor_SubmitTransaction(
         ::grpc::MessageAllocator< ::tari::rpc::SubmitTransactionRequest, ::tari::rpc::SubmitTransactionResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(16);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(18);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::SubmitTransactionRequest, ::tari::rpc::SubmitTransactionResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2173,13 +2321,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodCallback(17,
+      ::grpc::Service::MarkMethodCallback(19,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::SyncInfoResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::SyncInfoResponse* response) { return this->GetSyncInfo(context, request, response); }));}
     void SetMessageAllocatorFor_GetSyncInfo(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::SyncInfoResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(17);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(19);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::SyncInfoResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2200,13 +2348,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodCallback(18,
+      ::grpc::Service::MarkMethodCallback(20,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::SyncProgressResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::SyncProgressResponse* response) { return this->GetSyncProgress(context, request, response); }));}
     void SetMessageAllocatorFor_GetSyncProgress(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::SyncProgressResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(18);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(20);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::SyncProgressResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2227,13 +2375,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodCallback(19,
+      ::grpc::Service::MarkMethodCallback(21,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::TipInfoResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::TipInfoResponse* response) { return this->GetTipInfo(context, request, response); }));}
     void SetMessageAllocatorFor_GetTipInfo(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::TipInfoResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(19);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(21);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::TipInfoResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2254,7 +2402,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodCallback(20,
+      ::grpc::Service::MarkMethodCallback(22,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::SearchKernelsRequest, ::tari::rpc::HistoricalBlock>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::SearchKernelsRequest* request) { return this->SearchKernels(context, request); }));
@@ -2276,7 +2424,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodCallback(21,
+      ::grpc::Service::MarkMethodCallback(23,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::SearchUtxosRequest, ::tari::rpc::HistoricalBlock>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::SearchUtxosRequest* request) { return this->SearchUtxos(context, request); }));
@@ -2298,7 +2446,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodCallback(22,
+      ::grpc::Service::MarkMethodCallback(24,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::FetchMatchingUtxosRequest, ::tari::rpc::FetchMatchingUtxosResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::FetchMatchingUtxosRequest* request) { return this->FetchMatchingUtxos(context, request); }));
@@ -2320,7 +2468,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetPeers() {
-      ::grpc::Service::MarkMethodCallback(23,
+      ::grpc::Service::MarkMethodCallback(25,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::GetPeersRequest, ::tari::rpc::GetPeersResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetPeersRequest* request) { return this->GetPeers(context, request); }));
@@ -2342,7 +2490,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodCallback(24,
+      ::grpc::Service::MarkMethodCallback(26,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::GetMempoolTransactionsRequest, ::tari::rpc::GetMempoolTransactionsResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetMempoolTransactionsRequest* request) { return this->GetMempoolTransactions(context, request); }));
@@ -2364,13 +2512,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_TransactionState() {
-      ::grpc::Service::MarkMethodCallback(25,
+      ::grpc::Service::MarkMethodCallback(27,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::TransactionStateRequest, ::tari::rpc::TransactionStateResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::TransactionStateRequest* request, ::tari::rpc::TransactionStateResponse* response) { return this->TransactionState(context, request, response); }));}
     void SetMessageAllocatorFor_TransactionState(
         ::grpc::MessageAllocator< ::tari::rpc::TransactionStateRequest, ::tari::rpc::TransactionStateResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(25);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(27);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::TransactionStateRequest, ::tari::rpc::TransactionStateResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2391,13 +2539,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_Identify() {
-      ::grpc::Service::MarkMethodCallback(26,
+      ::grpc::Service::MarkMethodCallback(28,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::NodeIdentity>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::NodeIdentity* response) { return this->Identify(context, request, response); }));}
     void SetMessageAllocatorFor_Identify(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::NodeIdentity>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(26);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(28);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::NodeIdentity>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2418,13 +2566,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodCallback(27,
+      ::grpc::Service::MarkMethodCallback(29,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::NetworkStatusResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::NetworkStatusResponse* response) { return this->GetNetworkStatus(context, request, response); }));}
     void SetMessageAllocatorFor_GetNetworkStatus(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::NetworkStatusResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(27);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(29);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::NetworkStatusResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2445,13 +2593,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodCallback(28,
+      ::grpc::Service::MarkMethodCallback(30,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::ListConnectedPeersResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::ListConnectedPeersResponse* response) { return this->ListConnectedPeers(context, request, response); }));}
     void SetMessageAllocatorFor_ListConnectedPeers(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::ListConnectedPeersResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(28);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(30);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::ListConnectedPeersResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2472,13 +2620,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodCallback(29,
+      ::grpc::Service::MarkMethodCallback(31,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::MempoolStatsResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::Empty* request, ::tari::rpc::MempoolStatsResponse* response) { return this->GetMempoolStats(context, request, response); }));}
     void SetMessageAllocatorFor_GetMempoolStats(
         ::grpc::MessageAllocator< ::tari::rpc::Empty, ::tari::rpc::MempoolStatsResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(29);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(31);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::Empty, ::tari::rpc::MempoolStatsResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2499,7 +2647,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodCallback(30,
+      ::grpc::Service::MarkMethodCallback(32,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::GetActiveValidatorNodesRequest, ::tari::rpc::GetActiveValidatorNodesResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetActiveValidatorNodesRequest* request) { return this->GetActiveValidatorNodes(context, request); }));
@@ -2521,13 +2669,13 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodCallback(31,
+      ::grpc::Service::MarkMethodCallback(33,
           new ::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetShardKeyRequest, ::tari::rpc::GetShardKeyResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetShardKeyRequest* request, ::tari::rpc::GetShardKeyResponse* response) { return this->GetShardKey(context, request, response); }));}
     void SetMessageAllocatorFor_GetShardKey(
         ::grpc::MessageAllocator< ::tari::rpc::GetShardKeyRequest, ::tari::rpc::GetShardKeyResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(31);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(33);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::tari::rpc::GetShardKeyRequest, ::tari::rpc::GetShardKeyResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -2548,7 +2696,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodCallback(32,
+      ::grpc::Service::MarkMethodCallback(34,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::GetTemplateRegistrationsRequest, ::tari::rpc::GetTemplateRegistrationResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest* request) { return this->GetTemplateRegistrations(context, request); }));
@@ -2570,7 +2718,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodCallback(33,
+      ::grpc::Service::MarkMethodCallback(35,
           new ::grpc::internal::CallbackServerStreamingHandler< ::tari::rpc::GetSideChainUtxosRequest, ::tari::rpc::GetSideChainUtxosResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::tari::rpc::GetSideChainUtxosRequest* request) { return this->GetSideChainUtxos(context, request); }));
@@ -2586,7 +2734,7 @@ class BaseNode final {
     virtual ::grpc::ServerWriteReactor< ::tari::rpc::GetSideChainUtxosResponse>* GetSideChainUtxos(
       ::grpc::CallbackServerContext* /*context*/, const ::tari::rpc::GetSideChainUtxosRequest* /*request*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_ListHeaders<WithCallbackMethod_GetHeaderByHash<WithCallbackMethod_GetBlocks<WithCallbackMethod_GetBlockTiming<WithCallbackMethod_GetConstants<WithCallbackMethod_GetBlockSize<WithCallbackMethod_GetBlockFees<WithCallbackMethod_GetVersion<WithCallbackMethod_CheckForUpdates<WithCallbackMethod_GetTokensInCirculation<WithCallbackMethod_GetNetworkDifficulty<WithCallbackMethod_GetNewBlockTemplate<WithCallbackMethod_GetNewBlock<WithCallbackMethod_GetNewBlockBlob<WithCallbackMethod_SubmitBlock<WithCallbackMethod_SubmitBlockBlob<WithCallbackMethod_SubmitTransaction<WithCallbackMethod_GetSyncInfo<WithCallbackMethod_GetSyncProgress<WithCallbackMethod_GetTipInfo<WithCallbackMethod_SearchKernels<WithCallbackMethod_SearchUtxos<WithCallbackMethod_FetchMatchingUtxos<WithCallbackMethod_GetPeers<WithCallbackMethod_GetMempoolTransactions<WithCallbackMethod_TransactionState<WithCallbackMethod_Identify<WithCallbackMethod_GetNetworkStatus<WithCallbackMethod_ListConnectedPeers<WithCallbackMethod_GetMempoolStats<WithCallbackMethod_GetActiveValidatorNodes<WithCallbackMethod_GetShardKey<WithCallbackMethod_GetTemplateRegistrations<WithCallbackMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > CallbackService;
+  typedef WithCallbackMethod_ListHeaders<WithCallbackMethod_GetHeaderByHash<WithCallbackMethod_GetBlocks<WithCallbackMethod_GetBlockTiming<WithCallbackMethod_GetConstants<WithCallbackMethod_GetBlockSize<WithCallbackMethod_GetBlockFees<WithCallbackMethod_GetVersion<WithCallbackMethod_CheckForUpdates<WithCallbackMethod_GetTokensInCirculation<WithCallbackMethod_GetNetworkDifficulty<WithCallbackMethod_GetNewBlockTemplate<WithCallbackMethod_GetNewBlock<WithCallbackMethod_GetNewBlockWithCoinbases<WithCallbackMethod_GetNewBlockTemplateWithCoinbases<WithCallbackMethod_GetNewBlockBlob<WithCallbackMethod_SubmitBlock<WithCallbackMethod_SubmitBlockBlob<WithCallbackMethod_SubmitTransaction<WithCallbackMethod_GetSyncInfo<WithCallbackMethod_GetSyncProgress<WithCallbackMethod_GetTipInfo<WithCallbackMethod_SearchKernels<WithCallbackMethod_SearchUtxos<WithCallbackMethod_FetchMatchingUtxos<WithCallbackMethod_GetPeers<WithCallbackMethod_GetMempoolTransactions<WithCallbackMethod_TransactionState<WithCallbackMethod_Identify<WithCallbackMethod_GetNetworkStatus<WithCallbackMethod_ListConnectedPeers<WithCallbackMethod_GetMempoolStats<WithCallbackMethod_GetActiveValidatorNodes<WithCallbackMethod_GetShardKey<WithCallbackMethod_GetTemplateRegistrations<WithCallbackMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_ListHeaders : public BaseClass {
@@ -2810,12 +2958,46 @@ class BaseNode final {
     }
   };
   template <class BaseClass>
+  class WithGenericMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodGeneric(13);
+    }
+    ~WithGenericMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodGeneric(14);
+    }
+    ~WithGenericMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
   class WithGenericMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodGeneric(13);
+      ::grpc::Service::MarkMethodGeneric(15);
     }
     ~WithGenericMethod_GetNewBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2832,7 +3014,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodGeneric(14);
+      ::grpc::Service::MarkMethodGeneric(16);
     }
     ~WithGenericMethod_SubmitBlock() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2849,7 +3031,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodGeneric(15);
+      ::grpc::Service::MarkMethodGeneric(17);
     }
     ~WithGenericMethod_SubmitBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2866,7 +3048,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodGeneric(16);
+      ::grpc::Service::MarkMethodGeneric(18);
     }
     ~WithGenericMethod_SubmitTransaction() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2883,7 +3065,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodGeneric(17);
+      ::grpc::Service::MarkMethodGeneric(19);
     }
     ~WithGenericMethod_GetSyncInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2900,7 +3082,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodGeneric(18);
+      ::grpc::Service::MarkMethodGeneric(20);
     }
     ~WithGenericMethod_GetSyncProgress() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2917,7 +3099,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodGeneric(19);
+      ::grpc::Service::MarkMethodGeneric(21);
     }
     ~WithGenericMethod_GetTipInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2934,7 +3116,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodGeneric(20);
+      ::grpc::Service::MarkMethodGeneric(22);
     }
     ~WithGenericMethod_SearchKernels() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2951,7 +3133,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodGeneric(21);
+      ::grpc::Service::MarkMethodGeneric(23);
     }
     ~WithGenericMethod_SearchUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2968,7 +3150,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodGeneric(22);
+      ::grpc::Service::MarkMethodGeneric(24);
     }
     ~WithGenericMethod_FetchMatchingUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -2985,7 +3167,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetPeers() {
-      ::grpc::Service::MarkMethodGeneric(23);
+      ::grpc::Service::MarkMethodGeneric(25);
     }
     ~WithGenericMethod_GetPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3002,7 +3184,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodGeneric(24);
+      ::grpc::Service::MarkMethodGeneric(26);
     }
     ~WithGenericMethod_GetMempoolTransactions() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3019,7 +3201,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_TransactionState() {
-      ::grpc::Service::MarkMethodGeneric(25);
+      ::grpc::Service::MarkMethodGeneric(27);
     }
     ~WithGenericMethod_TransactionState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3036,7 +3218,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_Identify() {
-      ::grpc::Service::MarkMethodGeneric(26);
+      ::grpc::Service::MarkMethodGeneric(28);
     }
     ~WithGenericMethod_Identify() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3053,7 +3235,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodGeneric(27);
+      ::grpc::Service::MarkMethodGeneric(29);
     }
     ~WithGenericMethod_GetNetworkStatus() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3070,7 +3252,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodGeneric(28);
+      ::grpc::Service::MarkMethodGeneric(30);
     }
     ~WithGenericMethod_ListConnectedPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3087,7 +3269,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodGeneric(29);
+      ::grpc::Service::MarkMethodGeneric(31);
     }
     ~WithGenericMethod_GetMempoolStats() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3104,7 +3286,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodGeneric(30);
+      ::grpc::Service::MarkMethodGeneric(32);
     }
     ~WithGenericMethod_GetActiveValidatorNodes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3121,7 +3303,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodGeneric(31);
+      ::grpc::Service::MarkMethodGeneric(33);
     }
     ~WithGenericMethod_GetShardKey() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3138,7 +3320,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodGeneric(32);
+      ::grpc::Service::MarkMethodGeneric(34);
     }
     ~WithGenericMethod_GetTemplateRegistrations() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3155,7 +3337,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodGeneric(33);
+      ::grpc::Service::MarkMethodGeneric(35);
     }
     ~WithGenericMethod_GetSideChainUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3427,12 +3609,52 @@ class BaseNode final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodRaw(13);
+    }
+    ~WithRawMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNewBlockWithCoinbases(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodRaw(14);
+    }
+    ~WithRawMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNewBlockTemplateWithCoinbases(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodRaw(13);
+      ::grpc::Service::MarkMethodRaw(15);
     }
     ~WithRawMethod_GetNewBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3443,7 +3665,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetNewBlockBlob(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(15, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3452,7 +3674,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodRaw(14);
+      ::grpc::Service::MarkMethodRaw(16);
     }
     ~WithRawMethod_SubmitBlock() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3463,7 +3685,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitBlock(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(16, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3472,7 +3694,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodRaw(15);
+      ::grpc::Service::MarkMethodRaw(17);
     }
     ~WithRawMethod_SubmitBlockBlob() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3483,7 +3705,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitBlockBlob(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(15, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(17, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3492,7 +3714,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodRaw(16);
+      ::grpc::Service::MarkMethodRaw(18);
     }
     ~WithRawMethod_SubmitTransaction() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3503,7 +3725,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSubmitTransaction(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(16, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(18, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3512,7 +3734,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodRaw(17);
+      ::grpc::Service::MarkMethodRaw(19);
     }
     ~WithRawMethod_GetSyncInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3523,7 +3745,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSyncInfo(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(17, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(19, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3532,7 +3754,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodRaw(18);
+      ::grpc::Service::MarkMethodRaw(20);
     }
     ~WithRawMethod_GetSyncProgress() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3543,7 +3765,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSyncProgress(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(18, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(20, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3552,7 +3774,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodRaw(19);
+      ::grpc::Service::MarkMethodRaw(21);
     }
     ~WithRawMethod_GetTipInfo() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3563,7 +3785,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetTipInfo(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(19, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(21, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3572,7 +3794,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodRaw(20);
+      ::grpc::Service::MarkMethodRaw(22);
     }
     ~WithRawMethod_SearchKernels() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3583,7 +3805,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSearchKernels(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(20, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(22, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3592,7 +3814,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodRaw(21);
+      ::grpc::Service::MarkMethodRaw(23);
     }
     ~WithRawMethod_SearchUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3603,7 +3825,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSearchUtxos(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(21, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(23, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3612,7 +3834,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodRaw(22);
+      ::grpc::Service::MarkMethodRaw(24);
     }
     ~WithRawMethod_FetchMatchingUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3623,7 +3845,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestFetchMatchingUtxos(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(22, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(24, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3632,7 +3854,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetPeers() {
-      ::grpc::Service::MarkMethodRaw(23);
+      ::grpc::Service::MarkMethodRaw(25);
     }
     ~WithRawMethod_GetPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3643,7 +3865,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetPeers(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(23, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(25, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3652,7 +3874,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodRaw(24);
+      ::grpc::Service::MarkMethodRaw(26);
     }
     ~WithRawMethod_GetMempoolTransactions() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3663,7 +3885,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetMempoolTransactions(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(24, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(26, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3672,7 +3894,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_TransactionState() {
-      ::grpc::Service::MarkMethodRaw(25);
+      ::grpc::Service::MarkMethodRaw(27);
     }
     ~WithRawMethod_TransactionState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3683,7 +3905,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestTransactionState(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(25, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(27, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3692,7 +3914,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_Identify() {
-      ::grpc::Service::MarkMethodRaw(26);
+      ::grpc::Service::MarkMethodRaw(28);
     }
     ~WithRawMethod_Identify() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3703,7 +3925,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestIdentify(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(26, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(28, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3712,7 +3934,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodRaw(27);
+      ::grpc::Service::MarkMethodRaw(29);
     }
     ~WithRawMethod_GetNetworkStatus() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3723,7 +3945,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetNetworkStatus(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(27, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(29, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3732,7 +3954,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodRaw(28);
+      ::grpc::Service::MarkMethodRaw(30);
     }
     ~WithRawMethod_ListConnectedPeers() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3743,7 +3965,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestListConnectedPeers(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(28, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(30, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3752,7 +3974,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodRaw(29);
+      ::grpc::Service::MarkMethodRaw(31);
     }
     ~WithRawMethod_GetMempoolStats() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3763,7 +3985,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetMempoolStats(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(29, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(31, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3772,7 +3994,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodRaw(30);
+      ::grpc::Service::MarkMethodRaw(32);
     }
     ~WithRawMethod_GetActiveValidatorNodes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3783,7 +4005,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetActiveValidatorNodes(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(30, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(32, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3792,7 +4014,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodRaw(31);
+      ::grpc::Service::MarkMethodRaw(33);
     }
     ~WithRawMethod_GetShardKey() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3803,7 +4025,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetShardKey(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(31, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(33, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3812,7 +4034,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodRaw(32);
+      ::grpc::Service::MarkMethodRaw(34);
     }
     ~WithRawMethod_GetTemplateRegistrations() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3823,7 +4045,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetTemplateRegistrations(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(32, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(34, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -3832,7 +4054,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodRaw(33);
+      ::grpc::Service::MarkMethodRaw(35);
     }
     ~WithRawMethod_GetSideChainUtxos() override {
       BaseClassMustBeDerivedFromService(this);
@@ -3843,7 +4065,7 @@ class BaseNode final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetSideChainUtxos(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(33, context, request, writer, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncServerStreaming(35, context, request, writer, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -4133,12 +4355,56 @@ class BaseNode final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithRawCallbackMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodRawCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetNewBlockWithCoinbases(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNewBlockWithCoinbases(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodRawCallback(14,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetNewBlockTemplateWithCoinbases(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNewBlockTemplateWithCoinbases(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithRawCallbackMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodRawCallback(13,
+      ::grpc::Service::MarkMethodRawCallback(15,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetNewBlockBlob(context, request, response); }));
@@ -4160,7 +4426,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodRawCallback(14,
+      ::grpc::Service::MarkMethodRawCallback(16,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SubmitBlock(context, request, response); }));
@@ -4182,7 +4448,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodRawCallback(15,
+      ::grpc::Service::MarkMethodRawCallback(17,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SubmitBlockBlob(context, request, response); }));
@@ -4204,7 +4470,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodRawCallback(16,
+      ::grpc::Service::MarkMethodRawCallback(18,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SubmitTransaction(context, request, response); }));
@@ -4226,7 +4492,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodRawCallback(17,
+      ::grpc::Service::MarkMethodRawCallback(19,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetSyncInfo(context, request, response); }));
@@ -4248,7 +4514,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodRawCallback(18,
+      ::grpc::Service::MarkMethodRawCallback(20,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetSyncProgress(context, request, response); }));
@@ -4270,7 +4536,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodRawCallback(19,
+      ::grpc::Service::MarkMethodRawCallback(21,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetTipInfo(context, request, response); }));
@@ -4292,7 +4558,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodRawCallback(20,
+      ::grpc::Service::MarkMethodRawCallback(22,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->SearchKernels(context, request); }));
@@ -4314,7 +4580,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodRawCallback(21,
+      ::grpc::Service::MarkMethodRawCallback(23,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->SearchUtxos(context, request); }));
@@ -4336,7 +4602,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodRawCallback(22,
+      ::grpc::Service::MarkMethodRawCallback(24,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->FetchMatchingUtxos(context, request); }));
@@ -4358,7 +4624,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetPeers() {
-      ::grpc::Service::MarkMethodRawCallback(23,
+      ::grpc::Service::MarkMethodRawCallback(25,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->GetPeers(context, request); }));
@@ -4380,7 +4646,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodRawCallback(24,
+      ::grpc::Service::MarkMethodRawCallback(26,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->GetMempoolTransactions(context, request); }));
@@ -4402,7 +4668,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_TransactionState() {
-      ::grpc::Service::MarkMethodRawCallback(25,
+      ::grpc::Service::MarkMethodRawCallback(27,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->TransactionState(context, request, response); }));
@@ -4424,7 +4690,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_Identify() {
-      ::grpc::Service::MarkMethodRawCallback(26,
+      ::grpc::Service::MarkMethodRawCallback(28,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->Identify(context, request, response); }));
@@ -4446,7 +4712,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodRawCallback(27,
+      ::grpc::Service::MarkMethodRawCallback(29,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetNetworkStatus(context, request, response); }));
@@ -4468,7 +4734,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodRawCallback(28,
+      ::grpc::Service::MarkMethodRawCallback(30,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ListConnectedPeers(context, request, response); }));
@@ -4490,7 +4756,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodRawCallback(29,
+      ::grpc::Service::MarkMethodRawCallback(31,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetMempoolStats(context, request, response); }));
@@ -4512,7 +4778,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodRawCallback(30,
+      ::grpc::Service::MarkMethodRawCallback(32,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->GetActiveValidatorNodes(context, request); }));
@@ -4534,7 +4800,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodRawCallback(31,
+      ::grpc::Service::MarkMethodRawCallback(33,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetShardKey(context, request, response); }));
@@ -4556,7 +4822,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodRawCallback(32,
+      ::grpc::Service::MarkMethodRawCallback(34,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->GetTemplateRegistrations(context, request); }));
@@ -4578,7 +4844,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodRawCallback(33,
+      ::grpc::Service::MarkMethodRawCallback(35,
           new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->GetSideChainUtxos(context, request); }));
@@ -4838,12 +5104,66 @@ class BaseNode final {
     virtual ::grpc::Status StreamedGetNewBlock(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::tari::rpc::NewBlockTemplate,::tari::rpc::GetNewBlockResult>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
+  class WithStreamedUnaryMethod_GetNewBlockWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetNewBlockWithCoinbases() {
+      ::grpc::Service::MarkMethodStreamed(13,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>* streamer) {
+                       return this->StreamedGetNewBlockWithCoinbases(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetNewBlockWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetNewBlockWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetNewBlockWithCoinbases(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::tari::rpc::GetNewBlockWithCoinbasesRequest,::tari::rpc::GetNewBlockResult>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetNewBlockTemplateWithCoinbases : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetNewBlockTemplateWithCoinbases() {
+      ::grpc::Service::MarkMethodStreamed(14,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult>* streamer) {
+                       return this->StreamedGetNewBlockTemplateWithCoinbases(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetNewBlockTemplateWithCoinbases() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* /*context*/, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* /*request*/, ::tari::rpc::GetNewBlockResult* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetNewBlockTemplateWithCoinbases(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest,::tari::rpc::GetNewBlockResult>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_GetNewBlockBlob : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetNewBlockBlob() {
-      ::grpc::Service::MarkMethodStreamed(13,
+      ::grpc::Service::MarkMethodStreamed(15,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::NewBlockTemplate, ::tari::rpc::GetNewBlockBlobResult>(
             [this](::grpc::ServerContext* context,
@@ -4870,7 +5190,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_SubmitBlock() {
-      ::grpc::Service::MarkMethodStreamed(14,
+      ::grpc::Service::MarkMethodStreamed(16,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Block, ::tari::rpc::SubmitBlockResponse>(
             [this](::grpc::ServerContext* context,
@@ -4897,7 +5217,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_SubmitBlockBlob() {
-      ::grpc::Service::MarkMethodStreamed(15,
+      ::grpc::Service::MarkMethodStreamed(17,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::BlockBlobRequest, ::tari::rpc::SubmitBlockResponse>(
             [this](::grpc::ServerContext* context,
@@ -4924,7 +5244,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_SubmitTransaction() {
-      ::grpc::Service::MarkMethodStreamed(16,
+      ::grpc::Service::MarkMethodStreamed(18,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::SubmitTransactionRequest, ::tari::rpc::SubmitTransactionResponse>(
             [this](::grpc::ServerContext* context,
@@ -4951,7 +5271,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetSyncInfo() {
-      ::grpc::Service::MarkMethodStreamed(17,
+      ::grpc::Service::MarkMethodStreamed(19,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::SyncInfoResponse>(
             [this](::grpc::ServerContext* context,
@@ -4978,7 +5298,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetSyncProgress() {
-      ::grpc::Service::MarkMethodStreamed(18,
+      ::grpc::Service::MarkMethodStreamed(20,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::SyncProgressResponse>(
             [this](::grpc::ServerContext* context,
@@ -5005,7 +5325,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetTipInfo() {
-      ::grpc::Service::MarkMethodStreamed(19,
+      ::grpc::Service::MarkMethodStreamed(21,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::TipInfoResponse>(
             [this](::grpc::ServerContext* context,
@@ -5032,7 +5352,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_TransactionState() {
-      ::grpc::Service::MarkMethodStreamed(25,
+      ::grpc::Service::MarkMethodStreamed(27,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::TransactionStateRequest, ::tari::rpc::TransactionStateResponse>(
             [this](::grpc::ServerContext* context,
@@ -5059,7 +5379,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_Identify() {
-      ::grpc::Service::MarkMethodStreamed(26,
+      ::grpc::Service::MarkMethodStreamed(28,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::NodeIdentity>(
             [this](::grpc::ServerContext* context,
@@ -5086,7 +5406,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetNetworkStatus() {
-      ::grpc::Service::MarkMethodStreamed(27,
+      ::grpc::Service::MarkMethodStreamed(29,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::NetworkStatusResponse>(
             [this](::grpc::ServerContext* context,
@@ -5113,7 +5433,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ListConnectedPeers() {
-      ::grpc::Service::MarkMethodStreamed(28,
+      ::grpc::Service::MarkMethodStreamed(30,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::ListConnectedPeersResponse>(
             [this](::grpc::ServerContext* context,
@@ -5140,7 +5460,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetMempoolStats() {
-      ::grpc::Service::MarkMethodStreamed(29,
+      ::grpc::Service::MarkMethodStreamed(31,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::Empty, ::tari::rpc::MempoolStatsResponse>(
             [this](::grpc::ServerContext* context,
@@ -5167,7 +5487,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetShardKey() {
-      ::grpc::Service::MarkMethodStreamed(31,
+      ::grpc::Service::MarkMethodStreamed(33,
         new ::grpc::internal::StreamedUnaryHandler<
           ::tari::rpc::GetShardKeyRequest, ::tari::rpc::GetShardKeyResponse>(
             [this](::grpc::ServerContext* context,
@@ -5188,7 +5508,7 @@ class BaseNode final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedGetShardKey(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::tari::rpc::GetShardKeyRequest,::tari::rpc::GetShardKeyResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetHeaderByHash<WithStreamedUnaryMethod_GetBlockTiming<WithStreamedUnaryMethod_GetConstants<WithStreamedUnaryMethod_GetBlockSize<WithStreamedUnaryMethod_GetBlockFees<WithStreamedUnaryMethod_GetVersion<WithStreamedUnaryMethod_CheckForUpdates<WithStreamedUnaryMethod_GetNewBlockTemplate<WithStreamedUnaryMethod_GetNewBlock<WithStreamedUnaryMethod_GetNewBlockBlob<WithStreamedUnaryMethod_SubmitBlock<WithStreamedUnaryMethod_SubmitBlockBlob<WithStreamedUnaryMethod_SubmitTransaction<WithStreamedUnaryMethod_GetSyncInfo<WithStreamedUnaryMethod_GetSyncProgress<WithStreamedUnaryMethod_GetTipInfo<WithStreamedUnaryMethod_TransactionState<WithStreamedUnaryMethod_Identify<WithStreamedUnaryMethod_GetNetworkStatus<WithStreamedUnaryMethod_ListConnectedPeers<WithStreamedUnaryMethod_GetMempoolStats<WithStreamedUnaryMethod_GetShardKey<Service > > > > > > > > > > > > > > > > > > > > > > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_GetHeaderByHash<WithStreamedUnaryMethod_GetBlockTiming<WithStreamedUnaryMethod_GetConstants<WithStreamedUnaryMethod_GetBlockSize<WithStreamedUnaryMethod_GetBlockFees<WithStreamedUnaryMethod_GetVersion<WithStreamedUnaryMethod_CheckForUpdates<WithStreamedUnaryMethod_GetNewBlockTemplate<WithStreamedUnaryMethod_GetNewBlock<WithStreamedUnaryMethod_GetNewBlockWithCoinbases<WithStreamedUnaryMethod_GetNewBlockTemplateWithCoinbases<WithStreamedUnaryMethod_GetNewBlockBlob<WithStreamedUnaryMethod_SubmitBlock<WithStreamedUnaryMethod_SubmitBlockBlob<WithStreamedUnaryMethod_SubmitTransaction<WithStreamedUnaryMethod_GetSyncInfo<WithStreamedUnaryMethod_GetSyncProgress<WithStreamedUnaryMethod_GetTipInfo<WithStreamedUnaryMethod_TransactionState<WithStreamedUnaryMethod_Identify<WithStreamedUnaryMethod_GetNetworkStatus<WithStreamedUnaryMethod_ListConnectedPeers<WithStreamedUnaryMethod_GetMempoolStats<WithStreamedUnaryMethod_GetShardKey<Service > > > > > > > > > > > > > > > > > > > > > > > > StreamedUnaryService;
   template <class BaseClass>
   class WithSplitStreamingMethod_ListHeaders : public BaseClass {
    private:
@@ -5303,7 +5623,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_SearchKernels() {
-      ::grpc::Service::MarkMethodStreamed(20,
+      ::grpc::Service::MarkMethodStreamed(22,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::SearchKernelsRequest, ::tari::rpc::HistoricalBlock>(
             [this](::grpc::ServerContext* context,
@@ -5330,7 +5650,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_SearchUtxos() {
-      ::grpc::Service::MarkMethodStreamed(21,
+      ::grpc::Service::MarkMethodStreamed(23,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::SearchUtxosRequest, ::tari::rpc::HistoricalBlock>(
             [this](::grpc::ServerContext* context,
@@ -5357,7 +5677,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_FetchMatchingUtxos() {
-      ::grpc::Service::MarkMethodStreamed(22,
+      ::grpc::Service::MarkMethodStreamed(24,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::FetchMatchingUtxosRequest, ::tari::rpc::FetchMatchingUtxosResponse>(
             [this](::grpc::ServerContext* context,
@@ -5384,7 +5704,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_GetPeers() {
-      ::grpc::Service::MarkMethodStreamed(23,
+      ::grpc::Service::MarkMethodStreamed(25,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::GetPeersRequest, ::tari::rpc::GetPeersResponse>(
             [this](::grpc::ServerContext* context,
@@ -5411,7 +5731,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_GetMempoolTransactions() {
-      ::grpc::Service::MarkMethodStreamed(24,
+      ::grpc::Service::MarkMethodStreamed(26,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::GetMempoolTransactionsRequest, ::tari::rpc::GetMempoolTransactionsResponse>(
             [this](::grpc::ServerContext* context,
@@ -5438,7 +5758,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_GetActiveValidatorNodes() {
-      ::grpc::Service::MarkMethodStreamed(30,
+      ::grpc::Service::MarkMethodStreamed(32,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::GetActiveValidatorNodesRequest, ::tari::rpc::GetActiveValidatorNodesResponse>(
             [this](::grpc::ServerContext* context,
@@ -5465,7 +5785,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_GetTemplateRegistrations() {
-      ::grpc::Service::MarkMethodStreamed(32,
+      ::grpc::Service::MarkMethodStreamed(34,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::GetTemplateRegistrationsRequest, ::tari::rpc::GetTemplateRegistrationResponse>(
             [this](::grpc::ServerContext* context,
@@ -5492,7 +5812,7 @@ class BaseNode final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithSplitStreamingMethod_GetSideChainUtxos() {
-      ::grpc::Service::MarkMethodStreamed(33,
+      ::grpc::Service::MarkMethodStreamed(35,
         new ::grpc::internal::SplitServerStreamingHandler<
           ::tari::rpc::GetSideChainUtxosRequest, ::tari::rpc::GetSideChainUtxosResponse>(
             [this](::grpc::ServerContext* context,
@@ -5514,7 +5834,7 @@ class BaseNode final {
     virtual ::grpc::Status StreamedGetSideChainUtxos(::grpc::ServerContext* context, ::grpc::ServerSplitStreamer< ::tari::rpc::GetSideChainUtxosRequest,::tari::rpc::GetSideChainUtxosResponse>* server_split_streamer) = 0;
   };
   typedef WithSplitStreamingMethod_ListHeaders<WithSplitStreamingMethod_GetBlocks<WithSplitStreamingMethod_GetTokensInCirculation<WithSplitStreamingMethod_GetNetworkDifficulty<WithSplitStreamingMethod_SearchKernels<WithSplitStreamingMethod_SearchUtxos<WithSplitStreamingMethod_FetchMatchingUtxos<WithSplitStreamingMethod_GetPeers<WithSplitStreamingMethod_GetMempoolTransactions<WithSplitStreamingMethod_GetActiveValidatorNodes<WithSplitStreamingMethod_GetTemplateRegistrations<WithSplitStreamingMethod_GetSideChainUtxos<Service > > > > > > > > > > > > SplitStreamedService;
-  typedef WithSplitStreamingMethod_ListHeaders<WithStreamedUnaryMethod_GetHeaderByHash<WithSplitStreamingMethod_GetBlocks<WithStreamedUnaryMethod_GetBlockTiming<WithStreamedUnaryMethod_GetConstants<WithStreamedUnaryMethod_GetBlockSize<WithStreamedUnaryMethod_GetBlockFees<WithStreamedUnaryMethod_GetVersion<WithStreamedUnaryMethod_CheckForUpdates<WithSplitStreamingMethod_GetTokensInCirculation<WithSplitStreamingMethod_GetNetworkDifficulty<WithStreamedUnaryMethod_GetNewBlockTemplate<WithStreamedUnaryMethod_GetNewBlock<WithStreamedUnaryMethod_GetNewBlockBlob<WithStreamedUnaryMethod_SubmitBlock<WithStreamedUnaryMethod_SubmitBlockBlob<WithStreamedUnaryMethod_SubmitTransaction<WithStreamedUnaryMethod_GetSyncInfo<WithStreamedUnaryMethod_GetSyncProgress<WithStreamedUnaryMethod_GetTipInfo<WithSplitStreamingMethod_SearchKernels<WithSplitStreamingMethod_SearchUtxos<WithSplitStreamingMethod_FetchMatchingUtxos<WithSplitStreamingMethod_GetPeers<WithSplitStreamingMethod_GetMempoolTransactions<WithStreamedUnaryMethod_TransactionState<WithStreamedUnaryMethod_Identify<WithStreamedUnaryMethod_GetNetworkStatus<WithStreamedUnaryMethod_ListConnectedPeers<WithStreamedUnaryMethod_GetMempoolStats<WithSplitStreamingMethod_GetActiveValidatorNodes<WithStreamedUnaryMethod_GetShardKey<WithSplitStreamingMethod_GetTemplateRegistrations<WithSplitStreamingMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > StreamedService;
+  typedef WithSplitStreamingMethod_ListHeaders<WithStreamedUnaryMethod_GetHeaderByHash<WithSplitStreamingMethod_GetBlocks<WithStreamedUnaryMethod_GetBlockTiming<WithStreamedUnaryMethod_GetConstants<WithStreamedUnaryMethod_GetBlockSize<WithStreamedUnaryMethod_GetBlockFees<WithStreamedUnaryMethod_GetVersion<WithStreamedUnaryMethod_CheckForUpdates<WithSplitStreamingMethod_GetTokensInCirculation<WithSplitStreamingMethod_GetNetworkDifficulty<WithStreamedUnaryMethod_GetNewBlockTemplate<WithStreamedUnaryMethod_GetNewBlock<WithStreamedUnaryMethod_GetNewBlockWithCoinbases<WithStreamedUnaryMethod_GetNewBlockTemplateWithCoinbases<WithStreamedUnaryMethod_GetNewBlockBlob<WithStreamedUnaryMethod_SubmitBlock<WithStreamedUnaryMethod_SubmitBlockBlob<WithStreamedUnaryMethod_SubmitTransaction<WithStreamedUnaryMethod_GetSyncInfo<WithStreamedUnaryMethod_GetSyncProgress<WithStreamedUnaryMethod_GetTipInfo<WithSplitStreamingMethod_SearchKernels<WithSplitStreamingMethod_SearchUtxos<WithSplitStreamingMethod_FetchMatchingUtxos<WithSplitStreamingMethod_GetPeers<WithSplitStreamingMethod_GetMempoolTransactions<WithStreamedUnaryMethod_TransactionState<WithStreamedUnaryMethod_Identify<WithStreamedUnaryMethod_GetNetworkStatus<WithStreamedUnaryMethod_ListConnectedPeers<WithStreamedUnaryMethod_GetMempoolStats<WithSplitStreamingMethod_GetActiveValidatorNodes<WithStreamedUnaryMethod_GetShardKey<WithSplitStreamingMethod_GetTemplateRegistrations<WithSplitStreamingMethod_GetSideChainUtxos<Service > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > StreamedService;
 };
 
 }  // namespace rpc

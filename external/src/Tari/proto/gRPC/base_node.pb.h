@@ -121,6 +121,12 @@ extern GetNewBlockBlobResultDefaultTypeInternal _GetNewBlockBlobResult_default_i
 class GetNewBlockResult;
 struct GetNewBlockResultDefaultTypeInternal;
 extern GetNewBlockResultDefaultTypeInternal _GetNewBlockResult_default_instance_;
+class GetNewBlockTemplateWithCoinbasesRequest;
+struct GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal;
+extern GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal _GetNewBlockTemplateWithCoinbasesRequest_default_instance_;
+class GetNewBlockWithCoinbasesRequest;
+struct GetNewBlockWithCoinbasesRequestDefaultTypeInternal;
+extern GetNewBlockWithCoinbasesRequestDefaultTypeInternal _GetNewBlockWithCoinbasesRequest_default_instance_;
 class GetPeersRequest;
 struct GetPeersRequestDefaultTypeInternal;
 extern GetPeersRequestDefaultTypeInternal _GetPeersRequest_default_instance_;
@@ -178,6 +184,9 @@ extern MinerDataDefaultTypeInternal _MinerData_default_instance_;
 class NetworkDifficultyResponse;
 struct NetworkDifficultyResponseDefaultTypeInternal;
 extern NetworkDifficultyResponseDefaultTypeInternal _NetworkDifficultyResponse_default_instance_;
+class NewBlockCoinbase;
+struct NewBlockCoinbaseDefaultTypeInternal;
+extern NewBlockCoinbaseDefaultTypeInternal _NewBlockCoinbase_default_instance_;
 class NewBlockTemplateRequest;
 struct NewBlockTemplateRequestDefaultTypeInternal;
 extern NewBlockTemplateRequestDefaultTypeInternal _NewBlockTemplateRequest_default_instance_;
@@ -508,7 +517,7 @@ class ValueAtHeightResponse final :
                &_ValueAtHeightResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    15;
 
   friend void swap(ValueAtHeightResponse& a, ValueAtHeightResponse& b) {
     a.Swap(&b);
@@ -695,7 +704,7 @@ class TransactionStateResponse final :
                &_TransactionStateResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    41;
+    44;
 
   friend void swap(TransactionStateResponse& a, TransactionStateResponse& b) {
     a.Swap(&b);
@@ -870,7 +879,7 @@ class SyncProgressResponse final :
                &_SyncProgressResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    26;
+    29;
 
   friend void swap(SyncProgressResponse& a, SyncProgressResponse& b) {
     a.Swap(&b);
@@ -1069,7 +1078,7 @@ class SyncInfoResponse final :
                &_SyncInfoResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    25;
+    28;
 
   friend void swap(SyncInfoResponse& a, SyncInfoResponse& b) {
     a.Swap(&b);
@@ -1286,7 +1295,7 @@ class SubmitTransactionResponse final :
                &_SubmitTransactionResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    37;
+    40;
 
   friend void swap(SubmitTransactionResponse& a, SubmitTransactionResponse& b) {
     a.Swap(&b);
@@ -1642,7 +1651,7 @@ class StringValue final :
                &_StringValue_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    14;
+    17;
 
   friend void swap(StringValue& a, StringValue& b) {
     a.Swap(&b);
@@ -1823,7 +1832,7 @@ class SearchUtxosRequest final :
                &_SearchUtxosRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    31;
+    34;
 
   friend void swap(SearchUtxosRequest& a, SearchUtxosRequest& b) {
     a.Swap(&b);
@@ -1957,6 +1966,241 @@ class SearchUtxosRequest final :
   friend struct ::TableStruct_base_5fnode_2eproto;
 };// -------------------------------------------------------------------
 
+class NewBlockCoinbase final :
+    public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.NewBlockCoinbase) */ {
+ public:
+  inline NewBlockCoinbase() : NewBlockCoinbase(nullptr) {}
+  ~NewBlockCoinbase() override;
+  template<typename = void>
+  explicit PROTOBUF_CONSTEXPR NewBlockCoinbase(::google::protobuf::internal::ConstantInitialized);
+
+  inline NewBlockCoinbase(const NewBlockCoinbase& from)
+      : NewBlockCoinbase(nullptr, from) {}
+  NewBlockCoinbase(NewBlockCoinbase&& from) noexcept
+    : NewBlockCoinbase() {
+    *this = ::std::move(from);
+  }
+
+  inline NewBlockCoinbase& operator=(const NewBlockCoinbase& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NewBlockCoinbase& operator=(NewBlockCoinbase&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const NewBlockCoinbase& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const NewBlockCoinbase* internal_default_instance() {
+    return reinterpret_cast<const NewBlockCoinbase*>(
+               &_NewBlockCoinbase_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    13;
+
+  friend void swap(NewBlockCoinbase& a, NewBlockCoinbase& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(NewBlockCoinbase* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr &&
+        GetArena() == other->GetArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NewBlockCoinbase* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NewBlockCoinbase* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<NewBlockCoinbase>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const NewBlockCoinbase& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom( const NewBlockCoinbase& from) {
+    NewBlockCoinbase::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target, ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  ::google::protobuf::internal::CachedSize* AccessCachedSize() const final;
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(NewBlockCoinbase* other);
+
+  private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() {
+    return "tari.rpc.NewBlockCoinbase";
+  }
+  protected:
+  explicit NewBlockCoinbase(::google::protobuf::Arena* arena);
+  NewBlockCoinbase(::google::protobuf::Arena* arena, const NewBlockCoinbase& from);
+  public:
+
+  static const ClassData _class_data_;
+  const ::google::protobuf::Message::ClassData*GetClassData() const final;
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kAddressFieldNumber = 1,
+    kCoinbaseExtraFieldNumber = 5,
+    kValueFieldNumber = 2,
+    kStealthPaymentFieldNumber = 3,
+    kRevealedValueProofFieldNumber = 4,
+  };
+  // string address = 1;
+  void clear_address() ;
+  const std::string& address() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_address(Arg_&& arg, Args_... args);
+  std::string* mutable_address();
+  PROTOBUF_NODISCARD std::string* release_address();
+  void set_allocated_address(std::string* value);
+
+  private:
+  const std::string& _internal_address() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_address(
+      const std::string& value);
+  std::string* _internal_mutable_address();
+
+  public:
+  // bytes coinbase_extra = 5;
+  void clear_coinbase_extra() ;
+  const std::string& coinbase_extra() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_coinbase_extra(Arg_&& arg, Args_... args);
+  std::string* mutable_coinbase_extra();
+  PROTOBUF_NODISCARD std::string* release_coinbase_extra();
+  void set_allocated_coinbase_extra(std::string* value);
+
+  private:
+  const std::string& _internal_coinbase_extra() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_coinbase_extra(
+      const std::string& value);
+  std::string* _internal_mutable_coinbase_extra();
+
+  public:
+  // uint64 value = 2;
+  void clear_value() ;
+  ::uint64_t value() const;
+  void set_value(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_value() const;
+  void _internal_set_value(::uint64_t value);
+
+  public:
+  // bool stealth_payment = 3;
+  void clear_stealth_payment() ;
+  bool stealth_payment() const;
+  void set_stealth_payment(bool value);
+
+  private:
+  bool _internal_stealth_payment() const;
+  void _internal_set_stealth_payment(bool value);
+
+  public:
+  // bool revealed_value_proof = 4;
+  void clear_revealed_value_proof() ;
+  bool revealed_value_proof() const;
+  void set_revealed_value_proof(bool value);
+
+  private:
+  bool _internal_revealed_value_proof() const;
+  void _internal_set_revealed_value_proof(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.NewBlockCoinbase)
+ private:
+  class _Internal;
+
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      3, 5, 0,
+      41, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+
+        inline explicit constexpr Impl_(
+            ::google::protobuf::internal::ConstantInitialized) noexcept;
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena);
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena, const Impl_& from);
+    ::google::protobuf::internal::ArenaStringPtr address_;
+    ::google::protobuf::internal::ArenaStringPtr coinbase_extra_;
+    ::uint64_t value_;
+    bool stealth_payment_;
+    bool revealed_value_proof_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_base_5fnode_2eproto;
+};// -------------------------------------------------------------------
+
 class NetworkDifficultyResponse final :
     public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.NetworkDifficultyResponse) */ {
  public:
@@ -2016,7 +2260,7 @@ class NetworkDifficultyResponse final :
                &_NetworkDifficultyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    14;
 
   friend void swap(NetworkDifficultyResponse& a, NetworkDifficultyResponse& b) {
     a.Swap(&b);
@@ -2263,7 +2507,7 @@ class MetaData final :
                &_MetaData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    27;
 
   friend void swap(MetaData& a, MetaData& b) {
     a.Swap(&b);
@@ -2336,25 +2580,25 @@ class MetaData final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBestBlockFieldNumber = 2,
+    kBestBlockHashFieldNumber = 2,
     kAccumulatedDifficultyFieldNumber = 5,
-    kHeightOfLongestChainFieldNumber = 1,
+    kBestBlockHeightFieldNumber = 1,
     kPrunedHeightFieldNumber = 6,
   };
-  // bytes best_block = 2;
-  void clear_best_block() ;
-  const std::string& best_block() const;
+  // bytes best_block_hash = 2;
+  void clear_best_block_hash() ;
+  const std::string& best_block_hash() const;
   template <typename Arg_ = const std::string&, typename... Args_>
-  void set_best_block(Arg_&& arg, Args_... args);
-  std::string* mutable_best_block();
-  PROTOBUF_NODISCARD std::string* release_best_block();
-  void set_allocated_best_block(std::string* value);
+  void set_best_block_hash(Arg_&& arg, Args_... args);
+  std::string* mutable_best_block_hash();
+  PROTOBUF_NODISCARD std::string* release_best_block_hash();
+  void set_allocated_best_block_hash(std::string* value);
 
   private:
-  const std::string& _internal_best_block() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_best_block(
+  const std::string& _internal_best_block_hash() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_best_block_hash(
       const std::string& value);
-  std::string* _internal_mutable_best_block();
+  std::string* _internal_mutable_best_block_hash();
 
   public:
   // bytes accumulated_difficulty = 5;
@@ -2373,14 +2617,14 @@ class MetaData final :
   std::string* _internal_mutable_accumulated_difficulty();
 
   public:
-  // uint64 height_of_longest_chain = 1;
-  void clear_height_of_longest_chain() ;
-  ::uint64_t height_of_longest_chain() const;
-  void set_height_of_longest_chain(::uint64_t value);
+  // uint64 best_block_height = 1;
+  void clear_best_block_height() ;
+  ::uint64_t best_block_height() const;
+  void set_best_block_height(::uint64_t value);
 
   private:
-  ::uint64_t _internal_height_of_longest_chain() const;
-  void _internal_set_height_of_longest_chain(::uint64_t value);
+  ::uint64_t _internal_best_block_height() const;
+  void _internal_set_best_block_height(::uint64_t value);
 
   public:
   // uint64 pruned_height = 6;
@@ -2416,9 +2660,9 @@ class MetaData final :
                               ::google::protobuf::Arena* arena);
         inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                               ::google::protobuf::Arena* arena, const Impl_& from);
-    ::google::protobuf::internal::ArenaStringPtr best_block_;
+    ::google::protobuf::internal::ArenaStringPtr best_block_hash_;
     ::google::protobuf::internal::ArenaStringPtr accumulated_difficulty_;
-    ::uint64_t height_of_longest_chain_;
+    ::uint64_t best_block_height_;
     ::uint64_t pruned_height_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -2486,7 +2730,7 @@ class MempoolStatsResponse final :
                &_MempoolStatsResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    42;
+    45;
 
   friend void swap(MempoolStatsResponse& a, MempoolStatsResponse& b) {
     a.Swap(&b);
@@ -2685,7 +2929,7 @@ class ListHeadersRequest final :
                &_ListHeadersRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    24;
 
   friend void swap(ListHeadersRequest& a, ListHeadersRequest& b) {
     a.Swap(&b);
@@ -3071,7 +3315,7 @@ class IntegerValue final :
                &_IntegerValue_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    16;
 
   friend void swap(IntegerValue& a, IntegerValue& b) {
     a.Swap(&b);
@@ -3246,7 +3490,7 @@ class HeightRequest final :
                &_HeightRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    17;
+    20;
 
   friend void swap(HeightRequest& a, HeightRequest& b) {
     a.Swap(&b);
@@ -3656,7 +3900,7 @@ class GetTemplateRegistrationsRequest final :
                &_GetTemplateRegistrationsRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    47;
+    50;
 
   friend void swap(GetTemplateRegistrationsRequest& a, GetTemplateRegistrationsRequest& b) {
     a.Swap(&b);
@@ -3849,7 +4093,7 @@ class GetSideChainUtxosRequest final :
                &_GetSideChainUtxosRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    50;
+    53;
 
   friend void swap(GetSideChainUtxosRequest& a, GetSideChainUtxosRequest& b) {
     a.Swap(&b);
@@ -4042,7 +4286,7 @@ class GetShardKeyResponse final :
                &_GetShardKeyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    46;
+    49;
 
   friend void swap(GetShardKeyResponse& a, GetShardKeyResponse& b) {
     a.Swap(&b);
@@ -4235,7 +4479,7 @@ class GetShardKeyRequest final :
                &_GetShardKeyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    45;
+    48;
 
   friend void swap(GetShardKeyRequest& a, GetShardKeyRequest& b) {
     a.Swap(&b);
@@ -4427,7 +4671,7 @@ class GetPeersRequest final :
                &_GetPeersRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    35;
+    38;
 
   friend void swap(GetPeersRequest& a, GetPeersRequest& b) {
     a.Swap(&b);
@@ -4564,7 +4808,7 @@ class GetNewBlockBlobResult final :
                &_GetNewBlockBlobResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    28;
+    31;
 
   friend void swap(GetNewBlockBlobResult& a, GetNewBlockBlobResult& b) {
     a.Swap(&b);
@@ -4834,7 +5078,7 @@ class GetMempoolTransactionsRequest final :
                &_GetMempoolTransactionsRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    38;
+    41;
 
   friend void swap(GetMempoolTransactionsRequest& a, GetMempoolTransactionsRequest& b) {
     a.Swap(&b);
@@ -4971,7 +5215,7 @@ class GetHeaderByHashRequest final :
                &_GetHeaderByHashRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    22;
 
   friend void swap(GetHeaderByHashRequest& a, GetHeaderByHashRequest& b) {
     a.Swap(&b);
@@ -5152,7 +5396,7 @@ class GetBlocksRequest final :
                &_GetBlocksRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    25;
 
   friend void swap(GetBlocksRequest& a, GetBlocksRequest& b) {
     a.Swap(&b);
@@ -5517,7 +5761,7 @@ class GetActiveValidatorNodesResponse final :
                &_GetActiveValidatorNodesResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    44;
+    47;
 
   friend void swap(GetActiveValidatorNodesResponse& a, GetActiveValidatorNodesResponse& b) {
     a.Swap(&b);
@@ -5716,7 +5960,7 @@ class GetActiveValidatorNodesRequest final :
                &_GetActiveValidatorNodesRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    43;
+    46;
 
   friend void swap(GetActiveValidatorNodesRequest& a, GetActiveValidatorNodesRequest& b) {
     a.Swap(&b);
@@ -5891,7 +6135,7 @@ class FetchMatchingUtxosRequest final :
                &_FetchMatchingUtxosRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    32;
+    35;
 
   friend void swap(FetchMatchingUtxosRequest& a, FetchMatchingUtxosRequest& b) {
     a.Swap(&b);
@@ -6084,7 +6328,7 @@ class BlockTimingResponse final :
                &_BlockTimingResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    18;
+    21;
 
   friend void swap(BlockTimingResponse& a, BlockTimingResponse& b) {
     a.Swap(&b);
@@ -6283,7 +6527,7 @@ class BlockInfo final :
                &_BlockInfo_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    49;
+    52;
 
   friend void swap(BlockInfo& a, BlockInfo& b) {
     a.Swap(&b);
@@ -6494,7 +6738,7 @@ class BlockGroupResponse final :
                &_BlockGroupResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    16;
+    19;
 
   friend void swap(BlockGroupResponse& a, BlockGroupResponse& b) {
     a.Swap(&b);
@@ -6689,7 +6933,7 @@ class BlockGroupRequest final :
                &_BlockGroupRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    15;
+    18;
 
   friend void swap(BlockGroupRequest& a, BlockGroupRequest& b) {
     a.Swap(&b);
@@ -7099,7 +7343,7 @@ class TransactionStateRequest final :
                &_TransactionStateRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    40;
+    43;
 
   friend void swap(TransactionStateRequest& a, TransactionStateRequest& b) {
     a.Swap(&b);
@@ -7485,7 +7729,7 @@ class SearchKernelsRequest final :
                &_SearchKernelsRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    30;
+    33;
 
   friend void swap(SearchKernelsRequest& a, SearchKernelsRequest& b) {
     a.Swap(&b);
@@ -7861,7 +8105,7 @@ class MinerData final :
                &_MinerData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    29;
+    32;
 
   friend void swap(MinerData& a, MinerData& b) {
     a.Swap(&b);
@@ -8019,6 +8263,219 @@ class MinerData final :
   friend struct ::TableStruct_base_5fnode_2eproto;
 };// -------------------------------------------------------------------
 
+class GetNewBlockTemplateWithCoinbasesRequest final :
+    public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest) */ {
+ public:
+  inline GetNewBlockTemplateWithCoinbasesRequest() : GetNewBlockTemplateWithCoinbasesRequest(nullptr) {}
+  ~GetNewBlockTemplateWithCoinbasesRequest() override;
+  template<typename = void>
+  explicit PROTOBUF_CONSTEXPR GetNewBlockTemplateWithCoinbasesRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetNewBlockTemplateWithCoinbasesRequest(const GetNewBlockTemplateWithCoinbasesRequest& from)
+      : GetNewBlockTemplateWithCoinbasesRequest(nullptr, from) {}
+  GetNewBlockTemplateWithCoinbasesRequest(GetNewBlockTemplateWithCoinbasesRequest&& from) noexcept
+    : GetNewBlockTemplateWithCoinbasesRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline GetNewBlockTemplateWithCoinbasesRequest& operator=(const GetNewBlockTemplateWithCoinbasesRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetNewBlockTemplateWithCoinbasesRequest& operator=(GetNewBlockTemplateWithCoinbasesRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const GetNewBlockTemplateWithCoinbasesRequest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const GetNewBlockTemplateWithCoinbasesRequest* internal_default_instance() {
+    return reinterpret_cast<const GetNewBlockTemplateWithCoinbasesRequest*>(
+               &_GetNewBlockTemplateWithCoinbasesRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    11;
+
+  friend void swap(GetNewBlockTemplateWithCoinbasesRequest& a, GetNewBlockTemplateWithCoinbasesRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(GetNewBlockTemplateWithCoinbasesRequest* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr &&
+        GetArena() == other->GetArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetNewBlockTemplateWithCoinbasesRequest* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetNewBlockTemplateWithCoinbasesRequest* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<GetNewBlockTemplateWithCoinbasesRequest>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const GetNewBlockTemplateWithCoinbasesRequest& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom( const GetNewBlockTemplateWithCoinbasesRequest& from) {
+    GetNewBlockTemplateWithCoinbasesRequest::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target, ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  ::google::protobuf::internal::CachedSize* AccessCachedSize() const final;
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(GetNewBlockTemplateWithCoinbasesRequest* other);
+
+  private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() {
+    return "tari.rpc.GetNewBlockTemplateWithCoinbasesRequest";
+  }
+  protected:
+  explicit GetNewBlockTemplateWithCoinbasesRequest(::google::protobuf::Arena* arena);
+  GetNewBlockTemplateWithCoinbasesRequest(::google::protobuf::Arena* arena, const GetNewBlockTemplateWithCoinbasesRequest& from);
+  public:
+
+  static const ClassData _class_data_;
+  const ::google::protobuf::Message::ClassData*GetClassData() const final;
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kCoinbasesFieldNumber = 3,
+    kAlgoFieldNumber = 1,
+    kMaxWeightFieldNumber = 2,
+  };
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+  int coinbases_size() const;
+  private:
+  int _internal_coinbases_size() const;
+
+  public:
+  void clear_coinbases() ;
+  ::tari::rpc::NewBlockCoinbase* mutable_coinbases(int index);
+  ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase >*
+      mutable_coinbases();
+  private:
+  const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>& _internal_coinbases() const;
+  ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>* _internal_mutable_coinbases();
+  public:
+  const ::tari::rpc::NewBlockCoinbase& coinbases(int index) const;
+  ::tari::rpc::NewBlockCoinbase* add_coinbases();
+  const ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase >&
+      coinbases() const;
+  // .tari.rpc.PowAlgo algo = 1;
+  bool has_algo() const;
+  void clear_algo() ;
+  const ::tari::rpc::PowAlgo& algo() const;
+  PROTOBUF_NODISCARD ::tari::rpc::PowAlgo* release_algo();
+  ::tari::rpc::PowAlgo* mutable_algo();
+  void set_allocated_algo(::tari::rpc::PowAlgo* value);
+  void unsafe_arena_set_allocated_algo(::tari::rpc::PowAlgo* value);
+  ::tari::rpc::PowAlgo* unsafe_arena_release_algo();
+
+  private:
+  const ::tari::rpc::PowAlgo& _internal_algo() const;
+  ::tari::rpc::PowAlgo* _internal_mutable_algo();
+
+  public:
+  // uint64 max_weight = 2;
+  void clear_max_weight() ;
+  ::uint64_t max_weight() const;
+  void set_max_weight(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_max_weight() const;
+  void _internal_set_max_weight(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+ private:
+  class _Internal;
+
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      2, 3, 2,
+      0, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+
+        inline explicit constexpr Impl_(
+            ::google::protobuf::internal::ConstantInitialized) noexcept;
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena);
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena, const Impl_& from);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase > coinbases_;
+    ::tari::rpc::PowAlgo* algo_;
+    ::uint64_t max_weight_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_base_5fnode_2eproto;
+};// -------------------------------------------------------------------
+
 class GetPeersResponse final :
     public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.GetPeersResponse) */ {
  public:
@@ -8078,7 +8535,7 @@ class GetPeersResponse final :
                &_GetPeersResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    34;
+    37;
 
   friend void swap(GetPeersResponse& a, GetPeersResponse& b) {
     a.Swap(&b);
@@ -8259,7 +8716,7 @@ class BlockHeaderResponse final :
                &_BlockHeaderResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    23;
 
   friend void swap(BlockHeaderResponse& a, BlockHeaderResponse& b) {
     a.Swap(&b);
@@ -8488,7 +8945,7 @@ class GetTemplateRegistrationResponse final :
                &_GetTemplateRegistrationResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    48;
+    51;
 
   friend void swap(GetTemplateRegistrationResponse& a, GetTemplateRegistrationResponse& b) {
     a.Swap(&b);
@@ -9536,7 +9993,7 @@ class GetSideChainUtxosResponse final :
                &_GetSideChainUtxosResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    51;
+    54;
 
   friend void swap(GetSideChainUtxosResponse& a, GetSideChainUtxosResponse& b) {
     a.Swap(&b);
@@ -9737,7 +10194,7 @@ class FetchMatchingUtxosResponse final :
                &_FetchMatchingUtxosResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    33;
+    36;
 
   friend void swap(FetchMatchingUtxosResponse& a, FetchMatchingUtxosResponse& b) {
     a.Swap(&b);
@@ -9918,7 +10375,7 @@ class SubmitTransactionRequest final :
                &_SubmitTransactionRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    36;
+    39;
 
   friend void swap(SubmitTransactionRequest& a, SubmitTransactionRequest& b) {
     a.Swap(&b);
@@ -10250,6 +10707,207 @@ class NewBlockTemplateResponse final :
   friend struct ::TableStruct_base_5fnode_2eproto;
 };// -------------------------------------------------------------------
 
+class GetNewBlockWithCoinbasesRequest final :
+    public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.GetNewBlockWithCoinbasesRequest) */ {
+ public:
+  inline GetNewBlockWithCoinbasesRequest() : GetNewBlockWithCoinbasesRequest(nullptr) {}
+  ~GetNewBlockWithCoinbasesRequest() override;
+  template<typename = void>
+  explicit PROTOBUF_CONSTEXPR GetNewBlockWithCoinbasesRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetNewBlockWithCoinbasesRequest(const GetNewBlockWithCoinbasesRequest& from)
+      : GetNewBlockWithCoinbasesRequest(nullptr, from) {}
+  GetNewBlockWithCoinbasesRequest(GetNewBlockWithCoinbasesRequest&& from) noexcept
+    : GetNewBlockWithCoinbasesRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline GetNewBlockWithCoinbasesRequest& operator=(const GetNewBlockWithCoinbasesRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetNewBlockWithCoinbasesRequest& operator=(GetNewBlockWithCoinbasesRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const GetNewBlockWithCoinbasesRequest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const GetNewBlockWithCoinbasesRequest* internal_default_instance() {
+    return reinterpret_cast<const GetNewBlockWithCoinbasesRequest*>(
+               &_GetNewBlockWithCoinbasesRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    12;
+
+  friend void swap(GetNewBlockWithCoinbasesRequest& a, GetNewBlockWithCoinbasesRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(GetNewBlockWithCoinbasesRequest* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr &&
+        GetArena() == other->GetArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetNewBlockWithCoinbasesRequest* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetNewBlockWithCoinbasesRequest* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<GetNewBlockWithCoinbasesRequest>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const GetNewBlockWithCoinbasesRequest& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom( const GetNewBlockWithCoinbasesRequest& from) {
+    GetNewBlockWithCoinbasesRequest::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target, ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  ::google::protobuf::internal::CachedSize* AccessCachedSize() const final;
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(GetNewBlockWithCoinbasesRequest* other);
+
+  private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() {
+    return "tari.rpc.GetNewBlockWithCoinbasesRequest";
+  }
+  protected:
+  explicit GetNewBlockWithCoinbasesRequest(::google::protobuf::Arena* arena);
+  GetNewBlockWithCoinbasesRequest(::google::protobuf::Arena* arena, const GetNewBlockWithCoinbasesRequest& from);
+  public:
+
+  static const ClassData _class_data_;
+  const ::google::protobuf::Message::ClassData*GetClassData() const final;
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kCoinbasesFieldNumber = 2,
+    kNewTemplateFieldNumber = 1,
+  };
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+  int coinbases_size() const;
+  private:
+  int _internal_coinbases_size() const;
+
+  public:
+  void clear_coinbases() ;
+  ::tari::rpc::NewBlockCoinbase* mutable_coinbases(int index);
+  ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase >*
+      mutable_coinbases();
+  private:
+  const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>& _internal_coinbases() const;
+  ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>* _internal_mutable_coinbases();
+  public:
+  const ::tari::rpc::NewBlockCoinbase& coinbases(int index) const;
+  ::tari::rpc::NewBlockCoinbase* add_coinbases();
+  const ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase >&
+      coinbases() const;
+  // .tari.rpc.NewBlockTemplate new_template = 1;
+  bool has_new_template() const;
+  void clear_new_template() ;
+  const ::tari::rpc::NewBlockTemplate& new_template() const;
+  PROTOBUF_NODISCARD ::tari::rpc::NewBlockTemplate* release_new_template();
+  ::tari::rpc::NewBlockTemplate* mutable_new_template();
+  void set_allocated_new_template(::tari::rpc::NewBlockTemplate* value);
+  void unsafe_arena_set_allocated_new_template(::tari::rpc::NewBlockTemplate* value);
+  ::tari::rpc::NewBlockTemplate* unsafe_arena_release_new_template();
+
+  private:
+  const ::tari::rpc::NewBlockTemplate& _internal_new_template() const;
+  ::tari::rpc::NewBlockTemplate* _internal_mutable_new_template();
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.GetNewBlockWithCoinbasesRequest)
+ private:
+  class _Internal;
+
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      1, 2, 2,
+      0, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+
+        inline explicit constexpr Impl_(
+            ::google::protobuf::internal::ConstantInitialized) noexcept;
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena);
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena, const Impl_& from);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::tari::rpc::NewBlockCoinbase > coinbases_;
+    ::tari::rpc::NewBlockTemplate* new_template_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_base_5fnode_2eproto;
+};// -------------------------------------------------------------------
+
 class GetNewBlockResult final :
     public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.GetNewBlockResult) */ {
  public:
@@ -10309,7 +10967,7 @@ class GetNewBlockResult final :
                &_GetNewBlockResult_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    27;
+    30;
 
   friend void swap(GetNewBlockResult& a, GetNewBlockResult& b) {
     a.Swap(&b);
@@ -10386,6 +11044,7 @@ class GetNewBlockResult final :
     kMergeMiningHashFieldNumber = 3,
     kTariUniqueIdFieldNumber = 4,
     kBlockFieldNumber = 2,
+    kMinerDataFieldNumber = 5,
   };
   // bytes block_hash = 1;
   void clear_block_hash() ;
@@ -10450,13 +11109,28 @@ class GetNewBlockResult final :
   ::tari::rpc::Block* _internal_mutable_block();
 
   public:
+  // .tari.rpc.MinerData miner_data = 5;
+  bool has_miner_data() const;
+  void clear_miner_data() ;
+  const ::tari::rpc::MinerData& miner_data() const;
+  PROTOBUF_NODISCARD ::tari::rpc::MinerData* release_miner_data();
+  ::tari::rpc::MinerData* mutable_miner_data();
+  void set_allocated_miner_data(::tari::rpc::MinerData* value);
+  void unsafe_arena_set_allocated_miner_data(::tari::rpc::MinerData* value);
+  ::tari::rpc::MinerData* unsafe_arena_release_miner_data();
+
+  private:
+  const ::tari::rpc::MinerData& _internal_miner_data() const;
+  ::tari::rpc::MinerData* _internal_mutable_miner_data();
+
+  public:
   // @@protoc_insertion_point(class_scope:tari.rpc.GetNewBlockResult)
  private:
   class _Internal;
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 4, 1,
+      3, 5, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -10479,6 +11153,7 @@ class GetNewBlockResult final :
     ::google::protobuf::internal::ArenaStringPtr merge_mining_hash_;
     ::google::protobuf::internal::ArenaStringPtr tari_unique_id_;
     ::tari::rpc::Block* block_;
+    ::tari::rpc::MinerData* miner_data_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -10544,7 +11219,7 @@ class GetMempoolTransactionsResponse final :
                &_GetMempoolTransactionsResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    39;
+    42;
 
   friend void swap(GetMempoolTransactionsResponse& a, GetMempoolTransactionsResponse& b) {
     a.Swap(&b);
@@ -10725,7 +11400,7 @@ class GetBlocksResponse final :
                &_GetBlocksResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    26;
 
   friend void swap(GetBlocksResponse& a, GetBlocksResponse& b) {
     a.Swap(&b);
@@ -12922,6 +13597,496 @@ inline void NewBlockTemplateRequest::_internal_set_max_weight(::uint64_t value) 
 
 // -------------------------------------------------------------------
 
+// GetNewBlockTemplateWithCoinbasesRequest
+
+// .tari.rpc.PowAlgo algo = 1;
+inline bool GetNewBlockTemplateWithCoinbasesRequest::has_algo() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.algo_ != nullptr);
+  return value;
+}
+inline const ::tari::rpc::PowAlgo& GetNewBlockTemplateWithCoinbasesRequest::_internal_algo() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::tari::rpc::PowAlgo* p = _impl_.algo_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::PowAlgo&>(::tari::rpc::_PowAlgo_default_instance_);
+}
+inline const ::tari::rpc::PowAlgo& GetNewBlockTemplateWithCoinbasesRequest::algo() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.algo)
+  return _internal_algo();
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::unsafe_arena_set_allocated_algo(::tari::rpc::PowAlgo* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.algo_);
+  }
+  _impl_.algo_ = reinterpret_cast<::tari::rpc::PowAlgo*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.algo)
+}
+inline ::tari::rpc::PowAlgo* GetNewBlockTemplateWithCoinbasesRequest::release_algo() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::PowAlgo* released = _impl_.algo_;
+  _impl_.algo_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::tari::rpc::PowAlgo* GetNewBlockTemplateWithCoinbasesRequest::unsafe_arena_release_algo() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.algo)
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::PowAlgo* temp = _impl_.algo_;
+  _impl_.algo_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::PowAlgo* GetNewBlockTemplateWithCoinbasesRequest::_internal_mutable_algo() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  if (_impl_.algo_ == nullptr) {
+    auto* p = CreateMaybeMessage<::tari::rpc::PowAlgo>(GetArena());
+    _impl_.algo_ = reinterpret_cast<::tari::rpc::PowAlgo*>(p);
+  }
+  return _impl_.algo_;
+}
+inline ::tari::rpc::PowAlgo* GetNewBlockTemplateWithCoinbasesRequest::mutable_algo() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::tari::rpc::PowAlgo* _msg = _internal_mutable_algo();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.algo)
+  return _msg;
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::set_allocated_algo(::tari::rpc::PowAlgo* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.algo_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::MessageLite*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+
+  _impl_.algo_ = reinterpret_cast<::tari::rpc::PowAlgo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.algo)
+}
+
+// uint64 max_weight = 2;
+inline void GetNewBlockTemplateWithCoinbasesRequest::clear_max_weight() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.max_weight_ = ::uint64_t{0u};
+}
+inline ::uint64_t GetNewBlockTemplateWithCoinbasesRequest::max_weight() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.max_weight)
+  return _internal_max_weight();
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::set_max_weight(::uint64_t value) {
+  _internal_set_max_weight(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.max_weight)
+}
+inline ::uint64_t GetNewBlockTemplateWithCoinbasesRequest::_internal_max_weight() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.max_weight_;
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::_internal_set_max_weight(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.max_weight_ = value;
+}
+
+// repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+inline int GetNewBlockTemplateWithCoinbasesRequest::_internal_coinbases_size() const {
+  return _internal_coinbases().size();
+}
+inline int GetNewBlockTemplateWithCoinbasesRequest::coinbases_size() const {
+  return _internal_coinbases_size();
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::clear_coinbases() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.coinbases_.Clear();
+}
+inline ::tari::rpc::NewBlockCoinbase* GetNewBlockTemplateWithCoinbasesRequest::mutable_coinbases(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.coinbases)
+  return _internal_mutable_coinbases()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>* GetNewBlockTemplateWithCoinbasesRequest::mutable_coinbases()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable_list:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.coinbases)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _internal_mutable_coinbases();
+}
+inline const ::tari::rpc::NewBlockCoinbase& GetNewBlockTemplateWithCoinbasesRequest::coinbases(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.coinbases)
+  return _internal_coinbases().Get(index);
+}
+inline ::tari::rpc::NewBlockCoinbase* GetNewBlockTemplateWithCoinbasesRequest::add_coinbases() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::tari::rpc::NewBlockCoinbase* _add = _internal_mutable_coinbases()->Add();
+  // @@protoc_insertion_point(field_add:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.coinbases)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>& GetNewBlockTemplateWithCoinbasesRequest::coinbases() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest.coinbases)
+  return _internal_coinbases();
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>&
+GetNewBlockTemplateWithCoinbasesRequest::_internal_coinbases() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.coinbases_;
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>*
+GetNewBlockTemplateWithCoinbasesRequest::_internal_mutable_coinbases() {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return &_impl_.coinbases_;
+}
+
+// -------------------------------------------------------------------
+
+// GetNewBlockWithCoinbasesRequest
+
+// .tari.rpc.NewBlockTemplate new_template = 1;
+inline bool GetNewBlockWithCoinbasesRequest::has_new_template() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.new_template_ != nullptr);
+  return value;
+}
+inline const ::tari::rpc::NewBlockTemplate& GetNewBlockWithCoinbasesRequest::_internal_new_template() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::tari::rpc::NewBlockTemplate* p = _impl_.new_template_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::NewBlockTemplate&>(::tari::rpc::_NewBlockTemplate_default_instance_);
+}
+inline const ::tari::rpc::NewBlockTemplate& GetNewBlockWithCoinbasesRequest::new_template() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockWithCoinbasesRequest.new_template)
+  return _internal_new_template();
+}
+inline void GetNewBlockWithCoinbasesRequest::unsafe_arena_set_allocated_new_template(::tari::rpc::NewBlockTemplate* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.new_template_);
+  }
+  _impl_.new_template_ = reinterpret_cast<::tari::rpc::NewBlockTemplate*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.GetNewBlockWithCoinbasesRequest.new_template)
+}
+inline ::tari::rpc::NewBlockTemplate* GetNewBlockWithCoinbasesRequest::release_new_template() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::NewBlockTemplate* released = _impl_.new_template_;
+  _impl_.new_template_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::tari::rpc::NewBlockTemplate* GetNewBlockWithCoinbasesRequest::unsafe_arena_release_new_template() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockWithCoinbasesRequest.new_template)
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::NewBlockTemplate* temp = _impl_.new_template_;
+  _impl_.new_template_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::NewBlockTemplate* GetNewBlockWithCoinbasesRequest::_internal_mutable_new_template() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  if (_impl_.new_template_ == nullptr) {
+    auto* p = CreateMaybeMessage<::tari::rpc::NewBlockTemplate>(GetArena());
+    _impl_.new_template_ = reinterpret_cast<::tari::rpc::NewBlockTemplate*>(p);
+  }
+  return _impl_.new_template_;
+}
+inline ::tari::rpc::NewBlockTemplate* GetNewBlockWithCoinbasesRequest::mutable_new_template() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::tari::rpc::NewBlockTemplate* _msg = _internal_mutable_new_template();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockWithCoinbasesRequest.new_template)
+  return _msg;
+}
+inline void GetNewBlockWithCoinbasesRequest::set_allocated_new_template(::tari::rpc::NewBlockTemplate* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.new_template_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::MessageLite*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+
+  _impl_.new_template_ = reinterpret_cast<::tari::rpc::NewBlockTemplate*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockWithCoinbasesRequest.new_template)
+}
+
+// repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+inline int GetNewBlockWithCoinbasesRequest::_internal_coinbases_size() const {
+  return _internal_coinbases().size();
+}
+inline int GetNewBlockWithCoinbasesRequest::coinbases_size() const {
+  return _internal_coinbases_size();
+}
+inline void GetNewBlockWithCoinbasesRequest::clear_coinbases() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.coinbases_.Clear();
+}
+inline ::tari::rpc::NewBlockCoinbase* GetNewBlockWithCoinbasesRequest::mutable_coinbases(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockWithCoinbasesRequest.coinbases)
+  return _internal_mutable_coinbases()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>* GetNewBlockWithCoinbasesRequest::mutable_coinbases()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable_list:tari.rpc.GetNewBlockWithCoinbasesRequest.coinbases)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _internal_mutable_coinbases();
+}
+inline const ::tari::rpc::NewBlockCoinbase& GetNewBlockWithCoinbasesRequest::coinbases(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockWithCoinbasesRequest.coinbases)
+  return _internal_coinbases().Get(index);
+}
+inline ::tari::rpc::NewBlockCoinbase* GetNewBlockWithCoinbasesRequest::add_coinbases() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::tari::rpc::NewBlockCoinbase* _add = _internal_mutable_coinbases()->Add();
+  // @@protoc_insertion_point(field_add:tari.rpc.GetNewBlockWithCoinbasesRequest.coinbases)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>& GetNewBlockWithCoinbasesRequest::coinbases() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:tari.rpc.GetNewBlockWithCoinbasesRequest.coinbases)
+  return _internal_coinbases();
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>&
+GetNewBlockWithCoinbasesRequest::_internal_coinbases() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.coinbases_;
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::NewBlockCoinbase>*
+GetNewBlockWithCoinbasesRequest::_internal_mutable_coinbases() {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return &_impl_.coinbases_;
+}
+
+// -------------------------------------------------------------------
+
+// NewBlockCoinbase
+
+// string address = 1;
+inline void NewBlockCoinbase::clear_address() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.address_.ClearToEmpty();
+}
+inline const std::string& NewBlockCoinbase::address() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockCoinbase.address)
+  return _internal_address();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void NewBlockCoinbase::set_address(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.address_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockCoinbase.address)
+}
+inline std::string* NewBlockCoinbase::mutable_address() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_address();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.NewBlockCoinbase.address)
+  return _s;
+}
+inline const std::string& NewBlockCoinbase::_internal_address() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.address_.Get();
+}
+inline void NewBlockCoinbase::_internal_set_address(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.address_.Set(value, GetArena());
+}
+inline std::string* NewBlockCoinbase::_internal_mutable_address() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  return _impl_.address_.Mutable( GetArena());
+}
+inline std::string* NewBlockCoinbase::release_address() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.NewBlockCoinbase.address)
+  return _impl_.address_.Release();
+}
+inline void NewBlockCoinbase::set_allocated_address(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.address_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.address_.IsDefault()) {
+          _impl_.address_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.NewBlockCoinbase.address)
+}
+
+// uint64 value = 2;
+inline void NewBlockCoinbase::clear_value() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.value_ = ::uint64_t{0u};
+}
+inline ::uint64_t NewBlockCoinbase::value() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockCoinbase.value)
+  return _internal_value();
+}
+inline void NewBlockCoinbase::set_value(::uint64_t value) {
+  _internal_set_value(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockCoinbase.value)
+}
+inline ::uint64_t NewBlockCoinbase::_internal_value() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.value_;
+}
+inline void NewBlockCoinbase::_internal_set_value(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.value_ = value;
+}
+
+// bool stealth_payment = 3;
+inline void NewBlockCoinbase::clear_stealth_payment() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.stealth_payment_ = false;
+}
+inline bool NewBlockCoinbase::stealth_payment() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockCoinbase.stealth_payment)
+  return _internal_stealth_payment();
+}
+inline void NewBlockCoinbase::set_stealth_payment(bool value) {
+  _internal_set_stealth_payment(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockCoinbase.stealth_payment)
+}
+inline bool NewBlockCoinbase::_internal_stealth_payment() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.stealth_payment_;
+}
+inline void NewBlockCoinbase::_internal_set_stealth_payment(bool value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.stealth_payment_ = value;
+}
+
+// bool revealed_value_proof = 4;
+inline void NewBlockCoinbase::clear_revealed_value_proof() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.revealed_value_proof_ = false;
+}
+inline bool NewBlockCoinbase::revealed_value_proof() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockCoinbase.revealed_value_proof)
+  return _internal_revealed_value_proof();
+}
+inline void NewBlockCoinbase::set_revealed_value_proof(bool value) {
+  _internal_set_revealed_value_proof(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockCoinbase.revealed_value_proof)
+}
+inline bool NewBlockCoinbase::_internal_revealed_value_proof() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.revealed_value_proof_;
+}
+inline void NewBlockCoinbase::_internal_set_revealed_value_proof(bool value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.revealed_value_proof_ = value;
+}
+
+// bytes coinbase_extra = 5;
+inline void NewBlockCoinbase::clear_coinbase_extra() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.coinbase_extra_.ClearToEmpty();
+}
+inline const std::string& NewBlockCoinbase::coinbase_extra() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockCoinbase.coinbase_extra)
+  return _internal_coinbase_extra();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void NewBlockCoinbase::set_coinbase_extra(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.coinbase_extra_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockCoinbase.coinbase_extra)
+}
+inline std::string* NewBlockCoinbase::mutable_coinbase_extra() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_coinbase_extra();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.NewBlockCoinbase.coinbase_extra)
+  return _s;
+}
+inline const std::string& NewBlockCoinbase::_internal_coinbase_extra() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.coinbase_extra_.Get();
+}
+inline void NewBlockCoinbase::_internal_set_coinbase_extra(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.coinbase_extra_.Set(value, GetArena());
+}
+inline std::string* NewBlockCoinbase::_internal_mutable_coinbase_extra() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  return _impl_.coinbase_extra_.Mutable( GetArena());
+}
+inline std::string* NewBlockCoinbase::release_coinbase_extra() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.NewBlockCoinbase.coinbase_extra)
+  return _impl_.coinbase_extra_.Release();
+}
+inline void NewBlockCoinbase::set_allocated_coinbase_extra(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.coinbase_extra_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.coinbase_extra_.IsDefault()) {
+          _impl_.coinbase_extra_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.NewBlockCoinbase.coinbase_extra)
+}
+
+// -------------------------------------------------------------------
+
 // NetworkDifficultyResponse
 
 // uint64 difficulty = 1;
@@ -13952,80 +15117,80 @@ GetBlocksResponse::_internal_mutable_blocks() {
 
 // MetaData
 
-// uint64 height_of_longest_chain = 1;
-inline void MetaData::clear_height_of_longest_chain() {
+// uint64 best_block_height = 1;
+inline void MetaData::clear_best_block_height() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.height_of_longest_chain_ = ::uint64_t{0u};
+  _impl_.best_block_height_ = ::uint64_t{0u};
 }
-inline ::uint64_t MetaData::height_of_longest_chain() const {
-  // @@protoc_insertion_point(field_get:tari.rpc.MetaData.height_of_longest_chain)
-  return _internal_height_of_longest_chain();
+inline ::uint64_t MetaData::best_block_height() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.MetaData.best_block_height)
+  return _internal_best_block_height();
 }
-inline void MetaData::set_height_of_longest_chain(::uint64_t value) {
-  _internal_set_height_of_longest_chain(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.MetaData.height_of_longest_chain)
+inline void MetaData::set_best_block_height(::uint64_t value) {
+  _internal_set_best_block_height(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.MetaData.best_block_height)
 }
-inline ::uint64_t MetaData::_internal_height_of_longest_chain() const {
+inline ::uint64_t MetaData::_internal_best_block_height() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.height_of_longest_chain_;
+  return _impl_.best_block_height_;
 }
-inline void MetaData::_internal_set_height_of_longest_chain(::uint64_t value) {
+inline void MetaData::_internal_set_best_block_height(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.height_of_longest_chain_ = value;
+  _impl_.best_block_height_ = value;
 }
 
-// bytes best_block = 2;
-inline void MetaData::clear_best_block() {
+// bytes best_block_hash = 2;
+inline void MetaData::clear_best_block_hash() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.best_block_.ClearToEmpty();
+  _impl_.best_block_hash_.ClearToEmpty();
 }
-inline const std::string& MetaData::best_block() const
+inline const std::string& MetaData::best_block_hash() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:tari.rpc.MetaData.best_block)
-  return _internal_best_block();
+  // @@protoc_insertion_point(field_get:tari.rpc.MetaData.best_block_hash)
+  return _internal_best_block_hash();
 }
 template <typename Arg_, typename... Args_>
-inline PROTOBUF_ALWAYS_INLINE void MetaData::set_best_block(Arg_&& arg,
+inline PROTOBUF_ALWAYS_INLINE void MetaData::set_best_block_hash(Arg_&& arg,
                                                      Args_... args) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.best_block_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:tari.rpc.MetaData.best_block)
+  _impl_.best_block_hash_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.MetaData.best_block_hash)
 }
-inline std::string* MetaData::mutable_best_block() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  std::string* _s = _internal_mutable_best_block();
-  // @@protoc_insertion_point(field_mutable:tari.rpc.MetaData.best_block)
+inline std::string* MetaData::mutable_best_block_hash() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_best_block_hash();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.MetaData.best_block_hash)
   return _s;
 }
-inline const std::string& MetaData::_internal_best_block() const {
+inline const std::string& MetaData::_internal_best_block_hash() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.best_block_.Get();
+  return _impl_.best_block_hash_.Get();
 }
-inline void MetaData::_internal_set_best_block(const std::string& value) {
+inline void MetaData::_internal_set_best_block_hash(const std::string& value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.best_block_.Set(value, GetArena());
+  _impl_.best_block_hash_.Set(value, GetArena());
 }
-inline std::string* MetaData::_internal_mutable_best_block() {
+inline std::string* MetaData::_internal_mutable_best_block_hash() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  return _impl_.best_block_.Mutable( GetArena());
+  return _impl_.best_block_hash_.Mutable( GetArena());
 }
-inline std::string* MetaData::release_best_block() {
+inline std::string* MetaData::release_best_block_hash() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  // @@protoc_insertion_point(field_release:tari.rpc.MetaData.best_block)
-  return _impl_.best_block_.Release();
+  // @@protoc_insertion_point(field_release:tari.rpc.MetaData.best_block_hash)
+  return _impl_.best_block_hash_.Release();
 }
-inline void MetaData::set_allocated_best_block(std::string* value) {
+inline void MetaData::set_allocated_best_block_hash(std::string* value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.best_block_.SetAllocated(value, GetArena());
+  _impl_.best_block_hash_.SetAllocated(value, GetArena());
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-        if (_impl_.best_block_.IsDefault()) {
-          _impl_.best_block_.Set("", GetArena());
+        if (_impl_.best_block_hash_.IsDefault()) {
+          _impl_.best_block_hash_.Set("", GetArena());
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:tari.rpc.MetaData.best_block)
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.MetaData.best_block_hash)
 }
 
 // uint64 pruned_height = 6;
@@ -14580,6 +15745,102 @@ inline void GetNewBlockResult::set_allocated_tari_unique_id(std::string* value) 
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.tari_unique_id)
+}
+
+// .tari.rpc.MinerData miner_data = 5;
+inline bool GetNewBlockResult::has_miner_data() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.miner_data_ != nullptr);
+  return value;
+}
+inline void GetNewBlockResult::clear_miner_data() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.miner_data_ != nullptr) _impl_.miner_data_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000002u;
+}
+inline const ::tari::rpc::MinerData& GetNewBlockResult::_internal_miner_data() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::tari::rpc::MinerData* p = _impl_.miner_data_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::MinerData&>(::tari::rpc::_MinerData_default_instance_);
+}
+inline const ::tari::rpc::MinerData& GetNewBlockResult::miner_data() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockResult.miner_data)
+  return _internal_miner_data();
+}
+inline void GetNewBlockResult::unsafe_arena_set_allocated_miner_data(::tari::rpc::MinerData* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.miner_data_);
+  }
+  _impl_.miner_data_ = reinterpret_cast<::tari::rpc::MinerData*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.GetNewBlockResult.miner_data)
+}
+inline ::tari::rpc::MinerData* GetNewBlockResult::release_miner_data() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::tari::rpc::MinerData* released = _impl_.miner_data_;
+  _impl_.miner_data_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::tari::rpc::MinerData* GetNewBlockResult::unsafe_arena_release_miner_data() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockResult.miner_data)
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::tari::rpc::MinerData* temp = _impl_.miner_data_;
+  _impl_.miner_data_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::MinerData* GetNewBlockResult::_internal_mutable_miner_data() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_._has_bits_[0] |= 0x00000002u;
+  if (_impl_.miner_data_ == nullptr) {
+    auto* p = CreateMaybeMessage<::tari::rpc::MinerData>(GetArena());
+    _impl_.miner_data_ = reinterpret_cast<::tari::rpc::MinerData*>(p);
+  }
+  return _impl_.miner_data_;
+}
+inline ::tari::rpc::MinerData* GetNewBlockResult::mutable_miner_data() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::tari::rpc::MinerData* _msg = _internal_mutable_miner_data();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockResult.miner_data)
+  return _msg;
+}
+inline void GetNewBlockResult::set_allocated_miner_data(::tari::rpc::MinerData* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::tari::rpc::MinerData*>(_impl_.miner_data_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::tari::rpc::MinerData*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+
+  _impl_.miner_data_ = reinterpret_cast<::tari::rpc::MinerData*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.miner_data)
 }
 
 // -------------------------------------------------------------------

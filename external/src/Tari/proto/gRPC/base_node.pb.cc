@@ -184,6 +184,33 @@ struct SearchUtxosRequestDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SearchUtxosRequestDefaultTypeInternal _SearchUtxosRequest_default_instance_;
 
+inline constexpr NewBlockCoinbase::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : address_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        coinbase_extra_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        value_{::uint64_t{0u}},
+        stealth_payment_{false},
+        revealed_value_proof_{false},
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR NewBlockCoinbase::NewBlockCoinbase(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct NewBlockCoinbaseDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NewBlockCoinbaseDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NewBlockCoinbaseDefaultTypeInternal() {}
+  union {
+    NewBlockCoinbase _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NewBlockCoinbaseDefaultTypeInternal _NewBlockCoinbase_default_instance_;
+
 inline constexpr NetworkDifficultyResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : difficulty_{::uint64_t{0u}},
@@ -211,13 +238,13 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr MetaData::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : best_block_(
+      : best_block_hash_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         accumulated_difficulty_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        height_of_longest_chain_{::uint64_t{0u}},
+        best_block_height_{::uint64_t{0u}},
         pruned_height_{::uint64_t{0u}},
         _cached_size_{0} {}
 
@@ -844,6 +871,27 @@ struct MinerDataDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MinerDataDefaultTypeInternal _MinerData_default_instance_;
 
+inline constexpr GetNewBlockTemplateWithCoinbasesRequest::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        coinbases_{},
+        algo_{nullptr},
+        max_weight_{::uint64_t{0u}} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR GetNewBlockTemplateWithCoinbasesRequest::GetNewBlockTemplateWithCoinbasesRequest(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal() {}
+  union {
+    GetNewBlockTemplateWithCoinbasesRequest _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetNewBlockTemplateWithCoinbasesRequestDefaultTypeInternal _GetNewBlockTemplateWithCoinbasesRequest_default_instance_;
+
 inline constexpr GetPeersResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -1092,6 +1140,26 @@ struct NewBlockTemplateResponseDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NewBlockTemplateResponseDefaultTypeInternal _NewBlockTemplateResponse_default_instance_;
 
+inline constexpr GetNewBlockWithCoinbasesRequest::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        coinbases_{},
+        new_template_{nullptr} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR GetNewBlockWithCoinbasesRequest::GetNewBlockWithCoinbasesRequest(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct GetNewBlockWithCoinbasesRequestDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR GetNewBlockWithCoinbasesRequestDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~GetNewBlockWithCoinbasesRequestDefaultTypeInternal() {}
+  union {
+    GetNewBlockWithCoinbasesRequest _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetNewBlockWithCoinbasesRequestDefaultTypeInternal _GetNewBlockWithCoinbasesRequest_default_instance_;
+
 inline constexpr GetNewBlockResult::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -1104,7 +1172,8 @@ inline constexpr GetNewBlockResult::Impl_::Impl_(
         tari_unique_id_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        block_{nullptr} {}
+        block_{nullptr},
+        miner_data_{nullptr} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR GetNewBlockResult::GetNewBlockResult(::_pbi::ConstantInitialized)
@@ -1159,7 +1228,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetBlocksResponseDefaultTypeInternal _GetBlocksResponse_default_instance_;
 }  // namespace rpc
 }  // namespace tari
-static ::_pb::Metadata file_level_metadata_base_5fnode_2eproto[52];
+static ::_pb::Metadata file_level_metadata_base_5fnode_2eproto[55];
 static const ::_pb::EnumDescriptor* file_level_enum_descriptors_base_5fnode_2eproto[6];
 static constexpr const ::_pb::ServiceDescriptor**
     file_level_service_descriptors_base_5fnode_2eproto = nullptr;
@@ -1319,6 +1388,45 @@ const ::uint32_t TableStruct_base_5fnode_2eproto::offsets[] PROTOBUF_SECTION_VAR
     PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockTemplateRequest, _impl_.max_weight_),
     0,
     ~0u,
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, _impl_._has_bits_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, _internal_metadata_),
+    ~0u,  // no _extensions_
+    ~0u,  // no _oneof_case_
+    ~0u,  // no _weak_field_map_
+    ~0u,  // no _inlined_string_donated_
+    ~0u,  // no _split_
+    ~0u,  // no sizeof(Split)
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, _impl_.algo_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, _impl_.max_weight_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, _impl_.coinbases_),
+    0,
+    ~0u,
+    ~0u,
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockWithCoinbasesRequest, _impl_._has_bits_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockWithCoinbasesRequest, _internal_metadata_),
+    ~0u,  // no _extensions_
+    ~0u,  // no _oneof_case_
+    ~0u,  // no _weak_field_map_
+    ~0u,  // no _inlined_string_donated_
+    ~0u,  // no _split_
+    ~0u,  // no sizeof(Split)
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockWithCoinbasesRequest, _impl_.new_template_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockWithCoinbasesRequest, _impl_.coinbases_),
+    0,
+    ~0u,
+    ~0u,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _internal_metadata_),
+    ~0u,  // no _extensions_
+    ~0u,  // no _oneof_case_
+    ~0u,  // no _weak_field_map_
+    ~0u,  // no _inlined_string_donated_
+    ~0u,  // no _split_
+    ~0u,  // no sizeof(Split)
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _impl_.address_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _impl_.value_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _impl_.stealth_payment_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _impl_.revealed_value_proof_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockCoinbase, _impl_.coinbase_extra_),
     ~0u,  // no _has_bits_
     PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _internal_metadata_),
     ~0u,  // no _extensions_
@@ -1470,8 +1578,8 @@ const ::uint32_t TableStruct_base_5fnode_2eproto::offsets[] PROTOBUF_SECTION_VAR
     ~0u,  // no _inlined_string_donated_
     ~0u,  // no _split_
     ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.height_of_longest_chain_),
-    PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.best_block_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.best_block_height_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.best_block_hash_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.pruned_height_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::MetaData, _impl_.accumulated_difficulty_),
     ~0u,  // no _has_bits_
@@ -1508,10 +1616,12 @@ const ::uint32_t TableStruct_base_5fnode_2eproto::offsets[] PROTOBUF_SECTION_VAR
     PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.block_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.merge_mining_hash_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.tari_unique_id_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockResult, _impl_.miner_data_),
     ~0u,
     0,
     ~0u,
     ~0u,
+    1,
     ~0u,  // no _has_bits_
     PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNewBlockBlobResult, _internal_metadata_),
     ~0u,  // no _extensions_
@@ -1773,47 +1883,50 @@ static const ::_pbi::MigrationSchema
         {114, 125, -1, sizeof(::tari::rpc::TipInfoResponse)},
         {128, 139, -1, sizeof(::tari::rpc::NewBlockTemplateResponse)},
         {142, 152, -1, sizeof(::tari::rpc::NewBlockTemplateRequest)},
-        {154, -1, -1, sizeof(::tari::rpc::NetworkDifficultyResponse)},
-        {169, -1, -1, sizeof(::tari::rpc::ValueAtHeightResponse)},
-        {179, -1, -1, sizeof(::tari::rpc::IntegerValue)},
-        {188, -1, -1, sizeof(::tari::rpc::StringValue)},
-        {197, -1, -1, sizeof(::tari::rpc::BlockGroupRequest)},
-        {209, -1, -1, sizeof(::tari::rpc::BlockGroupResponse)},
-        {219, -1, -1, sizeof(::tari::rpc::HeightRequest)},
-        {230, -1, -1, sizeof(::tari::rpc::BlockTimingResponse)},
-        {241, -1, -1, sizeof(::tari::rpc::GetHeaderByHashRequest)},
-        {250, 263, -1, sizeof(::tari::rpc::BlockHeaderResponse)},
-        {268, -1, -1, sizeof(::tari::rpc::ListHeadersRequest)},
-        {279, -1, -1, sizeof(::tari::rpc::GetBlocksRequest)},
-        {288, -1, -1, sizeof(::tari::rpc::GetBlocksResponse)},
-        {297, -1, -1, sizeof(::tari::rpc::MetaData)},
-        {309, -1, -1, sizeof(::tari::rpc::SyncInfoResponse)},
-        {320, -1, -1, sizeof(::tari::rpc::SyncProgressResponse)},
-        {331, 343, -1, sizeof(::tari::rpc::GetNewBlockResult)},
-        {347, -1, -1, sizeof(::tari::rpc::GetNewBlockBlobResult)},
-        {361, 373, -1, sizeof(::tari::rpc::MinerData)},
-        {377, -1, -1, sizeof(::tari::rpc::SearchKernelsRequest)},
-        {386, -1, -1, sizeof(::tari::rpc::SearchUtxosRequest)},
-        {395, -1, -1, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
-        {404, 413, -1, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
-        {414, 423, -1, sizeof(::tari::rpc::GetPeersResponse)},
-        {424, -1, -1, sizeof(::tari::rpc::GetPeersRequest)},
-        {432, 441, -1, sizeof(::tari::rpc::SubmitTransactionRequest)},
-        {442, -1, -1, sizeof(::tari::rpc::SubmitTransactionResponse)},
-        {451, -1, -1, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
-        {459, 468, -1, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
-        {469, 478, -1, sizeof(::tari::rpc::TransactionStateRequest)},
-        {479, -1, -1, sizeof(::tari::rpc::TransactionStateResponse)},
-        {488, -1, -1, sizeof(::tari::rpc::MempoolStatsResponse)},
-        {499, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
-        {508, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
-        {518, -1, -1, sizeof(::tari::rpc::GetShardKeyRequest)},
-        {528, -1, -1, sizeof(::tari::rpc::GetShardKeyResponse)},
-        {538, -1, -1, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
-        {548, 558, -1, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
-        {560, -1, -1, sizeof(::tari::rpc::BlockInfo)},
-        {571, -1, -1, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
-        {581, 591, -1, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
+        {154, 165, -1, sizeof(::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest)},
+        {168, 178, -1, sizeof(::tari::rpc::GetNewBlockWithCoinbasesRequest)},
+        {180, -1, -1, sizeof(::tari::rpc::NewBlockCoinbase)},
+        {193, -1, -1, sizeof(::tari::rpc::NetworkDifficultyResponse)},
+        {208, -1, -1, sizeof(::tari::rpc::ValueAtHeightResponse)},
+        {218, -1, -1, sizeof(::tari::rpc::IntegerValue)},
+        {227, -1, -1, sizeof(::tari::rpc::StringValue)},
+        {236, -1, -1, sizeof(::tari::rpc::BlockGroupRequest)},
+        {248, -1, -1, sizeof(::tari::rpc::BlockGroupResponse)},
+        {258, -1, -1, sizeof(::tari::rpc::HeightRequest)},
+        {269, -1, -1, sizeof(::tari::rpc::BlockTimingResponse)},
+        {280, -1, -1, sizeof(::tari::rpc::GetHeaderByHashRequest)},
+        {289, 302, -1, sizeof(::tari::rpc::BlockHeaderResponse)},
+        {307, -1, -1, sizeof(::tari::rpc::ListHeadersRequest)},
+        {318, -1, -1, sizeof(::tari::rpc::GetBlocksRequest)},
+        {327, -1, -1, sizeof(::tari::rpc::GetBlocksResponse)},
+        {336, -1, -1, sizeof(::tari::rpc::MetaData)},
+        {348, -1, -1, sizeof(::tari::rpc::SyncInfoResponse)},
+        {359, -1, -1, sizeof(::tari::rpc::SyncProgressResponse)},
+        {370, 383, -1, sizeof(::tari::rpc::GetNewBlockResult)},
+        {388, -1, -1, sizeof(::tari::rpc::GetNewBlockBlobResult)},
+        {402, 414, -1, sizeof(::tari::rpc::MinerData)},
+        {418, -1, -1, sizeof(::tari::rpc::SearchKernelsRequest)},
+        {427, -1, -1, sizeof(::tari::rpc::SearchUtxosRequest)},
+        {436, -1, -1, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
+        {445, 454, -1, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
+        {455, 464, -1, sizeof(::tari::rpc::GetPeersResponse)},
+        {465, -1, -1, sizeof(::tari::rpc::GetPeersRequest)},
+        {473, 482, -1, sizeof(::tari::rpc::SubmitTransactionRequest)},
+        {483, -1, -1, sizeof(::tari::rpc::SubmitTransactionResponse)},
+        {492, -1, -1, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
+        {500, 509, -1, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
+        {510, 519, -1, sizeof(::tari::rpc::TransactionStateRequest)},
+        {520, -1, -1, sizeof(::tari::rpc::TransactionStateResponse)},
+        {529, -1, -1, sizeof(::tari::rpc::MempoolStatsResponse)},
+        {540, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
+        {549, -1, -1, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
+        {559, -1, -1, sizeof(::tari::rpc::GetShardKeyRequest)},
+        {569, -1, -1, sizeof(::tari::rpc::GetShardKeyResponse)},
+        {579, -1, -1, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
+        {589, 599, -1, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
+        {601, -1, -1, sizeof(::tari::rpc::BlockInfo)},
+        {612, -1, -1, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
+        {622, 632, -1, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -1828,6 +1941,9 @@ static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_TipInfoResponse_default_instance_._instance,
     &::tari::rpc::_NewBlockTemplateResponse_default_instance_._instance,
     &::tari::rpc::_NewBlockTemplateRequest_default_instance_._instance,
+    &::tari::rpc::_GetNewBlockTemplateWithCoinbasesRequest_default_instance_._instance,
+    &::tari::rpc::_GetNewBlockWithCoinbasesRequest_default_instance_._instance,
+    &::tari::rpc::_NewBlockCoinbase_default_instance_._instance,
     &::tari::rpc::_NetworkDifficultyResponse_default_instance_._instance,
     &::tari::rpc::_ValueAtHeightResponse_default_instance_._instance,
     &::tari::rpc::_IntegerValue_default_instance_._instance,
@@ -1905,168 +2021,184 @@ const char descriptor_table_protodef_base_5fnode_2eproto[] PROTOBUF_SECTION_VARI
     "nc_achieved\030\003 \001(\010\022\'\n\nminer_data\030\004 \001(\0132\023."
     "tari.rpc.MinerData\"N\n\027NewBlockTemplateRe"
     "quest\022\037\n\004algo\030\001 \001(\0132\021.tari.rpc.PowAlgo\022\022"
-    "\n\nmax_weight\030\002 \001(\004\"\311\001\n\031NetworkDifficulty"
-    "Response\022\022\n\ndifficulty\030\001 \001(\004\022\033\n\023estimate"
-    "d_hash_rate\030\002 \001(\004\022\016\n\006height\030\003 \001(\004\022\021\n\ttim"
-    "estamp\030\004 \001(\004\022\020\n\010pow_algo\030\005 \001(\004\022!\n\031sha3x_"
-    "estimated_hash_rate\030\006 \001(\004\022#\n\033randomx_est"
-    "imated_hash_rate\030\007 \001(\004\"6\n\025ValueAtHeightR"
-    "esponse\022\r\n\005value\030\001 \001(\004\022\016\n\006height\030\002 \001(\004\"\035"
-    "\n\014IntegerValue\022\r\n\005value\030\001 \001(\004\"\034\n\013StringV"
-    "alue\022\r\n\005value\030\001 \001(\t\"v\n\021BlockGroupRequest"
-    "\022\020\n\010from_tip\030\001 \001(\004\022\024\n\014start_height\030\002 \001(\004"
-    "\022\022\n\nend_height\030\003 \001(\004\022%\n\tcalc_type\030\004 \001(\0162"
-    "\022.tari.rpc.CalcType\"J\n\022BlockGroupRespons"
-    "e\022\r\n\005value\030\001 \003(\001\022%\n\tcalc_type\030\002 \001(\0162\022.ta"
-    "ri.rpc.CalcType\"K\n\rHeightRequest\022\020\n\010from"
-    "_tip\030\001 \001(\004\022\024\n\014start_height\030\002 \001(\004\022\022\n\nend_"
-    "height\030\003 \001(\004\"<\n\023BlockTimingResponse\022\013\n\003m"
-    "ax\030\001 \001(\004\022\013\n\003min\030\002 \001(\004\022\013\n\003avg\030\003 \001(\001\"&\n\026Ge"
-    "tHeaderByHashRequest\022\014\n\004hash\030\001 \001(\014\"\221\001\n\023B"
-    "lockHeaderResponse\022%\n\006header\030\001 \001(\0132\025.tar"
-    "i.rpc.BlockHeader\022\025\n\rconfirmations\030\002 \001(\004"
-    "\022\016\n\006reward\030\003 \001(\004\022\022\n\ndifficulty\030\004 \001(\004\022\030\n\020"
-    "num_transactions\030\005 \001(\r\"b\n\022ListHeadersReq"
-    "uest\022\023\n\013from_height\030\001 \001(\004\022\023\n\013num_headers"
-    "\030\002 \001(\004\022\"\n\007sorting\030\003 \001(\0162\021.tari.rpc.Sorti"
-    "ng\"#\n\020GetBlocksRequest\022\017\n\007heights\030\001 \003(\004\""
-    ">\n\021GetBlocksResponse\022)\n\006blocks\030\001 \003(\0132\031.t"
-    "ari.rpc.HistoricalBlock\"v\n\010MetaData\022\037\n\027h"
-    "eight_of_longest_chain\030\001 \001(\004\022\022\n\nbest_blo"
-    "ck\030\002 \001(\014\022\025\n\rpruned_height\030\006 \001(\004\022\036\n\026accum"
-    "ulated_difficulty\030\005 \001(\014\"R\n\020SyncInfoRespo"
-    "nse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014local_height\030"
-    "\002 \001(\004\022\024\n\014peer_node_id\030\003 \003(\014\"d\n\024SyncProgr"
-    "essResponse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014local"
-    "_height\030\002 \001(\004\022\"\n\005state\030\003 \001(\0162\023.tari.rpc."
-    "SyncState\"z\n\021GetNewBlockResult\022\022\n\nblock_"
-    "hash\030\001 \001(\014\022\036\n\005block\030\002 \001(\0132\017.tari.rpc.Blo"
-    "ck\022\031\n\021merge_mining_hash\030\003 \001(\014\022\026\n\016tari_un"
-    "ique_id\030\004 \001(\014\"\223\001\n\025GetNewBlockBlobResult\022"
-    "\022\n\nblock_hash\030\001 \001(\014\022\016\n\006header\030\002 \001(\014\022\022\n\nb"
-    "lock_body\030\003 \001(\014\022\031\n\021merge_mining_hash\030\004 \001"
-    "(\014\022\017\n\007utxo_mr\030\005 \001(\014\022\026\n\016tari_unique_id\030\006 "
-    "\001(\014\"k\n\tMinerData\022\037\n\004algo\030\001 \001(\0132\021.tari.rp"
-    "c.PowAlgo\022\031\n\021target_difficulty\030\002 \001(\004\022\016\n\006"
-    "reward\030\003 \001(\004\022\022\n\ntotal_fees\030\005 \001(\004\"\?\n\024Sear"
-    "chKernelsRequest\022\'\n\nsignatures\030\001 \003(\0132\023.t"
-    "ari.rpc.Signature\")\n\022SearchUtxosRequest\022"
-    "\023\n\013commitments\030\001 \003(\014\"+\n\031FetchMatchingUtx"
-    "osRequest\022\016\n\006hashes\030\001 \003(\014\"I\n\032FetchMatchi"
-    "ngUtxosResponse\022+\n\006output\030\001 \001(\0132\033.tari.r"
-    "pc.TransactionOutput\"0\n\020GetPeersResponse"
-    "\022\034\n\004peer\030\001 \001(\0132\016.tari.rpc.Peer\"\021\n\017GetPee"
-    "rsRequest\"F\n\030SubmitTransactionRequest\022*\n"
-    "\013transaction\030\001 \001(\0132\025.tari.rpc.Transactio"
-    "n\"N\n\031SubmitTransactionResponse\0221\n\006result"
-    "\030\001 \001(\0162!.tari.rpc.SubmitTransactionResul"
-    "t\"\037\n\035GetMempoolTransactionsRequest\"L\n\036Ge"
-    "tMempoolTransactionsResponse\022*\n\013transact"
-    "ion\030\001 \001(\0132\025.tari.rpc.Transaction\"B\n\027Tran"
-    "sactionStateRequest\022\'\n\nexcess_sig\030\001 \001(\0132"
-    "\023.tari.rpc.Signature\"I\n\030TransactionState"
-    "Response\022-\n\006result\030\001 \001(\0162\035.tari.rpc.Tran"
-    "sactionLocation\"^\n\024MempoolStatsResponse\022"
-    "\027\n\017unconfirmed_txs\030\002 \001(\004\022\021\n\treorg_txs\030\003 "
-    "\001(\004\022\032\n\022unconfirmed_weight\030\004 \001(\004\"0\n\036GetAc"
-    "tiveValidatorNodesRequest\022\016\n\006height\030\001 \001("
-    "\004\"H\n\037GetActiveValidatorNodesResponse\022\021\n\t"
-    "shard_key\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014\"8\n\022G"
-    "etShardKeyRequest\022\016\n\006height\030\001 \001(\004\022\022\n\npub"
-    "lic_key\030\002 \001(\014\"7\n\023GetShardKeyResponse\022\021\n\t"
-    "shard_key\030\001 \001(\014\022\r\n\005found\030\002 \001(\010\"D\n\037GetTem"
-    "plateRegistrationsRequest\022\022\n\nstart_hash\030"
-    "\001 \001(\014\022\r\n\005count\030\002 \001(\004\"j\n\037GetTemplateRegis"
-    "trationResponse\022\021\n\tutxo_hash\030\001 \001(\014\0224\n\014re"
-    "gistration\030\002 \001(\0132\036.tari.rpc.TemplateRegi"
-    "stration\"B\n\tBlockInfo\022\016\n\006height\030\001 \001(\004\022\014\n"
-    "\004hash\030\002 \001(\014\022\027\n\017next_block_hash\030\003 \001(\014\"=\n\030"
-    "GetSideChainUtxosRequest\022\022\n\nstart_hash\030\001"
-    " \001(\014\022\r\n\005count\030\002 \001(\004\"r\n\031GetSideChainUtxos"
-    "Response\022\'\n\nblock_info\030\001 \001(\0132\023.tari.rpc."
-    "BlockInfo\022,\n\007outputs\030\002 \003(\0132\033.tari.rpc.Tr"
-    "ansactionOutput*\200\001\n\rBaseNodeState\022\014\n\010STA"
-    "RT_UP\020\000\022\017\n\013HEADER_SYNC\020\001\022\020\n\014HORIZON_SYNC"
-    "\020\002\022\016\n\nCONNECTING\020\003\022\016\n\nBLOCK_SYNC\020\004\022\r\n\tLI"
-    "STENING\020\005\022\017\n\013SYNC_FAILED\020\006*<\n\010CalcType\022\010"
-    "\n\004MEAN\020\000\022\n\n\006MEDIAN\020\001\022\014\n\010QUANTILE\020\002\022\014\n\010QU"
-    "ARTILE\020\003*,\n\007Sorting\022\020\n\014SORTING_DESC\020\000\022\017\n"
-    "\013SORTING_ASC\020\001*b\n\tSyncState\022\013\n\007STARTUP\020\000"
-    "\022\023\n\017HEADER_STARTING\020\001\022\n\n\006HEADER\020\002\022\022\n\016BLO"
-    "CK_STARTING\020\003\022\t\n\005BLOCK\020\004\022\010\n\004DONE\020\005*t\n\027Su"
-    "bmitTransactionResult\022\010\n\004NONE\020\000\022\014\n\010ACCEP"
-    "TED\020\001\022 \n\034NOT_PROCESSABLE_AT_THIS_TIME\020\002\022"
-    "\021\n\rALREADY_MINED\020\003\022\014\n\010REJECTED\020\004*J\n\023Tran"
-    "sactionLocation\022\013\n\007UNKNOWN\020\000\022\013\n\007MEMPOOL\020"
-    "\001\022\t\n\005MINED\020\002\022\016\n\nNOT_STORED\020\0032\377\024\n\010BaseNod"
-    "e\022L\n\013ListHeaders\022\034.tari.rpc.ListHeadersR"
-    "equest\032\035.tari.rpc.BlockHeaderResponse0\001\022"
-    "R\n\017GetHeaderByHash\022 .tari.rpc.GetHeaderB"
-    "yHashRequest\032\035.tari.rpc.BlockHeaderRespo"
-    "nse\022D\n\tGetBlocks\022\032.tari.rpc.GetBlocksReq"
-    "uest\032\031.tari.rpc.HistoricalBlock0\001\022H\n\016Get"
-    "BlockTiming\022\027.tari.rpc.HeightRequest\032\035.t"
-    "ari.rpc.BlockTimingResponse\022C\n\014GetConsta"
-    "nts\022\025.tari.rpc.BlockHeight\032\034.tari.rpc.Co"
-    "nsensusConstants\022I\n\014GetBlockSize\022\033.tari."
-    "rpc.BlockGroupRequest\032\034.tari.rpc.BlockGr"
-    "oupResponse\022I\n\014GetBlockFees\022\033.tari.rpc.B"
-    "lockGroupRequest\032\034.tari.rpc.BlockGroupRe"
-    "sponse\0224\n\nGetVersion\022\017.tari.rpc.Empty\032\025."
-    "tari.rpc.StringValue\022<\n\017CheckForUpdates\022"
-    "\017.tari.rpc.Empty\032\030.tari.rpc.SoftwareUpda"
-    "te\022W\n\026GetTokensInCirculation\022\032.tari.rpc."
-    "GetBlocksRequest\032\037.tari.rpc.ValueAtHeigh"
-    "tResponse0\001\022V\n\024GetNetworkDifficulty\022\027.ta"
-    "ri.rpc.HeightRequest\032#.tari.rpc.NetworkD"
-    "ifficultyResponse0\001\022\\\n\023GetNewBlockTempla"
-    "te\022!.tari.rpc.NewBlockTemplateRequest\032\"."
-    "tari.rpc.NewBlockTemplateResponse\022F\n\013Get"
-    "NewBlock\022\032.tari.rpc.NewBlockTemplate\032\033.t"
-    "ari.rpc.GetNewBlockResult\022N\n\017GetNewBlock"
-    "Blob\022\032.tari.rpc.NewBlockTemplate\032\037.tari."
-    "rpc.GetNewBlockBlobResult\022=\n\013SubmitBlock"
-    "\022\017.tari.rpc.Block\032\035.tari.rpc.SubmitBlock"
-    "Response\022L\n\017SubmitBlockBlob\022\032.tari.rpc.B"
-    "lockBlobRequest\032\035.tari.rpc.SubmitBlockRe"
-    "sponse\022\\\n\021SubmitTransaction\022\".tari.rpc.S"
-    "ubmitTransactionRequest\032#.tari.rpc.Submi"
-    "tTransactionResponse\022:\n\013GetSyncInfo\022\017.ta"
-    "ri.rpc.Empty\032\032.tari.rpc.SyncInfoResponse"
-    "\022B\n\017GetSyncProgress\022\017.tari.rpc.Empty\032\036.t"
-    "ari.rpc.SyncProgressResponse\0228\n\nGetTipIn"
-    "fo\022\017.tari.rpc.Empty\032\031.tari.rpc.TipInfoRe"
-    "sponse\022L\n\rSearchKernels\022\036.tari.rpc.Searc"
-    "hKernelsRequest\032\031.tari.rpc.HistoricalBlo"
-    "ck0\001\022H\n\013SearchUtxos\022\034.tari.rpc.SearchUtx"
-    "osRequest\032\031.tari.rpc.HistoricalBlock0\001\022a"
-    "\n\022FetchMatchingUtxos\022#.tari.rpc.FetchMat"
-    "chingUtxosRequest\032$.tari.rpc.FetchMatchi"
-    "ngUtxosResponse0\001\022C\n\010GetPeers\022\031.tari.rpc"
-    ".GetPeersRequest\032\032.tari.rpc.GetPeersResp"
-    "onse0\001\022m\n\026GetMempoolTransactions\022\'.tari."
-    "rpc.GetMempoolTransactionsRequest\032(.tari"
-    ".rpc.GetMempoolTransactionsResponse0\001\022Y\n"
-    "\020TransactionState\022!.tari.rpc.Transaction"
-    "StateRequest\032\".tari.rpc.TransactionState"
-    "Response\0223\n\010Identify\022\017.tari.rpc.Empty\032\026."
-    "tari.rpc.NodeIdentity\022D\n\020GetNetworkStatu"
-    "s\022\017.tari.rpc.Empty\032\037.tari.rpc.NetworkSta"
-    "tusResponse\022K\n\022ListConnectedPeers\022\017.tari"
-    ".rpc.Empty\032$.tari.rpc.ListConnectedPeers"
-    "Response\022B\n\017GetMempoolStats\022\017.tari.rpc.E"
-    "mpty\032\036.tari.rpc.MempoolStatsResponse\022p\n\027"
-    "GetActiveValidatorNodes\022(.tari.rpc.GetAc"
-    "tiveValidatorNodesRequest\032).tari.rpc.Get"
-    "ActiveValidatorNodesResponse0\001\022J\n\013GetSha"
-    "rdKey\022\034.tari.rpc.GetShardKeyRequest\032\035.ta"
-    "ri.rpc.GetShardKeyResponse\022r\n\030GetTemplat"
-    "eRegistrations\022).tari.rpc.GetTemplateReg"
-    "istrationsRequest\032).tari.rpc.GetTemplate"
-    "RegistrationResponse0\001\022^\n\021GetSideChainUt"
-    "xos\022\".tari.rpc.GetSideChainUtxosRequest\032"
-    "#.tari.rpc.GetSideChainUtxosResponse0\001b\006"
-    "proto3"
+    "\n\nmax_weight\030\002 \001(\004\"\215\001\n\'GetNewBlockTempla"
+    "teWithCoinbasesRequest\022\037\n\004algo\030\001 \001(\0132\021.t"
+    "ari.rpc.PowAlgo\022\022\n\nmax_weight\030\002 \001(\004\022-\n\tc"
+    "oinbases\030\003 \003(\0132\032.tari.rpc.NewBlockCoinba"
+    "se\"\202\001\n\037GetNewBlockWithCoinbasesRequest\0220"
+    "\n\014new_template\030\001 \001(\0132\032.tari.rpc.NewBlock"
+    "Template\022-\n\tcoinbases\030\002 \003(\0132\032.tari.rpc.N"
+    "ewBlockCoinbase\"\201\001\n\020NewBlockCoinbase\022\017\n\007"
+    "address\030\001 \001(\t\022\r\n\005value\030\002 \001(\004\022\027\n\017stealth_"
+    "payment\030\003 \001(\010\022\034\n\024revealed_value_proof\030\004 "
+    "\001(\010\022\026\n\016coinbase_extra\030\005 \001(\014\"\311\001\n\031NetworkD"
+    "ifficultyResponse\022\022\n\ndifficulty\030\001 \001(\004\022\033\n"
+    "\023estimated_hash_rate\030\002 \001(\004\022\016\n\006height\030\003 \001"
+    "(\004\022\021\n\ttimestamp\030\004 \001(\004\022\020\n\010pow_algo\030\005 \001(\004\022"
+    "!\n\031sha3x_estimated_hash_rate\030\006 \001(\004\022#\n\033ra"
+    "ndomx_estimated_hash_rate\030\007 \001(\004\"6\n\025Value"
+    "AtHeightResponse\022\r\n\005value\030\001 \001(\004\022\016\n\006heigh"
+    "t\030\002 \001(\004\"\035\n\014IntegerValue\022\r\n\005value\030\001 \001(\004\"\034"
+    "\n\013StringValue\022\r\n\005value\030\001 \001(\t\"v\n\021BlockGro"
+    "upRequest\022\020\n\010from_tip\030\001 \001(\004\022\024\n\014start_hei"
+    "ght\030\002 \001(\004\022\022\n\nend_height\030\003 \001(\004\022%\n\tcalc_ty"
+    "pe\030\004 \001(\0162\022.tari.rpc.CalcType\"J\n\022BlockGro"
+    "upResponse\022\r\n\005value\030\001 \003(\001\022%\n\tcalc_type\030\002"
+    " \001(\0162\022.tari.rpc.CalcType\"K\n\rHeightReques"
+    "t\022\020\n\010from_tip\030\001 \001(\004\022\024\n\014start_height\030\002 \001("
+    "\004\022\022\n\nend_height\030\003 \001(\004\"<\n\023BlockTimingResp"
+    "onse\022\013\n\003max\030\001 \001(\004\022\013\n\003min\030\002 \001(\004\022\013\n\003avg\030\003 "
+    "\001(\001\"&\n\026GetHeaderByHashRequest\022\014\n\004hash\030\001 "
+    "\001(\014\"\221\001\n\023BlockHeaderResponse\022%\n\006header\030\001 "
+    "\001(\0132\025.tari.rpc.BlockHeader\022\025\n\rconfirmati"
+    "ons\030\002 \001(\004\022\016\n\006reward\030\003 \001(\004\022\022\n\ndifficulty\030"
+    "\004 \001(\004\022\030\n\020num_transactions\030\005 \001(\r\"b\n\022ListH"
+    "eadersRequest\022\023\n\013from_height\030\001 \001(\004\022\023\n\013nu"
+    "m_headers\030\002 \001(\004\022\"\n\007sorting\030\003 \001(\0162\021.tari."
+    "rpc.Sorting\"#\n\020GetBlocksRequest\022\017\n\007heigh"
+    "ts\030\001 \003(\004\">\n\021GetBlocksResponse\022)\n\006blocks\030"
+    "\001 \003(\0132\031.tari.rpc.HistoricalBlock\"u\n\010Meta"
+    "Data\022\031\n\021best_block_height\030\001 \001(\004\022\027\n\017best_"
+    "block_hash\030\002 \001(\014\022\025\n\rpruned_height\030\006 \001(\004\022"
+    "\036\n\026accumulated_difficulty\030\005 \001(\014\"R\n\020SyncI"
+    "nfoResponse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014local"
+    "_height\030\002 \001(\004\022\024\n\014peer_node_id\030\003 \003(\014\"d\n\024S"
+    "yncProgressResponse\022\022\n\ntip_height\030\001 \001(\004\022"
+    "\024\n\014local_height\030\002 \001(\004\022\"\n\005state\030\003 \001(\0162\023.t"
+    "ari.rpc.SyncState\"\243\001\n\021GetNewBlockResult\022"
+    "\022\n\nblock_hash\030\001 \001(\014\022\036\n\005block\030\002 \001(\0132\017.tar"
+    "i.rpc.Block\022\031\n\021merge_mining_hash\030\003 \001(\014\022\026"
+    "\n\016tari_unique_id\030\004 \001(\014\022\'\n\nminer_data\030\005 \001"
+    "(\0132\023.tari.rpc.MinerData\"\223\001\n\025GetNewBlockB"
+    "lobResult\022\022\n\nblock_hash\030\001 \001(\014\022\016\n\006header\030"
+    "\002 \001(\014\022\022\n\nblock_body\030\003 \001(\014\022\031\n\021merge_minin"
+    "g_hash\030\004 \001(\014\022\017\n\007utxo_mr\030\005 \001(\014\022\026\n\016tari_un"
+    "ique_id\030\006 \001(\014\"k\n\tMinerData\022\037\n\004algo\030\001 \001(\013"
+    "2\021.tari.rpc.PowAlgo\022\031\n\021target_difficulty"
+    "\030\002 \001(\004\022\016\n\006reward\030\003 \001(\004\022\022\n\ntotal_fees\030\005 \001"
+    "(\004\"\?\n\024SearchKernelsRequest\022\'\n\nsignatures"
+    "\030\001 \003(\0132\023.tari.rpc.Signature\")\n\022SearchUtx"
+    "osRequest\022\023\n\013commitments\030\001 \003(\014\"+\n\031FetchM"
+    "atchingUtxosRequest\022\016\n\006hashes\030\001 \003(\014\"I\n\032F"
+    "etchMatchingUtxosResponse\022+\n\006output\030\001 \001("
+    "\0132\033.tari.rpc.TransactionOutput\"0\n\020GetPee"
+    "rsResponse\022\034\n\004peer\030\001 \001(\0132\016.tari.rpc.Peer"
+    "\"\021\n\017GetPeersRequest\"F\n\030SubmitTransaction"
+    "Request\022*\n\013transaction\030\001 \001(\0132\025.tari.rpc."
+    "Transaction\"N\n\031SubmitTransactionResponse"
+    "\0221\n\006result\030\001 \001(\0162!.tari.rpc.SubmitTransa"
+    "ctionResult\"\037\n\035GetMempoolTransactionsReq"
+    "uest\"L\n\036GetMempoolTransactionsResponse\022*"
+    "\n\013transaction\030\001 \001(\0132\025.tari.rpc.Transacti"
+    "on\"B\n\027TransactionStateRequest\022\'\n\nexcess_"
+    "sig\030\001 \001(\0132\023.tari.rpc.Signature\"I\n\030Transa"
+    "ctionStateResponse\022-\n\006result\030\001 \001(\0162\035.tar"
+    "i.rpc.TransactionLocation\"^\n\024MempoolStat"
+    "sResponse\022\027\n\017unconfirmed_txs\030\002 \001(\004\022\021\n\tre"
+    "org_txs\030\003 \001(\004\022\032\n\022unconfirmed_weight\030\004 \001("
+    "\004\"0\n\036GetActiveValidatorNodesRequest\022\016\n\006h"
+    "eight\030\001 \001(\004\"H\n\037GetActiveValidatorNodesRe"
+    "sponse\022\021\n\tshard_key\030\001 \001(\014\022\022\n\npublic_key\030"
+    "\002 \001(\014\"8\n\022GetShardKeyRequest\022\016\n\006height\030\001 "
+    "\001(\004\022\022\n\npublic_key\030\002 \001(\014\"7\n\023GetShardKeyRe"
+    "sponse\022\021\n\tshard_key\030\001 \001(\014\022\r\n\005found\030\002 \001(\010"
+    "\"D\n\037GetTemplateRegistrationsRequest\022\022\n\ns"
+    "tart_hash\030\001 \001(\014\022\r\n\005count\030\002 \001(\004\"j\n\037GetTem"
+    "plateRegistrationResponse\022\021\n\tutxo_hash\030\001"
+    " \001(\014\0224\n\014registration\030\002 \001(\0132\036.tari.rpc.Te"
+    "mplateRegistration\"B\n\tBlockInfo\022\016\n\006heigh"
+    "t\030\001 \001(\004\022\014\n\004hash\030\002 \001(\014\022\027\n\017next_block_hash"
+    "\030\003 \001(\014\"=\n\030GetSideChainUtxosRequest\022\022\n\nst"
+    "art_hash\030\001 \001(\014\022\r\n\005count\030\002 \001(\004\"r\n\031GetSide"
+    "ChainUtxosResponse\022\'\n\nblock_info\030\001 \001(\0132\023"
+    ".tari.rpc.BlockInfo\022,\n\007outputs\030\002 \003(\0132\033.t"
+    "ari.rpc.TransactionOutput*\200\001\n\rBaseNodeSt"
+    "ate\022\014\n\010START_UP\020\000\022\017\n\013HEADER_SYNC\020\001\022\020\n\014HO"
+    "RIZON_SYNC\020\002\022\016\n\nCONNECTING\020\003\022\016\n\nBLOCK_SY"
+    "NC\020\004\022\r\n\tLISTENING\020\005\022\017\n\013SYNC_FAILED\020\006*<\n\010"
+    "CalcType\022\010\n\004MEAN\020\000\022\n\n\006MEDIAN\020\001\022\014\n\010QUANTI"
+    "LE\020\002\022\014\n\010QUARTILE\020\003*,\n\007Sorting\022\020\n\014SORTING"
+    "_DESC\020\000\022\017\n\013SORTING_ASC\020\001*b\n\tSyncState\022\013\n"
+    "\007STARTUP\020\000\022\023\n\017HEADER_STARTING\020\001\022\n\n\006HEADE"
+    "R\020\002\022\022\n\016BLOCK_STARTING\020\003\022\t\n\005BLOCK\020\004\022\010\n\004DO"
+    "NE\020\005*t\n\027SubmitTransactionResult\022\010\n\004NONE\020"
+    "\000\022\014\n\010ACCEPTED\020\001\022 \n\034NOT_PROCESSABLE_AT_TH"
+    "IS_TIME\020\002\022\021\n\rALREADY_MINED\020\003\022\014\n\010REJECTED"
+    "\020\004*J\n\023TransactionLocation\022\013\n\007UNKNOWN\020\000\022\013"
+    "\n\007MEMPOOL\020\001\022\t\n\005MINED\020\002\022\016\n\nNOT_STORED\020\0032\327"
+    "\026\n\010BaseNode\022L\n\013ListHeaders\022\034.tari.rpc.Li"
+    "stHeadersRequest\032\035.tari.rpc.BlockHeaderR"
+    "esponse0\001\022R\n\017GetHeaderByHash\022 .tari.rpc."
+    "GetHeaderByHashRequest\032\035.tari.rpc.BlockH"
+    "eaderResponse\022D\n\tGetBlocks\022\032.tari.rpc.Ge"
+    "tBlocksRequest\032\031.tari.rpc.HistoricalBloc"
+    "k0\001\022H\n\016GetBlockTiming\022\027.tari.rpc.HeightR"
+    "equest\032\035.tari.rpc.BlockTimingResponse\022C\n"
+    "\014GetConstants\022\025.tari.rpc.BlockHeight\032\034.t"
+    "ari.rpc.ConsensusConstants\022I\n\014GetBlockSi"
+    "ze\022\033.tari.rpc.BlockGroupRequest\032\034.tari.r"
+    "pc.BlockGroupResponse\022I\n\014GetBlockFees\022\033."
+    "tari.rpc.BlockGroupRequest\032\034.tari.rpc.Bl"
+    "ockGroupResponse\0224\n\nGetVersion\022\017.tari.rp"
+    "c.Empty\032\025.tari.rpc.StringValue\022<\n\017CheckF"
+    "orUpdates\022\017.tari.rpc.Empty\032\030.tari.rpc.So"
+    "ftwareUpdate\022W\n\026GetTokensInCirculation\022\032"
+    ".tari.rpc.GetBlocksRequest\032\037.tari.rpc.Va"
+    "lueAtHeightResponse0\001\022V\n\024GetNetworkDiffi"
+    "culty\022\027.tari.rpc.HeightRequest\032#.tari.rp"
+    "c.NetworkDifficultyResponse0\001\022\\\n\023GetNewB"
+    "lockTemplate\022!.tari.rpc.NewBlockTemplate"
+    "Request\032\".tari.rpc.NewBlockTemplateRespo"
+    "nse\022F\n\013GetNewBlock\022\032.tari.rpc.NewBlockTe"
+    "mplate\032\033.tari.rpc.GetNewBlockResult\022b\n\030G"
+    "etNewBlockWithCoinbases\022).tari.rpc.GetNe"
+    "wBlockWithCoinbasesRequest\032\033.tari.rpc.Ge"
+    "tNewBlockResult\022r\n GetNewBlockTemplateWi"
+    "thCoinbases\0221.tari.rpc.GetNewBlockTempla"
+    "teWithCoinbasesRequest\032\033.tari.rpc.GetNew"
+    "BlockResult\022N\n\017GetNewBlockBlob\022\032.tari.rp"
+    "c.NewBlockTemplate\032\037.tari.rpc.GetNewBloc"
+    "kBlobResult\022=\n\013SubmitBlock\022\017.tari.rpc.Bl"
+    "ock\032\035.tari.rpc.SubmitBlockResponse\022L\n\017Su"
+    "bmitBlockBlob\022\032.tari.rpc.BlockBlobReques"
+    "t\032\035.tari.rpc.SubmitBlockResponse\022\\\n\021Subm"
+    "itTransaction\022\".tari.rpc.SubmitTransacti"
+    "onRequest\032#.tari.rpc.SubmitTransactionRe"
+    "sponse\022:\n\013GetSyncInfo\022\017.tari.rpc.Empty\032\032"
+    ".tari.rpc.SyncInfoResponse\022B\n\017GetSyncPro"
+    "gress\022\017.tari.rpc.Empty\032\036.tari.rpc.SyncPr"
+    "ogressResponse\0228\n\nGetTipInfo\022\017.tari.rpc."
+    "Empty\032\031.tari.rpc.TipInfoResponse\022L\n\rSear"
+    "chKernels\022\036.tari.rpc.SearchKernelsReques"
+    "t\032\031.tari.rpc.HistoricalBlock0\001\022H\n\013Search"
+    "Utxos\022\034.tari.rpc.SearchUtxosRequest\032\031.ta"
+    "ri.rpc.HistoricalBlock0\001\022a\n\022FetchMatchin"
+    "gUtxos\022#.tari.rpc.FetchMatchingUtxosRequ"
+    "est\032$.tari.rpc.FetchMatchingUtxosRespons"
+    "e0\001\022C\n\010GetPeers\022\031.tari.rpc.GetPeersReque"
+    "st\032\032.tari.rpc.GetPeersResponse0\001\022m\n\026GetM"
+    "empoolTransactions\022\'.tari.rpc.GetMempool"
+    "TransactionsRequest\032(.tari.rpc.GetMempoo"
+    "lTransactionsResponse0\001\022Y\n\020TransactionSt"
+    "ate\022!.tari.rpc.TransactionStateRequest\032\""
+    ".tari.rpc.TransactionStateResponse\0223\n\010Id"
+    "entify\022\017.tari.rpc.Empty\032\026.tari.rpc.NodeI"
+    "dentity\022D\n\020GetNetworkStatus\022\017.tari.rpc.E"
+    "mpty\032\037.tari.rpc.NetworkStatusResponse\022K\n"
+    "\022ListConnectedPeers\022\017.tari.rpc.Empty\032$.t"
+    "ari.rpc.ListConnectedPeersResponse\022B\n\017Ge"
+    "tMempoolStats\022\017.tari.rpc.Empty\032\036.tari.rp"
+    "c.MempoolStatsResponse\022p\n\027GetActiveValid"
+    "atorNodes\022(.tari.rpc.GetActiveValidatorN"
+    "odesRequest\032).tari.rpc.GetActiveValidato"
+    "rNodesResponse0\001\022J\n\013GetShardKey\022\034.tari.r"
+    "pc.GetShardKeyRequest\032\035.tari.rpc.GetShar"
+    "dKeyResponse\022r\n\030GetTemplateRegistrations"
+    "\022).tari.rpc.GetTemplateRegistrationsRequ"
+    "est\032).tari.rpc.GetTemplateRegistrationRe"
+    "sponse0\001\022^\n\021GetSideChainUtxos\022\".tari.rpc"
+    ".GetSideChainUtxosRequest\032#.tari.rpc.Get"
+    "SideChainUtxosResponse0\001b\006proto3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_base_5fnode_2eproto_deps[5] =
     {
@@ -2080,13 +2212,13 @@ static ::absl::once_flag descriptor_table_base_5fnode_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_base_5fnode_2eproto = {
     false,
     false,
-    7806,
+    8472,
     descriptor_table_protodef_base_5fnode_2eproto,
     "base_node.proto",
     &descriptor_table_base_5fnode_2eproto_once,
     descriptor_table_base_5fnode_2eproto_deps,
     5,
-    52,
+    55,
     schemas,
     file_default_instances,
     TableStruct_base_5fnode_2eproto::offsets,
@@ -5120,6 +5252,824 @@ void NewBlockTemplateRequest::InternalSwap(NewBlockTemplateRequest* PROTOBUF_RES
 }
 // ===================================================================
 
+class GetNewBlockTemplateWithCoinbasesRequest::_Internal {
+ public:
+  using HasBits = decltype(std::declval<GetNewBlockTemplateWithCoinbasesRequest>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_._has_bits_);
+  static const ::tari::rpc::PowAlgo& algo(const GetNewBlockTemplateWithCoinbasesRequest* msg);
+  static void set_has_algo(HasBits* has_bits) {
+    (*has_bits)[0] |= 1u;
+  }
+};
+
+const ::tari::rpc::PowAlgo& GetNewBlockTemplateWithCoinbasesRequest::_Internal::algo(const GetNewBlockTemplateWithCoinbasesRequest* msg) {
+  return *msg->_impl_.algo_;
+}
+void GetNewBlockTemplateWithCoinbasesRequest::clear_algo() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.algo_ != nullptr) _impl_.algo_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+GetNewBlockTemplateWithCoinbasesRequest::GetNewBlockTemplateWithCoinbasesRequest(::google::protobuf::Arena* arena)
+    : ::google::protobuf::Message(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+}
+inline PROTOBUF_NDEBUG_INLINE GetNewBlockTemplateWithCoinbasesRequest::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from)
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        coinbases_{visibility, arena, from.coinbases_} {}
+
+GetNewBlockTemplateWithCoinbasesRequest::GetNewBlockTemplateWithCoinbasesRequest(
+    ::google::protobuf::Arena* arena,
+    const GetNewBlockTemplateWithCoinbasesRequest& from)
+    : ::google::protobuf::Message(arena) {
+  GetNewBlockTemplateWithCoinbasesRequest* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.algo_ = (cached_has_bits & 0x00000001u)
+                ? CreateMaybeMessage<::tari::rpc::PowAlgo>(arena, *from._impl_.algo_)
+                : nullptr;
+  _impl_.max_weight_ = from._impl_.max_weight_;
+
+  // @@protoc_insertion_point(copy_constructor:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+}
+inline PROTOBUF_NDEBUG_INLINE GetNewBlockTemplateWithCoinbasesRequest::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : _cached_size_{0},
+        coinbases_{visibility, arena} {}
+
+inline void GetNewBlockTemplateWithCoinbasesRequest::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  ::memset(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, algo_),
+           0,
+           offsetof(Impl_, max_weight_) -
+               offsetof(Impl_, algo_) +
+               sizeof(Impl_::max_weight_));
+}
+GetNewBlockTemplateWithCoinbasesRequest::~GetNewBlockTemplateWithCoinbasesRequest() {
+  // @@protoc_insertion_point(destructor:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  SharedDtor();
+}
+inline void GetNewBlockTemplateWithCoinbasesRequest::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  delete _impl_.algo_;
+  _impl_.~Impl_();
+}
+
+PROTOBUF_NOINLINE void GetNewBlockTemplateWithCoinbasesRequest::Clear() {
+// @@protoc_insertion_point(message_clear_start:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.coinbases_.Clear();
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    ABSL_DCHECK(_impl_.algo_ != nullptr);
+    _impl_.algo_->Clear();
+  }
+  _impl_.max_weight_ = ::uint64_t{0u};
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+const char* GetNewBlockTemplateWithCoinbasesRequest::_InternalParse(
+    const char* ptr, ::_pbi::ParseContext* ctx) {
+  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+  return ptr;
+}
+
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<2, 3, 2, 0, 2> GetNewBlockTemplateWithCoinbasesRequest::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_._has_bits_),
+    0, // no _extensions_
+    3, 24,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967288,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    3,  // num_field_entries
+    2,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
+    &_GetNewBlockTemplateWithCoinbasesRequest_default_instance_._instance,
+    ::_pbi::TcParser::GenericFallback,  // fallback
+  }, {{
+    {::_pbi::TcParser::MiniParse, {}},
+    // .tari.rpc.PowAlgo algo = 1;
+    {::_pbi::TcParser::FastMtS1,
+     {10, 0, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.algo_)}},
+    // uint64 max_weight = 2;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNewBlockTemplateWithCoinbasesRequest, _impl_.max_weight_), 63>(),
+     {16, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.max_weight_)}},
+    // repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+    {::_pbi::TcParser::FastMtR1,
+     {26, 63, 1, PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.coinbases_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // .tari.rpc.PowAlgo algo = 1;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.algo_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // uint64 max_weight = 2;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.max_weight_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.coinbases_), -1, 1,
+    (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+  }}, {{
+    {::_pbi::TcParser::GetTable<::tari::rpc::PowAlgo>()},
+    {::_pbi::TcParser::GetTable<::tari::rpc::NewBlockCoinbase>()},
+  }}, {{
+  }},
+};
+
+::uint8_t* GetNewBlockTemplateWithCoinbasesRequest::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = _impl_._has_bits_[0];
+  // .tari.rpc.PowAlgo algo = 1;
+  if (cached_has_bits & 0x00000001u) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        1, _Internal::algo(this),
+        _Internal::algo(this).GetCachedSize(), target, stream);
+  }
+
+  // uint64 max_weight = 2;
+  if (this->_internal_max_weight() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        2, this->_internal_max_weight(), target);
+  }
+
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_coinbases_size()); i < n; i++) {
+    const auto& repfield = this->_internal_coinbases().Get(i);
+    target = ::google::protobuf::internal::WireFormatLite::
+        InternalWriteMessage(3, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  return target;
+}
+
+::size_t GetNewBlockTemplateWithCoinbasesRequest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 3;
+  total_size += 1UL * this->_internal_coinbases_size();
+  for (const auto& msg : this->_internal_coinbases()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+  }
+  // .tari.rpc.PowAlgo algo = 1;
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    total_size +=
+        1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.algo_);
+  }
+
+  // uint64 max_weight = 2;
+  if (this->_internal_max_weight() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+        this->_internal_max_weight());
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::google::protobuf::Message::ClassData GetNewBlockTemplateWithCoinbasesRequest::_class_data_ = {
+    GetNewBlockTemplateWithCoinbasesRequest::MergeImpl,
+    nullptr,  // OnDemandRegisterArenaDtor
+};
+const ::google::protobuf::Message::ClassData* GetNewBlockTemplateWithCoinbasesRequest::GetClassData() const {
+  return &_class_data_;
+}
+
+void GetNewBlockTemplateWithCoinbasesRequest::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
+  auto* const _this = static_cast<GetNewBlockTemplateWithCoinbasesRequest*>(&to_msg);
+  auto& from = static_cast<const GetNewBlockTemplateWithCoinbasesRequest&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_internal_mutable_coinbases()->MergeFrom(
+      from._internal_coinbases());
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_internal_mutable_algo()->::tari::rpc::PowAlgo::MergeFrom(
+        from._internal_algo());
+  }
+  if (from._internal_max_weight() != 0) {
+    _this->_internal_set_max_weight(from._internal_max_weight());
+  }
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void GetNewBlockTemplateWithCoinbasesRequest::CopyFrom(const GetNewBlockTemplateWithCoinbasesRequest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:tari.rpc.GetNewBlockTemplateWithCoinbasesRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+PROTOBUF_NOINLINE bool GetNewBlockTemplateWithCoinbasesRequest::IsInitialized() const {
+  return true;
+}
+
+::_pbi::CachedSize* GetNewBlockTemplateWithCoinbasesRequest::AccessCachedSize() const {
+  return &_impl_._cached_size_;
+}
+void GetNewBlockTemplateWithCoinbasesRequest::InternalSwap(GetNewBlockTemplateWithCoinbasesRequest* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  _impl_.coinbases_.InternalSwap(&other->_impl_.coinbases_);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.max_weight_)
+      + sizeof(GetNewBlockTemplateWithCoinbasesRequest::_impl_.max_weight_)
+      - PROTOBUF_FIELD_OFFSET(GetNewBlockTemplateWithCoinbasesRequest, _impl_.algo_)>(
+          reinterpret_cast<char*>(&_impl_.algo_),
+          reinterpret_cast<char*>(&other->_impl_.algo_));
+}
+
+::google::protobuf::Metadata GetNewBlockTemplateWithCoinbasesRequest::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
+      file_level_metadata_base_5fnode_2eproto[11]);
+}
+// ===================================================================
+
+class GetNewBlockWithCoinbasesRequest::_Internal {
+ public:
+  using HasBits = decltype(std::declval<GetNewBlockWithCoinbasesRequest>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_._has_bits_);
+  static const ::tari::rpc::NewBlockTemplate& new_template(const GetNewBlockWithCoinbasesRequest* msg);
+  static void set_has_new_template(HasBits* has_bits) {
+    (*has_bits)[0] |= 1u;
+  }
+};
+
+const ::tari::rpc::NewBlockTemplate& GetNewBlockWithCoinbasesRequest::_Internal::new_template(const GetNewBlockWithCoinbasesRequest* msg) {
+  return *msg->_impl_.new_template_;
+}
+void GetNewBlockWithCoinbasesRequest::clear_new_template() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.new_template_ != nullptr) _impl_.new_template_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+GetNewBlockWithCoinbasesRequest::GetNewBlockWithCoinbasesRequest(::google::protobuf::Arena* arena)
+    : ::google::protobuf::Message(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tari.rpc.GetNewBlockWithCoinbasesRequest)
+}
+inline PROTOBUF_NDEBUG_INLINE GetNewBlockWithCoinbasesRequest::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from)
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        coinbases_{visibility, arena, from.coinbases_} {}
+
+GetNewBlockWithCoinbasesRequest::GetNewBlockWithCoinbasesRequest(
+    ::google::protobuf::Arena* arena,
+    const GetNewBlockWithCoinbasesRequest& from)
+    : ::google::protobuf::Message(arena) {
+  GetNewBlockWithCoinbasesRequest* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.new_template_ = (cached_has_bits & 0x00000001u)
+                ? CreateMaybeMessage<::tari::rpc::NewBlockTemplate>(arena, *from._impl_.new_template_)
+                : nullptr;
+
+  // @@protoc_insertion_point(copy_constructor:tari.rpc.GetNewBlockWithCoinbasesRequest)
+}
+inline PROTOBUF_NDEBUG_INLINE GetNewBlockWithCoinbasesRequest::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : _cached_size_{0},
+        coinbases_{visibility, arena} {}
+
+inline void GetNewBlockWithCoinbasesRequest::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.new_template_ = {};
+}
+GetNewBlockWithCoinbasesRequest::~GetNewBlockWithCoinbasesRequest() {
+  // @@protoc_insertion_point(destructor:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  SharedDtor();
+}
+inline void GetNewBlockWithCoinbasesRequest::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  delete _impl_.new_template_;
+  _impl_.~Impl_();
+}
+
+PROTOBUF_NOINLINE void GetNewBlockWithCoinbasesRequest::Clear() {
+// @@protoc_insertion_point(message_clear_start:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.coinbases_.Clear();
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    ABSL_DCHECK(_impl_.new_template_ != nullptr);
+    _impl_.new_template_->Clear();
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+const char* GetNewBlockWithCoinbasesRequest::_InternalParse(
+    const char* ptr, ::_pbi::ParseContext* ctx) {
+  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+  return ptr;
+}
+
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<1, 2, 2, 0, 2> GetNewBlockWithCoinbasesRequest::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_._has_bits_),
+    0, // no _extensions_
+    2, 8,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967292,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    2,  // num_field_entries
+    2,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
+    &_GetNewBlockWithCoinbasesRequest_default_instance_._instance,
+    ::_pbi::TcParser::GenericFallback,  // fallback
+  }, {{
+    // repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+    {::_pbi::TcParser::FastMtR1,
+     {18, 63, 1, PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_.coinbases_)}},
+    // .tari.rpc.NewBlockTemplate new_template = 1;
+    {::_pbi::TcParser::FastMtS1,
+     {10, 0, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_.new_template_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // .tari.rpc.NewBlockTemplate new_template = 1;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_.new_template_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockWithCoinbasesRequest, _impl_.coinbases_), -1, 1,
+    (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+  }}, {{
+    {::_pbi::TcParser::GetTable<::tari::rpc::NewBlockTemplate>()},
+    {::_pbi::TcParser::GetTable<::tari::rpc::NewBlockCoinbase>()},
+  }}, {{
+  }},
+};
+
+::uint8_t* GetNewBlockWithCoinbasesRequest::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = _impl_._has_bits_[0];
+  // .tari.rpc.NewBlockTemplate new_template = 1;
+  if (cached_has_bits & 0x00000001u) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        1, _Internal::new_template(this),
+        _Internal::new_template(this).GetCachedSize(), target, stream);
+  }
+
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_coinbases_size()); i < n; i++) {
+    const auto& repfield = this->_internal_coinbases().Get(i);
+    target = ::google::protobuf::internal::WireFormatLite::
+        InternalWriteMessage(2, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  return target;
+}
+
+::size_t GetNewBlockWithCoinbasesRequest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated .tari.rpc.NewBlockCoinbase coinbases = 2;
+  total_size += 1UL * this->_internal_coinbases_size();
+  for (const auto& msg : this->_internal_coinbases()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+  }
+  // .tari.rpc.NewBlockTemplate new_template = 1;
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    total_size +=
+        1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.new_template_);
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::google::protobuf::Message::ClassData GetNewBlockWithCoinbasesRequest::_class_data_ = {
+    GetNewBlockWithCoinbasesRequest::MergeImpl,
+    nullptr,  // OnDemandRegisterArenaDtor
+};
+const ::google::protobuf::Message::ClassData* GetNewBlockWithCoinbasesRequest::GetClassData() const {
+  return &_class_data_;
+}
+
+void GetNewBlockWithCoinbasesRequest::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
+  auto* const _this = static_cast<GetNewBlockWithCoinbasesRequest*>(&to_msg);
+  auto& from = static_cast<const GetNewBlockWithCoinbasesRequest&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_internal_mutable_coinbases()->MergeFrom(
+      from._internal_coinbases());
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_internal_mutable_new_template()->::tari::rpc::NewBlockTemplate::MergeFrom(
+        from._internal_new_template());
+  }
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void GetNewBlockWithCoinbasesRequest::CopyFrom(const GetNewBlockWithCoinbasesRequest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:tari.rpc.GetNewBlockWithCoinbasesRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+PROTOBUF_NOINLINE bool GetNewBlockWithCoinbasesRequest::IsInitialized() const {
+  return true;
+}
+
+::_pbi::CachedSize* GetNewBlockWithCoinbasesRequest::AccessCachedSize() const {
+  return &_impl_._cached_size_;
+}
+void GetNewBlockWithCoinbasesRequest::InternalSwap(GetNewBlockWithCoinbasesRequest* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  _impl_.coinbases_.InternalSwap(&other->_impl_.coinbases_);
+  swap(_impl_.new_template_, other->_impl_.new_template_);
+}
+
+::google::protobuf::Metadata GetNewBlockWithCoinbasesRequest::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
+      file_level_metadata_base_5fnode_2eproto[12]);
+}
+// ===================================================================
+
+class NewBlockCoinbase::_Internal {
+ public:
+};
+
+NewBlockCoinbase::NewBlockCoinbase(::google::protobuf::Arena* arena)
+    : ::google::protobuf::Message(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tari.rpc.NewBlockCoinbase)
+}
+inline PROTOBUF_NDEBUG_INLINE NewBlockCoinbase::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from)
+      : address_(arena, from.address_),
+        coinbase_extra_(arena, from.coinbase_extra_),
+        _cached_size_{0} {}
+
+NewBlockCoinbase::NewBlockCoinbase(
+    ::google::protobuf::Arena* arena,
+    const NewBlockCoinbase& from)
+    : ::google::protobuf::Message(arena) {
+  NewBlockCoinbase* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
+  ::memcpy(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, value_),
+           reinterpret_cast<const char *>(&from._impl_) +
+               offsetof(Impl_, value_),
+           offsetof(Impl_, revealed_value_proof_) -
+               offsetof(Impl_, value_) +
+               sizeof(Impl_::revealed_value_proof_));
+
+  // @@protoc_insertion_point(copy_constructor:tari.rpc.NewBlockCoinbase)
+}
+inline PROTOBUF_NDEBUG_INLINE NewBlockCoinbase::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : address_(arena),
+        coinbase_extra_(arena),
+        _cached_size_{0} {}
+
+inline void NewBlockCoinbase::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  ::memset(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, value_),
+           0,
+           offsetof(Impl_, revealed_value_proof_) -
+               offsetof(Impl_, value_) +
+               sizeof(Impl_::revealed_value_proof_));
+}
+NewBlockCoinbase::~NewBlockCoinbase() {
+  // @@protoc_insertion_point(destructor:tari.rpc.NewBlockCoinbase)
+  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  SharedDtor();
+}
+inline void NewBlockCoinbase::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.address_.Destroy();
+  _impl_.coinbase_extra_.Destroy();
+  _impl_.~Impl_();
+}
+
+PROTOBUF_NOINLINE void NewBlockCoinbase::Clear() {
+// @@protoc_insertion_point(message_clear_start:tari.rpc.NewBlockCoinbase)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.address_.ClearToEmpty();
+  _impl_.coinbase_extra_.ClearToEmpty();
+  ::memset(&_impl_.value_, 0, static_cast<::size_t>(
+      reinterpret_cast<char*>(&_impl_.revealed_value_proof_) -
+      reinterpret_cast<char*>(&_impl_.value_)) + sizeof(_impl_.revealed_value_proof_));
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+const char* NewBlockCoinbase::_InternalParse(
+    const char* ptr, ::_pbi::ParseContext* ctx) {
+  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+  return ptr;
+}
+
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<3, 5, 0, 41, 2> NewBlockCoinbase::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    5, 56,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967264,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    5,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_NewBlockCoinbase_default_instance_._instance,
+    ::_pbi::TcParser::GenericFallback,  // fallback
+  }, {{
+    {::_pbi::TcParser::MiniParse, {}},
+    // string address = 1;
+    {::_pbi::TcParser::FastUS1,
+     {10, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.address_)}},
+    // uint64 value = 2;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NewBlockCoinbase, _impl_.value_), 63>(),
+     {16, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.value_)}},
+    // bool stealth_payment = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(NewBlockCoinbase, _impl_.stealth_payment_), 63>(),
+     {24, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.stealth_payment_)}},
+    // bool revealed_value_proof = 4;
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(NewBlockCoinbase, _impl_.revealed_value_proof_), 63>(),
+     {32, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.revealed_value_proof_)}},
+    // bytes coinbase_extra = 5;
+    {::_pbi::TcParser::FastBS1,
+     {42, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.coinbase_extra_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // string address = 1;
+    {PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.address_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // uint64 value = 2;
+    {PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.value_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // bool stealth_payment = 3;
+    {PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.stealth_payment_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
+    // bool revealed_value_proof = 4;
+    {PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.revealed_value_proof_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
+    // bytes coinbase_extra = 5;
+    {PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.coinbase_extra_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
+  }},
+  // no aux_entries
+  {{
+    "\31\7\0\0\0\0\0\0"
+    "tari.rpc.NewBlockCoinbase"
+    "address"
+  }},
+};
+
+::uint8_t* NewBlockCoinbase::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:tari.rpc.NewBlockCoinbase)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // string address = 1;
+  if (!this->_internal_address().empty()) {
+    const std::string& _s = this->_internal_address();
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tari.rpc.NewBlockCoinbase.address");
+    target = stream->WriteStringMaybeAliased(1, _s, target);
+  }
+
+  // uint64 value = 2;
+  if (this->_internal_value() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        2, this->_internal_value(), target);
+  }
+
+  // bool stealth_payment = 3;
+  if (this->_internal_stealth_payment() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        3, this->_internal_stealth_payment(), target);
+  }
+
+  // bool revealed_value_proof = 4;
+  if (this->_internal_revealed_value_proof() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        4, this->_internal_revealed_value_proof(), target);
+  }
+
+  // bytes coinbase_extra = 5;
+  if (!this->_internal_coinbase_extra().empty()) {
+    const std::string& _s = this->_internal_coinbase_extra();
+    target = stream->WriteBytesMaybeAliased(5, _s, target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tari.rpc.NewBlockCoinbase)
+  return target;
+}
+
+::size_t NewBlockCoinbase::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:tari.rpc.NewBlockCoinbase)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string address = 1;
+  if (!this->_internal_address().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                    this->_internal_address());
+  }
+
+  // bytes coinbase_extra = 5;
+  if (!this->_internal_coinbase_extra().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
+                                    this->_internal_coinbase_extra());
+  }
+
+  // uint64 value = 2;
+  if (this->_internal_value() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+        this->_internal_value());
+  }
+
+  // bool stealth_payment = 3;
+  if (this->_internal_stealth_payment() != 0) {
+    total_size += 2;
+  }
+
+  // bool revealed_value_proof = 4;
+  if (this->_internal_revealed_value_proof() != 0) {
+    total_size += 2;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::google::protobuf::Message::ClassData NewBlockCoinbase::_class_data_ = {
+    NewBlockCoinbase::MergeImpl,
+    nullptr,  // OnDemandRegisterArenaDtor
+};
+const ::google::protobuf::Message::ClassData* NewBlockCoinbase::GetClassData() const {
+  return &_class_data_;
+}
+
+void NewBlockCoinbase::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
+  auto* const _this = static_cast<NewBlockCoinbase*>(&to_msg);
+  auto& from = static_cast<const NewBlockCoinbase&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:tari.rpc.NewBlockCoinbase)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_address().empty()) {
+    _this->_internal_set_address(from._internal_address());
+  }
+  if (!from._internal_coinbase_extra().empty()) {
+    _this->_internal_set_coinbase_extra(from._internal_coinbase_extra());
+  }
+  if (from._internal_value() != 0) {
+    _this->_internal_set_value(from._internal_value());
+  }
+  if (from._internal_stealth_payment() != 0) {
+    _this->_internal_set_stealth_payment(from._internal_stealth_payment());
+  }
+  if (from._internal_revealed_value_proof() != 0) {
+    _this->_internal_set_revealed_value_proof(from._internal_revealed_value_proof());
+  }
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void NewBlockCoinbase::CopyFrom(const NewBlockCoinbase& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:tari.rpc.NewBlockCoinbase)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+PROTOBUF_NOINLINE bool NewBlockCoinbase::IsInitialized() const {
+  return true;
+}
+
+::_pbi::CachedSize* NewBlockCoinbase::AccessCachedSize() const {
+  return &_impl_._cached_size_;
+}
+void NewBlockCoinbase::InternalSwap(NewBlockCoinbase* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.address_, &other->_impl_.address_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.coinbase_extra_, &other->_impl_.coinbase_extra_, arena);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.revealed_value_proof_)
+      + sizeof(NewBlockCoinbase::_impl_.revealed_value_proof_)
+      - PROTOBUF_FIELD_OFFSET(NewBlockCoinbase, _impl_.value_)>(
+          reinterpret_cast<char*>(&_impl_.value_),
+          reinterpret_cast<char*>(&other->_impl_.value_));
+}
+
+::google::protobuf::Metadata NewBlockCoinbase::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
+      file_level_metadata_base_5fnode_2eproto[13]);
+}
+// ===================================================================
+
 class NetworkDifficultyResponse::_Internal {
  public:
 };
@@ -5431,7 +6381,7 @@ void NetworkDifficultyResponse::InternalSwap(NetworkDifficultyResponse* PROTOBUF
 ::google::protobuf::Metadata NetworkDifficultyResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[11]);
+      file_level_metadata_base_5fnode_2eproto[14]);
 }
 // ===================================================================
 
@@ -5635,7 +6585,7 @@ void ValueAtHeightResponse::InternalSwap(ValueAtHeightResponse* PROTOBUF_RESTRIC
 ::google::protobuf::Metadata ValueAtHeightResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[12]);
+      file_level_metadata_base_5fnode_2eproto[15]);
 }
 // ===================================================================
 
@@ -5805,7 +6755,7 @@ void IntegerValue::InternalSwap(IntegerValue* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata IntegerValue::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[13]);
+      file_level_metadata_base_5fnode_2eproto[16]);
 }
 // ===================================================================
 
@@ -5995,7 +6945,7 @@ void StringValue::InternalSwap(StringValue* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata StringValue::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[14]);
+      file_level_metadata_base_5fnode_2eproto[17]);
 }
 // ===================================================================
 
@@ -6243,7 +7193,7 @@ void BlockGroupRequest::InternalSwap(BlockGroupRequest* PROTOBUF_RESTRICT other)
 ::google::protobuf::Metadata BlockGroupRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[15]);
+      file_level_metadata_base_5fnode_2eproto[18]);
 }
 // ===================================================================
 
@@ -6454,7 +7404,7 @@ void BlockGroupResponse::InternalSwap(BlockGroupResponse* PROTOBUF_RESTRICT othe
 ::google::protobuf::Metadata BlockGroupResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[16]);
+      file_level_metadata_base_5fnode_2eproto[19]);
 }
 // ===================================================================
 
@@ -6681,7 +7631,7 @@ void HeightRequest::InternalSwap(HeightRequest* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata HeightRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[17]);
+      file_level_metadata_base_5fnode_2eproto[20]);
 }
 // ===================================================================
 
@@ -6922,7 +7872,7 @@ void BlockTimingResponse::InternalSwap(BlockTimingResponse* PROTOBUF_RESTRICT ot
 ::google::protobuf::Metadata BlockTimingResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[18]);
+      file_level_metadata_base_5fnode_2eproto[21]);
 }
 // ===================================================================
 
@@ -7107,7 +8057,7 @@ void GetHeaderByHashRequest::InternalSwap(GetHeaderByHashRequest* PROTOBUF_RESTR
 ::google::protobuf::Metadata GetHeaderByHashRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[19]);
+      file_level_metadata_base_5fnode_2eproto[22]);
 }
 // ===================================================================
 
@@ -7430,7 +8380,7 @@ void BlockHeaderResponse::InternalSwap(BlockHeaderResponse* PROTOBUF_RESTRICT ot
 ::google::protobuf::Metadata BlockHeaderResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[20]);
+      file_level_metadata_base_5fnode_2eproto[23]);
 }
 // ===================================================================
 
@@ -7657,7 +8607,7 @@ void ListHeadersRequest::InternalSwap(ListHeadersRequest* PROTOBUF_RESTRICT othe
 ::google::protobuf::Metadata ListHeadersRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[21]);
+      file_level_metadata_base_5fnode_2eproto[24]);
 }
 // ===================================================================
 
@@ -7849,7 +8799,7 @@ void GetBlocksRequest::InternalSwap(GetBlocksRequest* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata GetBlocksRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[22]);
+      file_level_metadata_base_5fnode_2eproto[25]);
 }
 // ===================================================================
 
@@ -8036,7 +8986,7 @@ void GetBlocksResponse::InternalSwap(GetBlocksResponse* PROTOBUF_RESTRICT other)
 ::google::protobuf::Metadata GetBlocksResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[23]);
+      file_level_metadata_base_5fnode_2eproto[26]);
 }
 // ===================================================================
 
@@ -8052,7 +9002,7 @@ MetaData::MetaData(::google::protobuf::Arena* arena)
 inline PROTOBUF_NDEBUG_INLINE MetaData::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from)
-      : best_block_(arena, from.best_block_),
+      : best_block_hash_(arena, from.best_block_hash_),
         accumulated_difficulty_(arena, from.accumulated_difficulty_),
         _cached_size_{0} {}
 
@@ -8066,11 +9016,11 @@ MetaData::MetaData(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
   ::memcpy(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, height_of_longest_chain_),
+               offsetof(Impl_, best_block_height_),
            reinterpret_cast<const char *>(&from._impl_) +
-               offsetof(Impl_, height_of_longest_chain_),
+               offsetof(Impl_, best_block_height_),
            offsetof(Impl_, pruned_height_) -
-               offsetof(Impl_, height_of_longest_chain_) +
+               offsetof(Impl_, best_block_height_) +
                sizeof(Impl_::pruned_height_));
 
   // @@protoc_insertion_point(copy_constructor:tari.rpc.MetaData)
@@ -8078,17 +9028,17 @@ MetaData::MetaData(
 inline PROTOBUF_NDEBUG_INLINE MetaData::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : best_block_(arena),
+      : best_block_hash_(arena),
         accumulated_difficulty_(arena),
         _cached_size_{0} {}
 
 inline void MetaData::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
   ::memset(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, height_of_longest_chain_),
+               offsetof(Impl_, best_block_height_),
            0,
            offsetof(Impl_, pruned_height_) -
-               offsetof(Impl_, height_of_longest_chain_) +
+               offsetof(Impl_, best_block_height_) +
                sizeof(Impl_::pruned_height_));
 }
 MetaData::~MetaData() {
@@ -8098,7 +9048,7 @@ MetaData::~MetaData() {
 }
 inline void MetaData::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.best_block_.Destroy();
+  _impl_.best_block_hash_.Destroy();
   _impl_.accumulated_difficulty_.Destroy();
   _impl_.~Impl_();
 }
@@ -8110,11 +9060,11 @@ PROTOBUF_NOINLINE void MetaData::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.best_block_.ClearToEmpty();
+  _impl_.best_block_hash_.ClearToEmpty();
   _impl_.accumulated_difficulty_.ClearToEmpty();
-  ::memset(&_impl_.height_of_longest_chain_, 0, static_cast<::size_t>(
+  ::memset(&_impl_.best_block_height_, 0, static_cast<::size_t>(
       reinterpret_cast<char*>(&_impl_.pruned_height_) -
-      reinterpret_cast<char*>(&_impl_.height_of_longest_chain_)) + sizeof(_impl_.pruned_height_));
+      reinterpret_cast<char*>(&_impl_.best_block_height_)) + sizeof(_impl_.pruned_height_));
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -8141,12 +9091,12 @@ const ::_pbi::TcParseTable<3, 4, 0, 0, 2> MetaData::_table_ = {
     ::_pbi::TcParser::GenericFallback,  // fallback
   }, {{
     {::_pbi::TcParser::MiniParse, {}},
-    // uint64 height_of_longest_chain = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(MetaData, _impl_.height_of_longest_chain_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(MetaData, _impl_.height_of_longest_chain_)}},
-    // bytes best_block = 2;
+    // uint64 best_block_height = 1;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(MetaData, _impl_.best_block_height_), 63>(),
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_height_)}},
+    // bytes best_block_hash = 2;
     {::_pbi::TcParser::FastBS1,
-     {18, 63, 0, PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_)}},
+     {18, 63, 0, PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_hash_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     // bytes accumulated_difficulty = 5;
@@ -8159,11 +9109,11 @@ const ::_pbi::TcParseTable<3, 4, 0, 0, 2> MetaData::_table_ = {
   }}, {{
     65535, 65535
   }}, {{
-    // uint64 height_of_longest_chain = 1;
-    {PROTOBUF_FIELD_OFFSET(MetaData, _impl_.height_of_longest_chain_), 0, 0,
+    // uint64 best_block_height = 1;
+    {PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_height_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // bytes best_block = 2;
-    {PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_), 0, 0,
+    // bytes best_block_hash = 2;
+    {PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_hash_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
     // bytes accumulated_difficulty = 5;
     {PROTOBUF_FIELD_OFFSET(MetaData, _impl_.accumulated_difficulty_), 0, 0,
@@ -8184,16 +9134,16 @@ const ::_pbi::TcParseTable<3, 4, 0, 0, 2> MetaData::_table_ = {
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
-  // uint64 height_of_longest_chain = 1;
-  if (this->_internal_height_of_longest_chain() != 0) {
+  // uint64 best_block_height = 1;
+  if (this->_internal_best_block_height() != 0) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
-        1, this->_internal_height_of_longest_chain(), target);
+        1, this->_internal_best_block_height(), target);
   }
 
-  // bytes best_block = 2;
-  if (!this->_internal_best_block().empty()) {
-    const std::string& _s = this->_internal_best_block();
+  // bytes best_block_hash = 2;
+  if (!this->_internal_best_block_hash().empty()) {
+    const std::string& _s = this->_internal_best_block_hash();
     target = stream->WriteBytesMaybeAliased(2, _s, target);
   }
 
@@ -8227,10 +9177,10 @@ const ::_pbi::TcParseTable<3, 4, 0, 0, 2> MetaData::_table_ = {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // bytes best_block = 2;
-  if (!this->_internal_best_block().empty()) {
+  // bytes best_block_hash = 2;
+  if (!this->_internal_best_block_hash().empty()) {
     total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
-                                    this->_internal_best_block());
+                                    this->_internal_best_block_hash());
   }
 
   // bytes accumulated_difficulty = 5;
@@ -8239,10 +9189,10 @@ const ::_pbi::TcParseTable<3, 4, 0, 0, 2> MetaData::_table_ = {
                                     this->_internal_accumulated_difficulty());
   }
 
-  // uint64 height_of_longest_chain = 1;
-  if (this->_internal_height_of_longest_chain() != 0) {
+  // uint64 best_block_height = 1;
+  if (this->_internal_best_block_height() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
-        this->_internal_height_of_longest_chain());
+        this->_internal_best_block_height());
   }
 
   // uint64 pruned_height = 6;
@@ -8270,14 +9220,14 @@ void MetaData::MergeImpl(::google::protobuf::Message& to_msg, const ::google::pr
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_best_block().empty()) {
-    _this->_internal_set_best_block(from._internal_best_block());
+  if (!from._internal_best_block_hash().empty()) {
+    _this->_internal_set_best_block_hash(from._internal_best_block_hash());
   }
   if (!from._internal_accumulated_difficulty().empty()) {
     _this->_internal_set_accumulated_difficulty(from._internal_accumulated_difficulty());
   }
-  if (from._internal_height_of_longest_chain() != 0) {
-    _this->_internal_set_height_of_longest_chain(from._internal_height_of_longest_chain());
+  if (from._internal_best_block_height() != 0) {
+    _this->_internal_set_best_block_height(from._internal_best_block_height());
   }
   if (from._internal_pruned_height() != 0) {
     _this->_internal_set_pruned_height(from._internal_pruned_height());
@@ -8304,20 +9254,20 @@ void MetaData::InternalSwap(MetaData* PROTOBUF_RESTRICT other) {
   auto* arena = GetArena();
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.best_block_, &other->_impl_.best_block_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.best_block_hash_, &other->_impl_.best_block_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.accumulated_difficulty_, &other->_impl_.accumulated_difficulty_, arena);
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(MetaData, _impl_.pruned_height_)
       + sizeof(MetaData::_impl_.pruned_height_)
-      - PROTOBUF_FIELD_OFFSET(MetaData, _impl_.height_of_longest_chain_)>(
-          reinterpret_cast<char*>(&_impl_.height_of_longest_chain_),
-          reinterpret_cast<char*>(&other->_impl_.height_of_longest_chain_));
+      - PROTOBUF_FIELD_OFFSET(MetaData, _impl_.best_block_height_)>(
+          reinterpret_cast<char*>(&_impl_.best_block_height_),
+          reinterpret_cast<char*>(&other->_impl_.best_block_height_));
 }
 
 ::google::protobuf::Metadata MetaData::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[24]);
+      file_level_metadata_base_5fnode_2eproto[27]);
 }
 // ===================================================================
 
@@ -8564,7 +9514,7 @@ void SyncInfoResponse::InternalSwap(SyncInfoResponse* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata SyncInfoResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[25]);
+      file_level_metadata_base_5fnode_2eproto[28]);
 }
 // ===================================================================
 
@@ -8791,7 +9741,7 @@ void SyncProgressResponse::InternalSwap(SyncProgressResponse* PROTOBUF_RESTRICT 
 ::google::protobuf::Metadata SyncProgressResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[26]);
+      file_level_metadata_base_5fnode_2eproto[29]);
 }
 // ===================================================================
 
@@ -8804,10 +9754,17 @@ class GetNewBlockResult::_Internal {
   static void set_has_block(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
+  static const ::tari::rpc::MinerData& miner_data(const GetNewBlockResult* msg);
+  static void set_has_miner_data(HasBits* has_bits) {
+    (*has_bits)[0] |= 2u;
+  }
 };
 
 const ::tari::rpc::Block& GetNewBlockResult::_Internal::block(const GetNewBlockResult* msg) {
   return *msg->_impl_.block_;
+}
+const ::tari::rpc::MinerData& GetNewBlockResult::_Internal::miner_data(const GetNewBlockResult* msg) {
+  return *msg->_impl_.miner_data_;
 }
 void GetNewBlockResult::clear_block() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
@@ -8841,6 +9798,9 @@ GetNewBlockResult::GetNewBlockResult(
   _impl_.block_ = (cached_has_bits & 0x00000001u)
                 ? CreateMaybeMessage<::tari::rpc::Block>(arena, *from._impl_.block_)
                 : nullptr;
+  _impl_.miner_data_ = (cached_has_bits & 0x00000002u)
+                ? CreateMaybeMessage<::tari::rpc::MinerData>(arena, *from._impl_.miner_data_)
+                : nullptr;
 
   // @@protoc_insertion_point(copy_constructor:tari.rpc.GetNewBlockResult)
 }
@@ -8854,7 +9814,12 @@ inline PROTOBUF_NDEBUG_INLINE GetNewBlockResult::Impl_::Impl_(
 
 inline void GetNewBlockResult::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.block_ = {};
+  ::memset(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, block_),
+           0,
+           offsetof(Impl_, miner_data_) -
+               offsetof(Impl_, block_) +
+               sizeof(Impl_::miner_data_));
 }
 GetNewBlockResult::~GetNewBlockResult() {
   // @@protoc_insertion_point(destructor:tari.rpc.GetNewBlockResult)
@@ -8867,6 +9832,7 @@ inline void GetNewBlockResult::SharedDtor() {
   _impl_.merge_mining_hash_.Destroy();
   _impl_.tari_unique_id_.Destroy();
   delete _impl_.block_;
+  delete _impl_.miner_data_;
   _impl_.~Impl_();
 }
 
@@ -8881,9 +9847,15 @@ PROTOBUF_NOINLINE void GetNewBlockResult::Clear() {
   _impl_.merge_mining_hash_.ClearToEmpty();
   _impl_.tari_unique_id_.ClearToEmpty();
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    ABSL_DCHECK(_impl_.block_ != nullptr);
-    _impl_.block_->Clear();
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      ABSL_DCHECK(_impl_.block_ != nullptr);
+      _impl_.block_->Clear();
+    }
+    if (cached_has_bits & 0x00000002u) {
+      ABSL_DCHECK(_impl_.miner_data_ != nullptr);
+      _impl_.miner_data_->Clear();
+    }
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -8897,23 +9869,21 @@ const char* GetNewBlockResult::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
+const ::_pbi::TcParseTable<3, 5, 2, 0, 2> GetNewBlockResult::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_._has_bits_),
     0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
+    5, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
+    4294967264,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
-    1,  // num_aux_entries
+    5,  // num_field_entries
+    2,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_GetNewBlockResult_default_instance_._instance,
     ::_pbi::TcParser::GenericFallback,  // fallback
   }, {{
-    // bytes tari_unique_id = 4;
-    {::_pbi::TcParser::FastBS1,
-     {34, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.tari_unique_id_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // bytes block_hash = 1;
     {::_pbi::TcParser::FastBS1,
      {10, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.block_hash_)}},
@@ -8923,6 +9893,14 @@ const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
     // bytes merge_mining_hash = 3;
     {::_pbi::TcParser::FastBS1,
      {26, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.merge_mining_hash_)}},
+    // bytes tari_unique_id = 4;
+    {::_pbi::TcParser::FastBS1,
+     {34, 63, 0, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.tari_unique_id_)}},
+    // .tari.rpc.MinerData miner_data = 5;
+    {::_pbi::TcParser::FastMtS1,
+     {42, 1, 1, PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.miner_data_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
@@ -8938,8 +9916,12 @@ const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
     // bytes tari_unique_id = 4;
     {PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.tari_unique_id_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
+    // .tari.rpc.MinerData miner_data = 5;
+    {PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.miner_data_), _Internal::kHasBitsOffset + 1, 1,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::Block>()},
+    {::_pbi::TcParser::GetTable<::tari::rpc::MinerData>()},
   }}, {{
   }},
 };
@@ -8977,6 +9959,13 @@ const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
     target = stream->WriteBytesMaybeAliased(4, _s, target);
   }
 
+  // .tari.rpc.MinerData miner_data = 5;
+  if (cached_has_bits & 0x00000002u) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        5, _Internal::miner_data(this),
+        _Internal::miner_data(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -9012,13 +10001,21 @@ const ::_pbi::TcParseTable<2, 4, 1, 0, 2> GetNewBlockResult::_table_ = {
                                     this->_internal_tari_unique_id());
   }
 
-  // .tari.rpc.Block block = 2;
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    total_size +=
-        1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.block_);
-  }
+  if (cached_has_bits & 0x00000003u) {
+    // .tari.rpc.Block block = 2;
+    if (cached_has_bits & 0x00000001u) {
+      total_size +=
+          1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.block_);
+    }
 
+    // .tari.rpc.MinerData miner_data = 5;
+    if (cached_has_bits & 0x00000002u) {
+      total_size +=
+          1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.miner_data_);
+    }
+
+  }
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -9047,9 +10044,16 @@ void GetNewBlockResult::MergeImpl(::google::protobuf::Message& to_msg, const ::g
   if (!from._internal_tari_unique_id().empty()) {
     _this->_internal_set_tari_unique_id(from._internal_tari_unique_id());
   }
-  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
-    _this->_internal_mutable_block()->::tari::rpc::Block::MergeFrom(
-        from._internal_block());
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      _this->_internal_mutable_block()->::tari::rpc::Block::MergeFrom(
+          from._internal_block());
+    }
+    if (cached_has_bits & 0x00000002u) {
+      _this->_internal_mutable_miner_data()->::tari::rpc::MinerData::MergeFrom(
+          from._internal_miner_data());
+    }
   }
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -9077,13 +10081,18 @@ void GetNewBlockResult::InternalSwap(GetNewBlockResult* PROTOBUF_RESTRICT other)
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.block_hash_, &other->_impl_.block_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.merge_mining_hash_, &other->_impl_.merge_mining_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.tari_unique_id_, &other->_impl_.tari_unique_id_, arena);
-  swap(_impl_.block_, other->_impl_.block_);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.miner_data_)
+      + sizeof(GetNewBlockResult::_impl_.miner_data_)
+      - PROTOBUF_FIELD_OFFSET(GetNewBlockResult, _impl_.block_)>(
+          reinterpret_cast<char*>(&_impl_.block_),
+          reinterpret_cast<char*>(&other->_impl_.block_));
 }
 
 ::google::protobuf::Metadata GetNewBlockResult::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[27]);
+      file_level_metadata_base_5fnode_2eproto[30]);
 }
 // ===================================================================
 
@@ -9400,7 +10409,7 @@ void GetNewBlockBlobResult::InternalSwap(GetNewBlockBlobResult* PROTOBUF_RESTRIC
 ::google::protobuf::Metadata GetNewBlockBlobResult::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[28]);
+      file_level_metadata_base_5fnode_2eproto[31]);
 }
 // ===================================================================
 
@@ -9702,7 +10711,7 @@ void MinerData::InternalSwap(MinerData* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata MinerData::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[29]);
+      file_level_metadata_base_5fnode_2eproto[32]);
 }
 // ===================================================================
 
@@ -9889,7 +10898,7 @@ void SearchKernelsRequest::InternalSwap(SearchKernelsRequest* PROTOBUF_RESTRICT 
 ::google::protobuf::Metadata SearchKernelsRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[30]);
+      file_level_metadata_base_5fnode_2eproto[33]);
 }
 // ===================================================================
 
@@ -10069,7 +11078,7 @@ void SearchUtxosRequest::InternalSwap(SearchUtxosRequest* PROTOBUF_RESTRICT othe
 ::google::protobuf::Metadata SearchUtxosRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[31]);
+      file_level_metadata_base_5fnode_2eproto[34]);
 }
 // ===================================================================
 
@@ -10249,7 +11258,7 @@ void FetchMatchingUtxosRequest::InternalSwap(FetchMatchingUtxosRequest* PROTOBUF
 ::google::protobuf::Metadata FetchMatchingUtxosRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[32]);
+      file_level_metadata_base_5fnode_2eproto[35]);
 }
 // ===================================================================
 
@@ -10461,7 +11470,7 @@ void FetchMatchingUtxosResponse::InternalSwap(FetchMatchingUtxosResponse* PROTOB
 ::google::protobuf::Metadata FetchMatchingUtxosResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[33]);
+      file_level_metadata_base_5fnode_2eproto[36]);
 }
 // ===================================================================
 
@@ -10673,7 +11682,7 @@ void GetPeersResponse::InternalSwap(GetPeersResponse* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata GetPeersResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[34]);
+      file_level_metadata_base_5fnode_2eproto[37]);
 }
 // ===================================================================
 
@@ -10708,7 +11717,7 @@ GetPeersRequest::GetPeersRequest(
 ::google::protobuf::Metadata GetPeersRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[35]);
+      file_level_metadata_base_5fnode_2eproto[38]);
 }
 // ===================================================================
 
@@ -10920,7 +11929,7 @@ void SubmitTransactionRequest::InternalSwap(SubmitTransactionRequest* PROTOBUF_R
 ::google::protobuf::Metadata SubmitTransactionRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[36]);
+      file_level_metadata_base_5fnode_2eproto[39]);
 }
 // ===================================================================
 
@@ -11090,7 +12099,7 @@ void SubmitTransactionResponse::InternalSwap(SubmitTransactionResponse* PROTOBUF
 ::google::protobuf::Metadata SubmitTransactionResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[37]);
+      file_level_metadata_base_5fnode_2eproto[40]);
 }
 // ===================================================================
 
@@ -11125,7 +12134,7 @@ GetMempoolTransactionsRequest::GetMempoolTransactionsRequest(
 ::google::protobuf::Metadata GetMempoolTransactionsRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[38]);
+      file_level_metadata_base_5fnode_2eproto[41]);
 }
 // ===================================================================
 
@@ -11337,7 +12346,7 @@ void GetMempoolTransactionsResponse::InternalSwap(GetMempoolTransactionsResponse
 ::google::protobuf::Metadata GetMempoolTransactionsResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[39]);
+      file_level_metadata_base_5fnode_2eproto[42]);
 }
 // ===================================================================
 
@@ -11549,7 +12558,7 @@ void TransactionStateRequest::InternalSwap(TransactionStateRequest* PROTOBUF_RES
 ::google::protobuf::Metadata TransactionStateRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[40]);
+      file_level_metadata_base_5fnode_2eproto[43]);
 }
 // ===================================================================
 
@@ -11719,7 +12728,7 @@ void TransactionStateResponse::InternalSwap(TransactionStateResponse* PROTOBUF_R
 ::google::protobuf::Metadata TransactionStateResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[41]);
+      file_level_metadata_base_5fnode_2eproto[44]);
 }
 // ===================================================================
 
@@ -11946,7 +12955,7 @@ void MempoolStatsResponse::InternalSwap(MempoolStatsResponse* PROTOBUF_RESTRICT 
 ::google::protobuf::Metadata MempoolStatsResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[42]);
+      file_level_metadata_base_5fnode_2eproto[45]);
 }
 // ===================================================================
 
@@ -12116,7 +13125,7 @@ void GetActiveValidatorNodesRequest::InternalSwap(GetActiveValidatorNodesRequest
 ::google::protobuf::Metadata GetActiveValidatorNodesRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[43]);
+      file_level_metadata_base_5fnode_2eproto[46]);
 }
 // ===================================================================
 
@@ -12327,7 +13336,7 @@ void GetActiveValidatorNodesResponse::InternalSwap(GetActiveValidatorNodesRespon
 ::google::protobuf::Metadata GetActiveValidatorNodesResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[44]);
+      file_level_metadata_base_5fnode_2eproto[47]);
 }
 // ===================================================================
 
@@ -12538,7 +13547,7 @@ void GetShardKeyRequest::InternalSwap(GetShardKeyRequest* PROTOBUF_RESTRICT othe
 ::google::protobuf::Metadata GetShardKeyRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[45]);
+      file_level_metadata_base_5fnode_2eproto[48]);
 }
 // ===================================================================
 
@@ -12748,7 +13757,7 @@ void GetShardKeyResponse::InternalSwap(GetShardKeyResponse* PROTOBUF_RESTRICT ot
 ::google::protobuf::Metadata GetShardKeyResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[46]);
+      file_level_metadata_base_5fnode_2eproto[49]);
 }
 // ===================================================================
 
@@ -12959,7 +13968,7 @@ void GetTemplateRegistrationsRequest::InternalSwap(GetTemplateRegistrationsReque
 ::google::protobuf::Metadata GetTemplateRegistrationsRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[47]);
+      file_level_metadata_base_5fnode_2eproto[50]);
 }
 // ===================================================================
 
@@ -13199,7 +14208,7 @@ void GetTemplateRegistrationResponse::InternalSwap(GetTemplateRegistrationRespon
 ::google::protobuf::Metadata GetTemplateRegistrationResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[48]);
+      file_level_metadata_base_5fnode_2eproto[51]);
 }
 // ===================================================================
 
@@ -13437,7 +14446,7 @@ void BlockInfo::InternalSwap(BlockInfo* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata BlockInfo::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[49]);
+      file_level_metadata_base_5fnode_2eproto[52]);
 }
 // ===================================================================
 
@@ -13648,7 +14657,7 @@ void GetSideChainUtxosRequest::InternalSwap(GetSideChainUtxosRequest* PROTOBUF_R
 ::google::protobuf::Metadata GetSideChainUtxosRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[50]);
+      file_level_metadata_base_5fnode_2eproto[53]);
 }
 // ===================================================================
 
@@ -13886,7 +14895,7 @@ void GetSideChainUtxosResponse::InternalSwap(GetSideChainUtxosResponse* PROTOBUF
 ::google::protobuf::Metadata GetSideChainUtxosResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_base_5fnode_2eproto_getter, &descriptor_table_base_5fnode_2eproto_once,
-      file_level_metadata_base_5fnode_2eproto[51]);
+      file_level_metadata_base_5fnode_2eproto[54]);
 }
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace rpc

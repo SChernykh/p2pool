@@ -119,7 +119,7 @@ message ConsensusConstants {
     uint64 median_timestamp_count = 9;
     uint64 emission_initial = 10;
     repeated uint64 emission_decay = 11;
-    uint64 emission_tail = 12;
+    uint64 emission_tail = 12 [deprecated=true];
     uint64 min_sha3x_pow_difficulty = 13;
     uint64 block_weight_inputs = 14;
     uint64 block_weight_outputs = 15;
@@ -141,4 +141,6 @@ message ConsensusConstants {
     uint64 validator_node_registration_min_lock_height = 32;
     uint64 validator_node_registration_shuffle_interval_epoch = 33;
     repeated PermittedRangeProofs permitted_range_proof_types = 34;
+    uint64 inflation_bips = 35;
+    uint64 tail_epoch_length = 36;
 }

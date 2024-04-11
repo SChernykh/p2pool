@@ -57,6 +57,10 @@ service BaseNode {
     rpc GetNewBlockTemplate(NewBlockTemplateRequest) returns (NewBlockTemplateResponse);
     // Construct a new block from a provided template
     rpc GetNewBlock(NewBlockTemplate) returns (GetNewBlockResult);
+    // Construct a new block from a provided template
+    rpc GetNewBlockWithCoinbases(GetNewBlockWithCoinbasesRequest) returns (GetNewBlockResult);
+    // Construct a new block from a provided template
+    rpc GetNewBlockTemplateWithCoinbases(GetNewBlockTemplateWithCoinbasesRequest) returns (GetNewBlockResult);
     // Construct a new block and header blob from a provided template
     rpc GetNewBlockBlob(NewBlockTemplate) returns (GetNewBlockBlobResult);
     // Submit a new block for propagation
@@ -180,6 +184,28 @@ message NewBlockTemplateRequest{
     PowAlgo algo = 1;
     //This field should be moved to optional once optional keyword is standard
     uint64 max_weight = 2;
+}
+
+/// return type of NewBlockTemplateRequest
+message GetNewBlockTemplateWithCoinbasesRequest{
+    PowAlgo algo = 1;
+    //This field should be moved to optional once optional keyword is standard
+    uint64 max_weight = 2;
+    repeated  NewBlockCoinbase coinbases = 3;
+}
+
+/// request  type of GetNewBlockWithCoinbasesRequest
+message GetNewBlockWithCoinbasesRequest{
+    NewBlockTemplate new_template = 1;
+    repeated  NewBlockCoinbase coinbases = 2;
+}
+
+message NewBlockCoinbase{
+    string address = 1;
+    uint64 value = 2;
+    bool stealth_payment= 3;
+    bool revealed_value_proof= 4;
+    bytes coinbase_extra =5;
 }
 
 // Network difficulty response
@@ -310,9 +336,9 @@ enum Sorting {
 
 message MetaData {
     // The current chain height, or the block number of the longest valid chain, or `None` if there is no chain
-    uint64 height_of_longest_chain = 1;
+    uint64 best_block_height = 1;
     // The block hash of the current tip of the longest valid chain, or `None` for an empty chain
-    bytes best_block = 2;
+    bytes best_block_hash = 2;
     // This is the min height this node can provide complete blocks for. A 0 here means this node is archival and can provide complete blocks for every height.
     uint64 pruned_height = 6;
     // The current geometric mean of the pow of the chain tip, or `None` if there is no chain
@@ -348,6 +374,7 @@ message GetNewBlockResult{
     Block block = 2;
     bytes merge_mining_hash =3;
     bytes tari_unique_id =4;
+    MinerData miner_data = 5;
 }
 
 // This is the message that is returned for a miner after it asks for a new block.

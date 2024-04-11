@@ -310,6 +310,8 @@ inline constexpr ConsensusConstants::Impl_::Impl_(
         validator_node_registration_min_deposit_amount_{::uint64_t{0u}},
         validator_node_registration_min_lock_height_{::uint64_t{0u}},
         validator_node_registration_shuffle_interval_epoch_{::uint64_t{0u}},
+        inflation_bips_{::uint64_t{0u}},
+        tail_epoch_length_{::uint64_t{0u}},
         blockchain_version_{0u} {}
 
 template <typename>
@@ -499,6 +501,8 @@ const ::uint32_t TableStruct_types_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
     PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.validator_node_registration_min_lock_height_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.validator_node_registration_shuffle_interval_epoch_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.permitted_range_proof_types_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.inflation_bips_),
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.tail_epoch_length_),
     ~0u,
     ~0u,
     ~0u,
@@ -530,6 +534,8 @@ const ::uint32_t TableStruct_types_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
     ~0u,
     ~0u,
     ~0u,
+    ~0u,
+    ~0u,
 };
 
 static const ::_pbi::MigrationSchema
@@ -546,7 +552,7 @@ static const ::_pbi::MigrationSchema
         {96, -1, -1, sizeof(::tari::rpc::PermittedRangeProofs)},
         {106, -1, -1, sizeof(::tari::rpc::RangeProof)},
         {115, 125, -1, sizeof(::tari::rpc::ConsensusConstants_ProofOfWorkEntry_DoNotUse)},
-        {127, 166, -1, sizeof(::tari::rpc::ConsensusConstants)},
+        {127, 168, -1, sizeof(::tari::rpc::ConsensusConstants)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -585,50 +591,52 @@ const char descriptor_table_protodef_types_2eproto[] PROTOBUF_SECTION_VARIABLE(p
     "output_type\030\001 \001(\0162\024.tari.rpc.OutputType\022"
     "3\n\021range_proof_types\030\002 \003(\0162\030.tari.rpc.Ra"
     "ngeProofType\"!\n\nRangeProof\022\023\n\013proof_byte"
-    "s\030\001 \001(\014\"\240\n\n\022ConsensusConstants\022\035\n\025coinba"
+    "s\030\001 \001(\014\"\327\n\n\022ConsensusConstants\022\035\n\025coinba"
     "se_min_maturity\030\001 \001(\004\022\032\n\022blockchain_vers"
     "ion\030\002 \001(\r\022\031\n\021future_time_limit\030\003 \001(\004\022\037\n\027"
     "difficulty_block_window\030\005 \001(\004\022$\n\034max_blo"
     "ck_transaction_weight\030\007 \001(\004\022\026\n\016pow_algo_"
     "count\030\010 \001(\004\022\036\n\026median_timestamp_count\030\t "
     "\001(\004\022\030\n\020emission_initial\030\n \001(\004\022\026\n\016emissio"
-    "n_decay\030\013 \003(\004\022\025\n\remission_tail\030\014 \001(\004\022 \n\030"
-    "min_sha3x_pow_difficulty\030\r \001(\004\022\033\n\023block_"
-    "weight_inputs\030\016 \001(\004\022\034\n\024block_weight_outp"
-    "uts\030\017 \001(\004\022\034\n\024block_weight_kernels\030\020 \001(\004\022"
-    "\024\n\014faucet_value\030\021 \001(\004\022\034\n\024max_script_byte"
-    "_size\030\022 \001(\004\022&\n\036validator_node_validity_p"
-    "eriod\030\023 \001(\004\022\035\n\025effective_from_height\030\024 \001"
-    "(\004\0227\n\036valid_blockchain_version_range\030\025 \001"
-    "(\0132\017.tari.rpc.Range\022\037\n\027max_randomx_seed_"
-    "height\030\026 \001(\004\022D\n\rproof_of_work\030\027 \003(\0132-.ta"
-    "ri.rpc.ConsensusConstants.ProofOfWorkEnt"
-    "ry\0222\n\022transaction_weight\030\030 \001(\0132\026.tari.rp"
-    "c.WeightParams\022,\n\023input_version_range\030\032 "
-    "\001(\0132\017.tari.rpc.Range\0226\n\024output_version_r"
-    "ange\030\033 \001(\0132\030.tari.rpc.OutputsVersion\022-\n\024"
-    "kernel_version_range\030\034 \001(\0132\017.tari.rpc.Ra"
-    "nge\0224\n\026permitted_output_types\030\035 \003(\0162\024.ta"
-    "ri.rpc.OutputType\022\024\n\014epoch_length\030\036 \001(\004\022"
-    "6\n.validator_node_registration_min_depos"
-    "it_amount\030\037 \001(\004\0223\n+validator_node_regist"
-    "ration_min_lock_height\030  \001(\004\022:\n2validato"
-    "r_node_registration_shuffle_interval_epo"
-    "ch\030! \001(\004\022C\n\033permitted_range_proof_types\030"
-    "\" \003(\0132\036.tari.rpc.PermittedRangeProofs\032S\n"
-    "\020ProofOfWorkEntry\022\013\n\003key\030\001 \001(\r\022.\n\005value\030"
-    "\002 \001(\0132\037.tari.rpc.PowAlgorithmConstants:\002"
-    "8\001*s\n\nOutputType\022\014\n\010STANDARD\020\000\022\014\n\010COINBA"
-    "SE\020\001\022\010\n\004BURN\020\002\022\037\n\033VALIDATOR_NODE_REGISTR"
-    "ATION\020\003\022\036\n\032CODE_TEMPLATE_REGISTRATION\020\004*"
-    ":\n\016RangeProofType\022\024\n\020BULLETPROOF_PLUS\020\000\022"
-    "\022\n\016REVEALED_VALUE\020\001b\006proto3"
+    "n_decay\030\013 \003(\004\022\031\n\remission_tail\030\014 \001(\004B\002\030\001"
+    "\022 \n\030min_sha3x_pow_difficulty\030\r \001(\004\022\033\n\023bl"
+    "ock_weight_inputs\030\016 \001(\004\022\034\n\024block_weight_"
+    "outputs\030\017 \001(\004\022\034\n\024block_weight_kernels\030\020 "
+    "\001(\004\022\024\n\014faucet_value\030\021 \001(\004\022\034\n\024max_script_"
+    "byte_size\030\022 \001(\004\022&\n\036validator_node_validi"
+    "ty_period\030\023 \001(\004\022\035\n\025effective_from_height"
+    "\030\024 \001(\004\0227\n\036valid_blockchain_version_range"
+    "\030\025 \001(\0132\017.tari.rpc.Range\022\037\n\027max_randomx_s"
+    "eed_height\030\026 \001(\004\022D\n\rproof_of_work\030\027 \003(\0132"
+    "-.tari.rpc.ConsensusConstants.ProofOfWor"
+    "kEntry\0222\n\022transaction_weight\030\030 \001(\0132\026.tar"
+    "i.rpc.WeightParams\022,\n\023input_version_rang"
+    "e\030\032 \001(\0132\017.tari.rpc.Range\0226\n\024output_versi"
+    "on_range\030\033 \001(\0132\030.tari.rpc.OutputsVersion"
+    "\022-\n\024kernel_version_range\030\034 \001(\0132\017.tari.rp"
+    "c.Range\0224\n\026permitted_output_types\030\035 \003(\0162"
+    "\024.tari.rpc.OutputType\022\024\n\014epoch_length\030\036 "
+    "\001(\004\0226\n.validator_node_registration_min_d"
+    "eposit_amount\030\037 \001(\004\0223\n+validator_node_re"
+    "gistration_min_lock_height\030  \001(\004\022:\n2vali"
+    "dator_node_registration_shuffle_interval"
+    "_epoch\030! \001(\004\022C\n\033permitted_range_proof_ty"
+    "pes\030\" \003(\0132\036.tari.rpc.PermittedRangeProof"
+    "s\022\026\n\016inflation_bips\030# \001(\004\022\031\n\021tail_epoch_"
+    "length\030$ \001(\004\032S\n\020ProofOfWorkEntry\022\013\n\003key\030"
+    "\001 \001(\r\022.\n\005value\030\002 \001(\0132\037.tari.rpc.PowAlgor"
+    "ithmConstants:\0028\001*s\n\nOutputType\022\014\n\010STAND"
+    "ARD\020\000\022\014\n\010COINBASE\020\001\022\010\n\004BURN\020\002\022\037\n\033VALIDAT"
+    "OR_NODE_REGISTRATION\020\003\022\036\n\032CODE_TEMPLATE_"
+    "REGISTRATION\020\004*:\n\016RangeProofType\022\024\n\020BULL"
+    "ETPROOF_PLUS\020\000\022\022\n\016REVEALED_VALUE\020\001b\006prot"
+    "o3"
 };
 static ::absl::once_flag descriptor_table_types_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_types_2eproto = {
     false,
     false,
-    2307,
+    2362,
     descriptor_table_protodef_types_2eproto,
     "types.proto",
     &descriptor_table_types_2eproto_once,
@@ -3165,15 +3173,15 @@ const char* ConsensusConstants::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
+const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_._has_bits_),
     0, // no _extensions_
-    34, 248,  // max_field_number, fast_idx_mask
+    36, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
     16777256,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    31,  // num_field_entries
+    33,  // num_field_entries
     8,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_ConsensusConstants_default_instance_._instance,
@@ -3209,7 +3217,7 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
     // repeated uint64 emission_decay = 11;
     {::_pbi::TcParser::FastV64P1,
      {90, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.emission_decay_)}},
-    // uint64 emission_tail = 12;
+    // uint64 emission_tail = 12 [deprecated = true];
     {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(ConsensusConstants, _impl_.emission_tail_), 63>(),
      {96, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.emission_tail_)}},
     // uint64 min_sha3x_pow_difficulty = 13;
@@ -3267,7 +3275,7 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
      {504, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.validator_node_registration_min_deposit_amount_)}},
   }}, {{
     33, 0, 1,
-    65532, 29,
+    65520, 29,
     65535, 65535
   }}, {{
     // uint64 coinbase_min_maturity = 1;
@@ -3297,7 +3305,7 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
     // repeated uint64 emission_decay = 11;
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.emission_decay_), -1, 0,
     (0 | ::_fl::kFcRepeated | ::_fl::kPackedUInt64)},
-    // uint64 emission_tail = 12;
+    // uint64 emission_tail = 12 [deprecated = true];
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.emission_tail_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
     // uint64 min_sha3x_pow_difficulty = 13;
@@ -3363,6 +3371,12 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
     // repeated .tari.rpc.PermittedRangeProofs permitted_range_proof_types = 34;
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.permitted_range_proof_types_), -1, 7,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+    // uint64 inflation_bips = 35;
+    {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.inflation_bips_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // uint64 tail_epoch_length = 36;
+    {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.tail_epoch_length_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::Range>()},
     {::_pbi::TcParser::GetMapAuxInfo<
@@ -3451,7 +3465,7 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
     }
   }
 
-  // uint64 emission_tail = 12;
+  // uint64 emission_tail = 12 [deprecated = true];
   if (this->_internal_emission_tail() != 0) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -3623,6 +3637,20 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
         InternalWriteMessage(34, repfield, repfield.GetCachedSize(), target, stream);
   }
 
+  // uint64 inflation_bips = 35;
+  if (this->_internal_inflation_bips() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        35, this->_internal_inflation_bips(), target);
+  }
+
+  // uint64 tail_epoch_length = 36;
+  if (this->_internal_tail_epoch_length() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        36, this->_internal_tail_epoch_length(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -3758,7 +3786,7 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
         this->_internal_emission_initial());
   }
 
-  // uint64 emission_tail = 12;
+  // uint64 emission_tail = 12 [deprecated = true];
   if (this->_internal_emission_tail() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
         this->_internal_emission_tail());
@@ -3840,6 +3868,18 @@ const ::_pbi::TcParseTable<5, 31, 8, 0, 7> ConsensusConstants::_table_ = {
   if (this->_internal_validator_node_registration_shuffle_interval_epoch() != 0) {
     total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
                                     this->_internal_validator_node_registration_shuffle_interval_epoch());
+  }
+
+  // uint64 inflation_bips = 35;
+  if (this->_internal_inflation_bips() != 0) {
+    total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
+                                    this->_internal_inflation_bips());
+  }
+
+  // uint64 tail_epoch_length = 36;
+  if (this->_internal_tail_epoch_length() != 0) {
+    total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
+                                    this->_internal_tail_epoch_length());
   }
 
   // uint32 blockchain_version = 2;
@@ -3957,6 +3997,12 @@ void ConsensusConstants::MergeImpl(::google::protobuf::Message& to_msg, const ::
   }
   if (from._internal_validator_node_registration_shuffle_interval_epoch() != 0) {
     _this->_internal_set_validator_node_registration_shuffle_interval_epoch(from._internal_validator_node_registration_shuffle_interval_epoch());
+  }
+  if (from._internal_inflation_bips() != 0) {
+    _this->_internal_set_inflation_bips(from._internal_inflation_bips());
+  }
+  if (from._internal_tail_epoch_length() != 0) {
+    _this->_internal_set_tail_epoch_length(from._internal_tail_epoch_length());
   }
   if (from._internal_blockchain_version() != 0) {
     _this->_internal_set_blockchain_version(from._internal_blockchain_version());

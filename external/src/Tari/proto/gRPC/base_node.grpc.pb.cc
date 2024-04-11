@@ -36,6 +36,8 @@ static const char* BaseNode_method_names[] = {
   "/tari.rpc.BaseNode/GetNetworkDifficulty",
   "/tari.rpc.BaseNode/GetNewBlockTemplate",
   "/tari.rpc.BaseNode/GetNewBlock",
+  "/tari.rpc.BaseNode/GetNewBlockWithCoinbases",
+  "/tari.rpc.BaseNode/GetNewBlockTemplateWithCoinbases",
   "/tari.rpc.BaseNode/GetNewBlockBlob",
   "/tari.rpc.BaseNode/SubmitBlock",
   "/tari.rpc.BaseNode/SubmitBlockBlob",
@@ -79,27 +81,29 @@ BaseNode::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, 
   , rpcmethod_GetNetworkDifficulty_(BaseNode_method_names[10], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
   , rpcmethod_GetNewBlockTemplate_(BaseNode_method_names[11], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetNewBlock_(BaseNode_method_names[12], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetNewBlockBlob_(BaseNode_method_names[13], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SubmitBlock_(BaseNode_method_names[14], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SubmitBlockBlob_(BaseNode_method_names[15], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SubmitTransaction_(BaseNode_method_names[16], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetSyncInfo_(BaseNode_method_names[17], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetSyncProgress_(BaseNode_method_names[18], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetTipInfo_(BaseNode_method_names[19], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SearchKernels_(BaseNode_method_names[20], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_SearchUtxos_(BaseNode_method_names[21], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_FetchMatchingUtxos_(BaseNode_method_names[22], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetPeers_(BaseNode_method_names[23], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetMempoolTransactions_(BaseNode_method_names[24], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_TransactionState_(BaseNode_method_names[25], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_Identify_(BaseNode_method_names[26], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetNetworkStatus_(BaseNode_method_names[27], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ListConnectedPeers_(BaseNode_method_names[28], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetMempoolStats_(BaseNode_method_names[29], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetActiveValidatorNodes_(BaseNode_method_names[30], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetShardKey_(BaseNode_method_names[31], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetTemplateRegistrations_(BaseNode_method_names[32], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetSideChainUtxos_(BaseNode_method_names[33], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetNewBlockWithCoinbases_(BaseNode_method_names[13], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetNewBlockTemplateWithCoinbases_(BaseNode_method_names[14], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetNewBlockBlob_(BaseNode_method_names[15], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SubmitBlock_(BaseNode_method_names[16], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SubmitBlockBlob_(BaseNode_method_names[17], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SubmitTransaction_(BaseNode_method_names[18], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetSyncInfo_(BaseNode_method_names[19], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetSyncProgress_(BaseNode_method_names[20], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetTipInfo_(BaseNode_method_names[21], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SearchKernels_(BaseNode_method_names[22], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_SearchUtxos_(BaseNode_method_names[23], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_FetchMatchingUtxos_(BaseNode_method_names[24], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetPeers_(BaseNode_method_names[25], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetMempoolTransactions_(BaseNode_method_names[26], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_TransactionState_(BaseNode_method_names[27], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Identify_(BaseNode_method_names[28], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetNetworkStatus_(BaseNode_method_names[29], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ListConnectedPeers_(BaseNode_method_names[30], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetMempoolStats_(BaseNode_method_names[31], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetActiveValidatorNodes_(BaseNode_method_names[32], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetShardKey_(BaseNode_method_names[33], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetTemplateRegistrations_(BaseNode_method_names[34], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetSideChainUtxos_(BaseNode_method_names[35], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
   {}
 
 ::grpc::ClientReader< ::tari::rpc::BlockHeaderResponse>* BaseNode::Stub::ListHeadersRaw(::grpc::ClientContext* context, const ::tari::rpc::ListHeadersRequest& request) {
@@ -369,6 +373,52 @@ void BaseNode::Stub::async::GetNewBlock(::grpc::ClientContext* context, const ::
 ::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* BaseNode::Stub::AsyncGetNewBlockRaw(::grpc::ClientContext* context, const ::tari::rpc::NewBlockTemplate& request, ::grpc::CompletionQueue* cq) {
   auto* result =
     this->PrepareAsyncGetNewBlockRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status BaseNode::Stub::GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetNewBlockWithCoinbases_, context, request, response);
+}
+
+void BaseNode::Stub::async::GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNewBlockWithCoinbases_, context, request, response, std::move(f));
+}
+
+void BaseNode::Stub::async::GetNewBlockWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNewBlockWithCoinbases_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* BaseNode::Stub::PrepareAsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::tari::rpc::GetNewBlockResult, ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetNewBlockWithCoinbases_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* BaseNode::Stub::AsyncGetNewBlockWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetNewBlockWithCoinbasesRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status BaseNode::Stub::GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::tari::rpc::GetNewBlockResult* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetNewBlockTemplateWithCoinbases_, context, request, response);
+}
+
+void BaseNode::Stub::async::GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNewBlockTemplateWithCoinbases_, context, request, response, std::move(f));
+}
+
+void BaseNode::Stub::async::GetNewBlockTemplateWithCoinbases(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNewBlockTemplateWithCoinbases_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* BaseNode::Stub::PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::tari::rpc::GetNewBlockResult, ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetNewBlockTemplateWithCoinbases_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNewBlockResult>* BaseNode::Stub::AsyncGetNewBlockTemplateWithCoinbasesRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetNewBlockTemplateWithCoinbasesRaw(context, request, cq);
   result->StartCall();
   return result;
 }
@@ -934,6 +984,26 @@ BaseNode::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       BaseNode_method_names[13],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::GetNewBlockWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](BaseNode::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::tari::rpc::GetNewBlockWithCoinbasesRequest* req,
+             ::tari::rpc::GetNewBlockResult* resp) {
+               return service->GetNewBlockWithCoinbases(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      BaseNode_method_names[14],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest, ::tari::rpc::GetNewBlockResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](BaseNode::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* req,
+             ::tari::rpc::GetNewBlockResult* resp) {
+               return service->GetNewBlockTemplateWithCoinbases(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      BaseNode_method_names[15],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::NewBlockTemplate, ::tari::rpc::GetNewBlockBlobResult, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
              ::grpc::ServerContext* ctx,
@@ -942,7 +1012,7 @@ BaseNode::Service::Service() {
                return service->GetNewBlockBlob(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[14],
+      BaseNode_method_names[16],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Block, ::tari::rpc::SubmitBlockResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -952,7 +1022,7 @@ BaseNode::Service::Service() {
                return service->SubmitBlock(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[15],
+      BaseNode_method_names[17],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::BlockBlobRequest, ::tari::rpc::SubmitBlockResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -962,7 +1032,7 @@ BaseNode::Service::Service() {
                return service->SubmitBlockBlob(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[16],
+      BaseNode_method_names[18],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::SubmitTransactionRequest, ::tari::rpc::SubmitTransactionResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -972,7 +1042,7 @@ BaseNode::Service::Service() {
                return service->SubmitTransaction(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[17],
+      BaseNode_method_names[19],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::SyncInfoResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -982,7 +1052,7 @@ BaseNode::Service::Service() {
                return service->GetSyncInfo(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[18],
+      BaseNode_method_names[20],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::SyncProgressResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -992,7 +1062,7 @@ BaseNode::Service::Service() {
                return service->GetSyncProgress(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[19],
+      BaseNode_method_names[21],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::TipInfoResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1002,7 +1072,7 @@ BaseNode::Service::Service() {
                return service->GetTipInfo(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[20],
+      BaseNode_method_names[22],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::SearchKernelsRequest, ::tari::rpc::HistoricalBlock>(
           [](BaseNode::Service* service,
@@ -1012,7 +1082,7 @@ BaseNode::Service::Service() {
                return service->SearchKernels(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[21],
+      BaseNode_method_names[23],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::SearchUtxosRequest, ::tari::rpc::HistoricalBlock>(
           [](BaseNode::Service* service,
@@ -1022,7 +1092,7 @@ BaseNode::Service::Service() {
                return service->SearchUtxos(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[22],
+      BaseNode_method_names[24],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::FetchMatchingUtxosRequest, ::tari::rpc::FetchMatchingUtxosResponse>(
           [](BaseNode::Service* service,
@@ -1032,7 +1102,7 @@ BaseNode::Service::Service() {
                return service->FetchMatchingUtxos(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[23],
+      BaseNode_method_names[25],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetPeersRequest, ::tari::rpc::GetPeersResponse>(
           [](BaseNode::Service* service,
@@ -1042,7 +1112,7 @@ BaseNode::Service::Service() {
                return service->GetPeers(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[24],
+      BaseNode_method_names[26],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetMempoolTransactionsRequest, ::tari::rpc::GetMempoolTransactionsResponse>(
           [](BaseNode::Service* service,
@@ -1052,7 +1122,7 @@ BaseNode::Service::Service() {
                return service->GetMempoolTransactions(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[25],
+      BaseNode_method_names[27],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::TransactionStateRequest, ::tari::rpc::TransactionStateResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1062,7 +1132,7 @@ BaseNode::Service::Service() {
                return service->TransactionState(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[26],
+      BaseNode_method_names[28],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::NodeIdentity, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1072,7 +1142,7 @@ BaseNode::Service::Service() {
                return service->Identify(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[27],
+      BaseNode_method_names[29],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::NetworkStatusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1082,7 +1152,7 @@ BaseNode::Service::Service() {
                return service->GetNetworkStatus(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[28],
+      BaseNode_method_names[30],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::ListConnectedPeersResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1092,7 +1162,7 @@ BaseNode::Service::Service() {
                return service->ListConnectedPeers(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[29],
+      BaseNode_method_names[31],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::Empty, ::tari::rpc::MempoolStatsResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1102,7 +1172,7 @@ BaseNode::Service::Service() {
                return service->GetMempoolStats(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[30],
+      BaseNode_method_names[32],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetActiveValidatorNodesRequest, ::tari::rpc::GetActiveValidatorNodesResponse>(
           [](BaseNode::Service* service,
@@ -1112,7 +1182,7 @@ BaseNode::Service::Service() {
                return service->GetActiveValidatorNodes(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[31],
+      BaseNode_method_names[33],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::GetShardKeyRequest, ::tari::rpc::GetShardKeyResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1122,7 +1192,7 @@ BaseNode::Service::Service() {
                return service->GetShardKey(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[32],
+      BaseNode_method_names[34],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetTemplateRegistrationsRequest, ::tari::rpc::GetTemplateRegistrationResponse>(
           [](BaseNode::Service* service,
@@ -1132,7 +1202,7 @@ BaseNode::Service::Service() {
                return service->GetTemplateRegistrations(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[33],
+      BaseNode_method_names[35],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetSideChainUtxosRequest, ::tari::rpc::GetSideChainUtxosResponse>(
           [](BaseNode::Service* service,
@@ -1231,6 +1301,20 @@ BaseNode::Service::~Service() {
 }
 
 ::grpc::Status BaseNode::Service::GetNewBlock(::grpc::ServerContext* context, const ::tari::rpc::NewBlockTemplate* request, ::tari::rpc::GetNewBlockResult* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status BaseNode::Service::GetNewBlockWithCoinbases(::grpc::ServerContext* context, const ::tari::rpc::GetNewBlockWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status BaseNode::Service::GetNewBlockTemplateWithCoinbases(::grpc::ServerContext* context, const ::tari::rpc::GetNewBlockTemplateWithCoinbasesRequest* request, ::tari::rpc::GetNewBlockResult* response) {
   (void) context;
   (void) request;
   (void) response;
