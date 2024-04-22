@@ -136,17 +136,36 @@ struct GetIdentityRequestDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetIdentityRequestDefaultTypeInternal _GetIdentityRequest_default_instance_;
 
+inline constexpr AverageLatency::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : latency_{::uint64_t{0u}},
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR AverageLatency::AverageLatency(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct AverageLatencyDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR AverageLatencyDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~AverageLatencyDefaultTypeInternal() {}
+  union {
+    AverageLatency _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AverageLatencyDefaultTypeInternal _AverageLatency_default_instance_;
+
 inline constexpr Address::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : address_(
+      : _cached_size_{0},
+        address_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         last_seen_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        avg_latency_{::uint64_t{0u}},
-        connection_attempts_{0u},
-        _cached_size_{0} {}
+        avg_latency_{nullptr},
+        connection_attempts_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR Address::Address(::_pbi::ConstantInitialized)
@@ -219,7 +238,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ListConnectedPeersResponseDefaultTypeInternal _ListConnectedPeersResponse_default_instance_;
 }  // namespace rpc
 }  // namespace tari
-static ::_pb::Metadata file_level_metadata_network_2eproto[8];
+static ::_pb::Metadata file_level_metadata_network_2eproto[9];
 static const ::_pb::EnumDescriptor* file_level_enum_descriptors_network_2eproto[1];
 static constexpr const ::_pb::ServiceDescriptor**
     file_level_service_descriptors_network_2eproto = nullptr;
@@ -266,7 +285,7 @@ const ::uint32_t TableStruct_network_2eproto::offsets[] PROTOBUF_SECTION_VARIABL
     PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkStatusResponse, _impl_.status_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkStatusResponse, _impl_.avg_latency_ms_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkStatusResponse, _impl_.num_node_connections_),
-    ~0u,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::Address, _impl_._has_bits_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::Address, _internal_metadata_),
     ~0u,  // no _extensions_
     ~0u,  // no _oneof_case_
@@ -278,6 +297,19 @@ const ::uint32_t TableStruct_network_2eproto::offsets[] PROTOBUF_SECTION_VARIABL
     PROTOBUF_FIELD_OFFSET(::tari::rpc::Address, _impl_.last_seen_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::Address, _impl_.connection_attempts_),
     PROTOBUF_FIELD_OFFSET(::tari::rpc::Address, _impl_.avg_latency_),
+    ~0u,
+    ~0u,
+    ~0u,
+    0,
+    ~0u,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::AverageLatency, _internal_metadata_),
+    ~0u,  // no _extensions_
+    ~0u,  // no _oneof_case_
+    ~0u,  // no _weak_field_map_
+    ~0u,  // no _inlined_string_donated_
+    ~0u,  // no _split_
+    ~0u,  // no sizeof(Split)
+    PROTOBUF_FIELD_OFFSET(::tari::rpc::AverageLatency, _impl_.latency_),
     ~0u,  // no _has_bits_
     PROTOBUF_FIELD_OFFSET(::tari::rpc::ListConnectedPeersResponse, _internal_metadata_),
     ~0u,  // no _extensions_
@@ -325,11 +357,12 @@ static const ::_pbi::MigrationSchema
         {0, -1, -1, sizeof(::tari::rpc::NodeIdentity)},
         {11, -1, -1, sizeof(::tari::rpc::Peer)},
         {30, -1, -1, sizeof(::tari::rpc::NetworkStatusResponse)},
-        {41, -1, -1, sizeof(::tari::rpc::Address)},
-        {53, -1, -1, sizeof(::tari::rpc::ListConnectedPeersResponse)},
-        {62, -1, -1, sizeof(::tari::rpc::SoftwareUpdate)},
-        {74, -1, -1, sizeof(::tari::rpc::GetIdentityRequest)},
-        {82, -1, -1, sizeof(::tari::rpc::GetIdentityResponse)},
+        {41, 53, -1, sizeof(::tari::rpc::Address)},
+        {57, -1, -1, sizeof(::tari::rpc::AverageLatency)},
+        {66, -1, -1, sizeof(::tari::rpc::ListConnectedPeersResponse)},
+        {75, -1, -1, sizeof(::tari::rpc::SoftwareUpdate)},
+        {87, -1, -1, sizeof(::tari::rpc::GetIdentityRequest)},
+        {95, -1, -1, sizeof(::tari::rpc::GetIdentityResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -337,6 +370,7 @@ static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_Peer_default_instance_._instance,
     &::tari::rpc::_NetworkStatusResponse_default_instance_._instance,
     &::tari::rpc::_Address_default_instance_._instance,
+    &::tari::rpc::_AverageLatency_default_instance_._instance,
     &::tari::rpc::_ListConnectedPeersResponse_default_instance_._instance,
     &::tari::rpc::_SoftwareUpdate_default_instance_._instance,
     &::tari::rpc::_GetIdentityRequest_default_instance_._instance,
@@ -355,19 +389,20 @@ const char descriptor_table_protodef_network_2eproto[] PROTOBUF_SECTION_VARIABLE
     "otocols\030\013 \003(\014\022\022\n\nuser_agent\030\014 \001(\t\"{\n\025Net"
     "workStatusResponse\022,\n\006status\030\001 \001(\0162\034.tar"
     "i.rpc.ConnectivityStatus\022\026\n\016avg_latency_"
-    "ms\030\002 \001(\r\022\034\n\024num_node_connections\030\003 \001(\r\"_"
+    "ms\030\002 \001(\r\022\034\n\024num_node_connections\030\003 \001(\r\"y"
     "\n\007Address\022\017\n\007address\030\001 \001(\014\022\021\n\tlast_seen\030"
-    "\002 \001(\t\022\033\n\023connection_attempts\030\003 \001(\r\022\023\n\013av"
-    "g_latency\030\005 \001(\004\"E\n\032ListConnectedPeersRes"
-    "ponse\022\'\n\017connected_peers\030\001 \003(\0132\016.tari.rp"
-    "c.Peer\"X\n\016SoftwareUpdate\022\022\n\nhas_update\030\001"
-    " \001(\010\022\017\n\007version\030\002 \001(\t\022\013\n\003sha\030\003 \001(\t\022\024\n\014do"
-    "wnload_url\030\004 \001(\t\"\024\n\022GetIdentityRequest\"R"
-    "\n\023GetIdentityResponse\022\022\n\npublic_key\030\001 \001("
-    "\014\022\026\n\016public_address\030\002 \001(\t\022\017\n\007node_id\030\003 \001"
-    "(\014*M\n\022ConnectivityStatus\022\020\n\014Initializing"
-    "\020\000\022\n\n\006Online\020\001\022\014\n\010Degraded\020\002\022\013\n\007Offline\020"
-    "\003b\006proto3"
+    "\002 \001(\t\022\033\n\023connection_attempts\030\003 \001(\r\022-\n\013av"
+    "g_latency\030\005 \001(\0132\030.tari.rpc.AverageLatenc"
+    "y\"!\n\016AverageLatency\022\017\n\007latency\030\001 \001(\004\"E\n\032"
+    "ListConnectedPeersResponse\022\'\n\017connected_"
+    "peers\030\001 \003(\0132\016.tari.rpc.Peer\"X\n\016SoftwareU"
+    "pdate\022\022\n\nhas_update\030\001 \001(\010\022\017\n\007version\030\002 \001"
+    "(\t\022\013\n\003sha\030\003 \001(\t\022\024\n\014download_url\030\004 \001(\t\"\024\n"
+    "\022GetIdentityRequest\"R\n\023GetIdentityRespon"
+    "se\022\022\n\npublic_key\030\001 \001(\014\022\026\n\016public_address"
+    "\030\002 \001(\t\022\017\n\007node_id\030\003 \001(\014*M\n\022ConnectivityS"
+    "tatus\022\020\n\014Initializing\020\000\022\n\n\006Online\020\001\022\014\n\010D"
+    "egraded\020\002\022\013\n\007Offline\020\003b\006proto3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_network_2eproto_deps[1] =
     {
@@ -377,13 +412,13 @@ static ::absl::once_flag descriptor_table_network_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_network_2eproto = {
     false,
     false,
-    969,
+    1030,
     descriptor_table_protodef_network_2eproto,
     "network.proto",
     &descriptor_table_network_2eproto_once,
     descriptor_table_network_2eproto_deps,
     1,
-    8,
+    9,
     schemas,
     file_default_instances,
     TableStruct_network_2eproto::offsets,
@@ -1348,8 +1383,18 @@ void NetworkStatusResponse::InternalSwap(NetworkStatusResponse* PROTOBUF_RESTRIC
 
 class Address::_Internal {
  public:
+  using HasBits = decltype(std::declval<Address>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(Address, _impl_._has_bits_);
+  static const ::tari::rpc::AverageLatency& avg_latency(const Address* msg);
+  static void set_has_avg_latency(HasBits* has_bits) {
+    (*has_bits)[0] |= 1u;
+  }
 };
 
+const ::tari::rpc::AverageLatency& Address::_Internal::avg_latency(const Address* msg) {
+  return *msg->_impl_.avg_latency_;
+}
 Address::Address(::google::protobuf::Arena* arena)
     : ::google::protobuf::Message(arena) {
   SharedCtor(arena);
@@ -1358,9 +1403,10 @@ Address::Address(::google::protobuf::Arena* arena)
 inline PROTOBUF_NDEBUG_INLINE Address::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from)
-      : address_(arena, from.address_),
-        last_seen_(arena, from.last_seen_),
-        _cached_size_{0} {}
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        address_(arena, from.address_),
+        last_seen_(arena, from.last_seen_) {}
 
 Address::Address(
     ::google::protobuf::Arena* arena,
@@ -1371,22 +1417,20 @@ Address::Address(
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
-  ::memcpy(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, avg_latency_),
-           reinterpret_cast<const char *>(&from._impl_) +
-               offsetof(Impl_, avg_latency_),
-           offsetof(Impl_, connection_attempts_) -
-               offsetof(Impl_, avg_latency_) +
-               sizeof(Impl_::connection_attempts_));
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.avg_latency_ = (cached_has_bits & 0x00000001u)
+                ? CreateMaybeMessage<::tari::rpc::AverageLatency>(arena, *from._impl_.avg_latency_)
+                : nullptr;
+  _impl_.connection_attempts_ = from._impl_.connection_attempts_;
 
   // @@protoc_insertion_point(copy_constructor:tari.rpc.Address)
 }
 inline PROTOBUF_NDEBUG_INLINE Address::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : address_(arena),
-        last_seen_(arena),
-        _cached_size_{0} {}
+      : _cached_size_{0},
+        address_(arena),
+        last_seen_(arena) {}
 
 inline void Address::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -1406,6 +1450,7 @@ inline void Address::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
   _impl_.address_.Destroy();
   _impl_.last_seen_.Destroy();
+  delete _impl_.avg_latency_;
   _impl_.~Impl_();
 }
 
@@ -1418,9 +1463,13 @@ PROTOBUF_NOINLINE void Address::Clear() {
 
   _impl_.address_.ClearToEmpty();
   _impl_.last_seen_.ClearToEmpty();
-  ::memset(&_impl_.avg_latency_, 0, static_cast<::size_t>(
-      reinterpret_cast<char*>(&_impl_.connection_attempts_) -
-      reinterpret_cast<char*>(&_impl_.avg_latency_)) + sizeof(_impl_.connection_attempts_));
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    ABSL_DCHECK(_impl_.avg_latency_ != nullptr);
+    _impl_.avg_latency_->Clear();
+  }
+  _impl_.connection_attempts_ = 0u;
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -1432,17 +1481,17 @@ const char* Address::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<3, 4, 0, 34, 2> Address::_table_ = {
+const ::_pbi::TcParseTable<3, 4, 1, 34, 2> Address::_table_ = {
   {
-    0,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(Address, _impl_._has_bits_),
     0, // no _extensions_
     5, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
     4294967272,  // skipmap
     offsetof(decltype(_table_), field_entries),
     4,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
+    1,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
     &_Address_default_instance_._instance,
     ::_pbi::TcParser::GenericFallback,  // fallback
   }, {{
@@ -1457,29 +1506,29 @@ const ::_pbi::TcParseTable<3, 4, 0, 34, 2> Address::_table_ = {
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(Address, _impl_.connection_attempts_), 63>(),
      {24, 63, 0, PROTOBUF_FIELD_OFFSET(Address, _impl_.connection_attempts_)}},
     {::_pbi::TcParser::MiniParse, {}},
-    // uint64 avg_latency = 5;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(Address, _impl_.avg_latency_), 63>(),
-     {40, 63, 0, PROTOBUF_FIELD_OFFSET(Address, _impl_.avg_latency_)}},
+    // .tari.rpc.AverageLatency avg_latency = 5;
+    {::_pbi::TcParser::FastMtS1,
+     {42, 0, 0, PROTOBUF_FIELD_OFFSET(Address, _impl_.avg_latency_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
     // bytes address = 1;
-    {PROTOBUF_FIELD_OFFSET(Address, _impl_.address_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(Address, _impl_.address_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
     // string last_seen = 2;
-    {PROTOBUF_FIELD_OFFSET(Address, _impl_.last_seen_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(Address, _impl_.last_seen_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // uint32 connection_attempts = 3;
-    {PROTOBUF_FIELD_OFFSET(Address, _impl_.connection_attempts_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(Address, _impl_.connection_attempts_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
-    // uint64 avg_latency = 5;
-    {PROTOBUF_FIELD_OFFSET(Address, _impl_.avg_latency_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-  }},
-  // no aux_entries
-  {{
+    // .tari.rpc.AverageLatency avg_latency = 5;
+    {PROTOBUF_FIELD_OFFSET(Address, _impl_.avg_latency_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+  }}, {{
+    {::_pbi::TcParser::GetTable<::tari::rpc::AverageLatency>()},
+  }}, {{
     "\20\0\11\0\0\0\0\0"
     "tari.rpc.Address"
     "last_seen"
@@ -1514,11 +1563,12 @@ const ::_pbi::TcParseTable<3, 4, 0, 34, 2> Address::_table_ = {
         3, this->_internal_connection_attempts(), target);
   }
 
-  // uint64 avg_latency = 5;
-  if (this->_internal_avg_latency() != 0) {
-    target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
-        5, this->_internal_avg_latency(), target);
+  cached_has_bits = _impl_._has_bits_[0];
+  // .tari.rpc.AverageLatency avg_latency = 5;
+  if (cached_has_bits & 0x00000001u) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        5, _Internal::avg_latency(this),
+        _Internal::avg_latency(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1550,10 +1600,11 @@ const ::_pbi::TcParseTable<3, 4, 0, 34, 2> Address::_table_ = {
                                     this->_internal_last_seen());
   }
 
-  // uint64 avg_latency = 5;
-  if (this->_internal_avg_latency() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
-        this->_internal_avg_latency());
+  // .tari.rpc.AverageLatency avg_latency = 5;
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    total_size +=
+        1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.avg_latency_);
   }
 
   // uint32 connection_attempts = 3;
@@ -1587,8 +1638,9 @@ void Address::MergeImpl(::google::protobuf::Message& to_msg, const ::google::pro
   if (!from._internal_last_seen().empty()) {
     _this->_internal_set_last_seen(from._internal_last_seen());
   }
-  if (from._internal_avg_latency() != 0) {
-    _this->_internal_set_avg_latency(from._internal_avg_latency());
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_internal_mutable_avg_latency()->::tari::rpc::AverageLatency::MergeFrom(
+        from._internal_avg_latency());
   }
   if (from._internal_connection_attempts() != 0) {
     _this->_internal_set_connection_attempts(from._internal_connection_attempts());
@@ -1615,6 +1667,7 @@ void Address::InternalSwap(Address* PROTOBUF_RESTRICT other) {
   auto* arena = GetArena();
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.address_, &other->_impl_.address_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.last_seen_, &other->_impl_.last_seen_, arena);
   ::google::protobuf::internal::memswap<
@@ -1629,6 +1682,176 @@ void Address::InternalSwap(Address* PROTOBUF_RESTRICT other) {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
       file_level_metadata_network_2eproto[3]);
+}
+// ===================================================================
+
+class AverageLatency::_Internal {
+ public:
+};
+
+AverageLatency::AverageLatency(::google::protobuf::Arena* arena)
+    : ::google::protobuf::Message(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tari.rpc.AverageLatency)
+}
+AverageLatency::AverageLatency(
+    ::google::protobuf::Arena* arena, const AverageLatency& from)
+    : AverageLatency(arena) {
+  MergeFrom(from);
+}
+inline PROTOBUF_NDEBUG_INLINE AverageLatency::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : _cached_size_{0} {}
+
+inline void AverageLatency::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.latency_ = {};
+}
+AverageLatency::~AverageLatency() {
+  // @@protoc_insertion_point(destructor:tari.rpc.AverageLatency)
+  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  SharedDtor();
+}
+inline void AverageLatency::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.~Impl_();
+}
+
+PROTOBUF_NOINLINE void AverageLatency::Clear() {
+// @@protoc_insertion_point(message_clear_start:tari.rpc.AverageLatency)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.latency_ = ::uint64_t{0u};
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+const char* AverageLatency::_InternalParse(
+    const char* ptr, ::_pbi::ParseContext* ctx) {
+  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+  return ptr;
+}
+
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 1, 0, 0, 2> AverageLatency::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    1, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967294,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    1,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_AverageLatency_default_instance_._instance,
+    ::_pbi::TcParser::GenericFallback,  // fallback
+  }, {{
+    // uint64 latency = 1;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(AverageLatency, _impl_.latency_), 63>(),
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(AverageLatency, _impl_.latency_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // uint64 latency = 1;
+    {PROTOBUF_FIELD_OFFSET(AverageLatency, _impl_.latency_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+  }},
+  // no aux_entries
+  {{
+  }},
+};
+
+::uint8_t* AverageLatency::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:tari.rpc.AverageLatency)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // uint64 latency = 1;
+  if (this->_internal_latency() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        1, this->_internal_latency(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tari.rpc.AverageLatency)
+  return target;
+}
+
+::size_t AverageLatency::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:tari.rpc.AverageLatency)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // uint64 latency = 1;
+  if (this->_internal_latency() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+        this->_internal_latency());
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::google::protobuf::Message::ClassData AverageLatency::_class_data_ = {
+    AverageLatency::MergeImpl,
+    nullptr,  // OnDemandRegisterArenaDtor
+};
+const ::google::protobuf::Message::ClassData* AverageLatency::GetClassData() const {
+  return &_class_data_;
+}
+
+void AverageLatency::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
+  auto* const _this = static_cast<AverageLatency*>(&to_msg);
+  auto& from = static_cast<const AverageLatency&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:tari.rpc.AverageLatency)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_latency() != 0) {
+    _this->_internal_set_latency(from._internal_latency());
+  }
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void AverageLatency::CopyFrom(const AverageLatency& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:tari.rpc.AverageLatency)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+PROTOBUF_NOINLINE bool AverageLatency::IsInitialized() const {
+  return true;
+}
+
+::_pbi::CachedSize* AverageLatency::AccessCachedSize() const {
+  return &_impl_._cached_size_;
+}
+void AverageLatency::InternalSwap(AverageLatency* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+        swap(_impl_.latency_, other->_impl_.latency_);
+}
+
+::google::protobuf::Metadata AverageLatency::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
+      file_level_metadata_network_2eproto[4]);
 }
 // ===================================================================
 
@@ -1811,7 +2034,7 @@ void ListConnectedPeersResponse::InternalSwap(ListConnectedPeersResponse* PROTOB
 ::google::protobuf::Metadata ListConnectedPeersResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
-      file_level_metadata_network_2eproto[4]);
+      file_level_metadata_network_2eproto[5]);
 }
 // ===================================================================
 
@@ -2084,7 +2307,7 @@ void SoftwareUpdate::InternalSwap(SoftwareUpdate* PROTOBUF_RESTRICT other) {
 ::google::protobuf::Metadata SoftwareUpdate::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
-      file_level_metadata_network_2eproto[5]);
+      file_level_metadata_network_2eproto[6]);
 }
 // ===================================================================
 
@@ -2119,7 +2342,7 @@ GetIdentityRequest::GetIdentityRequest(
 ::google::protobuf::Metadata GetIdentityRequest::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
-      file_level_metadata_network_2eproto[6]);
+      file_level_metadata_network_2eproto[7]);
 }
 // ===================================================================
 
@@ -2362,7 +2585,7 @@ void GetIdentityResponse::InternalSwap(GetIdentityResponse* PROTOBUF_RESTRICT ot
 ::google::protobuf::Metadata GetIdentityResponse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_network_2eproto_getter, &descriptor_table_network_2eproto_once,
-      file_level_metadata_network_2eproto[7]);
+      file_level_metadata_network_2eproto[8]);
 }
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace rpc

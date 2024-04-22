@@ -70,7 +70,11 @@ message Address{
     bytes address =1;
     string last_seen = 2;
     uint32 connection_attempts = 3;
-    uint64 avg_latency = 5;
+    AverageLatency avg_latency = 5;
+}
+
+message AverageLatency {
+    uint64 latency = 1;
 }
 
 message ListConnectedPeersResponse {

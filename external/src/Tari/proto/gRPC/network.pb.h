@@ -63,6 +63,9 @@ namespace rpc {
 class Address;
 struct AddressDefaultTypeInternal;
 extern AddressDefaultTypeInternal _Address_default_instance_;
+class AverageLatency;
+struct AverageLatencyDefaultTypeInternal;
+extern AverageLatencyDefaultTypeInternal _AverageLatency_default_instance_;
 class GetIdentityRequest;
 struct GetIdentityRequestDefaultTypeInternal;
 extern GetIdentityRequestDefaultTypeInternal _GetIdentityRequest_default_instance_;
@@ -193,7 +196,7 @@ class SoftwareUpdate final :
                &_SoftwareUpdate_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    6;
 
   friend void swap(SoftwareUpdate& a, SoftwareUpdate& b) {
     a.Swap(&b);
@@ -850,7 +853,7 @@ class GetIdentityResponse final :
                &_GetIdentityResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    8;
 
   friend void swap(GetIdentityResponse& a, GetIdentityResponse& b) {
     a.Swap(&b);
@@ -1066,7 +1069,7 @@ class GetIdentityRequest final :
                &_GetIdentityRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    7;
 
   friend void swap(GetIdentityRequest& a, GetIdentityRequest& b) {
     a.Swap(&b);
@@ -1141,6 +1144,181 @@ class GetIdentityRequest final :
                               ::google::protobuf::Arena* arena, const Impl_& from);
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
+  friend struct ::TableStruct_network_2eproto;
+};// -------------------------------------------------------------------
+
+class AverageLatency final :
+    public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tari.rpc.AverageLatency) */ {
+ public:
+  inline AverageLatency() : AverageLatency(nullptr) {}
+  ~AverageLatency() override;
+  template<typename = void>
+  explicit PROTOBUF_CONSTEXPR AverageLatency(::google::protobuf::internal::ConstantInitialized);
+
+  inline AverageLatency(const AverageLatency& from)
+      : AverageLatency(nullptr, from) {}
+  AverageLatency(AverageLatency&& from) noexcept
+    : AverageLatency() {
+    *this = ::std::move(from);
+  }
+
+  inline AverageLatency& operator=(const AverageLatency& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AverageLatency& operator=(AverageLatency&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const AverageLatency& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const AverageLatency* internal_default_instance() {
+    return reinterpret_cast<const AverageLatency*>(
+               &_AverageLatency_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    4;
+
+  friend void swap(AverageLatency& a, AverageLatency& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(AverageLatency* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr &&
+        GetArena() == other->GetArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(AverageLatency* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  AverageLatency* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<AverageLatency>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const AverageLatency& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom( const AverageLatency& from) {
+    AverageLatency::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target, ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  ::google::protobuf::internal::CachedSize* AccessCachedSize() const final;
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(AverageLatency* other);
+
+  private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() {
+    return "tari.rpc.AverageLatency";
+  }
+  protected:
+  explicit AverageLatency(::google::protobuf::Arena* arena);
+  AverageLatency(::google::protobuf::Arena* arena, const AverageLatency& from);
+  public:
+
+  static const ClassData _class_data_;
+  const ::google::protobuf::Message::ClassData*GetClassData() const final;
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kLatencyFieldNumber = 1,
+  };
+  // uint64 latency = 1;
+  void clear_latency() ;
+  ::uint64_t latency() const;
+  void set_latency(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_latency() const;
+  void _internal_set_latency(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.AverageLatency)
+ private:
+  class _Internal;
+
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 1, 0,
+      0, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+
+        inline explicit constexpr Impl_(
+            ::google::protobuf::internal::ConstantInitialized) noexcept;
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena);
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena, const Impl_& from);
+    ::uint64_t latency_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
   friend struct ::TableStruct_network_2eproto;
 };// -------------------------------------------------------------------
 
@@ -1313,14 +1491,19 @@ class Address final :
   std::string* _internal_mutable_last_seen();
 
   public:
-  // uint64 avg_latency = 5;
+  // .tari.rpc.AverageLatency avg_latency = 5;
+  bool has_avg_latency() const;
   void clear_avg_latency() ;
-  ::uint64_t avg_latency() const;
-  void set_avg_latency(::uint64_t value);
+  const ::tari::rpc::AverageLatency& avg_latency() const;
+  PROTOBUF_NODISCARD ::tari::rpc::AverageLatency* release_avg_latency();
+  ::tari::rpc::AverageLatency* mutable_avg_latency();
+  void set_allocated_avg_latency(::tari::rpc::AverageLatency* value);
+  void unsafe_arena_set_allocated_avg_latency(::tari::rpc::AverageLatency* value);
+  ::tari::rpc::AverageLatency* unsafe_arena_release_avg_latency();
 
   private:
-  ::uint64_t _internal_avg_latency() const;
-  void _internal_set_avg_latency(::uint64_t value);
+  const ::tari::rpc::AverageLatency& _internal_avg_latency() const;
+  ::tari::rpc::AverageLatency* _internal_mutable_avg_latency();
 
   public:
   // uint32 connection_attempts = 3;
@@ -1339,7 +1522,7 @@ class Address final :
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      3, 4, 0,
+      3, 4, 1,
       34, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -1356,11 +1539,12 @@ class Address final :
                               ::google::protobuf::Arena* arena);
         inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                               ::google::protobuf::Arena* arena, const Impl_& from);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr address_;
     ::google::protobuf::internal::ArenaStringPtr last_seen_;
-    ::uint64_t avg_latency_;
+    ::tari::rpc::AverageLatency* avg_latency_;
     ::uint32_t connection_attempts_;
-    mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1771,7 +1955,7 @@ class ListConnectedPeersResponse final :
                &_ListConnectedPeersResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    5;
 
   friend void swap(ListConnectedPeersResponse& a, ListConnectedPeersResponse& b) {
     a.Swap(&b);
@@ -2805,27 +2989,127 @@ inline void Address::_internal_set_connection_attempts(::uint32_t value) {
   _impl_.connection_attempts_ = value;
 }
 
-// uint64 avg_latency = 5;
+// .tari.rpc.AverageLatency avg_latency = 5;
+inline bool Address::has_avg_latency() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.avg_latency_ != nullptr);
+  return value;
+}
 inline void Address::clear_avg_latency() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.avg_latency_ = ::uint64_t{0u};
+  if (_impl_.avg_latency_ != nullptr) _impl_.avg_latency_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000001u;
 }
-inline ::uint64_t Address::avg_latency() const {
+inline const ::tari::rpc::AverageLatency& Address::_internal_avg_latency() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::tari::rpc::AverageLatency* p = _impl_.avg_latency_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::AverageLatency&>(::tari::rpc::_AverageLatency_default_instance_);
+}
+inline const ::tari::rpc::AverageLatency& Address::avg_latency() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
   // @@protoc_insertion_point(field_get:tari.rpc.Address.avg_latency)
   return _internal_avg_latency();
 }
-inline void Address::set_avg_latency(::uint64_t value) {
-  _internal_set_avg_latency(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.Address.avg_latency)
+inline void Address::unsafe_arena_set_allocated_avg_latency(::tari::rpc::AverageLatency* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.avg_latency_);
+  }
+  _impl_.avg_latency_ = reinterpret_cast<::tari::rpc::AverageLatency*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.Address.avg_latency)
 }
-inline ::uint64_t Address::_internal_avg_latency() const {
-  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+inline ::tari::rpc::AverageLatency* Address::release_avg_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::AverageLatency* released = _impl_.avg_latency_;
+  _impl_.avg_latency_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::tari::rpc::AverageLatency* Address::unsafe_arena_release_avg_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.Address.avg_latency)
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::AverageLatency* temp = _impl_.avg_latency_;
+  _impl_.avg_latency_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::AverageLatency* Address::_internal_mutable_avg_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  if (_impl_.avg_latency_ == nullptr) {
+    auto* p = CreateMaybeMessage<::tari::rpc::AverageLatency>(GetArena());
+    _impl_.avg_latency_ = reinterpret_cast<::tari::rpc::AverageLatency*>(p);
+  }
   return _impl_.avg_latency_;
 }
-inline void Address::_internal_set_avg_latency(::uint64_t value) {
+inline ::tari::rpc::AverageLatency* Address::mutable_avg_latency() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::tari::rpc::AverageLatency* _msg = _internal_mutable_avg_latency();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.Address.avg_latency)
+  return _msg;
+}
+inline void Address::set_allocated_avg_latency(::tari::rpc::AverageLatency* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::tari::rpc::AverageLatency*>(_impl_.avg_latency_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::tari::rpc::AverageLatency*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+
+  _impl_.avg_latency_ = reinterpret_cast<::tari::rpc::AverageLatency*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.Address.avg_latency)
+}
+
+// -------------------------------------------------------------------
+
+// AverageLatency
+
+// uint64 latency = 1;
+inline void AverageLatency::clear_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.latency_ = ::uint64_t{0u};
+}
+inline ::uint64_t AverageLatency::latency() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.AverageLatency.latency)
+  return _internal_latency();
+}
+inline void AverageLatency::set_latency(::uint64_t value) {
+  _internal_set_latency(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.AverageLatency.latency)
+}
+inline ::uint64_t AverageLatency::_internal_latency() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.latency_;
+}
+inline void AverageLatency::_internal_set_latency(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.avg_latency_ = value;
+  _impl_.latency_ = value;
 }
 
 // -------------------------------------------------------------------
