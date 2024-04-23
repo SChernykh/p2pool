@@ -326,11 +326,19 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_VARINT(m_sidechainHeight);
 
+		if (m_sidechainHeight > MAX_SIDECHAIN_HEIGHT) {
+			return __LINE__;
+		}
+
 		READ_VARINT(m_difficulty.lo);
 		READ_VARINT(m_difficulty.hi);
 
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
+
+		if (m_cumulativeDifficulty > MAX_CUMULATIVE_DIFFICULTY) {
+			return __LINE__;
+		}
 
 		uint8_t merkle_proof_size;
 		READ_BYTE(merkle_proof_size);

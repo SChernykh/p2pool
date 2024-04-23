@@ -54,6 +54,12 @@ static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
 // 0.6 XMR
 static constexpr uint64_t BASE_BLOCK_REWARD = 600000000000ULL;
 
+// 1000 years at 1 TH/s. It should be enough for any normal use.
+static constexpr difficulty_type MAX_CUMULATIVE_DIFFICULTY{ 13019633956666736640ULL, 1710ULL };
+
+// 1000 years at 1 block/second. It should be enough for any normal use.
+static constexpr uint64_t MAX_SIDECHAIN_HEIGHT = 31556952000ULL;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}
