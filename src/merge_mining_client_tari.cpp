@@ -149,47 +149,60 @@ void MergeMiningClientTari::run()
 
 		LOGINFO(6, "Getting new block template from Tari node");
 
-		grpc::Status status;
-
-		NewBlockTemplateRequest request;
+		GetNewBlockTemplateWithCoinbasesRequest request;
 		PowAlgo* algo = new PowAlgo();
 		algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
 		request.clear_algo();
 		request.set_allocated_algo(algo);
 		request.set_max_weight(1);
 
+		NewBlockCoinbase* coinbase = request.add_coinbases();
+		coinbase->set_address(m_auxWallet);
+
+		// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
+		coinbase->set_value(1);
+
+		coinbase->set_stealth_payment(false);
+		coinbase->set_revealed_value_proof(true);
+		coinbase->clear_coinbase_extra();
+
 		grpc::ClientContext ctx;
-		NewBlockTemplateResponse response;
-		status = m_TariNode->GetNewBlockTemplate(&ctx, request, &response);
+		GetNewBlockResult response;
 
-		grpc::ClientContext ctx2;
-		GetNewBlockResult response2;
-		status = m_TariNode->GetNewBlock(&ctx2, response.new_block_template(), &response2);
+		const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
 
-		bool aux_id_empty;
-		{
-			ReadLock lock2(m_chainParamsLock);
-			aux_id_empty = m_chainParams.aux_id.empty();
-		}
-
-		if (aux_id_empty) {
-			const std::string& id = response2.tari_unique_id();
-			LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
-
-			if (id.size() == HASH_SIZE) {
-				WriteLock lock2(m_chainParamsLock);
-				std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
-			}
-			else {
-				LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
+		if (!status.ok()) {
+			LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
+			if (!status.error_details().empty()) {
+				LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
 			}
 		}
+		else {
+			bool aux_id_empty;
+			{
+				ReadLock lock2(m_chainParamsLock);
+				aux_id_empty = m_chainParams.aux_id.empty();
+			}
 
-		LOGINFO(6, "Tari block template: height = " << response.new_block_template().header().height()
-			<< ", diff = " << response.miner_data().target_difficulty()
-			<< ", reward = " << response.miner_data().reward()
-			<< ", fees = " << response.miner_data().total_fees()
-		);
+			if (aux_id_empty) {
+				const std::string& id = response.tari_unique_id();
+				LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+
+				if (id.size() == HASH_SIZE) {
+					WriteLock lock2(m_chainParamsLock);
+					std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+				}
+				else {
+					LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
+				}
+			}
+
+			LOGINFO(6, "Tari block template: height = " << response.block().header().height()
+				<< ", diff = " << response.miner_data().target_difficulty()
+				<< ", reward = " << response.miner_data().reward()
+				<< ", fees = " << response.miner_data().total_fees()
+			);
+		}
 
 		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
 
