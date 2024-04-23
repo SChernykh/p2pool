@@ -771,6 +771,11 @@ void P2PServer::Peer::normalize()
 
 void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 {
+	// Don't broadcast blocks when shutting down
+	if (m_finished.load()) {
+		return;
+	}
+
 	MinerData miner_data = m_pool->miner_data();
 
 	if (block.m_txinGenHeight + 2 < miner_data.height) {
