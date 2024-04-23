@@ -33,7 +33,7 @@
 #include "params.h"
 #include "json_parsers.h"
 #include "crypto.h"
-#include <hardforks/hardforks.h>
+#include "hardforks/hardforks.h"
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <fstream>

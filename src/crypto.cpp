@@ -21,7 +21,7 @@
 #include "uv_util.h"
 
 extern "C" {
-#include <crypto-ops.h>
+#include "crypto-ops.h"
 }
 
 // l = 2^252 + 27742317777372353535851937790883648493.

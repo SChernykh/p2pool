@@ -24,7 +24,7 @@
 #include "crypto.h"
 
 extern "C" {
-#include <crypto-ops.h>
+#include "crypto-ops.h"
 }
 
 namespace {

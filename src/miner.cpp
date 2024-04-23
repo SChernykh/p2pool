@@ -21,7 +21,7 @@
 #include "stratum_server.h"
 #include "block_template.h"
 #include "pow_hash.h"
-#include <randomx.h>
+#include "randomx.h"
 #include "params.h"
 #include "p2pool_api.h"
 #include "side_chain.h"
