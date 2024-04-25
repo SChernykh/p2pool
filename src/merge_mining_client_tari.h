@@ -73,7 +73,7 @@ private:
 	struct TariClient : public TCPServer::Client
 	{
 		TariClient();
-		~TariClient() {}
+		~TariClient() override {}
 
 		static Client* allocate() { return new TariClient(); }
 		virtual size_t size() const override { return sizeof(TariClient); }

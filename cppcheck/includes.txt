@@ -1,5 +1,6 @@
 ../src/
 ../external/src/
+../external/src/crypto/
 ../external/src/cryptonote/
 ../external/src/libuv/
 ../external/src/cppzmq/
@@ -8,3 +9,6 @@
 ../external/src/randomx/src/
 ../external/src/rapidjson/include/
 ../external/src/robin-hood-hashing/src/include/
+../external/src/grpc/include/
+../external/src/grpc/third_party/abseil-cpp/
+../external/src/grpc/third_party/protobuf/src/

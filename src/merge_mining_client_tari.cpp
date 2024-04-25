@@ -42,7 +42,7 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 
 	host.erase(0, sizeof(TARI_PREFIX) - 1);
 
-	while (host.back() == '/') {
+	while (!host.empty() && (host.back() == '/')) {
 		host.pop_back();
 	}
 
