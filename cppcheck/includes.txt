@@ -1,0 +1,10 @@
+../src/
+../external/src/
+../external/src/cryptonote/
+../external/src/libuv/
+../external/src/cppzmq/
+../external/src/libzmq/
+../external/src/miniupnp/miniupnpc/include/
+../external/src/randomx/src/
+../external/src/rapidjson/include/
+../external/src/robin-hood-hashing/src/include/
