@@ -86,8 +86,9 @@ struct BlockCache::Impl : public nocopy_nomove
 #elif defined(_WIN32)
 
 	Impl()
+		: m_file(CreateFile(cache_name, GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL))
+		, m_map(0)
 	{
-		m_file = CreateFile(cache_name, GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL);
 		if (m_file == INVALID_HANDLE_VALUE) {
 			LOGERR(1, "couldn't open " << cache_name << ", error " << static_cast<uint32_t>(GetLastError()));
 			return;
@@ -140,8 +141,8 @@ struct BlockCache::Impl : public nocopy_nomove
 		}
 	}
 
-	HANDLE m_file = INVALID_HANDLE_VALUE;
-	HANDLE m_map = 0;
+	HANDLE m_file;
+	HANDLE m_map;
 
 #else
 	// Not implemented on other platforms
