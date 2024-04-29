@@ -178,30 +178,41 @@ void MergeMiningClientTari::run()
 			}
 		}
 		else {
-			bool aux_id_empty;
-			{
-				ReadLock lock2(m_chainParamsLock);
-				aux_id_empty = m_chainParams.aux_id.empty();
+			const std::string& id = response.tari_unique_id();
+			const std::string& mm_hash = response.merge_mining_hash();
+
+			bool ok = true;
+
+			if (id.size() != HASH_SIZE) {
+				LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
+				ok = false;
 			}
 
-			if (aux_id_empty) {
-				const std::string& id = response.tari_unique_id();
-				LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+			if (mm_hash.size() != HASH_SIZE) {
+				LOGERR(1, "Tari merge mining hash has invalid size (" << mm_hash.size() << ')');
+				ok = false;
+			}
 
-				if (id.size() == HASH_SIZE) {
+			if (ok) {
+				{
 					WriteLock lock2(m_chainParamsLock);
-					std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
-				}
-				else {
-					LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
-				}
-			}
 
-			LOGINFO(6, "Tari block template: height = " << response.block().header().height()
-				<< ", diff = " << response.miner_data().target_difficulty()
-				<< ", reward = " << response.miner_data().reward()
-				<< ", fees = " << response.miner_data().total_fees()
-			);
+					if (m_chainParams.aux_id.empty()) {
+						LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+						std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+					}
+
+					std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
+					m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+				}
+
+				LOGINFO(6, "Tari block template: height = " << response.block().header().height()
+					<< ", diff = " << response.miner_data().target_difficulty()
+					<< ", reward = " << response.miner_data().reward()
+					<< ", fees = " << response.miner_data().total_fees()
+					<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
+				);
+			}
 		}
 
 		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);

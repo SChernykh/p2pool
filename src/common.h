@@ -219,8 +219,9 @@ struct
 #endif
 	difficulty_type
 {
-	FORCEINLINE constexpr difficulty_type() : lo(0), hi(0) {}
-	FORCEINLINE constexpr difficulty_type(uint64_t a, uint64_t b) : lo(a), hi(b) {}
+	FORCEINLINE          constexpr difficulty_type() noexcept : lo(0), hi(0) {}
+	FORCEINLINE explicit constexpr difficulty_type(uint64_t a) noexcept : lo(a), hi(0) {}
+	FORCEINLINE          constexpr difficulty_type(uint64_t a, uint64_t b) noexcept : lo(a), hi(b) {}
 
 	uint64_t lo;
 	uint64_t hi;
