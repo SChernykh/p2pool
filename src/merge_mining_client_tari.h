@@ -38,6 +38,7 @@ public:
 private:
 	mutable uv_rwlock_t m_chainParamsLock;
 	ChainParameters m_chainParams;
+	tari::rpc::Block m_tariBlock;
 
 	std::string m_auxWallet;
 	p2pool* m_pool;

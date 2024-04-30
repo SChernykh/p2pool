@@ -124,10 +124,36 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof)
+void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& /*blob*/, const std::vector<hash>& /*merkle_proof*/)
 {
-	(void)blob;
-	(void)merkle_proof;
+	Block block;
+	{
+		ReadLock lock(m_chainParamsLock);
+		block = m_tariBlock;
+	}
+
+	ProofOfWork* pow = block.mutable_header()->mutable_pow();
+	pow->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
+
+	// TODO fill in the data
+	std::string data;
+	pow->set_pow_data(data);
+
+	grpc::ClientContext ctx;
+	SubmitBlockResponse response;
+
+	const grpc::Status status = m_TariNode->SubmitBlock(&ctx, block, &response);
+
+	if (!status.ok()) {
+		LOGWARN(5, "SubmitBlock failed: " << status.error_message());
+		if (!status.error_details().empty()) {
+			LOGWARN(5, "SubmitBlock failed: " << status.error_details());
+		}
+	}
+	else {
+		const std::string& h = response.block_hash();
+		LOGINFO(3, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()));
+	}
 }
 
 void MergeMiningClientTari::run_wrapper(void* arg)
@@ -154,7 +180,7 @@ void MergeMiningClientTari::run()
 		algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
 		request.clear_algo();
 		request.set_allocated_algo(algo);
-		request.set_max_weight(1);
+		request.set_max_weight(0);
 
 		NewBlockCoinbase* coinbase = request.add_coinbases();
 		coinbase->set_address(m_auxWallet);
@@ -204,6 +230,8 @@ void MergeMiningClientTari::run()
 
 					std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
 					m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+
+					m_tariBlock = response.block();
 				}
 
 				LOGINFO(6, "Tari block template: height = " << response.block().header().height()
