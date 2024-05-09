@@ -635,9 +635,9 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 	size_t extra_nonce_offset = 0;
 	size_t merkle_root_offset = 0;
 	root_hash merge_mining_root;
-	const BlockTemplate* block_template = nullptr;
+	const BlockTemplate* block_tpl = nullptr;
 
-	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_template);
+	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 	uint8_t hashing_blob[128] = {};
 	uint64_t height = 0;
@@ -729,12 +729,12 @@ void p2pool::submit_block() const
 	size_t extra_nonce_offset = 0;
 	size_t merkle_root_offset = 0;
 	hash merge_mining_root;
-	const BlockTemplate* block_template = nullptr;
+	const BlockTemplate* block_tpl = nullptr;
 
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_template);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
 			<< ", template id = " << submit_data.template_id
