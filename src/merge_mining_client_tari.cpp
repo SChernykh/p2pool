@@ -20,6 +20,7 @@
 #include "merge_mining_client_tari.h"
 #include "p2pool.h"
 #include "params.h"
+#include "block_template.h"
 
 LOG_CATEGORY(MergeMiningClientTari)
 
@@ -124,7 +125,7 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& /*blob*/, const std::vector<hash>& /*merkle_proof*/)
+void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& /*blob*/, const std::vector<hash>& /*merkle_proof*/)
 {
 	Block block;
 	{
@@ -135,9 +136,31 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& /*blob*/
 	ProofOfWork* pow = block.mutable_header()->mutable_pow();
 	pow->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
 
-	// TODO fill in the data
-	std::string data;
-	pow->set_pow_data(data);
+	{
+		std::string data;
+
+		// Monero header + nonce
+		data.append(reinterpret_cast<const char*>(hashing_blob), nonce_offset + sizeof(uint32_t));
+
+		// Monero seed
+		data.append(1, HASH_SIZE);
+		data.append(reinterpret_cast<const char*>(seed_hash.h), HASH_SIZE);
+
+		uint64_t transaction_count;
+		if (!readVarint(hashing_blob + nonce_offset + sizeof(uint32_t) + HASH_SIZE, hashing_blob + 128, transaction_count)) {
+			return;
+		}
+
+		// Total number of transactions in this block (including the miner tx)
+		data.append(reinterpret_cast<const char*>(&transaction_count), 2);
+
+		// Tx Merkle tree root
+		data.append(reinterpret_cast<const char*>(hashing_blob + nonce_offset + sizeof(uint32_t)), HASH_SIZE);
+
+		// TODO: serialize coinbase_merkle_proof, coinbase_tx_extra, coinbase_tx_hasher, aux_chain_merkle_proof
+
+		pow->set_pow_data(data);
+	}
 
 	grpc::ClientContext ctx;
 	SubmitBlockResponse response;

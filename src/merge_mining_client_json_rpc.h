@@ -30,7 +30,7 @@ public:
 	~MergeMiningClientJSON_RPC() override;
 
 	bool get_params(ChainParameters& out_params) const override;
-	void submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) override;
+	void submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) override;
 
 private:
 	static void loop(void* data);

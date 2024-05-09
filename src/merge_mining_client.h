@@ -20,6 +20,7 @@
 namespace p2pool {
 
 class p2pool;
+class BlockTemplate;
 
 class IMergeMiningClient
 {
@@ -37,7 +38,7 @@ public:
 	virtual ~IMergeMiningClient() {}
 
 	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;
-	virtual void submit_solution(const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) = 0;
+	virtual void submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof) = 0;
 };
 
 } // namespace p2pool

@@ -51,7 +51,7 @@ public:
 	std::vector<AuxChainData> get_aux_chains(const uint32_t template_id) const;
 	bool get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof) const;
 
-	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root) const;
+	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const;
 
 	FORCEINLINE uint64_t height() const { return m_height; }
 	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }

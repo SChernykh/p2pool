@@ -167,10 +167,18 @@ const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 
 		const uint64_t cur_byte = *(data++);
 		result |= (cur_byte & 0x7F) << k;
+
+		if (shiftleft128(cur_byte & 0x7F, 0, k) != 0) {
+			return nullptr;
+		}
+
 		k += 7;
 
 		if ((cur_byte & 0x80) == 0) {
-			b = result;
+			if (result > std::numeric_limits<T>::max()) {
+				return nullptr;
+			}
+			b = static_cast<T>(result);
 			return data;
 		}
 	}
