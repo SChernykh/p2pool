@@ -168,7 +168,7 @@ const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 		const uint64_t cur_byte = *(data++);
 		result |= (cur_byte & 0x7F) << k;
 
-		if (shiftleft128(cur_byte & 0x7F, 0, k) != 0) {
+		if ((k > 0) && (shiftleft128(cur_byte & 0x7F, 0, k) != 0)) {
 			return nullptr;
 		}
 
