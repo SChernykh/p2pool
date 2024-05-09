@@ -125,7 +125,7 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& /*blob*/, const std::vector<hash>& /*merkle_proof*/)
+void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& /*merkle_proof*/)
 {
 	Block block;
 	{
@@ -140,14 +140,14 @@ void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], 
 		std::string data;
 
 		// Monero header + nonce
-		data.append(reinterpret_cast<const char*>(hashing_blob), nonce_offset + sizeof(uint32_t));
+		data.append(reinterpret_cast<const char*>(blob.data()), nonce_offset + sizeof(uint32_t));
 
 		// Monero seed
 		data.append(1, HASH_SIZE);
 		data.append(reinterpret_cast<const char*>(seed_hash.h), HASH_SIZE);
 
 		uint64_t transaction_count;
-		if (!readVarint(hashing_blob + nonce_offset + sizeof(uint32_t) + HASH_SIZE, hashing_blob + 128, transaction_count)) {
+		if (!readVarint(hashing_blob + nonce_offset + sizeof(uint32_t) + HASH_SIZE, hashing_blob + sizeof(hashing_blob), transaction_count)) {
 			return;
 		}
 
