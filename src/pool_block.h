@@ -134,6 +134,7 @@ struct PoolBlock
 
 	// Merkle proof for merge mining
 	std::vector<hash> m_merkleProof;
+	uint32_t m_merkleProofPath;
 
 	// Arbitrary extra data
 	uint32_t m_sidechainExtraBuf[4];

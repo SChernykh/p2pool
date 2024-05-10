@@ -1303,14 +1303,14 @@ std::vector<AuxChainData> BlockTemplate::get_aux_chains(const uint32_t template_
 	return m_poolBlockTemplate->m_auxChains;
 }
 
-bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof) const
+bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof, uint32_t& path) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_aux_proof(template_id, extra_nonce, h, proof);
+			return old->get_aux_proof(template_id, extra_nonce, h, proof, path);
 		}
 
 		return false;
@@ -1346,7 +1346,7 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 	std::vector<std::vector<hash>> tree;
 	merkle_hash_full_tree(hashes, tree);
 
-	return get_merkle_proof(tree, h, proof);
+	return get_merkle_proof(tree, h, proof, path);
 }
 
 std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const
@@ -1489,7 +1489,7 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 	std::vector<std::vector<hash>> tree;
 	merkle_hash_full_tree(hashes, tree);
 
-	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof);
+	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof, m_poolBlockTemplate->m_merkleProofPath);
 }
 
 } // namespace p2pool

@@ -667,19 +667,23 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 
 		if (chain_id == params.aux_id) {
 			std::vector<hash> proof;
+			uint32_t path;
 
-			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, params.aux_hash, proof)) {
+			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, params.aux_hash, proof, path)) {
 				if (pool_block_debug()) {
 					const MinerData data = miner_data();
 					const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
 					const uint32_t index = get_aux_slot(params.aux_id, data.aux_nonce, n_aux_chains);
 
 					if (!verify_merkle_proof(params.aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
-						LOGERR(0, "submit_aux_block: verify_merkle_proof failed for chain_id " << chain_id);
+						LOGERR(0, "submit_aux_block: verify_merkle_proof (1) failed for chain_id " << chain_id);
+					}
+					if (!verify_merkle_proof(params.aux_hash, proof, path, merge_mining_root)) {
+						LOGERR(0, "submit_aux_block: verify_merkle_proof (2) failed for chain_id " << chain_id);
 					}
 				}
 
-				c->submit_solution(block_tpl, hashing_blob, nonce_offset, seed_hash, blob, proof);
+				c->submit_solution(block_tpl, hashing_blob, nonce_offset, seed_hash, blob, proof, path);
 			}
 			else {
 				LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);

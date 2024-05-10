@@ -22,10 +22,12 @@ namespace p2pool {
 void merkle_hash(const std::vector<hash>& hashes, root_hash& root);
 void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vector<hash>>& tree);
 
-bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof);
+bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof, uint32_t& path);
 
 root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count);
+
 bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root);
+bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, const root_hash& root);
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains);
 bool find_aux_nonce(const std::vector<hash>& aux_id, uint32_t& nonce, uint32_t max_nonce = 0xFFFF);

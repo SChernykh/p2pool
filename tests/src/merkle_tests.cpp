@@ -19,6 +19,7 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "pool_block.h"
+#include "keccak.h"
 #include "gtest/gtest.h"
 
 namespace p2pool {
@@ -74,9 +75,11 @@ TEST(merkle, tree)
 		for (size_t i = 0, n = hashes.size(); i < n; ++i) {
 			const hash& h = hashes[i];
 			std::vector<hash> proof;
+			uint32_t path;
 
-			ASSERT_TRUE(get_merkle_proof(tree, h, proof));
+			ASSERT_TRUE(get_merkle_proof(tree, h, proof, path));
 			ASSERT_TRUE(verify_merkle_proof(h, proof, i, n, root));
+			ASSERT_TRUE(verify_merkle_proof(h, proof, path, root));
 		}
 	};
 

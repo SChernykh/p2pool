@@ -48,6 +48,8 @@ PoolBlock::PoolBlock()
 	, m_sidechainHeight(0)
 	, m_difficulty{}
 	, m_cumulativeDifficulty{}
+	, m_merkleProof{}
+	, m_merkleProofPath(0)
 	, m_sidechainExtraBuf{}
 	, m_sidechainId{}
 	, m_depth(0)
@@ -102,6 +104,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
 	m_merkleProof = b.m_merkleProof;
+	m_merkleProofPath = b.m_merkleProofPath;
 	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
 	m_depth = b.m_depth;

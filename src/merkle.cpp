@@ -117,7 +117,7 @@ void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vec
 	}
 }
 
-bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof)
+bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof, uint32_t& path)
 {
 	if (tree.empty()) {
 		return false;
@@ -137,12 +137,14 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 	}
 
 	proof.clear();
+	path = 0;
 
 	if (count == 1) {
 		return true;
 	}
 	else if (count == 2) {
 		proof.emplace_back(hashes[index ^ 1]);
+		path = index & 1;
 	}
 	else {
 		size_t cnt = 1;
@@ -158,6 +160,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 				return false;
 			}
 			proof.emplace_back(hashes[j]);
+			path = index & 1;
 			index = (index >> 1) + k;
 		}
 
@@ -169,6 +172,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 				return false;
 			}
 			proof.emplace_back(tree[i][j]);
+			path = (static_cast<uint64_t>(path) << 1) | (index & 1);
 		}
 	}
 
@@ -258,6 +262,26 @@ root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t ind
 bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root)
 {
 	return get_root_from_proof(h, proof, index, count) == root;
+}
+
+bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, const root_hash& root)
+{
+	for (size_t d = 0, depth = proof.size(); d < depth; ++d) {
+		hash tmp[2];
+
+		if ((path >> (depth - d - 1)) & 1) {
+			tmp[0] = proof[d];
+			tmp[1] = h;
+		}
+		else {
+			tmp[0] = h;
+			tmp[1] = proof[d];
+		}
+
+		keccak(tmp[0].h, HASH_SIZE * 2, h.h);
+	}
+
+	return h == root;
 }
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
