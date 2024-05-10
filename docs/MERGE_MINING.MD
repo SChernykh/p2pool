@@ -86,7 +86,7 @@ Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 
 ### merge_mining_submit_solution
 
-Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"]}}`
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"],"path":3}}`
 
 Request: a JSON containing these fields:
 Field|Description
@@ -95,6 +95,7 @@ Field|Description
 `aux_hash`|A 32-byte hex-encoded hash of the `aux_blob` - the same value that was returned by `merge_mining_get_job`.
 `blob`|Monero block template that has enough PoW to satisfy difficulty returned by `merge_mining_get_job`. It also must have a merge mining tag in tx_extra of the coinbase transaction.
 `merkle_proof`|A proof that `aux_hash` was included when calculating Merkle root hash from the merge mining tag
+`path`|A path bitmap (32-bit unsigned integer) that complements `merkle_proof`
 
 Note that `merkle_proof` only contains a vector of 32-byte hashes for `aux_hash` to be combined with. It can be verified by running this pseudo-code and functions from `merkle.cpp` (adapt it to your codebase):
 
@@ -102,6 +103,9 @@ Note that `merkle_proof` only contains a vector of 32-byte hashes for `aux_hash`
 
 `aux_nonce` and `n_aux_chains` can be extracted from the Merkle tree parameters (see above).
 `merkle_root_hash` can be extracted from the merge mining tag (see above).
+
+`merkle_proof` can also be verified by `verify_merkle_proof(aux_hash, merkle_proof, path, merkle_root_hash)`
+
 
 Response: a JSON containing these fields:
 Field|Description
