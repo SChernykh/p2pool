@@ -125,7 +125,7 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& /*merkle_proof*/)
+void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& /*merkle_proof*/)
 {
 	Block block;
 	{
@@ -157,7 +157,19 @@ void MergeMiningClientTari::submit_solution(const uint8_t (&hashing_blob)[128], 
 		// Tx Merkle tree root
 		data.append(reinterpret_cast<const char*>(hashing_blob + nonce_offset + sizeof(uint32_t)), HASH_SIZE);
 
-		// TODO: serialize coinbase_merkle_proof, coinbase_tx_extra, coinbase_tx_hasher, aux_chain_merkle_proof
+		// Coinbase transaction's Merkle proof
+		const std::vector<uint8_t> coinbase_merkle_proof = block_tpl->get_coinbase_merkle_proof();
+
+		// Number of hashes in the proof (varint, but an O(logN) proof will never get bigger than 127)
+		data.append(1, static_cast<char>(coinbase_merkle_proof.size() / HASH_SIZE));
+
+		// Hashes in the proof
+		data.append(reinterpret_cast<const char*>(coinbase_merkle_proof.data()), coinbase_merkle_proof.size());
+
+		// Path bitmap (always 0 for the coinbase tx)
+		data.append(1, 0);
+
+		// TODO: serialize coinbase_tx_hasher, coinbase_tx_extra, aux_chain_merkle_proof
 
 		pow->set_pow_data(data);
 	}

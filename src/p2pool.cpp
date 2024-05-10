@@ -679,7 +679,7 @@ void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32
 					}
 				}
 
-				c->submit_solution(hashing_blob, nonce_offset, seed_hash, blob, proof);
+				c->submit_solution(block_tpl, hashing_blob, nonce_offset, seed_hash, blob, proof);
 			}
 			else {
 				LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);

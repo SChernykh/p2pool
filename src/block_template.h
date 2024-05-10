@@ -61,6 +61,8 @@ public:
 	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
 	FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
 
+	FORCEINLINE std::vector<uint8_t> get_coinbase_merkle_proof() const { ReadLock lock(m_lock); return m_merkleTreeMainBranch; }
+
 #ifdef P2POOL_UNIT_TESTS
 	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
 	FORCEINLINE std::mt19937_64& rng() { return m_rng; }
