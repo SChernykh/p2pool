@@ -43,6 +43,21 @@ private:
 	std::string m_auxWallet;
 	p2pool* m_pool;
 
+	struct TariJobParams
+	{
+		uint64_t height;
+		uint64_t diff;
+		uint64_t reward;
+		uint64_t fees;
+
+		FORCEINLINE bool operator!=(const TariJobParams& job) const {
+			static_assert(sizeof(TariJobParams) == sizeof(uint64_t) * 4, "Invalid TariJobParams size");
+			return memcmp(this, &job, sizeof(TariJobParams)) != 0;
+		}
+	};
+
+	TariJobParams m_tariJobParams;
+
 private:
 	static constexpr uint64_t BUF_SIZE = 16384;
 

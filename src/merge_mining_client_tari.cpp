@@ -21,6 +21,7 @@
 #include "p2pool.h"
 #include "params.h"
 #include "block_template.h"
+#include "keccak.h"
 
 LOG_CATEGORY(MergeMiningClientTari)
 
@@ -32,6 +33,7 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	: m_chainParams{}
 	, m_auxWallet(wallet)
 	, m_pool(pool)
+	, m_tariJobParams{}
 	, m_server(new TariServer(pool->params().m_socks5Proxy))
 	, m_hostStr(host)
 	, m_workerStop(0)
@@ -125,7 +127,7 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& /*merkle_proof*/, uint32_t /*merkle_proof_path*/)
+void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
 {
 	Block block;
 	{
@@ -169,7 +171,68 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		// Path bitmap (always 0 for the coinbase tx)
 		data.append(1, 0);
 
-		// TODO: serialize coinbase_tx_hasher, coinbase_tx_extra, aux_chain_merkle_proof
+		// coinbase_tx_hasher
+		const uint8_t* coinbase_tx = blob.data() + nonce_offset + sizeof(uint32_t);
+
+		const uint8_t* p = coinbase_tx;
+		const uint8_t* e = blob.data() + blob.size();
+
+		uint64_t k;
+
+		p += 1; // TX_VERSION
+		p = readVarint(p, e, k); if (!p) return; // unlock height
+		p += 2; // '1', TXIN_GEN
+		p = readVarint(p, e, k); if (!p) return; // txinGenHeight
+		p = readVarint(p, e, k); if (!p) return; // num_outputs
+
+		for (uint64_t i = 0; i < k; ++i) {
+			uint64_t reward;
+			p = readVarint(p, e, reward); if (!p) return;
+			p += 1 + HASH_SIZE + 1; // tx_type, public key, view tag
+		}
+
+		std::array<uint64_t, 25> keccak_state = {};
+
+		size_t offset = p - coinbase_tx;
+
+		uint32_t tx_extra_size;
+		p = readVarint(p, e, tx_extra_size); if (!p) return;
+
+		p = coinbase_tx;
+
+		while (offset >= KeccakParams::HASH_DATA_AREA) {
+			for (size_t i = 0; i < KeccakParams::HASH_DATA_AREA / sizeof(uint64_t); ++i) {
+				keccak_state[i] ^= read_unaligned(reinterpret_cast<const uint64_t*>(p) + i);
+			}
+			keccakf(keccak_state);
+			p += KeccakParams::HASH_DATA_AREA;
+			offset -= KeccakParams::HASH_DATA_AREA;
+		}
+
+		for (size_t i = 0; i < offset; ++i, ++p) {
+			reinterpret_cast<uint8_t*>(keccak_state.data())[i] ^= *p;
+		}
+
+		// coinbase_tx_hasher.buffer
+		data.append(reinterpret_cast<const char*>(keccak_state.data()), sizeof(keccak_state));
+
+		// coinbase_tx_hasher.offset
+		data.append(1, static_cast<uint8_t>(offset));
+
+		// coinbase_tx_hasher.rate
+		data.append(1, static_cast<uint8_t>(KeccakParams::HASH_DATA_AREA));
+
+		// coinbase_tx_hasher.mode
+		data.append(1, 1);
+
+		// coinbase_tx_extra
+		data.append(reinterpret_cast<const char*>(&tx_extra_size), sizeof(tx_extra_size));
+		data.append(reinterpret_cast<const char*>(p), tx_extra_size);
+
+		// aux_chain_merkle_proof
+		data.append(1, static_cast<char>(merkle_proof.size()));
+		data.append(reinterpret_cast<const char*>(merkle_proof.data()), merkle_proof.size() * HASH_SIZE);
+		writeVarint(merkle_proof_path, [&data](uint8_t value) { data.append(1, value); });
 
 		pow->set_pow_data(data);
 	}
@@ -207,8 +270,6 @@ void MergeMiningClientTari::run()
 		const auto t1 = high_resolution_clock::now();
 
 		MutexLock lock(m_workerLock);
-
-		LOGINFO(6, "Getting new block template from Tari node");
 
 		GetNewBlockTemplateWithCoinbasesRequest request;
 		PowAlgo* algo = new PowAlgo();
@@ -255,26 +316,44 @@ void MergeMiningClientTari::run()
 			}
 
 			if (ok) {
+				TariJobParams job_params;
+
+				job_params.height = response.block().header().height();
+				job_params.diff = response.miner_data().target_difficulty();
+				job_params.reward = response.miner_data().reward();
+				job_params.fees = response.miner_data().total_fees();
+
+				hash chain_id;
 				{
 					WriteLock lock2(m_chainParamsLock);
 
-					if (m_chainParams.aux_id.empty()) {
-						LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
-						std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+					if (job_params != m_tariJobParams) {
+						m_tariJobParams = job_params;
+
+						if (m_chainParams.aux_id.empty()) {
+							LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+							std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+						}
+
+						chain_id = m_chainParams.aux_id;
+
+						std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
+						m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+
+						m_tariBlock = response.block();
+
+						LOGINFO(5, "Tari block template: height = " << job_params.height
+							<< ", diff = " << job_params.diff
+							<< ", reward = " << job_params.reward
+							<< ", fees = " << job_params.fees
+							<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
+						);
 					}
-
-					std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
-					m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
-
-					m_tariBlock = response.block();
 				}
 
-				LOGINFO(6, "Tari block template: height = " << response.block().header().height()
-					<< ", diff = " << response.miner_data().target_difficulty()
-					<< ", reward = " << response.miner_data().reward()
-					<< ", fees = " << response.miner_data().total_fees()
-					<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
-				);
+				if (!chain_id.empty()) {
+					m_pool->update_aux_data(chain_id);
+				}
 			}
 		}
 
