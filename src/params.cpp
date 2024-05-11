@@ -235,6 +235,11 @@ bool Params::valid() const
 		return false;
 	}
 
+	if (m_mergeMiningHosts.size() > 10) {
+		LOGERR(1, "Too many merge mining blockchains.");
+		return false;
+	}
+
 	return true;
 }
 

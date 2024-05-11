@@ -153,8 +153,12 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 			return;
 		}
 
+		if (transaction_count > std::numeric_limits<uint16_t>::max()) {
+			return;
+		}
+
 		// Total number of transactions in this block (including the miner tx)
-		data.append(reinterpret_cast<const char*>(&transaction_count), 2);
+		data.append(reinterpret_cast<const char*>(&transaction_count), sizeof(uint16_t));
 
 		// Tx Merkle tree root
 		data.append(reinterpret_cast<const char*>(hashing_blob + nonce_offset + sizeof(uint32_t)), HASH_SIZE);
@@ -198,6 +202,7 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		uint32_t tx_extra_size;
 		p = readVarint(p, e, tx_extra_size); if (!p) return;
 
+		const uint8_t* tx_extra_begin = p;
 		p = coinbase_tx;
 
 		while (offset >= KeccakParams::HASH_DATA_AREA) {
@@ -227,7 +232,7 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 
 		// coinbase_tx_extra
 		data.append(reinterpret_cast<const char*>(&tx_extra_size), sizeof(tx_extra_size));
-		data.append(reinterpret_cast<const char*>(p), tx_extra_size);
+		data.append(reinterpret_cast<const char*>(tx_extra_begin), tx_extra_size);
 
 		// aux_chain_merkle_proof
 		data.append(1, static_cast<char>(merkle_proof.size()));
