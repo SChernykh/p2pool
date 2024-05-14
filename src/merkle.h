@@ -31,5 +31,6 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, 
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains);
 bool find_aux_nonce(const std::vector<hash>& aux_id, uint32_t& nonce, uint32_t max_nonce = 0xFFFF);
+size_t get_position_from_path(size_t count, uint32_t path);
 
 } // namespace p2pool

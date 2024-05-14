@@ -338,4 +338,34 @@ bool find_aux_nonce(const std::vector<hash>& aux_id, uint32_t& nonce, uint32_t m
 	}
 }
 
+size_t get_position_from_path(size_t count, uint32_t path)
+{
+	if (count <= 1) {
+		return 0;
+	}
+
+	size_t depth = 0;
+	size_t k = 1;
+
+	while (k < count) {
+		++depth;
+		k <<= 1;
+	}
+
+	k -= count;
+
+	size_t pos = 0;
+
+	for (size_t i = 1; i < depth; ++i) {
+		pos = (pos << 1) | (path & 1);
+		path >>= 1;
+	}
+
+	if (pos < k) {
+		return pos;
+	}
+
+	return (((pos - k) << 1) | (path & 1)) + k;
+}
+
 } // namespace p2pool

@@ -24,6 +24,60 @@
 
 namespace p2pool {
 
+// Original Monero's tree_path function to test against
+
+size_t tree_hash_cnt(size_t count) {
+	size_t pow = 2;
+	while(pow < count) pow <<= 1;
+	return pow >> 1;
+}
+
+bool tree_path(size_t count, size_t idx, uint32_t* path)
+{
+	if (count == 0)
+		return false;
+
+	if (count == 1) {
+		*path = 0;
+	}
+	else if (count == 2) {
+		*path = idx == 0 ? 0 : 1;
+	}
+	else {
+		size_t i, j;
+
+		*path = 0;
+		size_t cnt = tree_hash_cnt(count);
+
+		for (i = 2 * cnt - count, j = 2 * cnt - count; j < cnt; i += 2, ++j) {
+			if (idx == i || idx == i + 1)
+			{
+				*path = (*path << 1) | (idx == i ? 0 : 1);
+				idx = j;
+			}
+		}
+		assert(i == count);
+
+		while (cnt > 2) {
+			cnt >>= 1;
+			for (i = 0, j = 0; j < cnt; i += 2, ++j) {
+				if (idx == i || idx == i + 1)
+				{
+					*path = (*path << 1) | (idx == i ? 0 : 1);
+					idx = j;
+				}
+			}
+		}
+
+		if (idx == 0 || idx == 1)
+		{
+			*path = (*path << 1) | (idx == 0 ? 0 : 1);
+			idx = 0;
+		}
+	}
+	return true;
+}
+
 TEST(merkle, tree)
 {
 	hash input[10];
@@ -78,8 +132,14 @@ TEST(merkle, tree)
 			uint32_t path;
 
 			ASSERT_TRUE(get_merkle_proof(tree, h, proof, path));
+
+			uint32_t path_monero;
+			ASSERT_TRUE(tree_path(n, i, &path_monero));
+			ASSERT_EQ(path, path_monero);
+
 			ASSERT_TRUE(verify_merkle_proof(h, proof, i, n, root));
 			ASSERT_TRUE(verify_merkle_proof(h, proof, path, root));
+			ASSERT_EQ(get_position_from_path(n, path), i);
 		}
 	};
 
