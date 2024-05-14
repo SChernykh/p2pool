@@ -411,9 +411,15 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
-	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
-	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
+	if (m_poolBlockTemplate->merge_mining_enabled()) {
+		m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
+		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+		writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
+	}
+	else {
+		m_poolBlockTemplate->m_merkleTreeData = 0;
+		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+	}
 
 	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
 		use_old_template();
@@ -705,7 +711,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	}
 
 	if (pool_block_debug()) {
-		const size_t merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
+		const size_t merkle_root_offset = 
+			m_poolBlockTemplate->merge_mining_enabled()
+				? (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
+				: (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2);
 
 		memcpy(m_blockTemplateBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
 		memcpy(m_fullDataBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
@@ -945,9 +954,16 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_poolBlockTemplate->m_extraNonceSize = corrected_extra_nonce_size;
 
 	m_minerTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
-	m_minerTxExtra.push_back(static_cast<uint8_t>(m_poolBlockTemplate->m_merkleTreeDataSize + HASH_SIZE));
-	writeVarint(m_poolBlockTemplate->m_merkleTreeData, m_minerTxExtra);
-	m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
+
+	if (!m_poolBlockTemplate->merge_mining_enabled()) {
+		m_minerTxExtra.push_back(HASH_SIZE);
+		m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
+	}
+	else {
+		m_minerTxExtra.push_back(static_cast<uint8_t>(m_poolBlockTemplate->m_merkleTreeDataSize + HASH_SIZE));
+		writeVarint(m_poolBlockTemplate->m_merkleTreeData, m_minerTxExtra);
+		m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
+	}
 	// TX_EXTRA end
 
 	writeVarint(m_minerTxExtra.size(), m_minerTx);
@@ -1037,7 +1053,10 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 		merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 	}
-	const size_t merkle_root_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
+
+	const size_t merkle_root_offset = m_poolBlockTemplate->merge_mining_enabled()
+		? (extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
+		: (extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2);
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
@@ -1374,7 +1393,9 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 	merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 
-	merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
+	merkle_root_offset = m_poolBlockTemplate->merge_mining_enabled()
+		? (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
+		: (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2);
 
 	*pThis = this;
 

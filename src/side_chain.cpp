@@ -42,7 +42,7 @@
 
 LOG_CATEGORY(SideChain)
 
-static constexpr uint64_t MIN_DIFFICULTY = 1000;
+static constexpr uint64_t MIN_DIFFICULTY = 100000;
 static constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
@@ -63,7 +63,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	, m_poolName(pool_name ? pool_name : "default")
 	, m_targetBlockTime(10)
 	, m_minDifficulty(MIN_DIFFICULTY, 0)
-	, m_chainWindowSize(216)
+	, m_chainWindowSize(2160)
 	, m_unclePenalty(20)
 	, m_precalcFinished(false)
 #ifdef DEV_TEST_SYNC
@@ -103,8 +103,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
 
-	s << "mm"              << '\0'
-	  << s_networkType     << '\0'
+	s << s_networkType     << '\0'
 	  << m_poolName        << '\0'
 	  << m_poolPassword    << '\0'
 	  << m_targetBlockTime << '\0'

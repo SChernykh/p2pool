@@ -148,7 +148,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			outputs_blob_size = static_cast<int>(tmp);
 
 			// Required by sidechain.get_outputs_blob() to speed up repeated broadcasts from different peers
-			READ_BUF(m_sidechainId.h, HASH_SIZE);
+			if (merge_mining_enabled()) {
+				READ_BUF(m_sidechainId.h, HASH_SIZE);
+			}
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
@@ -186,23 +188,39 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		EXPECT_BYTE(TX_EXTRA_MERGE_MINING_TAG);
 
-		uint64_t mm_field_size;
-		READ_VARINT(mm_field_size);
-
-		const uint8_t* const mm_field_begin = data;
-
-		READ_VARINT(m_merkleTreeData);
-
-		m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
-
+		int mm_root_hash_offset;
 		uint32_t mm_n_aux_chains, mm_nonce;
-		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
 
-		const int mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
-		READ_BUF(m_merkleRoot.h, HASH_SIZE);
+		if (!merge_mining_enabled()) {
+			EXPECT_BYTE(HASH_SIZE);
 
-		if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
-			return __LINE__;
+			mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+			READ_BUF(m_sidechainId.h, HASH_SIZE);
+
+			mm_n_aux_chains = 1;
+			mm_nonce = 0;
+
+			m_merkleRoot = static_cast<root_hash&>(m_sidechainId);
+			m_merkleTreeDataSize = 0;
+		}
+		else {
+			uint64_t mm_field_size;
+			READ_VARINT(mm_field_size);
+
+			const uint8_t* const mm_field_begin = data;
+
+			READ_VARINT(m_merkleTreeData);
+
+			m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
+
+			decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
+
+			mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+			READ_BUF(m_merkleRoot.h, HASH_SIZE);
+
+			if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
+				return __LINE__;
+			}
 		}
 
 		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
@@ -340,20 +358,23 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		uint8_t merkle_proof_size;
-		READ_BYTE(merkle_proof_size);
-
-		if (merkle_proof_size > 7) {
-			return __LINE__;
-		}
-
 		m_merkleProof.clear();
-		m_merkleProof.reserve(merkle_proof_size);
 
-		for (uint8_t i = 0; i < merkle_proof_size; ++i) {
-			hash h;
-			READ_BUF(h.h, HASH_SIZE);
-			m_merkleProof.emplace_back(h);
+		if (merge_mining_enabled()) {
+			uint8_t merkle_proof_size;
+			READ_BYTE(merkle_proof_size);
+
+			if (merkle_proof_size > 8) {
+				return __LINE__;
+			}
+
+			m_merkleProof.reserve(merkle_proof_size);
+
+			for (uint8_t i = 0; i < merkle_proof_size; ++i) {
+				hash h;
+				READ_BUF(h.h, HASH_SIZE);
+				m_merkleProof.emplace_back(h);
+			}
 		}
 
 		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));

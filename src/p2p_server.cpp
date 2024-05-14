@@ -804,7 +804,10 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	writeVarint(total_reward, data->pruned_blob);
 	writeVarint(outputs_blob_size, data->pruned_blob);
-	data->pruned_blob.insert(data->pruned_blob.end(), block.m_sidechainId.h, block.m_sidechainId.h + HASH_SIZE);
+
+	if (block.merge_mining_enabled()) {
+		data->pruned_blob.insert(data->pruned_blob.end(), block.m_sidechainId.h, block.m_sidechainId.h + HASH_SIZE);
+	}
 
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 

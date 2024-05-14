@@ -60,6 +60,9 @@ static constexpr difficulty_type MAX_CUMULATIVE_DIFFICULTY{ 13019633956666736640
 // 1000 years at 1 block/second. It should be enough for any normal use.
 static constexpr uint64_t MAX_SIDECHAIN_HEIGHT = 31556952000ULL;
 
+// Jul 01 2024 00:00:00 GMT+0000
+static constexpr uint64_t MERGE_MINING_FORK_TIME = 1719792000;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}
@@ -203,6 +206,8 @@ struct PoolBlock
 		mm_n_aux_chains = 1U + ((k >> 3U) & ((1U << n) - 1U));
 		mm_nonce = static_cast<uint32_t>(m_merkleTreeData >> (3U + n));
 	}
+
+	bool merge_mining_enabled() const;
 };
 
 } // namespace p2pool

@@ -26,7 +26,7 @@
 
 namespace p2pool {
 
-TEST(block_template, DISABLED_update)
+TEST(block_template, update)
 {
 	init_crypto_cache();
 
