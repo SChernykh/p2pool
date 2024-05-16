@@ -101,6 +101,7 @@ allowedAPIs = {
 	"SetFileCompletionNotificationModes",
 	"WideCharToMultiByte",
 	"DuplicateHandle",
+	"TryAcquireSRWLockExclusive",
 	"TryAcquireSRWLockShared",
 	"InitializeConditionVariable",
 	"WakeConditionVariable",
