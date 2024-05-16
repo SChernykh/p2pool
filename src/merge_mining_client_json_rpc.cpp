@@ -101,7 +101,7 @@ MergeMiningClientJSON_RPC::~MergeMiningClientJSON_RPC()
 void MergeMiningClientJSON_RPC::on_timer()
 {
 	MinerData data = m_pool->miner_data();
-	merge_mining_get_job(data.height, data.prev_id, m_auxWallet);
+	merge_mining_get_aux_block(data.height, data.prev_id, m_auxWallet);
 }
 
 void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
@@ -172,7 +172,7 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_chain_id(const char* data
 	return true;
 }
 
-void MergeMiningClientJSON_RPC::merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& wallet)
+void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, const hash& prev_id, const std::string& wallet)
 {
 	if (m_getJobRunning) {
 		return;
@@ -190,7 +190,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_job(uint64_t height, const hash
 		aux_hash = m_chainParams.aux_hash;
 	}
 
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_job\",\"params\":{"
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_aux_block\",\"params\":{"
 	  << "\"address\":\"" << wallet << '"'
 	  << ",\"aux_hash\":\"" << aux_hash << '"'
 	  << ",\"height\":" << height
@@ -204,7 +204,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_job(uint64_t height, const hash
 
 			{
 				WriteLock lock(m_lock);
-				if (parse_merge_mining_get_job(data, size, changed)) {
+				if (parse_merge_mining_get_aux_block(data, size, changed)) {
 					chain_id = m_chainParams.aux_id;
 				}
 			}
@@ -221,10 +221,10 @@ void MergeMiningClientJSON_RPC::merge_mining_get_job(uint64_t height, const hash
 		}, &m_loop);
 }
 
-bool MergeMiningClientJSON_RPC::parse_merge_mining_get_job(const char* data, size_t size, bool& changed)
+bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* data, size_t size, bool& changed)
 {
 	auto err = [](const char* msg) {
-		LOGWARN(3, "merge_mining_get_job RPC call failed: " << msg);
+		LOGWARN(3, "merge_mining_get_aux_block RPC call failed: " << msg);
 		return false;
 	};
 

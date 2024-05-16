@@ -41,8 +41,8 @@ private:
 	void merge_mining_get_chain_id();
 	bool parse_merge_mining_get_chain_id(const char* data, size_t size);
 
-	void merge_mining_get_job(uint64_t height, const hash& prev_id, const std::string& wallet);
-	bool parse_merge_mining_get_job(const char* data, size_t size, bool& changed);
+	void merge_mining_get_aux_block(uint64_t height, const hash& prev_id, const std::string& wallet);
+	bool parse_merge_mining_get_aux_block(const char* data, size_t size, bool& changed);
 
 	bool parse_merge_mining_submit_solution(const char* data, size_t size);
 

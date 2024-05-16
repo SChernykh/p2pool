@@ -48,6 +48,8 @@ P2Pool must be able to get mining jobs from merge mined chains and submit PoW so
 
 ### merge_mining_get_chain_id
 
+Gets a unique ID that identifies this merge mined chain and separates it from other chains.
+
 Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_get_chain_id"}`
 
 Response: a JSON containing these fields:
@@ -59,9 +61,11 @@ Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"0f28c4960d9
 
 Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`
 
-### merge_mining_get_job
+### merge_mining_get_aux_block
 
-Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_get_job","params":{"address":"MERGE_MINED_CHAIN_ADDRESS","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","height":3000000,"prev_id":"ad505b0be8a49b89273e307106fa42133cbd804456724c5e7635bd953215d92a"}}`
+Gets a blob of data (usually a new block for the merge mined chain) and its hash to be used for merge mining.
+
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_get_aux_block","params":{"address":"MERGE_MINED_CHAIN_ADDRESS","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","height":3000000,"prev_id":"ad505b0be8a49b89273e307106fa42133cbd804456724c5e7635bd953215d92a"}}`
 
 Request: a JSON containing these fields:
 Field|Description
@@ -86,14 +90,16 @@ Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 
 ### merge_mining_submit_solution
 
+Submits a PoW solution for the merge mined chain's block. Note that when merge mining with Monero, the PoW solution is always a Monero block template with merge mining data included in it.
+
 Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"],"path":3}}`
 
 Request: a JSON containing these fields:
 Field|Description
 -|-
-`aux_blob`|Blob of data returned by `merge_mining_get_job`.
-`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob` - the same value that was returned by `merge_mining_get_job`.
-`blob`|Monero block template that has enough PoW to satisfy difficulty returned by `merge_mining_get_job`. It also must have a merge mining tag in tx_extra of the coinbase transaction.
+`aux_blob`|Blob of data returned by `merge_mining_get_aux_block`.
+`aux_hash`|A 32-byte hex-encoded hash of the `aux_blob` - the same value that was returned by `merge_mining_get_aux_block`.
+`blob`|Monero block template that has enough PoW to satisfy difficulty returned by `merge_mining_get_aux_block`. It also must have a merge mining tag in tx_extra of the coinbase transaction.
 `merkle_proof`|A proof that `aux_hash` was included when calculating Merkle root hash from the merge mining tag
 `path`|A path bitmap (32-bit unsigned integer) that complements `merkle_proof`
 

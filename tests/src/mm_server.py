@@ -24,7 +24,7 @@ class Server(http.server.BaseHTTPRequestHandler):
 
 		if request['method'] == 'merge_mining_get_chain_id':
 			response['result'] = {'chain_id':chain_id}
-		elif request['method'] == 'merge_mining_get_job':
+		elif request['method'] == 'merge_mining_get_aux_block':
 			global counter
 			counter += 1
 			s = aux_blob + '_' + str(counter // 10)
