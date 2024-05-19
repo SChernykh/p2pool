@@ -357,8 +357,6 @@ jobs:
       run: |
         cd external/src/grpc/third_party/boringssl-with-bazel
         git apply --verbose --ignore-whitespace ../../../../../patches/msys2/gcc14_boringssl.patch
-        cd ../abseil-cpp
-        git apply --verbose --ignore-whitespace ../../../../../patches/msys2/gcc14_abseil.patch
         cd /
         git apply --verbose --ignore-whitespace --directory=mingw64/include/c++/`ls mingw64/include/c++`/ /d/a/p2pool/p2pool/patches/msys2/typeinfo.patch
 
