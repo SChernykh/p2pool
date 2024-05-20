@@ -89,7 +89,7 @@ public:
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 	void submit_block_async(std::vector<uint8_t>&& blob);
 
-	void submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const;
+	void submit_aux_block_async(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
@@ -123,11 +123,13 @@ private:
 	const Params::Host& switch_host();
 
 	static void on_submit_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_block(); }
+	static void on_submit_aux_block(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->submit_aux_block(); }
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
 	static void on_stop(uv_async_t*);
 	static void on_reconnect_to_host(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->reconnect_to_host(); }
 
 	void submit_block() const;
+	void submit_aux_block() const;
 
 	std::atomic<bool> m_stopped;
 
@@ -219,7 +221,19 @@ private:
 	mutable uv_mutex_t m_submitBlockDataLock;
 	SubmitBlockData m_submitBlockData;
 
+	struct SubmitAuxBlockData
+	{
+		hash chain_id;
+		uint32_t template_id = 0;
+		uint32_t nonce = 0;
+		uint32_t extra_nonce = 0;
+	};
+
+	mutable uv_mutex_t m_submitAuxBlockDataLock;
+	mutable std::vector<SubmitAuxBlockData> m_submitAuxBlockData;
+
 	uv_async_t m_submitBlockAsync;
+	uv_async_t m_submitAuxBlockAsync;
 	uv_async_t m_blockTemplateAsync;
 	uv_async_t m_stopAsync;
 

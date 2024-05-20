@@ -407,7 +407,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 				if (aux_data.difficulty.check_pow(resultHash)) {
 					const char* s = client->m_customUser;
 					LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found an aux block for chain_id " << aux_data.unique_id << ", diff " << aux_data.difficulty << ", submitting it");
-					m_pool->submit_aux_block(aux_data.unique_id, template_id, nonce, extra_nonce);
+					m_pool->submit_aux_block_async(aux_data.unique_id, template_id, nonce, extra_nonce);
 				}
 			}
 		}

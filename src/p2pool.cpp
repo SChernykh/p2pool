@@ -114,6 +114,13 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 	m_submitBlockAsync.data = this;
 
+	err = uv_async_init(uv_default_loop_checked(), &m_submitAuxBlockAsync, on_submit_aux_block);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		throw std::exception();
+	}
+	m_submitAuxBlockAsync.data = this;
+
 	err = uv_async_init(uv_default_loop_checked(), &m_blockTemplateAsync, on_update_block_template);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
@@ -145,6 +152,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_mutex_init_checked(&m_minerLock);
 #endif
 	uv_mutex_init_checked(&m_submitBlockDataLock);
+	uv_mutex_init_checked(&m_submitAuxBlockDataLock);
 
 	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
 
@@ -215,6 +223,7 @@ p2pool::~p2pool()
 	uv_mutex_destroy(&m_minerLock);
 #endif
 	uv_mutex_destroy(&m_submitBlockDataLock);
+	uv_mutex_destroy(&m_submitAuxBlockDataLock);
 
 	delete m_api;
 	delete m_sideChain;
@@ -627,69 +636,102 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 	}
 }
 
-void p2pool::submit_aux_block(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce) const
+void p2pool::submit_aux_block_async(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {
-	LOGINFO(3, "submit_aux_block: template id = " << template_id << ", chain_id = " << chain_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+	{
+		MutexLock lock(m_submitAuxBlockDataLock);
+		m_submitAuxBlockData.emplace_back(SubmitAuxBlockData{ chain_id, template_id, nonce, extra_nonce });
+	}
 
-	size_t nonce_offset = 0;
-	size_t extra_nonce_offset = 0;
-	size_t merkle_root_offset = 0;
-	root_hash merge_mining_root;
-	const BlockTemplate* block_tpl = nullptr;
-
-	std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
-
-	uint8_t hashing_blob[128] = {};
-	uint64_t height = 0;
-	difficulty_type diff, aux_diff, sidechain_diff;
-	hash seed_hash;
-
-	m_blockTemplate->get_hashing_blob(template_id, extra_nonce, hashing_blob, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset);
-
-	if (blob.empty()) {
-		LOGWARN(3, "submit_aux_block: block template blob not found");
+	// If p2pool is stopped, m_submitAuxBlockAsync is most likely already closed
+	if (m_stopped) {
+		LOGWARN(0, "p2pool is shutting down, but a block was found. Trying to submit it anyway!");
+		submit_aux_block();
 		return;
 	}
 
-	uint8_t* p = blob.data();
-	memcpy(p + nonce_offset, &nonce, NONCE_SIZE);
-	memcpy(p + extra_nonce_offset, &extra_nonce, EXTRA_NONCE_SIZE);
-	memcpy(p + merkle_root_offset, merge_mining_root.h, HASH_SIZE);
+	const int err = uv_async_send(&m_submitAuxBlockAsync);
+	if (err) {
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	}
+}
 
-	ReadLock lock(m_mergeMiningClientsLock);
+void p2pool::submit_aux_block() const
+{
+	std::vector<SubmitAuxBlockData> submit_data;
+	{
+		MutexLock lock(m_submitAuxBlockDataLock);
+		m_submitAuxBlockData.swap(submit_data);
+	}
 
-	IMergeMiningClient::ChainParameters params;
+	for (size_t i = 0; i < submit_data.size(); ++i) {
+		const hash chain_id = submit_data[i].chain_id;
+		const uint32_t template_id = submit_data[i].template_id;
+		const uint32_t nonce = submit_data[i].nonce;
+		const uint32_t extra_nonce = submit_data[i].extra_nonce;
 
-	for (IMergeMiningClient* c : m_mergeMiningClients) {
-		if (!c->get_params(params)) {
-			continue;
+		LOGINFO(3, "submit_aux_block: template id = " << template_id << ", chain_id = " << chain_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
+
+		size_t nonce_offset = 0;
+		size_t extra_nonce_offset = 0;
+		size_t merkle_root_offset = 0;
+		root_hash merge_mining_root;
+		const BlockTemplate* block_tpl = nullptr;
+
+		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
+
+		uint8_t hashing_blob[128] = {};
+		uint64_t height = 0;
+		difficulty_type diff, aux_diff, sidechain_diff;
+		hash seed_hash;
+
+		m_blockTemplate->get_hashing_blob(template_id, extra_nonce, hashing_blob, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset);
+
+		if (blob.empty()) {
+			LOGWARN(3, "submit_aux_block: block template blob not found");
+			return;
 		}
 
-		if (chain_id == params.aux_id) {
-			std::vector<hash> proof;
-			uint32_t path;
+		uint8_t* p = blob.data();
+		memcpy(p + nonce_offset, &nonce, NONCE_SIZE);
+		memcpy(p + extra_nonce_offset, &extra_nonce, EXTRA_NONCE_SIZE);
+		memcpy(p + merkle_root_offset, merge_mining_root.h, HASH_SIZE);
 
-			if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, params.aux_hash, proof, path)) {
-				if (pool_block_debug()) {
-					const MinerData data = miner_data();
-					const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
-					const uint32_t index = get_aux_slot(params.aux_id, data.aux_nonce, n_aux_chains);
+		ReadLock lock(m_mergeMiningClientsLock);
 
-					if (!verify_merkle_proof(params.aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
-						LOGERR(0, "submit_aux_block: verify_merkle_proof (1) failed for chain_id " << chain_id);
+		IMergeMiningClient::ChainParameters params;
+
+		for (IMergeMiningClient* c : m_mergeMiningClients) {
+			if (!c->get_params(params)) {
+				continue;
+			}
+
+			if (chain_id == params.aux_id) {
+				std::vector<hash> proof;
+				uint32_t path;
+
+				if (m_blockTemplate->get_aux_proof(template_id, extra_nonce, params.aux_hash, proof, path)) {
+					if (pool_block_debug()) {
+						const MinerData data = miner_data();
+						const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
+						const uint32_t index = get_aux_slot(params.aux_id, data.aux_nonce, n_aux_chains);
+
+						if (!verify_merkle_proof(params.aux_hash, proof, index, n_aux_chains, merge_mining_root)) {
+							LOGERR(0, "submit_aux_block: verify_merkle_proof (1) failed for chain_id " << chain_id);
+						}
+						if (!verify_merkle_proof(params.aux_hash, proof, path, merge_mining_root)) {
+							LOGERR(0, "submit_aux_block: verify_merkle_proof (2) failed for chain_id " << chain_id);
+						}
 					}
-					if (!verify_merkle_proof(params.aux_hash, proof, path, merge_mining_root)) {
-						LOGERR(0, "submit_aux_block: verify_merkle_proof (2) failed for chain_id " << chain_id);
-					}
+
+					c->submit_solution(block_tpl, hashing_blob, nonce_offset, seed_hash, blob, proof, path);
+				}
+				else {
+					LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);
 				}
 
-				c->submit_solution(block_tpl, hashing_blob, nonce_offset, seed_hash, blob, proof, path);
+				return;
 			}
-			else {
-				LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);
-			}
-
-			return;
 		}
 	}
 }
@@ -707,6 +749,7 @@ void p2pool::on_stop(uv_async_t* async)
 	}
 
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitBlockAsync), nullptr);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_submitAuxBlockAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_blockTemplateAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_reconnectToHostAsync), nullptr);
