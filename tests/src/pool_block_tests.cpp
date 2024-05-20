@@ -91,34 +91,8 @@ TEST(pool_block, deserialize)
 		s >> seed;
 	}
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-	class RandomX_Hasher_Test : public RandomX_Hasher_Base
-	{
-	public:
-		bool calculate(const void* data, size_t size, uint64_t, const hash&, hash& result, bool /*force_light_mode*/) override
-		{
-			if (size == 76) {
-				char buf[76 * 2 + 1];
-				{
-					log::Stream s(buf);
-					s << log::hex_buf(reinterpret_cast<const uint8_t*>(data), size);
-					buf[76 * 2] = '\0';
-				}
-				const char ref[] = "1010c0c8dba006b78e04571806733a74ef1014f404484d3358bfca889a75bb0fe9aff64a41c92bdf040000ecf0a11f83c6eced7d7cdfbdcd5a193f64d334b2c5491a9c595b4527e531ae7209";
-				if (memcmp(buf, ref, sizeof(buf)) == 0) {
-					std::stringstream s;
-					s << "aa7a3c4a2d67cb6a728e244288219bf038024f3b511b0da197a19ec601000000";
-					s >> result;
-					return true;
-				}
-			}
-			return false;
-		}
-	} hasher;
-#else
 	RandomX_Hasher hasher(nullptr);
 	hasher.set_seed(seed);
-#endif
 
 	hash pow_hash;
 	ASSERT_EQ(b.get_pow_hash(&hasher, 0, seed, pow_hash), true);

@@ -631,8 +631,8 @@ jobs:
         os:
           - name: freebsd
             architecture: x86-64
-            version: '13.2'
-            host: macos-13
+            version: '13.3'
+            host: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -646,12 +646,12 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.22.0
+      uses: cross-platform-actions/action@v0.24.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
         version: ${{ matrix.os.version }}
-        memory: 8G
+        memory: 12G
         cpu_count: 4
         shell: bash
         run: |
@@ -694,7 +694,7 @@ jobs:
 
   build-openbsd:
 
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: ${{ matrix.os.host }}
 
     strategy:
@@ -703,7 +703,7 @@ jobs:
           - name: openbsd
             architecture: x86-64
             version: '7.4'
-            host: macos-13
+            host: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -717,12 +717,12 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.22.0
+      uses: cross-platform-actions/action@v0.24.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
         version: ${{ matrix.os.version }}
-        memory: 8G
+        memory: 12G
         cpu_count: 4
         shell: bash
         run: |
