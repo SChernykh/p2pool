@@ -242,20 +242,46 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		pow->set_pow_data(data);
 	}
 
-	grpc::ClientContext ctx;
-	SubmitBlockResponse response;
+	struct Work
+	{
+		uv_work_t req;
+		MergeMiningClientTari* client;
+		Block block;
+	} *work = new Work{ {}, this, std::move(block) };
 
-	const grpc::Status status = m_TariNode->SubmitBlock(&ctx, block, &response);
+	work->req.data = work;
 
-	if (!status.ok()) {
-		LOGWARN(5, "SubmitBlock failed: " << status.error_message());
-		if (!status.error_details().empty()) {
-			LOGWARN(5, "SubmitBlock failed: " << status.error_details());
-		}
-	}
-	else {
-		const std::string& h = response.block_hash();
-		LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << block.header().height());
+	const int err = uv_queue_work(uv_default_loop_checked(), &work->req,
+		[](uv_work_t* req)
+		{
+			BACKGROUND_JOB_START(MergeMiningClientTari::submit_solution);
+
+			grpc::ClientContext ctx;
+			SubmitBlockResponse response;
+
+			const Work* w = reinterpret_cast<Work*>(req->data);
+			const grpc::Status status = w->client->m_TariNode->SubmitBlock(&ctx, w->block, &response);
+
+			if (!status.ok()) {
+				LOGWARN(5, "SubmitBlock failed: " << status.error_message());
+				if (!status.error_details().empty()) {
+					LOGWARN(5, "SubmitBlock failed: " << status.error_details());
+				}
+			}
+			else {
+				const std::string& h = response.block_hash();
+				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << w->block.header().height());
+			}
+		},
+		[](uv_work_t* req, int /*status*/)
+		{
+			delete reinterpret_cast<Work*>(req->data);
+			BACKGROUND_JOB_STOP(MergeMiningClientTari::submit_solution);
+		});
+
+	if (err) {
+		LOGERR(1, "submit_solution: uv_queue_work failed, error " << uv_err_name(err));
+		delete work;
 	}
 }
 
