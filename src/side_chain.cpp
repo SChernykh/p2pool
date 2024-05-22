@@ -1334,7 +1334,7 @@ void SideChain::verify_loop(PoolBlock* block)
 	// PoW is already checked at this point
 
 	std::vector<PoolBlock*> blocks_to_verify(1, block);
-	PoolBlock* highest_block = nullptr;
+	const PoolBlock* highest_block = nullptr;
 
 	while (!blocks_to_verify.empty()) {
 		block = blocks_to_verify.back();
