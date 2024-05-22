@@ -255,7 +255,7 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 	}
 	else {
 		const std::string& h = response.block_hash();
-		LOGINFO(3, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()));
+		LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << block.header().height());
 	}
 }
 

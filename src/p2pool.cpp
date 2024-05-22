@@ -578,13 +578,12 @@ void p2pool::update_aux_data(const hash& chain_id)
 
 	if (!chain_id.empty()) {
 		LOGINFO(4, "New aux data from chain " << chain_id);
-	}
-
-	if (!is_main_thread()) {
-		update_block_template_async();
-	}
-	else {
-		update_block_template();
+		if (!is_main_thread()) {
+			update_block_template_async();
+		}
+		else {
+			update_block_template();
+		}
 	}
 }
 
