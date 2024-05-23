@@ -740,23 +740,15 @@ int add_portmapping(int external_port, int internal_port)
 	UPNPUrls urls;
 	IGDdatas data;
 	char local_addr[64] = {};
+	char wan_addr[64] = {};
 
-	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr));
+	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr), wan_addr, sizeof(wan_addr));
 	if (result != 1) {
 		LOGWARN(1, "UPNP_GetValidIGD returned " << result << ", no valid UPnP IGD devices found");
 		return 0;
 	}
 
-	LOGINFO(1, "UPnP: LAN IP address " << log::Gray() << static_cast<const char*>(local_addr));
-
-	char ext_addr[64] = {};
-	result = UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, ext_addr);
-	if ((result != UPNPCOMMAND_SUCCESS) || !ext_addr[0]) {
-		LOGWARN(1, "UPNP_GetExternalIPAddress: failed to query external IP address, error " << result);
-	}
-	else {
-		LOGINFO(1, "UPnP: WAN IP address " << log::Gray() << static_cast<const char*>(ext_addr));
-	}
+	LOGINFO(1, "UPnP: LAN IP address " << log::Gray() << static_cast<const char*>(local_addr) << log::NoColor() << ", WAN IP address " << log::Gray() << static_cast<const char*>(wan_addr));
 
 	char eport[16] = {};
 	do { log::Stream s(eport); s << external_port; } while (0);
@@ -786,7 +778,7 @@ int add_portmapping(int external_port, int internal_port)
 		return 0;
 	}
 
-	LOGINFO(1, "UPnP: Mapped " << log::Gray() << static_cast<const char*>(ext_addr) << ':' << external_port << log::NoColor() << " to " << log::Gray() << static_cast<const char*>(local_addr) << ':' << internal_port);
+	LOGINFO(1, "UPnP: Mapped " << log::Gray() << static_cast<const char*>(wan_addr) << ':' << external_port << log::NoColor() << " to " << log::Gray() << static_cast<const char*>(local_addr) << ':' << internal_port);
 	return external_port;
 }
 
@@ -805,7 +797,7 @@ void remove_portmapping(int external_port)
 	IGDdatas data;
 	char local_addr[64] = {};
 
-	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr));
+	int result = UPNP_GetValidIGD(upnp_discover.devlist, &urls, &data, local_addr, sizeof(local_addr), nullptr, 0);
 	if (result != 1) {
 		LOGWARN(1, "UPNP_GetValidIGD returned " << result << ", no valid UPnP IGD devices found");
 		return;
