@@ -669,8 +669,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_sidechainId = {};
 	m_poolBlockTemplate->m_merkleRoot = {};
 
-	m_poolBlockTemplate->m_auxChains = data.aux_chains;
-	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
+	if (m_poolBlockTemplate->merge_mining_enabled()) {
+		m_poolBlockTemplate->m_auxChains = data.aux_chains;
+		m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
+	}
+	else {
+		m_poolBlockTemplate->m_auxChains.clear();
+		m_poolBlockTemplate->m_auxNonce = 0;
+	}
 
 	init_merge_mining_merkle_proof();
 
@@ -705,8 +711,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_poolBlockTemplate->m_sidechainId = calc_sidechain_hash(0);
 	{
-		const uint32_t n_aux_chains = static_cast<uint32_t>(data.aux_chains.size() + 1);
-		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), data.aux_nonce, n_aux_chains);
+		const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+		const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 		m_poolBlockTemplate->m_merkleRoot = get_root_from_proof(m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 	}
 
