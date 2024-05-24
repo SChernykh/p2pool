@@ -92,7 +92,7 @@ Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 
 Submits a PoW solution for the merge mined chain's block. Note that when merge mining with Monero, the PoW solution is always a Monero block template with merge mining data included in it.
 
-Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"],"path":3}}`
+Example request: `{"jsonrpc":"2.0","id":"0","method":"merge_mining_submit_solution","params":{"aux_blob":"4c6f72656d20697073756d","aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","blob":"...","merkle_proof":["hash1","hash2","hash3"],"path":3,"seed_hash":"22c3d47c595ae888b5d7fc304235f92f8854644d4fad38c5680a5d4a81009fcd"}}`
 
 Request: a JSON containing these fields:
 Field|Description
@@ -102,6 +102,7 @@ Field|Description
 `blob`|Monero block template that has enough PoW to satisfy difficulty returned by `merge_mining_get_aux_block`. It also must have a merge mining tag in tx_extra of the coinbase transaction.
 `merkle_proof`|A proof that `aux_hash` was included when calculating Merkle root hash from the merge mining tag
 `path`|A path bitmap (32-bit unsigned integer) that complements `merkle_proof`
+`seed_hash`|A 32-byte hex-encoded key that is used to [initialize RandomX dataset](https://github.com/tevador/RandomX/blob/master/doc/specs.md#7-dataset)
 
 Note that `merkle_proof` only contains a vector of 32-byte hashes for `aux_hash` to be combined with. It can be verified by running this pseudo-code and functions from `merkle.cpp` (adapt it to your codebase):
 
