@@ -244,7 +244,7 @@ void Miner::run(WorkerData* data)
 		if (j.m_auxDiff.check_pow(h)) {
 			for (const AuxChainData& aux_data : j.m_auxChains) {
 				if (aux_data.difficulty.check_pow(h)) {
-					LOGINFO(0, log::Green() << "AUX BLOCK FOUND: chain_id " << aux_data.unique_id << ", diff " << j.m_auxDiff << ", worker thread " << data->m_index << '/' << data->m_count);
+					LOGINFO(0, log::Green() << "AUX BLOCK FOUND: chain_id " << aux_data.unique_id << ", diff " << aux_data.difficulty << ", worker thread " << data->m_index << '/' << data->m_count);
 					m_pool->submit_aux_block_async(aux_data.unique_id, j.m_templateId, j.m_nonce, j.m_extraNonce);
 				}
 			}
