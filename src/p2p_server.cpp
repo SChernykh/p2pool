@@ -298,7 +298,7 @@ void P2PServer::update_peer_connections()
 			}
 			if ((client->m_SoftwareID == SoftwareID::P2Pool) && client->m_SoftwareVersion && !client->m_isIncoming) {
 				++total_outgoing_p2pool;
-				if (client->m_SoftwareVersion > ((P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR)) {
+				if (client->m_SoftwareVersion > P2POOL_VERSION) {
 					++newer_version_p2pool;
 				}
 			}
@@ -2319,12 +2319,12 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 	// - use first 8 bytes of the 16-byte raw IP address to send supported protocol version and p2pool version
 	if (first) {
 		LOGINFO(5, "sending protocol version " << (SUPPORTED_PROTOCOL_VERSION >> 16) << '.' << (SUPPORTED_PROTOCOL_VERSION & 0xFFFF)
-			<< ", P2Pool version " << P2POOL_VERSION_MAJOR << '.' << P2POOL_VERSION_MINOR
+			<< ", P2Pool version " << P2POOL_VERSION_MAJOR << '.' << P2POOL_VERSION_MINOR << '.' << P2POOL_VERSION_PATCH
 			<< " to peer " << log::Gray() << static_cast<char*>(m_addrString));
 
 		peers[0] = {};
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = P2POOL_VERSION;
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 8) = static_cast<uint32_t>(SoftwareID::P2Pool);
 		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + sizeof(raw_ip::ipv4_prefix)) = 0xFFFFFFFFU;
 		peers[0].m_port = 0xFFFF;

@@ -659,7 +659,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 #ifdef P2POOL_SIDECHAIN_EXTRA_1
 	sidechain_extra[1] = P2POOL_SIDECHAIN_EXTRA_1;
 #else
-	sidechain_extra[1] = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
+	sidechain_extra[1] = P2POOL_VERSION;
 #endif
 	sidechain_extra[2] = static_cast<uint32_t>(m_rng() >> 32);
 	sidechain_extra[3] = 0;

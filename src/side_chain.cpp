@@ -1325,8 +1325,6 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 
 bool SideChain::p2pool_update_available() const
 {
-	constexpr uint32_t version = (P2POOL_VERSION_MAJOR << 16) | P2POOL_VERSION_MINOR;
-
 	difficulty_type total_p2pool_diff, newer_p2pool_diff;
 	{
 		ReadLock lock(m_sidechainLock);
@@ -1336,7 +1334,7 @@ bool SideChain::p2pool_update_available() const
 		for (uint64_t i = 0; (i < m_chainWindowSize) && cur; ++i, cur = get_parent(cur)) {
 			if (cur->m_sidechainExtraBuf[0] == static_cast<uint32_t>(SoftwareID::P2Pool)) {
 				total_p2pool_diff += cur->m_difficulty;
-				if (cur->m_sidechainExtraBuf[1] > version) {
+				if (cur->m_sidechainExtraBuf[1] > P2POOL_VERSION) {
 					newer_p2pool_diff += cur->m_difficulty;
 				}
 			}
