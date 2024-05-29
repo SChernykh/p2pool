@@ -120,8 +120,6 @@ public:
 
 		[[nodiscard]] bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }
 
-		[[nodiscard]] const char* software_name() const;
-
 		alignas(8) char m_p2pReadBuf[P2P_BUF_SIZE];
 
 		uint64_t m_peerId;
@@ -154,6 +152,15 @@ public:
 
 		hash m_broadcastedHashes[8];
 		uint32_t m_broadcastedHashesIndex;
+
+		// log::Stream wrapper
+		struct SoftwareDisplayName
+		{
+			FORCEINLINE SoftwareDisplayName(SoftwareID id, uint32_t version) : m_id(id), m_version(version) {}
+
+			SoftwareID m_id;
+			uint32_t m_version;
+		};
 	};
 
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);

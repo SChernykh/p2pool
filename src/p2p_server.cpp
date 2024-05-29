@@ -1047,7 +1047,7 @@ void P2PServer::show_peers() const
 			char buf[32] = {};
 			if (client->m_SoftwareVersion) {
 				log::Stream s(buf);
-				s << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
+				s << P2PClient::SoftwareDisplayName(client->m_SoftwareID, client->m_SoftwareVersion);
 			}
 			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")
 				<< log::pad_right(log::Duration(cur_time - client->m_connectedTime), 16) << '\t'
@@ -1392,7 +1392,7 @@ void P2PServer::api_update_local_stats()
 					char buf[32] = {};
 					log::Stream s1(buf);
 					if (client->m_SoftwareVersion) {
-						s1 << client->software_name() << " v" << (client->m_SoftwareVersion >> 16) << '.' << (client->m_SoftwareVersion & 0xFFFF);
+						s1 << P2PClient::SoftwareDisplayName(client->m_SoftwareID, client->m_SoftwareVersion);
 					}
 
 					if (!first) {
@@ -2413,7 +2413,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
 						<< " supports protocol version " << (m_protocolVersion >> 16) << '.' << (m_protocolVersion & 0xFFFF)
-						<< ", runs " << software_name() << " v" << (m_SoftwareVersion >> 16) << '.' << (m_SoftwareVersion & 0xFFFF)
+						<< ", runs " << P2PClient::SoftwareDisplayName(m_SoftwareID, m_SoftwareVersion)
 					);
 
 					if (m_SoftwareID == SoftwareID::Unknown) {
@@ -2682,16 +2682,35 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 	}
 }
 
-const char* P2PServer::P2PClient::software_name() const
+template<> struct log::Stream::Entry<P2PServer::P2PClient::SoftwareDisplayName>
 {
-	switch (m_SoftwareID) {
-	case SoftwareID::P2Pool:
-		return "P2Pool";
-	case SoftwareID::GoObserver:
-		return "GoObserver";
-	default:
-		return "Unknown";
+	static NOINLINE void put(P2PServer::P2PClient::SoftwareDisplayName value, Stream* wrapper)
+	{
+		switch (value.m_id) {
+		case SoftwareID::P2Pool:
+			*wrapper << "P2Pool v";
+			if (value.m_version <= 0x3000A) {
+				// Encoding for versions <= 3.10
+				*wrapper << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
+			}
+			else {
+				// Encoding for versions > 3.10
+				*wrapper << (value.m_version >> 16) << '.' << ((value.m_version >> 8) & 0xFF);
+				if (value.m_version & 0xFF) {
+					*wrapper << '.' << (value.m_version & 0xFF);
+				}
+			}
+			break;
+
+		case SoftwareID::GoObserver:
+			*wrapper << "GoObserver v" << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
+			break;
+
+		default:
+			*wrapper << "Unknown v" << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
+			break;
+		}
 	}
-}
+};
 
 } // namespace p2pool
