@@ -156,6 +156,9 @@ FORCEINLINE void writeVarint(T value, std::vector<uint8_t>& out)
 	writeVarint(value, [&out](uint8_t b) { out.emplace_back(b); });
 }
 
+template<typename T> static FORCEINLINE bool out_of_range(uint64_t value) { return value > std::numeric_limits<T>::max(); }
+template<> FORCEINLINE bool out_of_range<uint64_t>(uint64_t) { return false; }
+
 template<typename T>
 const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 {
@@ -177,7 +180,7 @@ const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 		k += 7;
 
 		if ((cur_byte & 0x80) == 0) {
-			if (result > std::numeric_limits<T>::max()) {
+			if (out_of_range<T>(result)) {
 				return nullptr;
 			}
 			b = static_cast<T>(result);
