@@ -17,6 +17,9 @@
 
 #include "common.h"
 #include "keccak.h"
+#ifdef WITH_RANDOMX
+#include "RandomX/src/cpu.hpp"
+#endif
 
 namespace p2pool {
 
@@ -24,7 +27,7 @@ namespace p2pool {
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 #endif
 
-static const uint64_t keccakf_rndc[24] = 
+const uint64_t keccakf_rndc[24] = 
 {
 	0x0000000000000001, 0x0000000000008082, 0x800000000000808a,
 	0x8000000080008000, 0x000000000000808b, 0x0000000080000001,
@@ -36,7 +39,7 @@ static const uint64_t keccakf_rndc[24] =
 	0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 };
 
-NOINLINE void keccakf(std::array<uint64_t, 25>& st)
+NOINLINE void keccakf_plain(std::array<uint64_t, 25>& st)
 {
 	for (int round = 0; round < KeccakParams::ROUNDS; ++round) {
 		uint64_t bc[5];
@@ -114,6 +117,18 @@ NOINLINE void keccakf(std::array<uint64_t, 25>& st)
 		st[0] ^= keccakf_rndc[round];
 	}
 }
+
+void (*keccakf)(std::array<uint64_t, 25>&) = keccakf_plain;
+
+#if defined(WITH_RANDOMX) && (defined(__x86_64__) || defined(_M_AMD64))
+static struct KeccakBMI_Check {
+	KeccakBMI_Check() {
+		if (randomx::Cpu().hasBmi()) {
+			keccakf = keccakf_bmi;
+		}
+	}
+} keccak_bmi_check;
+#endif
 
 NOINLINE void keccak_step(const uint8_t* &in, int &inlen, std::array<uint64_t, 25>& st)
 {

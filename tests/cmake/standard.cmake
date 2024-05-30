@@ -15,3 +15,7 @@ endif()
 if (ARCH_ID MATCHES "^(aarch64|arm64|armv8-a)$")
 	set(ARMv8 1)
 endif()
+
+if (ARCH_ID MATCHES "^(x86_64|x86-64|amd64)$")
+	set(AMD64 1)
+endif()

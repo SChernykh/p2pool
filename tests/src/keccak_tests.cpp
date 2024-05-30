@@ -17,11 +17,12 @@
 
 #include "common.h"
 #include "keccak.h"
+#include "RandomX/src/cpu.hpp"
 #include "gtest/gtest.h"
 
 namespace p2pool {
 
-TEST(keccak, hashing)
+static void test_keccak()
 {
 	auto check = [](const void* input, size_t size, const char* expected_output) {
 		hash output;
@@ -53,6 +54,40 @@ TEST(keccak, hashing)
 
 	std::vector<uint8_t> v(1000000, 'a');
 	check(v.data(), v.size(), "fadae6b49f129bbb812be8407b7b2894f34aecf6dbd1f9b0f0c7e9853098fc96");
+
+	hash test;
+	for (int i = 0; i < 1000000; ++i) {
+		keccak(test.h, HASH_SIZE, test.h);
+	}
+
+	char buf[log::Stream::BUF_SIZE + 1];
+	log::Stream s(buf);
+	s << test;
+	ASSERT_EQ(memcmp(buf, "16e199635319b8c568a0405a570382994a90a56d5f116892d8cbcb3b13cda0eb", HASH_SIZE * 2), 0);
 }
+
+TEST(keccak, hashing)
+{
+	auto t = keccakf;
+	keccakf = keccakf_plain;
+
+	test_keccak();
+
+	keccakf = t;
+}
+
+#if defined(__x86_64__) || defined(_M_AMD64)
+TEST(keccak, hashing_bmi)
+{
+	if (randomx::Cpu().hasBmi()) {
+		auto t = keccakf;
+		keccakf = keccakf_bmi;
+
+		test_keccak();
+
+		keccakf = t;
+	}
+}
+#endif
 
 }

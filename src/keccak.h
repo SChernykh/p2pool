@@ -24,7 +24,12 @@ enum KeccakParams {
 	ROUNDS = 24,
 };
 
-void keccakf(std::array<uint64_t, 25> &st);
+extern const uint64_t keccakf_rndc[24];
+extern void (*keccakf)(std::array<uint64_t, 25>& st);
+
+void keccakf_plain(std::array<uint64_t, 25>& st);
+void keccakf_bmi(std::array<uint64_t, 25>& st);
+
 void keccak_step(const uint8_t* &in, int &inlen, std::array<uint64_t, 25>& st);
 void keccak_finish(const uint8_t* in, int inlen, std::array<uint64_t, 25>& st);
 

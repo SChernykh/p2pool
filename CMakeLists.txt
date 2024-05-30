@@ -146,6 +146,13 @@ set(SOURCES
 	src/zmq_reader.cpp
 )
 
+if (AMD64)
+	set(SOURCES ${SOURCES} src/keccak_bmi.cpp)
+	if (CMAKE_C_COMPILER_ID MATCHES GNU OR CMAKE_C_COMPILER_ID MATCHES Clang)
+		set_source_files_properties(src/keccak_bmi.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -mbmi")
+	endif()
+endif()
+
 if (WITH_RANDOMX)
 	set(HEADERS ${HEADERS} src/miner.h)
 	set(SOURCES ${SOURCES} src/miner.cpp)
