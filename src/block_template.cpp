@@ -1276,8 +1276,6 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 		blobs.reserve(required_capacity * 2);
 	}
 
-	uint32_t blob_size = 0;
-
 	ReadLock lock(m_lock);
 
 	height = m_height;
@@ -1288,25 +1286,40 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 	nonce_offset = m_nonceOffset;
 	template_id = m_templateId;
 
-	for (uint32_t i = 0; i < count; ++i) {
-		uint8_t blob[128];
-		uint32_t n = get_hashing_blob_nolock(extra_nonce_start + i, blob);
+	constexpr size_t MIN_BLOB_SIZE = 76;
+	constexpr size_t MAX_BLOB_SIZE = 128;
 
-		if (n > sizeof(blob)) {
-			LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << n << ", expected <= " << sizeof(blob));
-			n = sizeof(blob);
-		}
-		else if (n < 76) {
-			LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << n << ", expected >= 76");
-		}
+	blobs.resize(MAX_BLOB_SIZE);
+	const uint32_t blob_size = get_hashing_blob_nolock(extra_nonce_start, blobs.data());
 
-		if (blob_size == 0) {
-			blob_size = n;
-		}
-		else if (n != blob_size) {
-			LOGERR(1, "internal error: get_hashing_blob_nolock returned different blob size " << n << ", expected " << blob_size);
-		}
-		blobs.insert(blobs.end(), blob, blob + blob_size);
+	if (blob_size > MAX_BLOB_SIZE) {
+		LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << blob_size << ", expected <= " << MAX_BLOB_SIZE);
+		PANIC_STOP();
+	}
+	else if (blob_size < MIN_BLOB_SIZE) {
+		LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << blob_size << ", expected >= " << MIN_BLOB_SIZE);
+	}
+
+	blobs.resize(static_cast<size_t>(blob_size) * count);
+
+	if (count > 1) {
+		uint8_t* blobs_data = blobs.data();
+
+		std::atomic<uint32_t> counter = 1;
+
+		parallel_run(uv_default_loop_checked(), [this, blob_size, extra_nonce_start, count, &counter, blobs_data]() {
+			for (;;) {
+				const uint32_t i = counter.fetch_add(1);
+				if (i >= count) {
+					return;
+				}
+
+				const uint32_t n = get_hashing_blob_nolock(extra_nonce_start + i, blobs_data + static_cast<size_t>(i) * blob_size);
+				if (n != blob_size) {
+					LOGERR(1, "internal error: get_hashing_blob_nolock returned different blob size " << n << ", expected " << blob_size);
+				}
+			}
+		}, true);
 	}
 
 	return blob_size;
