@@ -17,9 +17,7 @@
 
 #include "common.h"
 #include "keccak.h"
-#ifdef WITH_RANDOMX
 #include "RandomX/src/cpu.hpp"
-#endif
 
 namespace p2pool {
 
@@ -120,7 +118,7 @@ NOINLINE void keccakf_plain(std::array<uint64_t, 25>& st)
 
 void (*keccakf)(std::array<uint64_t, 25>&) = keccakf_plain;
 
-#if defined(WITH_RANDOMX) && (defined(__x86_64__) || defined(_M_AMD64))
+#if defined(__x86_64__) || defined(_M_AMD64)
 static struct KeccakBMI_Check {
 	KeccakBMI_Check() {
 		if (randomx::Cpu().hasBmi()) {

@@ -156,6 +156,9 @@ endif()
 if (WITH_RANDOMX)
 	set(HEADERS ${HEADERS} src/miner.h)
 	set(SOURCES ${SOURCES} src/miner.cpp)
+else()
+	set(HEADERS ${HEADERS} external/src/RandomX/src/cpu.hpp)
+	set(SOURCES ${SOURCES} external/src/RandomX/src/cpu.cpp)
 endif()
 
 if (WITH_GRPC)
@@ -266,6 +269,13 @@ if(APPLE)
 endif()
 
 add_definitions(/DZMQ_STATIC)
+
+include(CheckIncludeFile)
+
+check_include_file(asm/hwcap.h HAVE_HWCAP)
+if(HAVE_HWCAP)
+	add_definitions(/DHAVE_HWCAP)
+endif()
 
 include(CheckCXXSourceCompiles)
 
