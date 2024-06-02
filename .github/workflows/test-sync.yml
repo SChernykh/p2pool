@@ -280,8 +280,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: macos-13, flags: "-Og"}
-          - {os: macos-14, flags: "-Og -target arm64-apple-macos-11"}
+          - {os: macos-13, flags: "-Og -ftrapv"}
+          - {os: macos-14, flags: "-Og -ftrapv -target arm64-apple-macos-11"}
 
     steps:
     - name: Checkout repository
