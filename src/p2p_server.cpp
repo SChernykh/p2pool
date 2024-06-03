@@ -2688,7 +2688,14 @@ template<> struct log::Stream::Entry<P2PServer::P2PClient::SoftwareDisplayName>
 	{
 		switch (value.m_id) {
 		case SoftwareID::P2Pool:
-			*wrapper << "P2Pool v";
+		case SoftwareID::GoObserver:
+			if (value.m_id == SoftwareID::P2Pool) {
+				*wrapper << "P2Pool v";
+			}
+			else {
+				*wrapper << "GoObserver v";
+			}
+
 			if (value.m_version <= 0x3000A) {
 				// Encoding for versions <= 3.10
 				*wrapper << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
@@ -2700,10 +2707,7 @@ template<> struct log::Stream::Entry<P2PServer::P2PClient::SoftwareDisplayName>
 					*wrapper << '.' << (value.m_version & 0xFF);
 				}
 			}
-			break;
 
-		case SoftwareID::GoObserver:
-			*wrapper << "GoObserver v" << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
 			break;
 
 		default:
