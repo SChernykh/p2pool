@@ -30,10 +30,12 @@ public:
 	MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet);
 	~MergeMiningClientTari() override;
 
+	static constexpr char TARI_PREFIX[] = "tari://";
+
 	bool get_params(ChainParameters& out_params) const override;
 	void submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
 
-	static constexpr char TARI_PREFIX[] = "tari://";
+	void print_status() const override;
 
 private:
 	mutable uv_rwlock_t m_chainParamsLock;

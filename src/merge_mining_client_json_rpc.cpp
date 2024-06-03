@@ -317,6 +317,17 @@ void MergeMiningClientJSON_RPC::submit_solution(const BlockTemplate* /*block_tpl
 		}, &m_loop);
 }
 
+void MergeMiningClientJSON_RPC::print_status() const
+{
+	ReadLock lock(m_lock);
+
+	LOGINFO(0, "status" <<
+		"\nHost       = " << m_host << ':' << m_port <<
+		"\nWallet     = " << m_auxWallet <<
+		"\nDifficulty = " << m_chainParams.aux_diff
+	);
+}
+
 bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const
 {
 	ReadLock lock(m_lock);

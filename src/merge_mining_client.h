@@ -39,6 +39,8 @@ public:
 
 	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;
 	virtual void submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) = 0;
+
+	virtual void print_status() const = 0;
 };
 
 } // namespace p2pool

@@ -311,6 +311,15 @@ void p2pool::print_miner_status()
 }
 #endif
 
+void p2pool::print_merge_mining_status() const
+{
+	ReadLock lock(m_mergeMiningClientsLock);
+
+	for (IMergeMiningClient* client : m_mergeMiningClients) {
+		client->print_status();
+	}
+}
+
 void p2pool::handle_tx(TxMempoolData& tx)
 {
 	if (!tx.weight || !tx.fee) {

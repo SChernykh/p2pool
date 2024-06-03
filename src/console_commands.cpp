@@ -211,6 +211,9 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 #ifdef WITH_RANDOMX
 	m_pool->print_miner_status();
 #endif
+
+	m_pool->print_merge_mining_status();
+
 	bkg_jobs_tracker.print_status();
 
 	if (p2p) {

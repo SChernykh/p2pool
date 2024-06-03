@@ -285,6 +285,45 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 	}
 }
 
+struct TariAmount
+{
+	explicit FORCEINLINE TariAmount(uint64_t data) : m_data(data) {}
+
+	uint64_t m_data;
+};
+
+template<> struct log::Stream::Entry<TariAmount>
+{
+	static NOINLINE void put(TariAmount value, Stream* wrapper)
+	{
+		constexpr uint64_t denomination = 1000000ULL;
+
+		const int w = wrapper->getNumberWidth();
+
+		wrapper->setNumberWidth(1);
+		*wrapper << value.m_data / denomination << '.';
+
+		wrapper->setNumberWidth(6);
+		*wrapper << value.m_data % denomination << " Minotari";
+
+		wrapper->setNumberWidth(w);
+	}
+};
+
+void MergeMiningClientTari::print_status() const
+{
+	ReadLock lock(m_chainParamsLock);
+
+	LOGINFO(0, "status" <<
+		"\nHost       = " << m_hostStr <<
+		"\nWallet     = " << m_auxWallet <<
+		"\nHeight     = " << m_tariJobParams.height <<
+		"\nDifficulty = " << m_tariJobParams.diff <<
+		"\nReward     = " << TariAmount(m_tariJobParams.reward) <<
+		"\nFees       = " << TariAmount(m_tariJobParams.fees)
+	);
+}
+
 void MergeMiningClientTari::run_wrapper(void* arg)
 {
 	reinterpret_cast<MergeMiningClientTari*>(arg)->run();

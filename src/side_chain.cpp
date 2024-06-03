@@ -2189,6 +2189,7 @@ void SideChain::prune_old_blocks()
 			}
 
 			m_pool->print_hosts();
+			m_pool->print_merge_mining_status();
 			bkg_jobs_tracker.print_status();
 			m_pool->stop();
 		}

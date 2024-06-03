@@ -80,6 +80,8 @@ public:
 	void print_miner_status();
 #endif
 
+	void print_merge_mining_status() const;
+
 	virtual void handle_tx(TxMempoolData& tx) override;
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
