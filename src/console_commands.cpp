@@ -126,11 +126,6 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	m_loopThreadCreated = true;
 }
 
-ConsoleCommands::~ConsoleCommands()
-{
-	shutdown_tcp();
-}
-
 void ConsoleCommands::on_shutdown()
 {
 	if (m_stdin_handle) {
@@ -404,6 +399,15 @@ void ConsoleCommands::process_input(std::string& command, char* data, uint32_t s
 		k = command.find_first_not_of("\r\n", k + 1);
 		command.erase(0, k);
 	} while (true);
+}
+
+ConsoleCommands::~ConsoleCommands()
+{
+#ifdef DEV_TEST_SYNC
+	do_status(m_pool, nullptr);
+#endif
+
+	shutdown_tcp();
 }
 
 } // namespace p2pool

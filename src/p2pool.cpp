@@ -315,7 +315,7 @@ void p2pool::print_merge_mining_status() const
 {
 	ReadLock lock(m_mergeMiningClientsLock);
 
-	for (IMergeMiningClient* client : m_mergeMiningClients) {
+	for (const IMergeMiningClient* client : m_mergeMiningClients) {
 		client->print_status();
 	}
 }
