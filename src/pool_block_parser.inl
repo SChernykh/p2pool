@@ -61,10 +61,16 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 #define READ_BUF(buf, size) do { if (!read_buf((buf), (size))) return __LINE__; } while(0)
 
-		READ_VARINT(m_majorVersion);
-		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
+		if (!merge_mining_enabled()) {
+			READ_BYTE(m_majorVersion);
+			READ_BYTE(m_minorVersion);
+		}
+		else {
+			READ_VARINT(m_majorVersion);
+			READ_VARINT(m_minorVersion);
+		}
 
-		READ_VARINT(m_minorVersion);
+		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
 		if (m_minorVersion < m_majorVersion) return __LINE__;
 
 		READ_VARINT(m_timestamp);
