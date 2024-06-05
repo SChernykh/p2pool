@@ -60,8 +60,11 @@ static constexpr difficulty_type MAX_CUMULATIVE_DIFFICULTY{ 13019633956666736640
 // 1000 years at 1 block/second. It should be enough for any normal use.
 static constexpr uint64_t MAX_SIDECHAIN_HEIGHT = 31556952000ULL;
 
-// Jul 01 2024 00:00:00 GMT+0000
-static constexpr uint64_t MERGE_MINING_FORK_TIME = 1719792000;
+// TBD
+static constexpr uint64_t MERGE_MINING_FORK_TIME = std::numeric_limits<uint64_t>::max();
+
+// Jun 09 2024 20:00:00 GMT+0000
+static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1717963200;
 
 struct DifficultyData
 {

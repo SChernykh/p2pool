@@ -416,7 +416,14 @@ bool PoolBlock::merge_mining_enabled() const
 #ifdef P2POOL_UNIT_TESTS
 	return false;
 #else
-	return (SideChain::network_type() != NetworkType::Mainnet) || (m_timestamp >= MERGE_MINING_FORK_TIME);
+	switch (SideChain::network_type()) {
+	case NetworkType::Mainnet:
+		return m_timestamp >= MERGE_MINING_FORK_TIME;
+	case NetworkType::Testnet:
+		return m_timestamp >= MERGE_MINING_TESTNET_FORK_TIME;
+	default:
+		return false;
+	}
 #endif
 }
 
