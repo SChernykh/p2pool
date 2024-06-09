@@ -2457,7 +2457,11 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	// If we don't know about this block, request it from this peer. The peer can do it to speed up our initial sync, for example.
-	if (!server->find_block(id)) {
+	const PoolBlock* block = server->find_block(id);
+	if (block) {
+		m_broadcastMaxHeight = std::max(m_broadcastMaxHeight, block->m_sidechainHeight);
+	}
+	else {
 		LOGINFO(6, "Received an unknown block " << id << " in BLOCK_NOTIFY");
 
 		if (m_blockPendingRequests.size() >= 25) {
