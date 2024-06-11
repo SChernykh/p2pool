@@ -91,7 +91,15 @@ public:
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 	void submit_block_async(std::vector<uint8_t>&& blob);
 
-	void submit_aux_block_async(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	struct SubmitAuxBlockData
+	{
+		hash chain_id;
+		uint32_t template_id = 0;
+		uint32_t nonce = 0;
+		uint32_t extra_nonce = 0;
+	};
+
+	void submit_aux_block_async(const std::vector<SubmitAuxBlockData>& aux_blocks);
 
 	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
@@ -222,14 +230,6 @@ private:
 
 	mutable uv_mutex_t m_submitBlockDataLock;
 	SubmitBlockData m_submitBlockData;
-
-	struct SubmitAuxBlockData
-	{
-		hash chain_id;
-		uint32_t template_id = 0;
-		uint32_t nonce = 0;
-		uint32_t extra_nonce = 0;
-	};
 
 	mutable uv_mutex_t m_submitAuxBlockDataLock;
 	mutable std::vector<SubmitAuxBlockData> m_submitAuxBlockData;

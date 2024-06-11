@@ -403,12 +403,21 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		if (aux_diff.check_pow(resultHash)) {
-			for (const AuxChainData& aux_data : block.get_aux_chains(template_id)) {
+			const std::vector<AuxChainData> aux_chains = block.get_aux_chains(template_id);
+
+			std::vector<p2pool::SubmitAuxBlockData> aux_blocks;
+			aux_blocks.reserve(aux_chains.size());
+
+			for (const AuxChainData& aux_data : aux_chains) {
 				if (aux_data.difficulty.check_pow(resultHash)) {
 					const char* s = client->m_customUser;
 					LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found an aux block for chain_id " << aux_data.unique_id << ", diff " << aux_data.difficulty << ", submitting it");
-					m_pool->submit_aux_block_async(aux_data.unique_id, template_id, nonce, extra_nonce);
+					aux_blocks.emplace_back(p2pool::SubmitAuxBlockData{ aux_data.unique_id, template_id, nonce, extra_nonce });
 				}
+			}
+
+			if (!aux_blocks.empty()) {
+				m_pool->submit_aux_block_async(aux_blocks);
 			}
 		}
 

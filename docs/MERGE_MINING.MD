@@ -121,4 +121,4 @@ Field|Description
 
 Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"status":"accepted"}}`
 
-Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`
+Example response 2: `{"jsonrpc":"2.0","id":"0","error":{"code":-1,"message":"Block not accepted"}}`

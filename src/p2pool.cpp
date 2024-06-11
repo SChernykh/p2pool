@@ -644,11 +644,11 @@ void p2pool::submit_block_async(std::vector<uint8_t>&& blob)
 	}
 }
 
-void p2pool::submit_aux_block_async(const hash& chain_id, uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+void p2pool::submit_aux_block_async(const std::vector<SubmitAuxBlockData>& aux_blocks)
 {
 	{
 		MutexLock lock(m_submitAuxBlockDataLock);
-		m_submitAuxBlockData.emplace_back(SubmitAuxBlockData{ chain_id, template_id, nonce, extra_nonce });
+		m_submitAuxBlockData.insert(m_submitAuxBlockData.end(), aux_blocks.begin(), aux_blocks.end());
 	}
 
 	// If p2pool is stopped, m_submitAuxBlockAsync is most likely already closed
@@ -738,7 +738,7 @@ void p2pool::submit_aux_block() const
 					LOGWARN(3, "submit_aux_block: failed to get merkle proof for chain_id " << chain_id);
 				}
 
-				return;
+				break;
 			}
 		}
 	}

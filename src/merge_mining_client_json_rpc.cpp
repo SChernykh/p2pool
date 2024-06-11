@@ -354,7 +354,17 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* d
 	}
 
 	if (doc.HasMember("error")) {
-		return err(doc["error"].IsString() ? doc["error"].GetString() : "an unknown error occurred");
+		const auto& error_result = doc["error"];
+
+		if (error_result.IsString()) {
+			return err(error_result.GetString());
+		}
+		else if (error_result.IsObject() && error_result.HasMember("message") && error_result["message"].IsString()) {
+			return err(error_result["message"].GetString());
+		}
+		else {
+			return err("an unknown error occurred");
+		}
 	}
 
 	if (!doc.HasMember("result")) {
@@ -372,6 +382,12 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* d
 	}
 
 	const char* status = result["status"].GetString();
+
+	// Empty string means no errors and the block was accepted
+	if (strlen(status) == 0) {
+		status = "accepted";
+	}
+
 	LOGINFO(0, log::LightGreen() << "merge_mining_submit_solution to " << m_host << ':' << m_port << ": " << status);
 
 	// Get new mining job
