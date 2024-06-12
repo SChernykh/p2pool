@@ -285,6 +285,12 @@ allowedAPIs = {
 	"InitOnceBeginInitialize",
 	"BCryptOpenAlgorithmProvider",
 	"BCryptCloseAlgorithmProvider",
+	"CertOpenSystemStoreW",
+	"CertEnumCertificatesInStore",
+	"CertCloseStore",
+	"CryptBinaryToStringW",
+	"DeleteFileA",
+	"GetFileAttributesA",
 }
 
 f = open(sys.argv[1], 'r')
