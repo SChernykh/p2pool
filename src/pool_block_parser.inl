@@ -361,12 +361,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		m_merkleProof.clear();
+		m_mergeMiningExtra.clear();
 
 		if (merge_mining_enabled()) {
 			uint8_t merkle_proof_size;
 			READ_BYTE(merkle_proof_size);
 
-			if (merkle_proof_size > 8) {
+			if (merkle_proof_size > LOG2_MERGE_MINING_MAX_CHAINS) {
 				return __LINE__;
 			}
 
@@ -376,6 +377,38 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				hash h;
 				READ_BUF(h.h, HASH_SIZE);
 				m_merkleProof.emplace_back(h);
+			}
+
+			uint64_t mm_extra_data_count;
+			READ_VARINT(mm_extra_data_count);
+
+			if (mm_extra_data_count) {
+				// Sanity check
+				if (mm_extra_data_count > MERGE_MINING_MAX_CHAINS) return __LINE__;
+				if (static_cast<uint64_t>(data_end - data) < mm_extra_data_count * (HASH_SIZE + 1)) return __LINE__;
+
+				m_mergeMiningExtra.reserve(mm_extra_data_count);
+
+				for (uint64_t i = 0; i < mm_extra_data_count; ++i) {
+					hash chain_id;
+					READ_BUF(chain_id.h, HASH_SIZE);
+
+					// IDs must be ordered to avoid duplicates
+					if (i && !(m_mergeMiningExtra[i - 1].first < chain_id)) return __LINE__;
+
+					uint64_t n;
+					READ_VARINT(n);
+
+					// Sanity check
+					if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
+
+					std::vector<uint8_t> t;
+					t.resize(n);
+
+					READ_BUF(t.data(), n);
+
+					m_mergeMiningExtra.emplace_back(chain_id, std::move(t));
+				}
 			}
 		}
 

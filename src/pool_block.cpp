@@ -50,6 +50,7 @@ PoolBlock::PoolBlock()
 	, m_cumulativeDifficulty{}
 	, m_merkleProof{}
 	, m_merkleProofPath(0)
+	, m_mergeMiningExtra{}
 	, m_sidechainExtraBuf{}
 	, m_sidechainId{}
 	, m_depth(0)
@@ -105,6 +106,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
 	m_merkleProof = b.m_merkleProof;
 	m_merkleProofPath = b.m_merkleProofPath;
+	m_mergeMiningExtra = b.m_mergeMiningExtra;
 	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
 	m_depth = b.m_depth;
@@ -272,6 +274,15 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 		for (uint8_t i = 0; i < n; ++i) {
 			const hash& h = m_merkleProof[i];
 			data.insert(data.end(), h.h, h.h + HASH_SIZE);
+		}
+
+		writeVarint(m_mergeMiningExtra.size(), data);
+
+		for (const auto& mm_extra_data : m_mergeMiningExtra) {
+			data.insert(data.end(), mm_extra_data.first.h, mm_extra_data.first.h + HASH_SIZE);
+
+			writeVarint(mm_extra_data.second.size(), data);
+			data.insert(data.end(), mm_extra_data.second.begin(), mm_extra_data.second.end());
 		}
 	}
 

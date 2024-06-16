@@ -59,6 +59,10 @@ static constexpr difficulty_type MAX_CUMULATIVE_DIFFICULTY{ 13019633956666736640
 // 1000 years at 1 block/second. It should be enough for any normal use.
 static constexpr uint64_t MAX_SIDECHAIN_HEIGHT = 31556952000ULL;
 
+// Limited by the format of the Merkle tree parameters in tx_extra
+static constexpr uint64_t MERGE_MINING_MAX_CHAINS = 256;
+static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
+
 // TBD
 static constexpr uint64_t MERGE_MINING_FORK_TIME = std::numeric_limits<uint64_t>::max();
 
@@ -140,6 +144,11 @@ struct PoolBlock
 	// Merkle proof for merge mining
 	std::vector<hash> m_merkleProof;
 	uint32_t m_merkleProofPath;
+
+	// Merge mining extra data
+	// Format: vector of (chain ID, chain data) pairs
+	// Chain data format is arbitrary and depends on the merge mined chain's requirements
+	std::vector<std::pair<hash, std::vector<uint8_t>>> m_mergeMiningExtra;
 
 	// Arbitrary extra data
 	uint32_t m_sidechainExtraBuf[4];
