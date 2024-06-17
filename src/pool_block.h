@@ -66,8 +66,8 @@ static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
 // TBD
 static constexpr uint64_t MERGE_MINING_FORK_TIME = std::numeric_limits<uint64_t>::max();
 
-// Jun 09 2024 20:00:00 GMT+0000
-static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1717963200;
+// Jun 18 2024 20:00:00 GMT+0000
+static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1718740800;
 
 struct DifficultyData
 {
