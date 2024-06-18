@@ -73,6 +73,7 @@ private:
 	RandomX_Hasher_Base* m_hasher;
 
 private:
+	void select_mempool_transactions(const Mempool& mempool);
 	int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
 	hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
 	hash calc_miner_tx_hash(uint32_t extra_nonce) const;

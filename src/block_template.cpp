@@ -324,61 +324,17 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
 	}
 
-	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
-	m_mempoolTxs.clear();
-
-	const uint64_t cur_time = seconds_since_epoch();
-	size_t total_mempool_transactions = 0;
-
-	mempool.iterate([this, cur_time, &total_mempool_transactions](const hash&, const TxMempoolData& tx) {
-		++total_mempool_transactions;
-
-		if ((cur_time > tx.time_received + 5) || (tx.fee >= HIGH_FEE_VALUE)) {
-			m_mempoolTxs.emplace_back(tx);
-		}
-	});
-
-	// Safeguard for busy mempool moments
-	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
-	// Calculate how many transactions we can take
-	{
-		PoolBlock* b = m_poolBlockTemplate;
-		b->m_transactions.clear();
-		b->m_transactions.resize(1);
-		b->m_outputs.clear();
-
-		// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
-		size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
-
-		// Add output and tx count real varints
-		writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
-		writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
-
-		// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
-		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
-
-		// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
-		{
-			uint64_t r = BASE_BLOCK_REWARD;
-			for (const auto& tx : m_mempoolTxs) {
-				r += tx.fee;
-			}
-			k += r / 34359738368ULL;
-		}
-
-		const size_t max_transactions = (MAX_BLOCK_SIZE > k) ? ((MAX_BLOCK_SIZE - k) / HASH_SIZE) : 0;
-		LOGINFO(6, max_transactions << " transactions can be taken with current block size limit");
-
-		if (max_transactions == 0) {
-			m_mempoolTxs.clear();
-		}
-		else if (m_mempoolTxs.size() > max_transactions) {
-			std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end());
-			m_mempoolTxs.resize(max_transactions);
-		}
-
-		LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
+	if (m_poolBlockTemplate->merge_mining_enabled()) {
+		m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
+		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+		writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
 	}
+	else {
+		m_poolBlockTemplate->m_merkleTreeData = 0;
+		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+	}
+
+	select_mempool_transactions(mempool);
 
 	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
 
@@ -410,16 +366,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			});
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
-
-	if (m_poolBlockTemplate->merge_mining_enabled()) {
-		m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
-		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-		writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
-	}
-	else {
-		m_poolBlockTemplate->m_merkleTreeData = 0;
-		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-	}
 
 	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
 		use_old_template();
@@ -864,6 +810,64 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 	m_knapsack.clear();
 }
 #endif
+
+void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
+{
+	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
+	m_mempoolTxs.clear();
+
+	const uint64_t cur_time = seconds_since_epoch();
+	size_t total_mempool_transactions = 0;
+
+	mempool.iterate([this, cur_time, &total_mempool_transactions](const hash&, const TxMempoolData& tx) {
+		++total_mempool_transactions;
+
+		if ((cur_time > tx.time_received + 5) || (tx.fee >= HIGH_FEE_VALUE)) {
+			m_mempoolTxs.emplace_back(tx);
+		}
+	});
+
+	// Safeguard for busy mempool moments
+	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
+	// Calculate how many transactions we can take
+
+	PoolBlock* b = m_poolBlockTemplate;
+	b->m_transactions.clear();
+	b->m_transactions.resize(1);
+	b->m_outputs.clear();
+
+	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
+	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
+
+	// Add output and tx count real varints
+	writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
+
+	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
+	k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
+
+	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
+	{
+		uint64_t r = BASE_BLOCK_REWARD;
+		for (const auto& tx : m_mempoolTxs) {
+			r += tx.fee;
+		}
+		k += r / 34359738368ULL;
+	}
+
+	const size_t max_transactions = (MAX_BLOCK_SIZE > k) ? ((MAX_BLOCK_SIZE - k) / HASH_SIZE) : 0;
+	LOGINFO(6, max_transactions << " transactions can be taken with current block size limit");
+
+	if (max_transactions == 0) {
+		m_mempoolTxs.clear();
+	}
+	else if (m_mempoolTxs.size() > max_transactions) {
+		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end());
+		m_mempoolTxs.resize(max_transactions);
+	}
+
+	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
+}
 
 int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run)
 {
