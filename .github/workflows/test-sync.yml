@@ -9,6 +9,9 @@ on:
 
   pull_request:
 
+  schedule:
+    - cron: '17 0/3 * * *'
+
 jobs:
   sync-test-ubuntu-tsan:
 
