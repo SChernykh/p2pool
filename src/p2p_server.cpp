@@ -178,7 +178,7 @@ void P2PServer::clear_cached_blocks()
 		return;
 	}
 
-	for (auto it : *m_cachedBlocks) {
+	for (const auto& it : *m_cachedBlocks) {
 		delete it.second;
 	}
 

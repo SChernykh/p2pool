@@ -37,7 +37,9 @@ class RandomBytes
 public:
 	RandomBytes() : rng(RandomDeviceSeed::instance), dist(0, 255)
 	{
-		uv_mutex_init_checked(&m);
+		if (uv_mutex_init(&m) != 0) {
+			abort();
+		}
 
 		// Diffuse the initial state in case it has low quality
 		rng.discard(10000);
