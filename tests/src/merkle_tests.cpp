@@ -334,6 +334,8 @@ TEST(merkle, params)
 	ASSERT_EQ(PoolBlock::encode_merkle_tree_data(1, 0xFFFFFFFFU), 0xFFFFFFFF0ULL);
 	ASSERT_EQ(PoolBlock::encode_merkle_tree_data(127, 0), 0x3F6U);
 	ASSERT_EQ(PoolBlock::encode_merkle_tree_data(127, 0xFFFFFFFFU), 0x3FFFFFFFFF6ULL);
+	ASSERT_EQ(PoolBlock::encode_merkle_tree_data(256, 0), 0x7FFU);
+	ASSERT_EQ(PoolBlock::encode_merkle_tree_data(256, 0xFFFFFFFFU), 0x7FFFFFFFFFFULL);
 
 	PoolBlock b;
 	uint32_t n1, nonce1;
@@ -354,12 +356,22 @@ TEST(merkle, params)
 	b.decode_merkle_tree_data(n1, nonce1);
 	ASSERT_TRUE(n1 == 127 && nonce1 == 0xFFFFFFFFU);
 
-	for (uint32_t n_aux_chains = 1; n_aux_chains < 128; ++n_aux_chains) {
+	b.m_merkleTreeData = 0x7FFU;
+	b.decode_merkle_tree_data(n1, nonce1);
+	ASSERT_TRUE(n1 == 256 && nonce1 == 0);
+
+	b.m_merkleTreeData = 0x7FFFFFFFFFFULL;
+	b.decode_merkle_tree_data(n1, nonce1);
+	ASSERT_TRUE(n1 == 256 && nonce1 == 0xFFFFFFFFU);
+
+	for (uint32_t n_aux_chains = 1; n_aux_chains <= 256; ++n_aux_chains) {
 		for (uint32_t nonce = 1; nonce; nonce <<= 1) {
-			b.m_merkleTreeData = PoolBlock::encode_merkle_tree_data(n_aux_chains, nonce);
-			b.decode_merkle_tree_data(n1, nonce1);
-			ASSERT_EQ(n1, n_aux_chains);
-			ASSERT_EQ(nonce1, nonce);
+			for (uint32_t i = 0; i <= 1; ++i) {
+				b.m_merkleTreeData = PoolBlock::encode_merkle_tree_data(n_aux_chains, nonce - i);
+				b.decode_merkle_tree_data(n1, nonce1);
+				ASSERT_EQ(n1, n_aux_chains);
+				ASSERT_EQ(nonce1, nonce - i);
+			}
 		}
 	}
 }

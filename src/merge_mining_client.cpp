@@ -23,6 +23,8 @@
 #include "merge_mining_client_tari.h"
 #endif
 
+LOG_CATEGORY(MergeMiningClient)
+
 namespace p2pool {
 
 IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& host, const std::string& wallet) noexcept
@@ -39,6 +41,7 @@ IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& 
 		}
 	}
 	catch (...) {
+		LOGERR(1, "Failed to create merge mining client for " << host);
 	}
 	return nullptr;
 }

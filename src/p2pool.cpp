@@ -564,7 +564,7 @@ void p2pool::update_aux_data(const hash& chain_id)
 			data.aux_nonce = m_auxNonce;
 		}
 		else if (find_aux_nonce(aux_id, data.aux_nonce)) {
-			m_auxId = aux_id;
+			m_auxId = std::move(aux_id);
 			m_auxNonce = data.aux_nonce;
 		}
 		else {

@@ -26,7 +26,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 
 root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count);
 
-bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root);
+bool verify_merkle_proof(const hash& h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root);
 bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, const root_hash& root);
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains);

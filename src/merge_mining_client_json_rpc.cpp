@@ -384,7 +384,7 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* d
 	const char* status = result["status"].GetString();
 
 	// Empty string means no errors and the block was accepted
-	if (strlen(status) == 0) {
+	if (status[0] == '\0') {
 		status = "accepted";
 	}
 

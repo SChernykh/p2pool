@@ -259,7 +259,7 @@ root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t ind
 	return root_hash(h);
 }
 
-bool verify_merkle_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root)
+bool verify_merkle_proof(const hash& h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root)
 {
 	return get_root_from_proof(h, proof, index, count) == root;
 }
