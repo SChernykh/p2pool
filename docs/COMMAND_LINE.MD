@@ -57,3 +57,9 @@ p2pool.exe --host 127.0.0.1 --host xmr1.rs.me --rpc-port 18089 --zmq-port 18084 
 ```
 p2pool.exe --wallet YOUR_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
 ```
+
+For Tari:
+
+```
+p2pool.exe --wallet YOUR_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
+```
