@@ -44,7 +44,7 @@ Reference code: `get_aux_slot` and `find_aux_nonce` in `merkle.cpp`
 
 ## Proposed RPC API
 
-P2Pool must be able to get mining jobs from merge mined chains and submit PoW solutions to them.
+P2Pool must be able to get mining jobs from merge mined chains and submit PoW solutions to them. All RPC calls here are sent as HTTP POST requests with `Content-Type: application/json`.
 
 ### merge_mining_get_chain_id
 

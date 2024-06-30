@@ -54,12 +54,17 @@ p2pool.exe --host 127.0.0.1 --host node.monerodevs.org --rpc-port 18089 --zmq-po
 
 ### Merge mining
 
-```
-p2pool.exe --wallet YOUR_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
-```
+Merge mining will be available in P2Pool after the fork on October 12th, 2024. Version 4.0 or newer is required to use it.
 
-For Tari:
+- Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api)
+  - [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
+  - [DarkFi](https://dark.fi/) is going to support it, but it's [not ready yet](https://github.com/darkrenaissance/darkfi/issues/244)
+  ```
+  p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
+  ```
 
-```
-p2pool.exe --wallet YOUR_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
-```
+- [Tari](https://www.tari.com/) uses their own gRPC API and requires a different command line:
+  ```
+  p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
+  ```
+  Merge mining is available for testing in Tari's [v1.0.0-pre.14 release](https://github.com/tari-project/tari/releases/tag/v1.0.0-pre.14) (Esmeralda testnet).
