@@ -38,10 +38,14 @@ struct parse_wrapper<T, out_type> \
 { \
 	static FORCEINLINE bool parse(T& v, const char* name, out_type& out_value) \
 	{ \
-		if (v.IsObject() && v.HasMember(name)) { \
-			const auto& t = v[name]; \
-			if (t.Is##type()) { \
-				out_value = static_cast<out_type>(t.Get##type()); \
+		if (!v.IsObject()) { \
+			return false; \
+		} \
+		const auto t = v.FindMember(name); \
+		if (t != v.MemberEnd()) { \
+			const auto& value = t->value; \
+			if (value.Is##type()) { \
+				out_value = static_cast<out_type>(value.Get##type()); \
 				return true; \
 			} \
 		} \

@@ -1158,10 +1158,10 @@ bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 	return true;
 }
 
-bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/)
+bool StratumServer::StratumClient::process_request(char* data, uint32_t size)
 {
 	rapidjson::Document doc;
-	if (doc.ParseInsitu(data).HasParseError()) {
+	if (doc.Parse(data, size).HasParseError()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (parse error)");
 		return false;
 	}
@@ -1171,23 +1171,25 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 		return false;
 	}
 
-	if (!doc.HasMember("id")) {
+	const auto id_it = doc.FindMember("id");
+	if (id_it == doc.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('id' field not found)");
 		return false;
 	}
 
-	auto& id = doc["id"];
+	const auto& id = id_it->value;
 	if (!id.IsUint()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('id' field is not an integer)");
 		return false;
 	}
 
-	if (!doc.HasMember("method")) {
+	const auto method_it = doc.FindMember("method");
+	if (method_it == doc.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('method' field not found)");
 		return false;
 	}
 
-	auto& method = doc["method"];
+	const auto& method = method_it->value;
 	if (!method.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request ('method' field is not a string)");
 		return false;
@@ -1213,23 +1215,25 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/
 
 bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint32_t id)
 {
-	if (!doc.HasMember("params")) {
+	const auto params_it = doc.FindMember("params");
+	if (params_it == doc.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('params' field not found)");
 		return false;
 	}
 
-	auto& params = doc["params"];
+	const auto& params = params_it->value;
 	if (!params.IsObject()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('params' field is not an object)");
 		return false;
 	}
 
-	if (!params.HasMember("login")) {
+	const auto login_it = params.FindMember("login");
+	if (login_it == params.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid login params ('login' field not found)");
 		return false;
 	}
 
-	auto& login = params["login"];
+	const auto& login = login_it->value;
 	if (!login.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid login params ('login' field is not a string)");
 		return false;
@@ -1240,45 +1244,49 @@ bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint3
 
 bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint32_t id)
 {
-	if (!doc.HasMember("params")) {
+	const auto params_it = doc.FindMember("params");
+	if (params_it == doc.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON submit request ('params' field not found)");
 		return false;
 	}
 
-	auto& params = doc["params"];
+	const auto& params = params_it->value;
 	if (!params.IsObject()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON submit request ('params' field is not an object)");
 		return false;
 	}
 
-	if (!params.HasMember("id")) {
+	const auto rpcId_it = params.FindMember("id");
+	if (rpcId_it == params.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('id' field not found)");
 		return false;
 	}
 
-	auto& rpcId = params["id"];
+	const auto& rpcId = rpcId_it->value;
 	if (!rpcId.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('id' field is not a string)");
 		return false;
 	}
 
-	if (!params.HasMember("job_id")) {
+	const auto job_id_it = params.FindMember("job_id");
+	if (job_id_it == params.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('job_id' field not found)");
 		return false;
 	}
 
-	auto& job_id = params["job_id"];
+	const auto& job_id = job_id_it->value;
 	if (!job_id.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('job_id' field is not a string)");
 		return false;
 	}
 
-	if (!params.HasMember("nonce")) {
+	const auto nonce_it = params.FindMember("nonce");
+	if (nonce_it == params.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('nonce' field not found)");
 		return false;
 	}
 
-	auto& nonce = params["nonce"];
+	const auto& nonce = nonce_it->value;
 	if (!nonce.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('nonce' field is not a string)");
 		return false;
@@ -1289,12 +1297,13 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 		return false;
 	}
 
-	if (!params.HasMember("result")) {
+	const auto result_it = params.FindMember("result");
+	if (result_it == params.MemberEnd()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field not found)");
 		return false;
 	}
 
-	auto& result = params["result"];
+	const auto& result = result_it->value;
 	if (!result.IsString()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field is not a string)");
 		return false;
