@@ -436,12 +436,14 @@ jobs:
     - name: Check p2pool.log
       run: |
         cd build/RelWithDebInfo
+        Remove-Item p2pool.cache -Force
         findstr /C:"Synchronization finished successfully" p2pool.log
 
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_windows_data_leaks
         path: |
-          build/RelWithDebInfo/*.log
+          build/RelWithDebInfo/p2pool.*
           build/RelWithDebInfo/data/

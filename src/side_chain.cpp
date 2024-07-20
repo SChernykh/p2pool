@@ -2185,6 +2185,11 @@ void SideChain::prune_old_blocks()
 
 			m_pool->print_hosts();
 			m_pool->stop();
+
+#ifdef DEV_TRACK_MEMORY
+			// Give it 1 minute to shut down, otherwise save a minidump
+			minidump_and_crash(60 * 1000);
+#endif
 		}
 #endif
 	}

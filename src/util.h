@@ -358,6 +358,7 @@ FORCEINLINE bool get_dns_txt_records(const std::string& host, T&& callback) { re
 
 #ifdef DEV_TRACK_MEMORY
 void show_top_10_allocations();
+void minidump_and_crash(size_t delay);
 #endif
 
 } // namespace p2pool

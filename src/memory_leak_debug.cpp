@@ -137,6 +137,27 @@ void show_top_10_allocations()
 	VirtualFree(buf, 0, MEM_RELEASE);
 }
 
+static DWORD WINAPI minidump_and_crash_thread(LPVOID param)
+{
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
+	const size_t delay = reinterpret_cast<size_t>(param);
+	Sleep(static_cast<DWORD>(delay));
+
+	HANDLE h = CreateFile(TEXT("p2pool.dmp"), GENERIC_ALL, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), h, MiniDumpWithHandleData, nullptr, nullptr, nullptr);
+	CloseHandle(h);
+
+	TerminateProcess(GetCurrentProcess(), 123);
+
+	return 0;
+}
+
+void minidump_and_crash(size_t delay)
+{
+	CreateThread(nullptr, 0, minidump_and_crash_thread, reinterpret_cast<LPVOID>(delay), 0, nullptr);
+}
+
 FORCEINLINE static void add_alocation(void* p, size_t size)
 {
 	if (!track_memory) {
