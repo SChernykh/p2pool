@@ -204,13 +204,14 @@ p2pool::~p2pool()
 	}
 #endif
 
+	std::vector<IMergeMiningClient*> merge_mining_clients;
 	{
 		WriteLock lock(m_mergeMiningClientsLock);
+		merge_mining_clients.swap(m_mergeMiningClients);
+	}
 
-		for (const IMergeMiningClient* c : m_mergeMiningClients) {
-			delete c;
-		}
-		m_mergeMiningClients.clear();
+	for (const IMergeMiningClient* c : merge_mining_clients) {
+		delete c;
 	}
 
 	uv_rwlock_destroy(&m_mainchainLock);
@@ -534,6 +535,10 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 
 void p2pool::update_aux_data(const hash& chain_id)
 {
+	if (m_stopped) {
+		return;
+	}
+
 	MinerData data;
 	std::vector<hash> aux_id;
 
@@ -1026,17 +1031,18 @@ void p2pool::download_block_headers(uint64_t current_height)
 						}
 					}
 
+					std::vector<IMergeMiningClient*> merge_mining_clients;
+
+					for (const auto& h : m_params->m_mergeMiningHosts) {
+						IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet);
+						if (c) {
+							merge_mining_clients.push_back(c);
+						}
+					}
+
 					{
 						WriteLock lock(m_mergeMiningClientsLock);
-
-						m_mergeMiningClients.clear();
-
-						for (const auto& h : m_params->m_mergeMiningHosts) {
-							IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet);
-							if (c) {
-								m_mergeMiningClients.push_back(c);
-							}
-						}
+						m_mergeMiningClients = merge_mining_clients;
 					}
 
 					m_startupFinished = true;
