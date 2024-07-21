@@ -155,7 +155,8 @@ static DWORD WINAPI minidump_and_crash_thread(LPVOID param)
 
 void minidump_and_crash(size_t delay)
 {
-	CreateThread(nullptr, 0, minidump_and_crash_thread, reinterpret_cast<LPVOID>(delay), 0, nullptr);
+	HANDLE h = CreateThread(nullptr, 0, minidump_and_crash_thread, reinterpret_cast<LPVOID>(delay), 0, nullptr);
+	CloseHandle(h);
 }
 
 FORCEINLINE static void add_alocation(void* p, size_t size)
