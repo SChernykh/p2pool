@@ -100,6 +100,10 @@ MergeMiningClientJSON_RPC::~MergeMiningClientJSON_RPC()
 
 void MergeMiningClientJSON_RPC::on_timer()
 {
+	if (m_pool->stopped()) {
+		return;
+	}
+
 	MinerData data = m_pool->miner_data();
 	merge_mining_get_aux_block(data.height, data.prev_id, m_auxWallet);
 }
