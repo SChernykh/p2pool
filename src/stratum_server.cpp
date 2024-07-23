@@ -277,7 +277,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	}
 	else if (m_autoDiff) {
 		// Limit autodiff to 4000000 for maximum compatibility
-		target = std::max(std::max(target, AUTODIFF_START), TARGET_4_BYTES_LIMIT);
+		target = std::max(target, std::max(AUTODIFF_START, TARGET_4_BYTES_LIMIT));
 	}
 
 	if (get_custom_user(login, client->m_customUser)) {
