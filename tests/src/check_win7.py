@@ -291,6 +291,7 @@ allowedAPIs = {
 	"CryptBinaryToStringW",
 	"DeleteFileA",
 	"GetFileAttributesA",
+	"OpenThreadToken",
 }
 
 f = open(sys.argv[1], 'r')
