@@ -1,7 +1,7 @@
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
 	set(WARNING_FLAGS "-Wall -Wextra")
-	set(OPTIMIZATION_FLAGS "-Ofast -s")
+	set(OPTIMIZATION_FLAGS "-O3 -ffast-math -s")
 
 	if (WITH_LTO)
 		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto=auto -fuse-linker-plugin")
@@ -45,7 +45,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
-	set(OPTIMIZATION_FLAGS "-Ofast -funroll-loops -fmerge-all-constants")
+	set(OPTIMIZATION_FLAGS "-O3 -ffast-math -funroll-loops -fmerge-all-constants")
 
 	if (WITH_LTO)
 		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto")
