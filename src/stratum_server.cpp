@@ -272,7 +272,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	target = std::max(target, aux_diff.target());
 
 	if (get_custom_diff(login, client->m_customDiff)) {
-		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom difficulty " << client->m_customDiff);
+		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " set custom difficulty " << client->m_customDiff);
 		target = std::max(target, client->m_customDiff.target());
 	}
 	else if (m_autoDiff) {
@@ -282,7 +282,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 
 	if (get_custom_user(login, client->m_customUser)) {
 		const char* s = client->m_customUser;
-		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << " set custom user " << s);
+		LOGINFO(5, "client " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " set custom user " << s);
 	}
 
 	uint32_t job_id;
@@ -541,6 +541,7 @@ void StratumServer::show_workers()
 	size_t n = 0;
 
 	LOGINFO(0, log::pad_right("IP:port", addr_len + 8)
+			<< "TLS "
 			<< log::pad_right("uptime", 20)
 			<< log::pad_right("difficulty", 20)
 			<< log::pad_right("hashrate", 15)
@@ -557,7 +558,15 @@ void StratumServer::show_workers()
 				++diff.lo;
 			}
 		}
+
+#ifdef WITH_TLS
+		const bool is_tls = c->m_tls.is_empty();
+#else
+		constexpr bool is_tls = false;
+#endif
+
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
+				<< (is_tls ? "no  " : "yes ")
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
@@ -1080,7 +1089,8 @@ void StratumServer::on_shutdown()
 }
 
 StratumServer::StratumClient::StratumClient()
-	: Client(m_stratumReadBuf, sizeof(m_stratumReadBuf))
+	: Client(m_rawReadBuf, sizeof(m_rawReadBuf))
+	, m_stratumReadBufBytes(0)
 	, m_rpcId(0)
 	, m_perConnectionJobId(0)
 	, m_connectedTime(0)
@@ -1100,6 +1110,10 @@ StratumServer::StratumClient::StratumClient()
 void StratumServer::StratumClient::reset()
 {
 	Client::reset();
+
+	m_stratumReadBuf[0] = '\0';
+	m_stratumReadBufBytes = 0;
+
 	m_rpcId = 0;
 	m_perConnectionJobId = 0;
 	m_connectedTime = 0;
@@ -1127,35 +1141,69 @@ bool StratumServer::StratumClient::on_connect()
 
 bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 {
-	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
-		LOGERR(1, "client: invalid data pointer or size in on_read()");
-		ban(DEFAULT_BAN_TIME);
-		return false;
-	}
-
-	m_numRead += size;
-
-	char* line_start = m_readBuf;
-	for (char* c = data; c < m_readBuf + m_numRead; ++c) {
-		if (*c == '\n') {
-			*c = '\0';
-			if (!process_request(line_start, static_cast<uint32_t>(c - line_start))) {
-				ban(DEFAULT_BAN_TIME);
+#ifdef WITH_TLS
+	if (!m_tlsChecked) {
+		if (data[0] == 0x16) {
+			if (!m_tls.init()) {
+				LOGWARN(5, "client " << static_cast<const char*>(m_addrString) << ": TLS init failed");
 				return false;
 			}
-			line_start = c + 1;
+			LOGINFO(5, "client " << log::Gray() << static_cast<const char*>(m_addrString) << log::NoColor() << " is using TLS");
 		}
+		m_tlsChecked = true;
 	}
+#endif
 
-	// Move the possible unfinished line to the beginning of m_readBuf to free up more space for reading
-	if (line_start != m_readBuf) {
-		m_numRead = static_cast<uint32_t>(m_readBuf + m_numRead - line_start);
-		if (m_numRead > 0) {
-			memmove(m_readBuf, line_start, m_numRead);
+	auto on_parse = [this](char* data, uint32_t size) {
+		if (static_cast<size_t>(m_stratumReadBufBytes) + size > STRATUM_BUF_SIZE) {
+			LOGWARN(4, "client " << static_cast<const char*>(m_addrString) << " sent too long Stratum message");
+			ban(DEFAULT_BAN_TIME);
+			return false;
 		}
-	}
 
-	return true;
+		memcpy(m_stratumReadBuf + m_stratumReadBufBytes, data, size);
+		m_stratumReadBufBytes += size;
+
+		char* line_start = m_stratumReadBuf;
+		for (char *e = line_start + m_stratumReadBufBytes, *c = e - size; c < e; ++c) {
+			if (*c == '\n') {
+				*c = '\0';
+				if (!process_request(line_start, static_cast<uint32_t>(c - line_start))) {
+					ban(DEFAULT_BAN_TIME);
+					return false;
+				}
+				line_start = c + 1;
+			}
+		}
+
+		// Move the possible unfinished line to the beginning of m_stratumReadBuf to free up more space for reading
+		if (line_start != m_stratumReadBuf) {
+			m_stratumReadBufBytes = static_cast<uint32_t>(m_stratumReadBuf + m_stratumReadBufBytes - line_start);
+			if (m_stratumReadBufBytes > 0) {
+				memmove(m_stratumReadBuf, line_start, m_stratumReadBufBytes);
+			}
+		}
+
+		return true;
+	};
+
+#ifdef WITH_TLS
+	if (!m_tls.is_empty()) {
+		auto on_write = [this](const uint8_t* data, size_t size) {
+			return m_owner->send(this, [data, size](uint8_t* buf, size_t buf_size) -> size_t {
+				if (buf_size < size) {
+					return 0;
+				}
+				memcpy(buf, data, size);
+				return size;
+			}, true);
+		};
+
+		return m_tls.on_read(data, size, std::move(on_parse), std::move(on_write));
+	}
+#endif
+
+	return on_parse(data, size);
 }
 
 bool StratumServer::StratumClient::process_request(char* data, uint32_t size)

@@ -17,6 +17,7 @@ option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
+option(WITH_TLS "Include TLS support. If this is turned off, p2pool will not support Stratum TLS connections." ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
@@ -164,6 +165,13 @@ endif()
 if (WITH_GRPC)
 	set(HEADERS ${HEADERS} src/merge_mining_client_tari.h)
 	set(SOURCES ${SOURCES} src/merge_mining_client_tari.cpp)
+endif()
+
+if (WITH_GRPC AND WITH_TLS)
+	add_definitions(-DWITH_TLS)
+
+	set(HEADERS ${HEADERS} src/tls.h)
+	set(SOURCES ${SOURCES} src/tls.cpp)
 endif()
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${HEADERS})

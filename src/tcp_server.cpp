@@ -538,7 +538,7 @@ void TCPServer::print_bans()
 	}
 }
 
-bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback)
+bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback, bool raw)
 {
 	check_event_loop_thread(__func__);
 
@@ -559,34 +559,50 @@ bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>
 		return false;
 	}
 
-	WriteBuf* buf = get_write_buffer(bytes_written);
+	auto on_write = [this, client](const uint8_t* data, size_t size) {
+		WriteBuf* buf = get_write_buffer(size);
 
-	buf->m_write.data = buf;
-	buf->m_client = client;
+		buf->m_write.data = buf;
+		buf->m_client = client;
 
-	if (buf->m_dataCapacity < bytes_written) {
-		buf->m_dataCapacity = round_up(bytes_written, 64);
-		buf->m_data = realloc_hook(buf->m_data, buf->m_dataCapacity);
-		if (!buf->m_data) {
-			LOGERR(0, "failed to allocate " << buf->m_dataCapacity << " bytes to send data");
-			PANIC_STOP();
+		if (buf->m_dataCapacity < size) {
+			buf->m_dataCapacity = round_up(size, 64);
+			buf->m_data = realloc_hook(buf->m_data, buf->m_dataCapacity);
+			if (!buf->m_data) {
+				LOGERR(0, "failed to allocate " << buf->m_dataCapacity << " bytes to send data");
+				PANIC_STOP();
+			}
 		}
+
+		memcpy(buf->m_data, data, size);
+
+		uv_buf_t bufs[1];
+		bufs[0].base = reinterpret_cast<char*>(buf->m_data);
+		bufs[0].len = static_cast<int>(size);
+
+		const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
+		if (err) {
+			LOGWARN(1, "failed to start writing data to client connection " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
+			return_write_buffer(buf);
+			return false;
+		}
+
+		return true;
+	};
+
+#ifdef WITH_TLS
+	if (!client->m_tls.is_empty() && !raw) {
+		if (!client->m_tls.on_write(m_callbackBuf.data(), bytes_written, std::move(on_write))) {
+			LOGWARN(1, "TLS write failed to client connection " << static_cast<const char*>(client->m_addrString));
+			return false;
+		}
+		return true;
 	}
+#else
+	(void)raw;
+#endif
 
-	memcpy(buf->m_data, m_callbackBuf.data(), bytes_written);
-
-	uv_buf_t bufs[1];
-	bufs[0].base = reinterpret_cast<char*>(buf->m_data);
-	bufs[0].len = static_cast<int>(bytes_written);
-
-	const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
-	if (err) {
-		LOGWARN(1, "failed to start writing data to client connection " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
-		return_write_buffer(buf);
-		return false;
-	}
-
-	return true;
+	return on_write(m_callbackBuf.data(), bytes_written);
 }
 
 const char* TCPServer::get_log_category() const
@@ -999,6 +1015,9 @@ TCPServer::Client::Client(char* read_buf, size_t size)
 	, m_addrString{}
 	, m_socks5ProxyState(Socks5ProxyState::Default)
 	, m_resetCounter{ 0 }
+#ifdef WITH_TLS
+	, m_tlsChecked(false)
+#endif
 {
 	m_readBuf[0] = '\0';
 	m_readBuf[m_readBufSize - 1] = '\0';
@@ -1023,6 +1042,11 @@ void TCPServer::Client::reset()
 	m_socks5ProxyState = Socks5ProxyState::Default;
 	m_readBuf[0] = '\0';
 	m_readBuf[m_readBufSize - 1] = '\0';
+
+#ifdef WITH_TLS
+	m_tls.reset();
+	m_tlsChecked = false;
+#endif
 }
 
 void TCPServer::Client::on_alloc(uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf)
