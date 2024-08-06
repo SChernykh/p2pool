@@ -541,7 +541,7 @@ void StratumServer::show_workers()
 	size_t n = 0;
 
 	LOGINFO(0, log::pad_right("IP:port", addr_len + 8)
-			<< "TLS "
+			<< "TLS    "
 			<< log::pad_right("uptime", 20)
 			<< log::pad_right("difficulty", 20)
 			<< log::pad_right("hashrate", 15)
@@ -566,7 +566,7 @@ void StratumServer::show_workers()
 #endif
 
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
-				<< (is_tls ? "no  " : "yes ")
+				<< (is_tls ? "no     " : "yes    ")
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)

@@ -423,11 +423,12 @@ jobs:
     strategy:
       matrix:
         config:
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF"}
-          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 16 2019, os: 2019, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "OFF"}
 
     steps:
     - name: Checkout repository
@@ -442,7 +443,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }} -DWITH_GRPC=${{ matrix.config.grpc }}
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }} -DWITH_GRPC=${{ matrix.config.grpc }} -DWITH_TLS=${{ matrix.config.tls }}
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Check Windows 7 compatibility
@@ -480,7 +481,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: p2pool-vs-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}-grpc-${{ matrix.config.grpc }}.exe
+        name: p2pool-vs-${{ matrix.config.os }}-randomx-${{ matrix.config.rx }}-upnp-${{ matrix.config.upnp }}-grpc-${{ matrix.config.grpc }}-tls-${{ matrix.config.tls }}.exe
         path: build/Release/p2pool.exe
 
   build-macos:
