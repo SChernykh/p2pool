@@ -92,6 +92,10 @@ struct Params
 	bool m_upnp = false;
 	bool m_upnpStratum = false;
 #endif
+#ifdef WITH_TLS
+	std::string m_tlsCert;
+	std::string m_tlsCertKey;
+#endif
 };
 
 } // namespace p2pool

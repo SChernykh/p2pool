@@ -31,6 +31,8 @@
 --upnp-stratum       Port forward Stratum port (it's not forwarded by default)
 --merge-mine         IP:port and wallet address for another blockchain to merge mine with
 --version            Print p2pool's version and build details
+--tls-cert file      Load TLS certificate chain from "file" in the PEM format
+--tls-cert-key file  Load TLS certificate private key from "file" in the PEM format
 ```
 
 ### Example command line
@@ -68,3 +70,13 @@ Merge mining will be available in P2Pool after the fork on October 12th, 2024. V
   p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
   ```
   Merge mining is available for testing in Tari's [v1.0.0-pre.14 release](https://github.com/tari-project/tari/releases/tag/v1.0.0-pre.14) (Esmeralda testnet).
+
+### TLS
+
+All `--tls...` parameters are optional. If they are not provided, P2Pool will generate a self-signed certificate upon startup.
+
+If you want to use your own certificate, please refer to your certificate provider's documentation (or OpenSSL documentation) on how to generate the appropriate PEM files.
+
+Note that you need to use certificate files and `--tls...` parameters to be able to use certificate pinning in XMRig miners that connect to your P2Pool instance.
+
+`--tls-cert` and `--tls-cert-key` parameters must always be used together.

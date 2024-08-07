@@ -40,6 +40,12 @@ static bssl::UniquePtr<EVP_PKEY> init_evp_pkey()
 		return nullptr;
 	}
 
+	//FILE* fp;
+	//if (fopen_s(&fp, "cert_key.pem", "wb") == 0) {
+	//	PEM_write_PrivateKey(fp, evp_pkey.get(), nullptr, nullptr, 0, nullptr, nullptr);
+	//	fclose(fp);
+	//}
+
 	return evp_pkey;
 }
 
@@ -100,6 +106,12 @@ static bssl::UniquePtr<X509> init_cert()
 		return nullptr;
 	}
 
+	//FILE* fp;
+	//if (fopen_s(&fp, "cert.pem", "wb") == 0) {
+	//	PEM_write_X509(fp, x509.get());
+	//	fclose(fp);
+	//}
+
 	return x509;
 }
 
@@ -129,6 +141,43 @@ static bssl::UniquePtr<SSL_CTX> init_ctx()
 }
 
 static bssl::UniquePtr<SSL_CTX> s_ctx = init_ctx();
+
+bool ServerTls::load_from_files(const char* cert, const char* cert_key)
+{
+	if (!cert) {
+		LOGERR(0, "No cert file specified");
+		return false;
+	}
+
+	if (!cert_key) {
+		LOGERR(0, "No cert_key file specified");
+		return false;
+	}
+
+	bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+
+	if (!ctx.get()) {
+		LOGERR(0, "Failed to create SSL context");
+		return false;
+	}
+
+	if (SSL_CTX_use_certificate_chain_file(ctx.get(), cert) <= 0) {
+		LOGERR(0, "Failed to load " << cert);
+		return false;
+	}
+
+	if (SSL_CTX_use_PrivateKey_file(ctx.get(), cert_key, SSL_FILETYPE_PEM) <= 0) {
+		LOGERR(0, "Failed to load " << cert_key);
+		return false;
+	}
+
+	SSL_CTX_set_options(ctx.get(), SSL_OP_CIPHER_SERVER_PREFERENCE);
+
+	LOGINFO(1, log::LightCyan() << "Loaded " << cert << ", " << cert_key);
+
+	s_ctx.reset(ctx.release());
+	return true;
+}
 
 void ServerTls::reset()
 {
