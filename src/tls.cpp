@@ -228,9 +228,6 @@ bool ServerTls::on_read_internal(char* data, uint32_t size, ReadCallback::Base&&
 		return false;
 	}
 
-	int bytes_read = 0;
-	char buf[1024];
-
 	if (!SSL_is_init_finished(ssl)) {
 		const int result = SSL_do_handshake(ssl);
 
@@ -273,6 +270,9 @@ bool ServerTls::on_read_internal(char* data, uint32_t size, ReadCallback::Base&&
 			return false;
 		}
 	}
+
+	int bytes_read;
+	char buf[1024];
 
 	while ((bytes_read = SSL_read(ssl, buf, sizeof(buf))) > 0) {
 		if (!read_callback(buf, static_cast<uint32_t>(bytes_read))) {

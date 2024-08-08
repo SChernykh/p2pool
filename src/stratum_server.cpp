@@ -1167,11 +1167,20 @@ bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 		char* line_start = m_stratumReadBuf;
 		for (char *e = line_start + m_stratumReadBufBytes, *c = e - size; c < e; ++c) {
 			if (*c == '\n') {
+				// Check if the line starts with "GET " (an HTTP request)
+				if ((c - line_start >= 4) && (*reinterpret_cast<uint32_t*>(line_start) == 0x20544547U)) {
+					LOGINFO(5, "client " << log::Gray() << static_cast<const char*>(m_addrString) << log::NoColor() << " sent an HTTP request");
+					send_http_response();
+					close();
+					return true;
+				}
+
 				*c = '\0';
 				if (!process_request(line_start, static_cast<uint32_t>(c - line_start))) {
 					ban(DEFAULT_BAN_TIME);
 					return false;
 				}
+
 				line_start = c + 1;
 			}
 		}
@@ -1363,6 +1372,25 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 	}
 
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
+}
+
+bool StratumServer::StratumClient::send_http_response()
+{
+	return m_owner->send(this, [](uint8_t *buf, size_t buf_size) -> size_t {
+		static constexpr uint8_t data[] =
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 21\r\n"
+			"Content-Type: text/html\r\n"
+			"Connection: Closed\r\n\r\n"
+			"P2Pool Stratum online";
+
+		if (buf_size < sizeof(data)) {
+			return 0;
+		}
+
+		memcpy(buf, data, sizeof(data));
+		return sizeof(data);
+	});
 }
 
 void StratumServer::api_update_local_stats(uint64_t timestamp)
