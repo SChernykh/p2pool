@@ -1903,6 +1903,15 @@ int p2pool::run()
 		return 1;
 	}
 
+#ifdef WITH_TLS
+	if (!m_params->m_tlsCert.empty() && !m_params->m_tlsCertKey.empty()) {
+		if (!ServerTls::load_from_files(m_params->m_tlsCert.c_str(), m_params->m_tlsCertKey.c_str())) {
+			LOGERR(1, "Failed to load TLS files");
+			return 1;
+		}
+	}
+#endif
+
 	// Init default loop user data before running it
 	uv_loop_t* loop = uv_default_loop_checked();
 	loop->data = nullptr;

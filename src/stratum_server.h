@@ -52,7 +52,12 @@ public:
 		[[nodiscard]] bool process_login(rapidjson::Document& doc, uint32_t id);
 		[[nodiscard]] bool process_submit(rapidjson::Document& doc, uint32_t id);
 
+		bool send_http_response();
+
+		alignas(8) char m_rawReadBuf[STRATUM_BUF_SIZE];
+
 		alignas(8) char m_stratumReadBuf[STRATUM_BUF_SIZE];
+		uint32_t m_stratumReadBufBytes;
 
 		uint32_t m_rpcId;
 		uint32_t m_perConnectionJobId;

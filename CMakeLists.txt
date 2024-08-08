@@ -17,6 +17,7 @@ option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
+option(WITH_TLS "Include TLS support. If this is turned off, p2pool will not support Stratum TLS connections." ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
@@ -37,6 +38,9 @@ if (WITH_GRPC)
 	include(cmake/grpc.cmake)
 
 	add_subdirectory(external/src/Tari)
+elseif (WITH_TLS)
+	add_subdirectory(cmake/ssl)
+	include_directories(external/src/grpc/third_party/boringssl-with-bazel/src/include)
 endif()
 
 if (WITH_RANDOMX)
@@ -164,6 +168,13 @@ endif()
 if (WITH_GRPC)
 	set(HEADERS ${HEADERS} src/merge_mining_client_tari.h)
 	set(SOURCES ${SOURCES} src/merge_mining_client_tari.cpp)
+endif()
+
+if (WITH_TLS)
+	add_definitions(-DWITH_TLS)
+
+	set(HEADERS ${HEADERS} src/tls.h)
+	set(SOURCES ${SOURCES} src/tls.cpp)
 endif()
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${HEADERS})
@@ -404,6 +415,8 @@ if (STATIC_BINARY OR STATIC_LIBS)
 
 	if (WITH_GRPC)
 		set(STATIC_LIBS ${STATIC_LIBS} Tari_gRPC grpc grpc++ libprotobuf)
+	elseif(WITH_TLS)
+		set(STATIC_LIBS ${STATIC_LIBS} ssl crypto)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
@@ -415,6 +428,8 @@ if (STATIC_BINARY OR STATIC_LIBS)
 else()
 	if (WITH_GRPC)
 		set(LIBS ${LIBS} Tari_gRPC grpc grpc++ libprotobuf)
+	elseif(WITH_TLS)
+		set(LIBS ${LIBS} ssl crypto)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})

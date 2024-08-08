@@ -64,6 +64,10 @@ void p2pool_usage()
 #endif
 		"--merge-mine         IP:port and wallet address for another blockchain to merge mine with\n"
 		"--version            Print p2pool's version and build details\n"
+#ifdef WITH_TLS
+		"--tls-cert file      Load TLS certificate chain from \"file\" in the PEM format\n"
+		"--tls-cert-key file  Load TLS certificate private key from \"file\" in the PEM format\n"
+#endif
 		"--help               Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",

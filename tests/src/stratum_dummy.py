@@ -17,16 +17,24 @@ import socket
 import time
 import sys
 import json
+import ssl
 
 f = open('stratum_dummy' + sys.argv[1] + '.log', 'wb')
 
 f.write(b'Connecting')
 f.flush()
 
+context = ssl.create_default_context()
+context.check_hostname = False
+context.verify_mode = ssl.CERT_NONE
+
 while True:
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock.settimeout(1)
 	sock.setblocking(True)
+
+	if (sys.argv[1] == '1'):
+		sock = context.wrap_socket(sock);
 
 	if sock.connect_ex(('127.0.0.1', 3333)) == 0:
 		break;

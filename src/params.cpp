@@ -195,6 +195,18 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+#ifdef WITH_TLS
+		if ((strcmp(argv[i], "--tls-cert") == 0) && (i + 1 < argc)) {
+			m_tlsCert = argv[++i];
+			ok = true;
+		}
+
+		if ((strcmp(argv[i], "--tls-cert-key") == 0) && (i + 1 < argc)) {
+			m_tlsCertKey = argv[++i];
+			ok = true;
+		}
+#endif
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();
@@ -239,6 +251,13 @@ bool Params::valid() const
 		LOGERR(1, "Too many merge mining blockchains.");
 		return false;
 	}
+
+#ifdef WITH_TLS
+	if (m_tlsCert.empty() != m_tlsCertKey.empty()) {
+		LOGERR(1, "Both --tls-cert and --tls-cert-key files must be specified");
+		return false;
+	}
+#endif
 
 	return true;
 }

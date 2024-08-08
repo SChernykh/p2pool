@@ -18,6 +18,11 @@
 #pragma once
 
 #include "uv_util.h"
+
+#ifdef WITH_TLS
+#include "tls.h"
+#endif
+
 #include <map>
 
 namespace p2pool {
@@ -106,6 +111,11 @@ public:
 		} m_socks5ProxyState;
 
 		std::atomic<uint32_t> m_resetCounter;
+
+#ifdef WITH_TLS
+		ServerTls m_tls;
+		bool m_tlsChecked;
+#endif
 	};
 
 	struct WriteBuf
@@ -128,7 +138,7 @@ public:
 	}
 
 	template<typename T>
-	[[nodiscard]] FORCEINLINE bool send(Client* client, T&& callback) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback))); }
+	[[nodiscard]] FORCEINLINE bool send(Client* client, T&& callback, bool raw = false) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback)), raw); }
 
 private:
 	static void on_new_connection(uv_stream_t* server, int status);
@@ -138,7 +148,7 @@ private:
 	void on_new_client(uv_stream_t* server);
 	void on_new_client(uv_stream_t* server, Client* client);
 
-	[[nodiscard]] bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback);
+	[[nodiscard]] bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback, bool raw);
 
 	allocate_client_callback m_allocateNewClient;
 
