@@ -1042,7 +1042,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 
 					{
 						WriteLock lock(m_mergeMiningClientsLock);
-						m_mergeMiningClients = merge_mining_clients;
+						m_mergeMiningClients = std::move(merge_mining_clients);
 					}
 
 					m_startupFinished = true;
