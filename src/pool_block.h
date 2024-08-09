@@ -42,7 +42,7 @@ class SideChain;
 * |xxxNONCExxxEXTRA_NONCExHASHxxx|xxxxxxxxxxxxxxxxx|
 * --------------------------------------------------
 *
-* HASH comes in TX_EXTRA_MERGE_MINING_TAG directly after EXTRA_NONCE
+* HASH (or Merkle tree root hash) comes in TX_EXTRA_MERGE_MINING_TAG directly after EXTRA_NONCE
 * HASH is calculated from all pool block's bytes and consensus ID (NONCE, EXTRA_NONCE and HASH itself are replaced with 0's when calculating HASH)
 * Pool block's PoW hash is calculated from the Monero block template part using Monero's consensus rules
 */
@@ -66,8 +66,8 @@ static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
 // Oct 12 2024 20:00:00 GMT+0000
 static constexpr uint64_t MERGE_MINING_FORK_TIME = 1728763200;
 
-// Jun 18 2024 20:00:00 GMT+0000
-static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1718740800;
+// Aug 11 2024 20:00:00 GMT+0000
+static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1723406400;
 
 struct DifficultyData
 {
