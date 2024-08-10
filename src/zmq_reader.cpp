@@ -42,7 +42,10 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	addr_buf[0] = '\0';
 
 	std::random_device rd;
-	for (uint32_t port = 49152 + (rd() % 16384), i = 0; i < 100; ++i, port = (port < 65535) ? (port + 1) : 49152) {
+
+	for (uint32_t i = 0; i < 100; ++i) {
+		const uint32_t port = 49152 + (rd() % 16384);
+
 		try {
 			log::Stream s(addr_buf);
 			s << "tcp://127.0.0.1:" << port << '\0';
@@ -52,6 +55,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		}
 		catch (const std::exception& e) {
 			LOGWARN(1, "failed to to bind port " << port << " for ZMQ publisher, error " << e.what());
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	}
 
