@@ -68,7 +68,7 @@ private:
 	std::string m_localPath;
 
 	uv_mutex_t m_dumpDataLock;
-	unordered_map<std::string, std::vector<char>> m_dumpData;
+	unordered_map<std::string, std::pair<std::vector<char>, bool>> m_dumpData;
 
 	uv_async_t m_dumpToFileAsync;
 

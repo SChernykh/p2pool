@@ -130,29 +130,36 @@ void p2pool_api::dump_to_file_async_internal(Category category, const char* file
 	}
 
 	MutexLock lock(m_dumpDataLock);
-	m_dumpData[path] = std::move(buf);
 
-	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync))) {
-		uv_async_send(&m_dumpToFileAsync);
+	std::pair<std::vector<char>, bool>& data = m_dumpData[path];
+
+	if (data.first != buf) {
+		data.first = buf;
+		data.second = true;
+
+		if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync))) {
+			uv_async_send(&m_dumpToFileAsync);
+		}
 	}
 }
 
 void p2pool_api::dump_to_file()
 {
-	unordered_map<std::string, std::vector<char>> data;
-	{
-		MutexLock lock(m_dumpDataLock);
-		data = std::move(m_dumpData);
-	}
+	MutexLock lock(m_dumpDataLock);
 
 	char buf[log::Stream::BUF_SIZE + 1];
 	buf[0] = '\0';
 
-	for (auto& it : data) {
+	for (auto& it : m_dumpData) {
+		if (!it.second.second) {
+			continue;
+		}
+		it.second.second = false;
+
 		log::Stream s(buf);
 		s << it.first << m_counter << '\0';
 
-		DumpFileWork* work = new DumpFileWork{ {}, 0, it.first, buf, std::move(it.second) };
+		DumpFileWork* work = new DumpFileWork{ {}, 0, it.first, buf, it.second.first };
 		work->req.data = work;
 		++m_counter;
 

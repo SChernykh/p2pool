@@ -110,7 +110,7 @@ public:
 
 	bool chainmain_get_by_hash(const hash& id, ChainMain& data) const;
 
-	void api_update_block_found(const ChainMain* data, const PoolBlock* block);
+	void api_update_block_found(const ChainMain* data, const PoolBlock* block, bool update_stats_mod = true);
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 

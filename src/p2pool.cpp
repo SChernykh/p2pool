@@ -521,7 +521,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 				LOGINFO(0, log::LightCyan() << "Your wallet " << log::LightYellow() << w << log::LightCyan() << " didn't get a payout in block " << log::LightYellow() << data.height << log::LightCyan() << " because you had no shares in PPLNS window");
 			}
 
-			api_update_block_found(&data, block);
+			api_update_block_found(&data, block, false);
 		}
 		else {
 			side_chain().watch_mainchain_block(data, merkle_root);
@@ -1680,7 +1680,7 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 	}
 }
 
-void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* block)
+void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* block, bool update_stats_mod)
 {
 	if (!m_api || m_stopped) {
 		return;
@@ -1727,7 +1727,9 @@ void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* bloc
 			s << ']';
 		});
 
-	api_update_stats_mod();
+	if (update_stats_mod) {
+		api_update_stats_mod();
+	}
 }
 
 bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
