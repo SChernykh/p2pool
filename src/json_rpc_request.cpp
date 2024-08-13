@@ -495,6 +495,8 @@ void Call(const std::string& address, int port, const std::string& req, const st
 			catch (const std::exception& e) {
 				const char* msg = e.what();
 				(*close_cb)(msg, strlen(msg), 0.0);
+				delete cb;
+				delete close_cb;
 			}
 		});
 
@@ -502,6 +504,8 @@ void Call(const std::string& address, int port, const std::string& req, const st
 		static constexpr char err[] = "CallOnLoop failed";
 		LOGERR(1, err);
 		(*close_cb)(err, sizeof(err) - 1, 0.0);
+		delete cb;
+		delete close_cb;
 	}
 }
 

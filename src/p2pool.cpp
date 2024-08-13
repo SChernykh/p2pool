@@ -658,7 +658,7 @@ void p2pool::submit_aux_block_async(const std::vector<SubmitAuxBlockData>& aux_b
 
 	// If p2pool is stopped, m_submitAuxBlockAsync is most likely already closed
 	if (m_stopped) {
-		LOGWARN(0, "p2pool is shutting down, but a block was found. Trying to submit it anyway!");
+		LOGWARN(0, "p2pool is shutting down, but an aux block was found. Trying to submit it anyway!");
 		submit_aux_block();
 		return;
 	}
