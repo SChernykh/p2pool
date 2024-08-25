@@ -909,11 +909,11 @@ void StratumServer::on_share_found(uv_work_t* req)
 	const uint64_t target = share->m_target;
 	const uint64_t hashes = share->m_hashes;
 
-	if (pool->stopped()) {
-		LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
-	}
-
 	if (share->m_highEnoughDifficulty) {
+		if (pool->stopped()) {
+			LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
+		}
+
 		uint8_t blob[128];
 		uint64_t height;
 		difficulty_type difficulty;
