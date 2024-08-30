@@ -82,7 +82,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
-|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.3.3 is recommended|v4.0 or newer
+|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.3.4 is recommended|v4.0 or newer
 
 ## How to mine on P2Pool
 
