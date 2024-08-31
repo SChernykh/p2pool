@@ -1168,7 +1168,7 @@ bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 		for (char *e = line_start + m_stratumReadBufBytes, *c = e - size; c < e; ++c) {
 			if (*c == '\n') {
 				// Check if the line starts with "GET " (an HTTP request)
-				if ((c - line_start >= 4) && (*reinterpret_cast<uint32_t*>(line_start) == 0x20544547U)) {
+				if ((c - line_start >= 4) && (read_unaligned(reinterpret_cast<uint32_t*>(line_start)) == 0x20544547U)) {
 					LOGINFO(5, "client " << log::Gray() << static_cast<const char*>(m_addrString) << log::NoColor() << " sent an HTTP request");
 					send_http_response();
 					close();
