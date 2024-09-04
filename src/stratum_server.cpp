@@ -1167,12 +1167,19 @@ bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 		char* line_start = m_stratumReadBuf;
 		for (char *e = line_start + m_stratumReadBufBytes, *c = e - size; c < e; ++c) {
 			if (*c == '\n') {
-				// Check if the line starts with "GET " (an HTTP request)
-				if ((c - line_start >= 4) && (read_unaligned(reinterpret_cast<uint32_t*>(line_start)) == 0x20544547U)) {
-					LOGINFO(5, "client " << log::Gray() << static_cast<const char*>(m_addrString) << log::NoColor() << " sent an HTTP request");
-					send_http_response();
-					close();
-					return true;
+				// Check if the line starts with "GET " or "HEAD" (an HTTP request)
+				if (c - line_start >= 4) {
+					const uint32_t line_start_data = read_unaligned(reinterpret_cast<uint32_t*>(line_start));
+
+					const bool is_http_get  = (line_start_data == 0x20544547U);
+					const bool is_http_head = (line_start_data == 0x44414548U);
+
+					if (is_http_get || is_http_head) {
+						LOGINFO(5, "client " << log::Gray() << static_cast<const char*>(m_addrString) << log::NoColor() << " sent an HTTP " << (is_http_get ? "GET" : "HEAD") << " request");
+						send_http_response(is_http_get);
+						close();
+						return true;
+					}
 				}
 
 				*c = '\0';
@@ -1374,22 +1381,24 @@ bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
 }
 
-bool StratumServer::StratumClient::send_http_response()
+bool StratumServer::StratumClient::send_http_response(bool send_content)
 {
-	return m_owner->send(this, [](uint8_t *buf, size_t buf_size) -> size_t {
+	return m_owner->send(this, [send_content](uint8_t *buf, size_t buf_size) -> size_t {
 		static constexpr uint8_t data[] =
 			"HTTP/1.1 200 OK\r\n"
 			"Content-Length: 21\r\n"
-			"Content-Type: text/html\r\n"
+			"Content-Type: text/plain\r\n"
 			"Connection: Closed\r\n\r\n"
 			"P2Pool Stratum online";
 
-		if (buf_size < sizeof(data)) {
+		const size_t data_size = send_content ? (sizeof(data) - 1) : (sizeof(data) - 1 - 21);
+
+		if (buf_size < data_size) {
 			return 0;
 		}
 
-		memcpy(buf, data, sizeof(data));
-		return sizeof(data);
+		memcpy(buf, data, data_size);
+		return data_size;
 	});
 }
 
