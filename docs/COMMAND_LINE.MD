@@ -73,6 +73,8 @@ Merge mining will be available in P2Pool after the fork on October 12th, 2024. V
 
 ### TLS
 
+Starting from v4.1, P2Pool supports SSL/TLS connections to its Stratum port. Port 443 can also be safely used for Stratum connections since v4.1 - P2Pool will detect HTTP requests and respond to them.
+
 All `--tls...` parameters are optional. If they are not provided, P2Pool will generate a self-signed certificate upon startup.
 
 If you want to use your own certificate, please refer to your certificate provider's documentation (or OpenSSL documentation) on how to generate the appropriate PEM files.
