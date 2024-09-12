@@ -67,7 +67,6 @@ struct CurlContext
 
 	uv_loop_t* m_loop;
 	uv_timer_t m_timer;
-	uv_async_t m_async;
 	CURLM* m_multiHandle;
 	CURL* m_handle;
 
@@ -88,7 +87,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_closeCallback(close_cb)
 	, m_loop(loop)
 	, m_timer{}
-	, m_async{}
 	, m_multiHandle(nullptr)
 	, m_handle(nullptr)
 	, m_req(req)
@@ -123,19 +121,10 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	}
 	m_timer.data = this;
 
-	err = uv_async_init(m_loop, &m_async, reinterpret_cast<uv_async_cb>(on_timeout));
-	if (err) {
-		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
-		throw std::runtime_error("uv_async_init failed");
-	}
-	m_async.data = this;
-
 	m_multiHandle = curl_multi_init();
 	if (!m_multiHandle) {
 		static constexpr char msg[] = "curl_multi_init() failed";
 		LOGERR(1, msg);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), nullptr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error(msg);
 	}
@@ -161,7 +150,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		static constexpr char msg[] = "curl_easy_init() failed";
 		LOGERR(1, msg);
 		curl_multi_cleanup(m_multiHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), nullptr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error(msg);
 	}
@@ -217,7 +205,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		LOGERR(1, "curl_multi_add_handle failed, error " << curl_multi_strerror(curl_err));
 		curl_easy_cleanup(m_handle);
 		curl_multi_cleanup(m_multiHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), nullptr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error("curl_multi_add_handle failed");
 	}
@@ -333,20 +320,6 @@ int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 		return 0;
 	}
 
-	if ((timeout_ms == 0) && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_async))) {
-		// 0 ms timeout, but we can't just call on_timeout() here - we have to kick the UV loop
-		const int result = uv_async_send(&m_async);
-		if (result < 0) {
-			LOGERR(1, "uv_async_send failed with error " << uv_err_name(result));
-
-			// if async call didn't work, try to use the timer with 1 ms timeout
-			timeout_ms = 1;
-		}
-		else {
-			return 0;
-		}
-	}
-
 	const int result = uv_timer_start(&m_timer, reinterpret_cast<uv_timer_cb>(on_timeout), timeout_ms, 0);
 	if (result < 0) {
 		LOGERR(1, "uv_timer_start failed with error " << uv_err_name(result));
@@ -456,7 +429,7 @@ void CurlContext::on_close(uv_handle_t* h)
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(h->data);
 	h->data = nullptr;
 
-	if (ctx->m_timer.data || ctx->m_async.data) {
+	if (ctx->m_timer.data) {
 		return;
 	}
 
@@ -470,10 +443,6 @@ void CurlContext::shutdown()
 		uv_close(reinterpret_cast<uv_handle_t*>(p.second), [](uv_handle_t* h) { delete reinterpret_cast<uv_poll_t*>(h); });
 	}
 	m_pollHandles.clear();
-
-	if (m_async.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_async))) {
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_async), on_close);
-	}
 
 	if (m_timer.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_timer))) {
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), on_close);
