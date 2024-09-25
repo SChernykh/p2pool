@@ -292,6 +292,7 @@ allowedAPIs = {
 	"DeleteFileA",
 	"GetFileAttributesA",
 	"OpenThreadToken",
+	"GetOverlappedResult",
 }
 
 f = open(sys.argv[1], 'r')
