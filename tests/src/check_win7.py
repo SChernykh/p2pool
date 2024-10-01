@@ -293,6 +293,7 @@ allowedAPIs = {
 	"GetFileAttributesA",
 	"OpenThreadToken",
 	"GetOverlappedResult",
+	"CryptGenRandom",
 }
 
 f = open(sys.argv[1], 'r')

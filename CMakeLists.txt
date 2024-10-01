@@ -215,7 +215,7 @@ if (WITH_UPNP)
 endif()
 
 if (WIN32)
-	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp)
+	set(LIBS ${LIBS} ws2_32 iphlpapi userenv psapi dnsapi dbghelp advapi32)
 	if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(LIBS ${LIBS} bcrypt)
 	endif()

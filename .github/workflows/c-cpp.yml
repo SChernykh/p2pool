@@ -439,6 +439,10 @@ jobs:
     - name: Setup cmake
       uses: lukka/get-cmake@latest
 
+    - name: Apply patch
+      run: |
+        git apply --verbose --ignore-whitespace --directory=external/src/grpc/third_party/boringssl-with-bazel patches/boringssl/win7.patch
+
     - name: Build p2pool
       run: |
         mkdir build

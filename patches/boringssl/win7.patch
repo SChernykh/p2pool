@@ -1,0 +1,58 @@
+diff --git a/src/crypto/rand_extra/windows.c b/src/crypto/rand_extra/windows.c
+index a44774d23..09cf10942 100644
+--- a/src/crypto/rand_extra/windows.c
++++ b/src/crypto/rand_extra/windows.c
+@@ -26,6 +26,7 @@
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
+ 
+ #include <windows.h>
++#include <wincrypt.h>
+ 
+ #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) && \
+     !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+@@ -61,16 +62,40 @@ void CRYPTO_sysrand(uint8_t *out, size_t requested) {
+ // See: https://learn.microsoft.com/en-us/windows/win32/seccng/processprng
+ typedef BOOL (WINAPI *ProcessPrngFunction)(PBYTE pbData, SIZE_T cbData);
+ static ProcessPrngFunction g_processprng_fn = NULL;
++static HCRYPTPROV g_hCryptProv = NULL;
++
++static BOOL WINAPI wrapper_CryptGenRandom(PBYTE pbData, SIZE_T cbData)
++{
++  return CryptGenRandom(g_hCryptProv, cbData, pbData);
++}
+ 
+ static void init_processprng(void) {
+   HMODULE hmod = LoadLibraryW(L"bcryptprimitives");
+-  if (hmod == NULL) {
+-    abort();
++
++  if (hmod) {
++    g_processprng_fn = (ProcessPrngFunction)GetProcAddress(hmod, "ProcessPrng");
++    if (g_processprng_fn) {
++      return;
++    }
+   }
+-  g_processprng_fn = (ProcessPrngFunction)GetProcAddress(hmod, "ProcessPrng");
+-  if (g_processprng_fn == NULL) {
+-    abort();
++
++  if (CryptAcquireContext(&g_hCryptProv, NULL, NULL, PROV_RSA_FULL, 0)) {
++    g_processprng_fn = &wrapper_CryptGenRandom;
++    return;
++  }
++
++  DWORD err = GetLastError();
++  if (err == NTE_BAD_KEYSET) {
++    if (CryptAcquireContext(&g_hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET)) {
++      g_processprng_fn = &wrapper_CryptGenRandom;
++      return;
++    }
++    else {
++      err = GetLastError();
++    }
+   }
++
++  abort();
+ }
+ 
+ void CRYPTO_init_sysrand(void) {
