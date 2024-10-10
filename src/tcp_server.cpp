@@ -879,7 +879,7 @@ void TCPServer::on_shutdown(uv_async_t* async)
 	uv_close(reinterpret_cast<uv_handle_t*>(&s->m_dropConnectionsAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&s->m_shutdownAsync), nullptr);
 
-	delete GetLoopUserData(&s->m_loop, false);
+	DeleteLoopUserData(&s->m_loop);
 
 	s->m_numHandles = 0;
 	uv_walk(&s->m_loop, [](uv_handle_t*, void* n) { (*reinterpret_cast<uint32_t*>(n))++; }, &s->m_numHandles);

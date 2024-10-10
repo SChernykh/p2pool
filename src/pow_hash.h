@@ -121,7 +121,7 @@ private:
 		RandomX_Hasher_RPC* server = reinterpret_cast<RandomX_Hasher_RPC*>(async->data);
 		uv_close(reinterpret_cast<uv_handle_t*>(&server->m_shutdownAsync), nullptr);
 
-		delete GetLoopUserData(&server->m_loop, false);
+		DeleteLoopUserData(&server->m_loop);
 	}
 };
 

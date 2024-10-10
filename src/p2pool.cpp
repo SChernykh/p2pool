@@ -769,9 +769,7 @@ void p2pool::on_stop(uv_async_t* async)
 
 	init_signals(pool, false);
 
-	uv_loop_t* loop = uv_default_loop_checked();
-	delete GetLoopUserData(loop, false);
-	loop->data = nullptr;
+	DeleteLoopUserData(uv_default_loop_checked());
 }
 
 void p2pool::submit_block() const

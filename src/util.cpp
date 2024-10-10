@@ -667,14 +667,30 @@ bool is_localhost(const std::string& host)
 
 UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
 {
-	UV_LoopUserData* data = reinterpret_cast<UV_LoopUserData*>(loop->data);
+	static_assert(sizeof(std::atomic<UV_LoopUserData*>) <= sizeof(void*), "loop->data size mismatch");
+	static_assert(alignof(std::atomic<UV_LoopUserData*>) <= alignof(void*), "loop->data alignment mismatch");
 
-	if (!data && create) {
-		data = new UV_LoopUserData(loop);
-		loop->data = data;
+	std::atomic<UV_LoopUserData*>& data = reinterpret_cast<std::atomic<UV_LoopUserData*>&>(loop->data);
+
+	UV_LoopUserData* result = data.load();
+
+	if (!result && create) {
+		UV_LoopUserData* new_data = new UV_LoopUserData(loop);
+
+		if (data.compare_exchange_strong(result, new_data)) {
+			result = new_data;
+		} else {
+			delete new_data;
+		}
 	}
 
-	return data;
+	return result;
+}
+
+void DeleteLoopUserData(uv_loop_t* loop)
+{
+	std::atomic<UV_LoopUserData*>& data = reinterpret_cast<std::atomic<UV_LoopUserData*>&>(loop->data);
+	delete data.exchange(nullptr);
 }
 
 #ifdef WITH_UPNP

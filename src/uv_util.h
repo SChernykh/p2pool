@@ -94,7 +94,6 @@ struct UV_LoopUserData
 
 	~UV_LoopUserData()
 	{
-		m_loop->data = nullptr;
 		uv_mutex_destroy(&m_callbacksLock);
 		uv_close(reinterpret_cast<uv_handle_t*>(m_async), [](uv_handle_t* h) { delete reinterpret_cast<uv_async_t*>(h); });
 		for (const UV_LoopCallbackBase* cb : m_callbacks) {
@@ -123,6 +122,7 @@ struct UV_LoopUserData
 };
 
 UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create = true);
+void DeleteLoopUserData(uv_loop_t* loop);
 
 template<typename T>
 bool CallOnLoop(uv_loop_t* loop, T&& callback)

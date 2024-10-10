@@ -76,7 +76,7 @@ private:
 
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_shutdownAsync), nullptr);
 
-		delete GetLoopUserData(&client->m_loop, false);
+		DeleteLoopUserData(&client->m_loop);
 	}
 
 	void on_shutdown();
