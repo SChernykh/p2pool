@@ -67,9 +67,13 @@ Merge mining will be available in P2Pool after the fork on October 12th, 2024. V
 
 - [Tari](https://www.tari.com/) uses their own gRPC API and requires a different command line:
   ```
-  p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
+  ./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
   ```
-  Merge mining is available for testing in Tari's [v1.0.0-pre.14 release](https://github.com/tari-project/tari/releases/tag/v1.0.0-pre.14) (Esmeralda testnet).
+  and on the Tari side
+  ```
+  ./minotari_node --grpc-enabled --mining-enabled
+  ```
+  Merge mining is available for testing in Tari's [latest release](https://github.com/tari-project/tari/releases) (Esmeralda testnet).
 
 ### TLS
 
