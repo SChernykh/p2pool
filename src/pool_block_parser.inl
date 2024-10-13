@@ -70,7 +70,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_timestamp);
 		READ_BUF(m_prevId.h, HASH_SIZE);
 
-		if (merge_mining_enabled() && (m_minorVersion > 127)) return __LINE__;
+		if (m_minorVersion > 127) return __LINE__;
 
 		const int nonce_offset = static_cast<int>(data - data_begin);
 		READ_BUF(&m_nonce, NONCE_SIZE);
@@ -150,9 +150,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			outputs_blob_size = static_cast<int>(tmp);
 
 			// Required by sidechain.get_outputs_blob() to speed up repeated broadcasts from different peers
-			if (merge_mining_enabled()) {
-				READ_BUF(m_sidechainId.h, HASH_SIZE);
-			}
+			READ_BUF(m_sidechainId.h, HASH_SIZE);
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
@@ -193,36 +191,22 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		int mm_root_hash_offset;
 		uint32_t mm_n_aux_chains, mm_nonce;
 
-		if (!merge_mining_enabled()) {
-			EXPECT_BYTE(HASH_SIZE);
+		uint64_t mm_field_size;
+		READ_VARINT(mm_field_size);
 
-			mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
-			READ_BUF(m_sidechainId.h, HASH_SIZE);
+		const uint8_t* const mm_field_begin = data;
 
-			mm_n_aux_chains = 1;
-			mm_nonce = 0;
+		READ_VARINT(m_merkleTreeData);
 
-			m_merkleRoot = static_cast<root_hash&>(m_sidechainId);
-			m_merkleTreeDataSize = 0;
-		}
-		else {
-			uint64_t mm_field_size;
-			READ_VARINT(mm_field_size);
+		m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
 
-			const uint8_t* const mm_field_begin = data;
+		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
 
-			READ_VARINT(m_merkleTreeData);
+		mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+		READ_BUF(m_merkleRoot.h, HASH_SIZE);
 
-			m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
-
-			decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
-
-			mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
-			READ_BUF(m_merkleRoot.h, HASH_SIZE);
-
-			if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
-				return __LINE__;
-			}
+		if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
+			return __LINE__;
 		}
 
 		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
@@ -363,52 +347,50 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		m_merkleProof.clear();
 		m_mergeMiningExtra.clear();
 
-		if (merge_mining_enabled()) {
-			uint8_t merkle_proof_size;
-			READ_BYTE(merkle_proof_size);
+		uint8_t merkle_proof_size;
+		READ_BYTE(merkle_proof_size);
 
-			if (merkle_proof_size > LOG2_MERGE_MINING_MAX_CHAINS) {
-				return __LINE__;
-			}
+		if (merkle_proof_size > LOG2_MERGE_MINING_MAX_CHAINS) {
+			return __LINE__;
+		}
 
-			m_merkleProof.reserve(merkle_proof_size);
+		m_merkleProof.reserve(merkle_proof_size);
 
-			for (uint8_t i = 0; i < merkle_proof_size; ++i) {
-				hash h;
-				READ_BUF(h.h, HASH_SIZE);
-				m_merkleProof.emplace_back(h);
-			}
+		for (uint8_t i = 0; i < merkle_proof_size; ++i) {
+			hash h;
+			READ_BUF(h.h, HASH_SIZE);
+			m_merkleProof.emplace_back(h);
+		}
 
-			uint64_t mm_extra_data_count;
-			READ_VARINT(mm_extra_data_count);
+		uint64_t mm_extra_data_count;
+		READ_VARINT(mm_extra_data_count);
 
-			if (mm_extra_data_count) {
+		if (mm_extra_data_count) {
+			// Sanity check
+			if (mm_extra_data_count > MERGE_MINING_MAX_CHAINS) return __LINE__;
+			if (static_cast<uint64_t>(data_end - data) < mm_extra_data_count * (HASH_SIZE + 1)) return __LINE__;
+
+			m_mergeMiningExtra.reserve(mm_extra_data_count);
+
+			for (uint64_t i = 0; i < mm_extra_data_count; ++i) {
+				hash chain_id;
+				READ_BUF(chain_id.h, HASH_SIZE);
+
+				// IDs must be ordered to avoid duplicates
+				if (i && !(m_mergeMiningExtra[i - 1].first < chain_id)) return __LINE__;
+
+				uint64_t n;
+				READ_VARINT(n);
+
 				// Sanity check
-				if (mm_extra_data_count > MERGE_MINING_MAX_CHAINS) return __LINE__;
-				if (static_cast<uint64_t>(data_end - data) < mm_extra_data_count * (HASH_SIZE + 1)) return __LINE__;
+				if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
 
-				m_mergeMiningExtra.reserve(mm_extra_data_count);
+				std::vector<uint8_t> t;
+				t.resize(n);
 
-				for (uint64_t i = 0; i < mm_extra_data_count; ++i) {
-					hash chain_id;
-					READ_BUF(chain_id.h, HASH_SIZE);
+				READ_BUF(t.data(), n);
 
-					// IDs must be ordered to avoid duplicates
-					if (i && !(m_mergeMiningExtra[i - 1].first < chain_id)) return __LINE__;
-
-					uint64_t n;
-					READ_VARINT(n);
-
-					// Sanity check
-					if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
-
-					std::vector<uint8_t> t;
-					t.resize(n);
-
-					READ_BUF(t.data(), n);
-
-					m_mergeMiningExtra.emplace_back(chain_id, std::move(t));
-				}
+				m_mergeMiningExtra.emplace_back(chain_id, std::move(t));
 			}
 		}
 

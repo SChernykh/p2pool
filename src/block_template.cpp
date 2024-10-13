@@ -324,15 +324,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
 	}
 
-	if (m_poolBlockTemplate->merge_mining_enabled()) {
-		m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
-		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-		writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
-	}
-	else {
-		m_poolBlockTemplate->m_merkleTreeData = 0;
-		m_poolBlockTemplate->m_merkleTreeDataSize = 0;
-	}
+	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
+	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
+	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
 
 	select_mempool_transactions(mempool);
 
@@ -615,14 +609,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_sidechainId = {};
 	m_poolBlockTemplate->m_merkleRoot = {};
 
-	if (m_poolBlockTemplate->merge_mining_enabled()) {
-		m_poolBlockTemplate->m_auxChains = data.aux_chains;
-		m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
-	}
-	else {
-		m_poolBlockTemplate->m_auxChains.clear();
-		m_poolBlockTemplate->m_auxNonce = 0;
-	}
+	m_poolBlockTemplate->m_auxChains = data.aux_chains;
+	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
 
 	init_merge_mining_merkle_proof();
 
@@ -663,10 +651,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	}
 
 	if (pool_block_debug()) {
-		const size_t merkle_root_offset = 
-			m_poolBlockTemplate->merge_mining_enabled()
-				? (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
-				: (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2);
+		const size_t merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 		memcpy(m_blockTemplateBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
 		memcpy(m_fullDataBlob.data() + merkle_root_offset, m_poolBlockTemplate->m_merkleRoot.h, HASH_SIZE);
@@ -965,15 +950,9 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 
 	m_minerTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
 
-	if (!m_poolBlockTemplate->merge_mining_enabled()) {
-		m_minerTxExtra.push_back(HASH_SIZE);
-		m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
-	}
-	else {
-		m_minerTxExtra.push_back(static_cast<uint8_t>(m_poolBlockTemplate->m_merkleTreeDataSize + HASH_SIZE));
-		writeVarint(m_poolBlockTemplate->m_merkleTreeData, m_minerTxExtra);
-		m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
-	}
+	m_minerTxExtra.push_back(static_cast<uint8_t>(m_poolBlockTemplate->m_merkleTreeDataSize + HASH_SIZE));
+	writeVarint(m_poolBlockTemplate->m_merkleTreeData, m_minerTxExtra);
+	m_minerTxExtra.insert(m_minerTxExtra.end(), HASH_SIZE, 0);
 	// TX_EXTRA end
 
 	writeVarint(m_minerTxExtra.size(), m_minerTx);
@@ -1064,9 +1043,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 	}
 
-	const size_t merkle_root_offset = m_poolBlockTemplate->merge_mining_enabled()
-		? (extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
-		: (extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2);
+	const size_t merkle_root_offset = extra_nonce_offset + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 	// 1. Prefix (everything except vin_rct_type byte in the end)
 	// Apply extra_nonce in-place because we can't write to the block template here
@@ -1416,9 +1393,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 	merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 
-	merkle_root_offset = m_poolBlockTemplate->merge_mining_enabled()
-		? (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize)
-		: (m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2);
+	merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
 
 	*pThis = this;
 

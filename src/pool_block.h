@@ -63,12 +63,6 @@ static constexpr uint64_t MAX_SIDECHAIN_HEIGHT = 31556952000ULL;
 static constexpr uint64_t MERGE_MINING_MAX_CHAINS = 256;
 static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
 
-// Oct 12 2024 20:00:00 GMT+0000
-static constexpr uint64_t MERGE_MINING_FORK_TIME = 1728763200;
-
-// Aug 11 2024 20:00:00 GMT+0000
-static constexpr uint64_t MERGE_MINING_TESTNET_FORK_TIME = 1723406400;
-
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}
@@ -217,8 +211,6 @@ struct PoolBlock
 		mm_n_aux_chains = 1U + ((k >> 3U) & ((1U << n) - 1U));
 		mm_nonce = static_cast<uint32_t>(m_merkleTreeData >> (3U + n));
 	}
-
-	bool merge_mining_enabled() const;
 };
 
 } // namespace p2pool

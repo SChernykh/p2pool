@@ -204,17 +204,10 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 
 	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
 
-	if (!merge_mining_enabled()) {
-		*(p++) = HASH_SIZE;
-		memcpy(p, m_sidechainId.h, HASH_SIZE);
-		p += HASH_SIZE;
-	}
-	else {
-		*(p++) = static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE);
-		writeVarint(m_merkleTreeData, [&p](const uint8_t b) { *(p++) = b; });
-		memcpy(p, m_merkleRoot.h, HASH_SIZE);
-		p += HASH_SIZE;
-	}
+	*(p++) = static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE);
+	writeVarint(m_merkleTreeData, [&p](const uint8_t b) { *(p++) = b; });
+	memcpy(p, m_merkleRoot.h, HASH_SIZE);
+	p += HASH_SIZE;
 
 	writeVarint(static_cast<size_t>(p - tx_extra), data);
 	data.insert(data.end(), tx_extra, p);
@@ -267,23 +260,21 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	writeVarint(m_cumulativeDifficulty.lo, data);
 	writeVarint(m_cumulativeDifficulty.hi, data);
 
-	if (merge_mining_enabled()) {
-		const uint8_t n = static_cast<uint8_t>(m_merkleProof.size());
-		data.push_back(n);
+	const uint8_t n = static_cast<uint8_t>(m_merkleProof.size());
+	data.push_back(n);
 
-		for (uint8_t i = 0; i < n; ++i) {
-			const hash& h = m_merkleProof[i];
-			data.insert(data.end(), h.h, h.h + HASH_SIZE);
-		}
+	for (uint8_t i = 0; i < n; ++i) {
+		const hash& h = m_merkleProof[i];
+		data.insert(data.end(), h.h, h.h + HASH_SIZE);
+	}
 
-		writeVarint(m_mergeMiningExtra.size(), data);
+	writeVarint(m_mergeMiningExtra.size(), data);
 
-		for (const auto& mm_extra_data : m_mergeMiningExtra) {
-			data.insert(data.end(), mm_extra_data.first.h, mm_extra_data.first.h + HASH_SIZE);
+	for (const auto& mm_extra_data : m_mergeMiningExtra) {
+		data.insert(data.end(), mm_extra_data.first.h, mm_extra_data.first.h + HASH_SIZE);
 
-			writeVarint(mm_extra_data.second.size(), data);
-			data.insert(data.end(), mm_extra_data.second.begin(), mm_extra_data.second.end());
-		}
+		writeVarint(mm_extra_data.second.size(), data);
+		data.insert(data.end(), mm_extra_data.second.begin(), mm_extra_data.second.end());
 	}
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(m_sidechainExtraBuf);
@@ -420,22 +411,6 @@ hash PoolBlock::calculate_tx_key_seed() const
 	}, static_cast<int>(sizeof(domain) + mainchain_data.size() + sidechain_data.size()), result.h, HASH_SIZE);
 
 	return result;
-}
-
-bool PoolBlock::merge_mining_enabled() const
-{
-#ifdef P2POOL_UNIT_TESTS
-	return true;
-#else
-	switch (SideChain::network_type()) {
-	case NetworkType::Mainnet:
-		return m_timestamp >= MERGE_MINING_FORK_TIME;
-	case NetworkType::Testnet:
-		return m_timestamp >= MERGE_MINING_TESTNET_FORK_TIME;
-	default:
-		return false;
-	}
-#endif
 }
 
 } // namespace p2pool
