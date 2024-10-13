@@ -1,8 +1,0 @@
-{
-	"name": "mm_test3",
-	"password": "",
-	"block_time": 10,
-	"min_diff": 100000,
-	"pplns_window": 216,
-	"uncle_penalty": 20
-}

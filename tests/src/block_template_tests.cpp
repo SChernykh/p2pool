@@ -60,7 +60,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, &wallet);
 
 	const PoolBlock* b = tpl.pool_block_template();
-	ASSERT_EQ(b->m_sidechainId, H("0355a4eeb586ab4d30f3ba89f0ebf7ac1c34a55aebf1bee50af04ff893330280"));
+	ASSERT_EQ(b->m_sidechainId, H("2c90c1926a75c81afd49bf4a4b63e9de7b4c153866411c47e7af864b547c23ec"));
 
 	std::vector<uint8_t> blobs;
 	uint64_t height;
@@ -79,7 +79,7 @@ TEST(block_template, update)
 
 	hash blobs_hash;
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("70ee1661794c9a55f006432b57b0fc37922e0ccf8f1e4294b43890f8a6f44c62"));
+	ASSERT_EQ(blobs_hash, H("c043b754d043b4f6fe3f70273a937c77ff75a5afba9a6ca92776e79da28a1165"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
 	for (uint64_t i = 0; i < 512; ++i) {
@@ -92,7 +92,7 @@ TEST(block_template, update)
 
 	tpl.update(data, mempool, &wallet);
 
-	ASSERT_EQ(b->m_sidechainId, H("272a7eea0b804cf24427528977d221850d0ee06c26e935219a75f180cfbfc7f3"));
+	ASSERT_EQ(b->m_sidechainId, H("c9df4853003ab436416b9fc9a5a072d16b4dede849e697a8be2ebb9c88c8ec72"));
 	ASSERT_EQ(b->m_transactions.size(), 203);
 
 	for (size_t i = 1; i < b->m_transactions.size(); ++i) {
@@ -109,7 +109,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 2U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("c74d295a9cb7e808030284e2169a6f05b685a11c6c577a774d5eb8fad175d5cd"));
+	ASSERT_EQ(blobs_hash, H("f00e196216d160a4fcbf468f748205039d276d62edfa6c6fd4c81dbd1f62d9b7"));
 
 	destroy_crypto_cache();
 }

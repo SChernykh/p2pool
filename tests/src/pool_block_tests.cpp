@@ -57,26 +57,26 @@ TEST(pool_block, deserialize)
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = b.serialize_mainchain_data(&header_size, &miner_tx_size, &outputs_offset, &outputs_blob_size);
 
-	ASSERT_EQ(mainchain_data.size(), 1757U);
+	ASSERT_EQ(mainchain_data.size(), 1829U);
 	ASSERT_EQ(header_size, 43U);
-	ASSERT_EQ(miner_tx_size, 1457U);
+	ASSERT_EQ(miner_tx_size, 1145U);
 	ASSERT_EQ(outputs_offset, 54);
-	ASSERT_EQ(outputs_blob_size, 1371);
+	ASSERT_EQ(outputs_blob_size, 1058);
 
 	ASSERT_EQ(b.m_majorVersion, 16U);
 	ASSERT_EQ(b.m_minorVersion, 16U);
-	ASSERT_EQ(b.m_timestamp, 1679221824U);
-	ASSERT_EQ(b.m_nonce, 1247U);
-	ASSERT_EQ(b.m_txinGenHeight, 2845298U);
-	ASSERT_EQ(b.m_outputs.size(), 35U);
+	ASSERT_EQ(b.m_timestamp, 1728813765U);
+	ASSERT_EQ(b.m_nonce, 352454720U);
+	ASSERT_EQ(b.m_txinGenHeight, 3258099U);
+	ASSERT_EQ(b.m_outputs.size(), 27U);
 	ASSERT_EQ(b.m_extraNonceSize, 4U);
-	ASSERT_EQ(b.m_extraNonce, 1482827308U);
-	ASSERT_EQ(b.m_transactions.size(), 9U);
+	ASSERT_EQ(b.m_extraNonce, 2983923783U);
+	ASSERT_EQ(b.m_transactions.size(), 21U);
 	ASSERT_EQ(b.m_uncles.size(), 0U);
-	ASSERT_EQ(b.m_sidechainHeight, 4674483U);
-	ASSERT_EQ(b.m_difficulty.lo, 1854596983U);
+	ASSERT_EQ(b.m_sidechainHeight, 9443384U);
+	ASSERT_EQ(b.m_difficulty.lo, 1828732004U);
 	ASSERT_EQ(b.m_difficulty.hi, 0U);
-	ASSERT_EQ(b.m_cumulativeDifficulty.lo, 7172845253120126ull);
+	ASSERT_EQ(b.m_cumulativeDifficulty.lo, 15051095864465561ull);
 	ASSERT_EQ(b.m_cumulativeDifficulty.hi, 0U);
 	ASSERT_EQ(b.m_depth, 0U);
 	ASSERT_EQ(b.m_verified, false);
@@ -87,7 +87,7 @@ TEST(pool_block, deserialize)
 	hash seed;
 	{
 		std::stringstream s;
-		s << "6fc9c4a55eb513eb31955c084d9342e0082987f9e42da042449b7c9001176d3a";
+		s << "bf513dbe52c22b09e65edae222ec902d6adb75585a0141b81a165f0fb0c9c0bc";
 		s >> seed;
 	}
 
@@ -99,7 +99,7 @@ TEST(pool_block, deserialize)
 
 	std::stringstream s;
 	s << pow_hash;
-	ASSERT_EQ(s.str(), "aa7a3c4a2d67cb6a728e244288219bf038024f3b511b0da197a19ec601000000");
+	ASSERT_EQ(s.str(), "0906c001cc0900098fe1b62593f8ba52bd1ae2a0806096aa361a9f1702000000");
 
 	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
 
@@ -118,16 +118,16 @@ TEST(pool_block, verify)
 		uint64_t m_sidechainHeight;
 		bool m_shuffle;
 	} tests[2] = {
-		{ "default", "sidechain_dump.dat", 2870010, 4957203, true },
-		{ "mini", "sidechain_dump_mini.dat", 2870010, 4414446, false },
+		{ "default", "sidechain_dump.dat", 3258121, 9443762, true },
+		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, false },
 	};
 
 	for (const STest& t : tests)
 	{
 		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
 
-		// Difficulty of block 2869248
-		sidechain.m_testMainChainDiff = difficulty_type(345786476185ULL, 0ULL);
+		// Difficulty of block 3256320
+		sidechain.m_testMainChainDiff = difficulty_type(374140388237ULL, 0ULL);
 
 		std::ifstream f(t.m_fileName, std::ios::binary | std::ios::ate);
 		ASSERT_EQ(f.good() && f.is_open(), true);

@@ -425,7 +425,7 @@ hash PoolBlock::calculate_tx_key_seed() const
 bool PoolBlock::merge_mining_enabled() const
 {
 #ifdef P2POOL_UNIT_TESTS
-	return false;
+	return true;
 #else
 	switch (SideChain::network_type()) {
 	case NetworkType::Mainnet:
