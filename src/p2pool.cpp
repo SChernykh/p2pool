@@ -1695,6 +1695,9 @@ void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* bloc
 			f.flush();
 			f.close();
 		}
+		else {
+			LOGERR(1, "Failed to update " << FOUND_BLOCKS_FILE << ", error " << errno);
+		}
 	}
 
 	std::vector<FoundBlock> found_blocks;

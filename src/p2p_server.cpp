@@ -438,7 +438,7 @@ void P2PServer::save_peer_list()
 	std::ofstream f(saved_peer_list_file_name, std::ios::binary);
 
 	if (!f.is_open()) {
-		LOGERR(1, "failed to save peer list");
+		LOGERR(1, "failed to save peer list " << saved_peer_list_file_name << ", error " << errno);
 		return;
 	}
 
