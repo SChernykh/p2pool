@@ -83,6 +83,11 @@ MinerCallbackHandler::~MinerCallbackHandler() {}
 
 void panic_stop(const char* message)
 {
+#ifdef DEV_TRACK_MEMORY
+	// Give it 1 minute to shut down, otherwise save a minidump
+	minidump_and_crash(60 * 1000);
+#endif
+
 	fprintf(stderr, "P2Pool can't continue execution: panic at %s\n", message);
 
 	p2pool::log::stop();
