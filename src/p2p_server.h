@@ -186,6 +186,8 @@ public:
 
 	void check_for_updates(bool forced = false) const;
 
+	bool disconnected() const { return m_seenGoodPeers && (m_numConnections == 0); };
+
 private:
 	[[nodiscard]] const char* get_log_category() const override;
 
@@ -244,6 +246,7 @@ private:
 		uint64_t m_lastSeen;
 	};
 
+	std::atomic<bool> m_seenGoodPeers;
 	std::vector<Peer> m_peerList;
 	std::vector<Peer> m_peerListMonero;
 	std::atomic<uint64_t> m_peerListLastSaved;

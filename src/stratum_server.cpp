@@ -22,6 +22,7 @@
 #include "side_chain.h"
 #include "params.h"
 #include "p2pool_api.h"
+#include "p2p_server.h"
 
 LOG_CATEGORY(StratumServer)
 
@@ -250,6 +251,24 @@ static bool get_custom_diff(const char* s, difficulty_type& diff)
 
 bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login)
 {
+	const P2PServer* p2p_server = m_pool->p2p_server();
+
+	// If there are no connections to other P2Pool peers, don't let Stratum clients connect
+	if (p2p_server && p2p_server->disconnected()) {
+		const bool result = send(client, [id](uint8_t* buf, size_t buf_size) {
+			log::Stream s(buf, buf_size);
+			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Disconnected from P2Pool network\"}}\n";
+			return s.m_pos;
+		});
+
+		if (!result) {
+			return false;
+		}
+
+		client->close();
+		return true;
+	}
+
 	if (client->m_rpcId) {
 		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " tried to login, but it's already logged in");
 		return false;

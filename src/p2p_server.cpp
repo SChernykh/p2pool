@@ -27,6 +27,7 @@
 #include "json_parsers.h"
 #include "block_template.h"
 #include "p2pool_api.h"
+#include "stratum_server.h"
 #include <rapidjson/document.h>
 #include <fstream>
 #include <numeric>
@@ -56,6 +57,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_timer{}
 	, m_timerCounter(0)
 	, m_timerInterval(2)
+	, m_seenGoodPeers(false)
 	, m_peerListLastSaved(0)
 	, m_lookForMissingBlocks(true)
 	, m_fastestPeer(nullptr)
@@ -329,7 +331,10 @@ void P2PServer::update_peer_connections()
 	uint32_t N = m_maxOutgoingPeers;
 
 	// Special case: when we can't find p2pool peers, scan through monerod peers (try 25 peers at a time)
-	if (!has_good_peers && !m_peerListMonero.empty()) {
+	if (has_good_peers) {
+		m_seenGoodPeers = true;
+	}
+	else if (!m_peerListMonero.empty()) {
 		LOGINFO(3, "Scanning monerod peers, " << m_peerListMonero.size() << " left");
 		for (uint32_t i = 0; (i < 25) && !m_peerListMonero.empty(); ++i) {
 			peer_list.push_back(m_peerListMonero.back());
@@ -358,6 +363,13 @@ void P2PServer::update_peer_connections()
 		load_peer_list();
 		if (m_peerListMonero.empty()) {
 			load_monerod_peer_list();
+		}
+	}
+
+	if (disconnected()) {
+		StratumServer* stratum_server = m_pool->stratum_server();
+		if (stratum_server) {
+			stratum_server->drop_connections_async();
 		}
 	}
 }
