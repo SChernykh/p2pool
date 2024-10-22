@@ -7,12 +7,11 @@ if [ -z "$DOCKER_VER" ]; then
     echo "Docker not found; install it: https://docs.docker.com/engine/install/"
     exit 1
 fi
-if [ "$(echo "$DOCKER_VER"| cut -d'.' -f 1)" -ge 19 ] && \
-   [ "$(echo "$DOCKER_VER"| cut -d'.' -f 2)" -ge 0 ]  && \
-   [ "$(echo "$DOCKER_VER"| cut -d'.' -f 3)" -ge 3 ]; then
+MIN_DOCKER_VER=19.0.3
+if { echo "$MIN_DOCKER_VER"; echo "$DOCKER_VER"; } | sort --version-sort --check=quiet; then
     echo "Docker Found; OK"
 else
-    echo "Docker version less than 19.0.3; upgrade it: https://docs.docker.com/engine/install/"
+    echo "Docker version less than $MIN_DOCKER_VER; upgrade it: https://docs.docker.com/engine/install/"
     exit 1
 fi
 docker compose version 2>&1 > /dev/null
