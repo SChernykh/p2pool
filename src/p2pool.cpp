@@ -996,8 +996,8 @@ void p2pool::download_block_headers(uint64_t current_height)
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
-					m_stratumServer = new StratumServer(this);
 					m_p2pServer = new P2PServer(this);
+					m_stratumServer = new StratumServer(this);
 #ifdef WITH_RANDOMX
 					if (m_params->m_minerThreads) {
 						start_mining(m_params->m_minerThreads);
