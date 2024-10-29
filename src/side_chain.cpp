@@ -94,6 +94,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	uv_mutex_init_checked(&m_seenWalletsLock);
 	uv_mutex_init_checked(&m_incomingBlocksLock);
 	uv_rwlock_init_checked(&m_curDifficultyLock);
+	uv_rwlock_init_checked(&m_watchBlockLock);
 
 	m_difficultyData.reserve(m_chainWindowSize);
 
@@ -213,6 +214,7 @@ SideChain::~SideChain()
 	uv_mutex_destroy(&m_seenWalletsLock);
 	uv_mutex_destroy(&m_incomingBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
+	uv_rwlock_destroy(&m_watchBlockLock);
 
 	for (const auto& it : m_blocksById) {
 		delete it.second;
@@ -629,7 +631,8 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 	missing_blocks.clear();
 	{
-		WriteLock lock(m_sidechainLock);
+		ReadLock lock(m_sidechainLock);
+
 		if (!block.m_parent.empty() && (m_blocksById.find(block.m_parent) == m_blocksById.end())) {
 			missing_blocks.push_back(block.m_parent);
 		}
@@ -639,6 +642,10 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 				missing_blocks.push_back(h);
 			}
 		}
+	}
+
+	{
+		WriteLock lock(m_watchBlockLock);
 
 		if (block.m_merkleRoot == m_watchBlockMerkleRoot) {
 			const Wallet& w = m_pool->params().m_wallet;
@@ -752,7 +759,7 @@ PoolBlock* SideChain::find_block_by_merkle_root(const root_hash& merkle_root) co
 
 void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root)
 {
-	WriteLock lock(m_sidechainLock);
+	WriteLock lock(m_watchBlockLock);
 	m_watchBlock = data;
 	m_watchBlockMerkleRoot = possible_merkle_root;
 }

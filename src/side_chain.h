@@ -143,6 +143,7 @@ private:
 	mutable uv_rwlock_t m_curDifficultyLock;
 	difficulty_type m_curDifficulty;
 
+	uv_rwlock_t m_watchBlockLock;
 	ChainMain m_watchBlock;
 	hash m_watchBlockMerkleRoot;
 
