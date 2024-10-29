@@ -26,6 +26,7 @@ option(DEV_WITH_UBSAN "[Developer only] Compile with undefined behavior sanitize
 option(DEV_WITH_ASAN "[Developer only] Compile with address sanitizer" OFF)
 option(DEV_CLANG_TIDY "[Developer only] Compile for clang-tidy" OFF)
 option(DEV_TRACK_MEMORY "[Developer only] Track memory allocations" OFF)
+option(DEV_DEBUG "[Developer only] Compile a debug build" OFF)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 
@@ -81,6 +82,10 @@ endif()
 
 if (DEV_TRACK_MEMORY)
 	add_definitions(-DDEV_TRACK_MEMORY)
+endif()
+
+if (DEV_DEBUG)
+	add_definitions(-DDEV_DEBUG)
 endif()
 
 include(cmake/flags.cmake)

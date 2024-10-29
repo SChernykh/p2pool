@@ -92,7 +92,7 @@
   #define __has_feature(x) 0
 #endif
 
-#if defined(_DEBUG) || defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer) || defined(__SANITIZE_THREAD__) || __has_feature(thread_sanitizer)
+#if defined(_DEBUG) || defined(DEV_DEBUG) || defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer) || defined(__SANITIZE_THREAD__) || __has_feature(thread_sanitizer)
 #define P2POOL_DEBUGGING 1
 #endif
 

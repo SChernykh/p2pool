@@ -271,8 +271,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: macos-13, flags: "-Og -ftrapv"}
-          - {os: macos-14, flags: "-Og -ftrapv -target arm64-apple-macos-11"}
+          - {os: macos-13, flags: ""}
+          - {os: macos-14, flags: "-target arm64-apple-macos-11"}
 
     steps:
     - name: Checkout repository
@@ -312,7 +312,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DWITH_LTO=OFF -DSTATIC_LIBS=ON -DDEV_TEST_SYNC=ON
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DWITH_LTO=OFF -DSTATIC_LIBS=ON -DDEV_TEST_SYNC=ON -DDEV_DEBUG=ON
         make -j4 p2pool
 
     - name: Run p2pool

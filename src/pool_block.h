@@ -20,7 +20,7 @@
 #include "uv_util.h"
 #include "wallet.h"
 
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(DEV_DEBUG)
 #define POOL_BLOCK_DEBUG 1
 #else
 #define POOL_BLOCK_DEBUG 0
