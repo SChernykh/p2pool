@@ -1014,35 +1014,6 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	server->check_event_loop_thread(__func__);
 
-	ON_SCOPE_LEAVE([share, server]()
-		{
-			if (!share->m_allocated) {
-				return;
-			}
-
-			auto it = std::find(server->m_pendingShareChecks.begin(), server->m_pendingShareChecks.end(), share);
-			if (it != server->m_pendingShareChecks.end()) {
-				server->m_pendingShareChecks.erase(it);
-			}
-
-			delete share;
-
-			if (!server->m_pendingShareChecks.empty()) {
-				SubmittedShare* share2 = server->m_pendingShareChecks.front();
-
-				const int err = uv_queue_work(&server->m_loop, &share2->m_req, on_share_found, on_after_share_found);
-				if (err) {
-					LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
-
-					// If uv_queue_work failed, process this share here anyway
-					server->on_share_found(&share2->m_req);
-					server->on_after_share_found(&share2->m_req, 0);
-				}
-			}
-
-			LOGINFO(5, "on_after_share_found: pending share checks count = " << server->m_pendingShareChecks.size());
-		});
-
 	if (share->m_highEnoughDifficulty) {
 		const char* s = share->m_clientCustomUser;
 		if (share->m_result == SubmittedShare::Result::OK) {
@@ -1109,6 +1080,30 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	}
 	else if (bad_share) {
 		server->ban(share->m_clientIPv6, share->m_clientAddr, DEFAULT_BAN_TIME);
+	}
+
+	if (share->m_allocated) {
+		auto it = std::find(server->m_pendingShareChecks.begin(), server->m_pendingShareChecks.end(), share);
+		if (it != server->m_pendingShareChecks.end()) {
+			server->m_pendingShareChecks.erase(it);
+		}
+
+		delete share;
+
+		if (!server->m_pendingShareChecks.empty()) {
+			SubmittedShare* share2 = server->m_pendingShareChecks.front();
+
+			const int err = uv_queue_work(&server->m_loop, &share2->m_req, on_share_found, on_after_share_found);
+			if (err) {
+				LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
+
+				// If uv_queue_work failed, process this share here anyway
+				server->on_share_found(&share2->m_req);
+				server->on_after_share_found(&share2->m_req, 0);
+			}
+		}
+
+		LOGINFO(5, "on_after_share_found: pending share checks count = " << server->m_pendingShareChecks.size());
 	}
 }
 
