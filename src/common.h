@@ -52,6 +52,7 @@
 
 #include <array>
 #include <vector>
+#include <deque>
 #include <string>
 #include <algorithm>
 #include <atomic>
