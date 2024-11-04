@@ -421,19 +421,36 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	if (m_serversStarted.load()) {
 		std::vector<uint64_t> missing_heights;
+
+		auto check_height = [this, &missing_heights](uint64_t h) {
+			auto it = m_mainchainByHeight.find(h);
+			if ((it == m_mainchainByHeight.end()) || it->second.difficulty.empty()) {
+				missing_heights.push_back(h);
+			}
+		};
+
 		{
-			WriteLock lock(m_mainchainLock);
+			ReadLock lock(m_mainchainLock);
 
 			for (uint64_t h = data.height; h && (h + BLOCK_HEADERS_REQUIRED > data.height); --h) {
-				auto it = m_mainchainByHeight.find(h);
-				if ((it == m_mainchainByHeight.end()) || it->second.difficulty.empty()) {
-					LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
-					missing_heights.push_back(h);
-				}
+				check_height(h);
 			}
+
+			const uint64_t seed_height = get_seed_height(data.height);
+			const uint64_t prev_seed_height = (seed_height > SEEDHASH_EPOCH_BLOCKS) ? (seed_height - SEEDHASH_EPOCH_BLOCKS) : 0;
+
+			check_height(seed_height);
+			check_height(prev_seed_height);
+		}
+
+		if (missing_heights.size() > 1) {
+			std::sort(missing_heights.begin(), missing_heights.end(), std::greater<uint64_t>());
+			missing_heights.erase(std::unique(missing_heights.begin(), missing_heights.end()), missing_heights.end());
 		}
 
 		for (uint64_t h : missing_heights) {
+			LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
+
 			char buf[log::Stream::BUF_SIZE + 1] = {};
 			log::Stream s(buf);
 			s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
