@@ -294,6 +294,7 @@ allowedAPIs = {
 	"OpenThreadToken",
 	"GetOverlappedResult",
 	"CryptGenRandom",
+	"HeapQueryInformation",
 }
 
 f = open(sys.argv[1], 'r')
