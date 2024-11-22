@@ -19,6 +19,7 @@
 #include "block_cache.h"
 #include "pool_block.h"
 #include "p2p_server.h"
+#include "side_chain.h"
 
 LOG_CATEGORY(BlockCache)
 

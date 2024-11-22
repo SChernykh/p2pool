@@ -68,7 +68,7 @@ jobs:
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         sudo sysctl vm.mmap_rnd_bits=28
-        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1" ./p2pool --host xmr.support --rpc-port 18081 --zmq-port 18083 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1 history_size=4" ./p2pool --host xmr.support --rpc-port 18081 --zmq-port 18083 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
     - name: Check p2pool.log
       run: |

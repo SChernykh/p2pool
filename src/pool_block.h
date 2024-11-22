@@ -32,6 +32,7 @@ static FORCEINLINE constexpr int pool_block_debug() { return POOL_BLOCK_DEBUG; }
 
 class RandomX_Hasher_Base;
 class SideChain;
+struct MinerShare;
 
 /*
 * --------------------------------------------------
@@ -160,6 +161,9 @@ struct PoolBlock
 	mutable bool m_wantBroadcast;
 
 	bool m_precalculated;
+
+	static uv_rwlock_t s_precalculatedSharesLock;
+	std::vector<MinerShare> m_precalculatedShares;
 
 	uint64_t m_localTimestamp;
 	uint64_t m_receivedTimestamp;

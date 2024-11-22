@@ -19,6 +19,7 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "pool_block.h"
+#include "side_chain.h"
 #include "keccak.h"
 #include "gtest/gtest.h"
 

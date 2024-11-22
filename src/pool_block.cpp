@@ -29,6 +29,14 @@ LOG_CATEGORY(PoolBlock)
 
 namespace p2pool {
 
+uv_rwlock_t PoolBlock::s_precalculatedSharesLock;
+
+static struct PrecalculatedLockInit
+{
+	FORCEINLINE PrecalculatedLockInit() { uv_rwlock_init(&PoolBlock::s_precalculatedSharesLock); }
+	FORCEINLINE ~PrecalculatedLockInit() { uv_rwlock_destroy(&PoolBlock::s_precalculatedSharesLock); }
+} precalculated_lock_init;
+
 PoolBlock::PoolBlock()
 	: m_majorVersion(0)
 	, m_minorVersion(0)
@@ -115,6 +123,10 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_broadcasted = b.m_broadcasted;
 	m_wantBroadcast = b.m_wantBroadcast;
 	m_precalculated = b.m_precalculated;
+	{
+		WriteLock lock(s_precalculatedSharesLock);
+		m_precalculatedShares = b.m_precalculatedShares;
+	}
 
 	m_localTimestamp = seconds_since_epoch();
 	m_receivedTimestamp = b.m_receivedTimestamp;
@@ -302,6 +314,11 @@ void PoolBlock::reset_offchain_data()
 	m_wantBroadcast = false;
 
 	m_precalculated = false;
+	{
+		WriteLock lock(s_precalculatedSharesLock);
+		m_precalculatedShares.clear();
+		m_precalculatedShares.shrink_to_fit();
+	}
 
 	m_localTimestamp = seconds_since_epoch();
 	m_receivedTimestamp = 0;

@@ -1677,7 +1677,13 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	std::vector<MinerShare> shares;
-	if (!get_shares(block, shares)) {
+
+	if (block->m_precalculated) {
+		WriteLock lock(PoolBlock::s_precalculatedSharesLock);
+		shares = std::move(block->m_precalculatedShares);
+	}
+
+	if (shares.empty() && !get_shares(block, shares)) {
 		block->m_invalid = true;
 		return;
 	}
@@ -2345,10 +2351,13 @@ void SideChain::launch_precalc(const PoolBlock* block)
 			std::vector<MinerShare> shares;
 			if (get_shares(b, shares, nullptr, true)) {
 				b->m_precalculated = true;
-				PrecalcJob* job = new PrecalcJob{ b, std::move(shares) };
+				{
+					WriteLock lock(PoolBlock::s_precalculatedSharesLock);
+					b->m_precalculatedShares = std::move(shares);
+				}
 				{
 					MutexLock lock2(m_precalcJobsMutex);
-					m_precalcJobs.push_back(job);
+					m_precalcJobs.push_back(b);
 					uv_cond_signal(&m_precalcJobsCond);
 				}
 			}
@@ -2358,9 +2367,12 @@ void SideChain::launch_precalc(const PoolBlock* block)
 
 void SideChain::precalc_worker()
 {
+	std::vector<std::pair<size_t, const Wallet*>> wallets;
+	wallets.reserve(m_chainWindowSize);
+
 	do {
-		PrecalcJob* job;
-		size_t num_inputs;
+		const PoolBlock* job;
+		
 		{
 			MutexLock lock(m_precalcJobsMutex);
 
@@ -2381,32 +2393,28 @@ void SideChain::precalc_worker()
 
 			// Filter out duplicate inputs for get_eph_public_key()
 			uint8_t t[HASH_SIZE * 2 + sizeof(size_t)];
-			memcpy(t, job->b->m_txkeySec.h, HASH_SIZE);
+			memcpy(t, job->m_txkeySec.h, HASH_SIZE);
 
-			const size_t n = job->shares.size();
-			num_inputs = n;
+			wallets.clear();
+
+			ReadLock lock2(PoolBlock::s_precalculatedSharesLock);
+
+			const size_t n = job->m_precalculatedShares.size();
 
 			for (size_t i = 0; i < n; ++i) {
-				memcpy(t + HASH_SIZE, job->shares[i].m_wallet->view_public_key().h, HASH_SIZE);
+				memcpy(t + HASH_SIZE, job->m_precalculatedShares[i].m_wallet->view_public_key().h, HASH_SIZE);
 				memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
-				if (!m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
-					job->shares[i].m_wallet = nullptr;
-					--num_inputs;
+				if (m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
+					wallets.emplace_back(i, job->m_precalculatedShares[i].m_wallet);
 				}
 			}
 		}
 
-		if (num_inputs) {
-			for (size_t i = 0, n = job->shares.size(); i < n; ++i) {
-				if (job->shares[i].m_wallet) {
-					hash eph_public_key;
-					uint8_t view_tag;
-					job->shares[i].m_wallet->get_eph_public_key(job->b->m_txkeySec, i, eph_public_key, view_tag);
-				}
-			}
+		for (const std::pair<size_t, const Wallet*>& w : wallets) {
+			hash eph_public_key;
+			uint8_t view_tag;
+			w.second->get_eph_public_key(job->m_txkeySec, w.first, eph_public_key, view_tag);
 		}
-
-		delete job;
 	} while (true);
 }
 
@@ -2420,9 +2428,6 @@ void SideChain::finish_precalc()
 	{
 		{
 			MutexLock lock(m_precalcJobsMutex);
-			for (PrecalcJob* job : m_precalcJobs) {
-				delete job;
-			}
 			m_precalcJobs.clear();
 			m_precalcJobs.shrink_to_fit();
 			uv_cond_broadcast(&m_precalcJobsCond);

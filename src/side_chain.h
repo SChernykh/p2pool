@@ -147,16 +147,10 @@ private:
 	ChainMain m_watchBlock;
 	hash m_watchBlockMerkleRoot;
 
-	struct PrecalcJob
-	{
-		const PoolBlock* b;
-		std::vector<MinerShare> shares;
-	};
-
 	uv_cond_t m_precalcJobsCond;
 	uv_mutex_t m_precalcJobsMutex;
 
-	std::vector<PrecalcJob*> m_precalcJobs;
+	std::vector<const PoolBlock*> m_precalcJobs;
 	std::vector<std::thread> m_precalcWorkers;
 	unordered_set<size_t>* m_uniquePrecalcInputs;
 
