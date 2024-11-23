@@ -280,11 +280,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install dependencies
-      run: |
-        HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv
-        pyenv install 3:latest
-
     - name: Build libcurl
       run: |
         cd external/src/curl
