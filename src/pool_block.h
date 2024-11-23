@@ -162,7 +162,7 @@ struct PoolBlock
 
 	bool m_precalculated;
 
-	static uv_rwlock_t s_precalculatedSharesLock;
+	static ReadWriteLock s_precalculatedSharesLock;
 	std::vector<MinerShare> m_precalculatedShares;
 
 	uint64_t m_localTimestamp;

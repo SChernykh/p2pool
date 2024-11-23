@@ -25,6 +25,16 @@ static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
 
 namespace p2pool {
 
+struct ReadWriteLock : public nocopy_nomove {
+	FORCEINLINE  ReadWriteLock() { uv_rwlock_init(&m_lock);    }
+	FORCEINLINE ~ReadWriteLock() { uv_rwlock_destroy(&m_lock); }
+
+	FORCEINLINE operator uv_rwlock_t&() { return m_lock; }
+
+private:
+	uv_rwlock_t m_lock;
+};
+
 struct MutexLock : public nocopy_nomove
 {
 	explicit FORCEINLINE MutexLock(uv_mutex_t& handle) : m_handle(&handle) { uv_mutex_lock(&handle); }

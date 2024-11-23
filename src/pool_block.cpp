@@ -29,13 +29,7 @@ LOG_CATEGORY(PoolBlock)
 
 namespace p2pool {
 
-uv_rwlock_t PoolBlock::s_precalculatedSharesLock;
-
-static struct PrecalculatedLockInit
-{
-	FORCEINLINE PrecalculatedLockInit() { uv_rwlock_init(&PoolBlock::s_precalculatedSharesLock); }
-	FORCEINLINE ~PrecalculatedLockInit() { uv_rwlock_destroy(&PoolBlock::s_precalculatedSharesLock); }
-} precalculated_lock_init;
+ReadWriteLock PoolBlock::s_precalculatedSharesLock;
 
 PoolBlock::PoolBlock()
 	: m_majorVersion(0)
