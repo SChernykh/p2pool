@@ -58,7 +58,8 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_totalFailedShares(0)
 	, m_apiLastUpdateTime(0)
 {
-	m_callbackBuf.resize(STRATUM_BUF_SIZE);
+	// Need a bigger buffer for the TLS handshake
+	m_callbackBuf.resize(STRATUM_CALLBACK_BUF_SIZE);
 
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
