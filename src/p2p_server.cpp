@@ -1496,7 +1496,7 @@ bool P2PServer::P2PClient::on_connect()
 	return send_handshake_challenge();
 }
 
-bool P2PServer::P2PClient::on_read(char* data, uint32_t size)
+bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	if (!server) {

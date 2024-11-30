@@ -1107,7 +1107,7 @@ void TCPServer::Client::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf
 	}
 }
 
-bool TCPServer::Client::on_proxy_handshake(char* data, uint32_t size)
+bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 {
 	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
 		LOGERR(1, "peer " << static_cast<char*>(m_addrString) << " invalid data pointer or size in on_read()");

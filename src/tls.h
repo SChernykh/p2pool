@@ -43,7 +43,7 @@ public:
 	[[nodiscard]] bool init();
 
 	template<typename T, typename U>
-	[[nodiscard]] FORCEINLINE bool on_read(char* data, uint32_t size, T&& read_callback, U&& write_callback)
+	[[nodiscard]] FORCEINLINE bool on_read(const char* data, uint32_t size, T&& read_callback, U&& write_callback)
 	{
 		return on_read_internal(data, size, ReadCallback::Derived<T>(std::move(read_callback)), WriteCallback::Derived<U>(std::move(write_callback)));
 	}
@@ -60,7 +60,7 @@ private:
 	typedef Callback<bool, char*, uint32_t> ReadCallback;
 	typedef Callback<bool, const uint8_t*, size_t> WriteCallback;
 
-	[[nodiscard]] bool on_read_internal(char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback);
+	[[nodiscard]] bool on_read_internal(const char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback);
 	[[nodiscard]] bool on_write_internal(const uint8_t* data, size_t size, WriteCallback::Base&& write_callback);
 
 private:

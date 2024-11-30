@@ -358,7 +358,7 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 }
 
 
-void ConsoleCommands::process_input(std::string& command, char* data, uint32_t size)
+void ConsoleCommands::process_input(std::string& command, const char* data, uint32_t size)
 {
 	command.append(data, size);
 

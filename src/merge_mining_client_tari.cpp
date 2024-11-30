@@ -574,7 +574,7 @@ bool MergeMiningClientTari::TariClient::on_connect()
 	return true;
 }
 
-bool MergeMiningClientTari::TariClient::on_read(char* data, uint32_t size)
+bool MergeMiningClientTari::TariClient::on_read(const char* data, uint32_t size)
 {
 	MergeMiningClientTari::TariServer* server = static_cast<MergeMiningClientTari::TariServer*>(m_owner);
 	if (!server) {

@@ -98,7 +98,7 @@ private:
 
 		void reset() override;
 		[[nodiscard]] bool on_connect() override;
-		[[nodiscard]] bool on_read(char* data, uint32_t size) override;
+		[[nodiscard]] bool on_read(const char* data, uint32_t size) override;
 
 		char m_buf[BUF_SIZE];
 		std::vector<uint8_t> m_pendingData;

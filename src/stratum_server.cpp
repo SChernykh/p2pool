@@ -1171,7 +1171,7 @@ bool StratumServer::StratumClient::on_connect()
 	return true;
 }
 
-bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
+bool StratumServer::StratumClient::on_read(const char* data, uint32_t size)
 {
 #ifdef WITH_TLS
 	if (!m_tlsChecked) {
@@ -1186,7 +1186,7 @@ bool StratumServer::StratumClient::on_read(char* data, uint32_t size)
 	}
 #endif
 
-	auto on_parse = [this](char* data, uint32_t size) {
+	auto on_parse = [this](const char* data, uint32_t size) {
 		if (static_cast<size_t>(m_stratumReadBufBytes) + size > STRATUM_BUF_SIZE) {
 			LOGWARN(4, "client " << static_cast<const char*>(m_addrString) << " sent too long Stratum message");
 			ban(DEFAULT_BAN_TIME);

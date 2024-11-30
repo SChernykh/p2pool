@@ -217,7 +217,7 @@ bool ServerTls::init()
 	return true;
 }
 
-bool ServerTls::on_read_internal(char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback)
+bool ServerTls::on_read_internal(const char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback)
 {
 	SSL* ssl = m_ssl.get();
 	if (!ssl) {
