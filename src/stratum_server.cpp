@@ -1136,6 +1136,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_lastJobTarget(0)
 	, m_score(0)
 {
+	m_rawReadBuf[0] = '\0';
 	m_stratumReadBuf[0] = '\0';
 }
 
@@ -1197,7 +1198,8 @@ bool StratumServer::StratumClient::on_read(const char* data, uint32_t size)
 		m_stratumReadBufBytes += size;
 
 		char* line_start = m_stratumReadBuf;
-		for (char *e = line_start + m_stratumReadBufBytes, *c = e - size; c < e; ++c) {
+		const char* e = line_start + m_stratumReadBufBytes;
+		for (char *c = line_start + m_stratumReadBufBytes - size; c < e; ++c) {
 			if (*c == '\n') {
 				// Check if the line starts with "GET " or "HEAD" (an HTTP request)
 				if (c - line_start >= 4) {
