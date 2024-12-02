@@ -48,12 +48,14 @@ jobs:
         ./run.sh
 
     - name: Archive full error list
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: errors_full-linux
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: checkers_report-linux
@@ -96,12 +98,14 @@ jobs:
         ./run.cmd
 
     - name: Archive full error list
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: errors_full-windows
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: checkers_report-windows

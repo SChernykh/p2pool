@@ -506,8 +506,8 @@ struct DummyStream
 	}
 };
 
-#ifdef __COVERITY__
-// Coverity doesn't like this macro - CID 393138: Big parameter passed by value (PASS_BY_VALUE)
+#if defined(__COVERITY__) || defined(__cppcheck__)
+// Coverity and cppcheck don't like this macro - CID 393138: Big parameter passed by value (PASS_BY_VALUE)
 #define SIDE_EFFECT_CHECK(level, ...)
 #else
 #define SIDE_EFFECT_CHECK(level, ...) \
