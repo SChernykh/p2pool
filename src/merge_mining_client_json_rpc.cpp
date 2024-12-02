@@ -22,7 +22,7 @@
 #include "params.h"
 #include "json_rpc_request.h"
 #include "json_parsers.h"
-#include <rapidjson/document.h>
+#include "rapidjson_wrapper.h"
 
 LOG_CATEGORY(MergeMiningClientJSON_RPC)
 

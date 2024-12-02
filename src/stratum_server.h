@@ -18,7 +18,6 @@
 #pragma once
 
 #include "tcp_server.h"
-#include <rapidjson/document.h>
 
 namespace p2pool {
 
@@ -50,8 +49,8 @@ public:
 		[[nodiscard]] bool on_read(const char* data, uint32_t size) override;
 
 		[[nodiscard]] bool process_request(char* data, uint32_t size);
-		[[nodiscard]] bool process_login(rapidjson::Document& doc, uint32_t id);
-		[[nodiscard]] bool process_submit(rapidjson::Document& doc, uint32_t id);
+		template<typename T> [[nodiscard]] bool process_login(T& doc, uint32_t id);
+		template<typename T> [[nodiscard]] bool process_submit(T& doc, uint32_t id);
 
 		bool send_http_response(bool send_content);
 

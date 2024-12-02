@@ -20,7 +20,7 @@
 #include "zmq_reader.h"
 #include "mempool.h"
 #include "json_rpc_request.h"
-#include "rapidjson/document.h"
+#include "rapidjson_wrapper.h"
 #include "json_parsers.h"
 #include "pow_hash.h"
 #include "block_template.h"

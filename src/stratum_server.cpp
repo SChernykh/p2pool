@@ -24,6 +24,8 @@
 #include "p2pool_api.h"
 #include "p2p_server.h"
 
+#include "rapidjson_wrapper.h"
+
 LOG_CATEGORY(StratumServer)
 
 static constexpr int DEFAULT_BACKLOG = 128;
@@ -1311,7 +1313,8 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t size)
 	return false;
 }
 
-bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint32_t id)
+template<typename T>
+bool StratumServer::StratumClient::process_login(T& doc, uint32_t id)
 {
 	const auto params_it = doc.FindMember("params");
 	if (params_it == doc.MemberEnd()) {
@@ -1340,7 +1343,8 @@ bool StratumServer::StratumClient::process_login(rapidjson::Document& doc, uint3
 	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString());
 }
 
-bool StratumServer::StratumClient::process_submit(rapidjson::Document& doc, uint32_t id)
+template<typename T>
+bool StratumServer::StratumClient::process_submit(T& doc, uint32_t id)
 {
 	const auto params_it = doc.FindMember("params");
 	if (params_it == doc.MemberEnd()) {

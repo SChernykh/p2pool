@@ -26,7 +26,7 @@
 #endif
 #include "json_rpc_request.h"
 #include "json_parsers.h"
-#include <rapidjson/document.h>
+#include "rapidjson_wrapper.h"
 #include <thread>
 
 LOG_CATEGORY(RandomX_Hasher)

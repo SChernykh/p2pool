@@ -18,7 +18,7 @@
 #include "common.h"
 #include "zmq_reader.h"
 #include "json_parsers.h"
-#include <rapidjson/document.h>
+#include "rapidjson_wrapper.h"
 
 LOG_CATEGORY(ZMQReader)
 

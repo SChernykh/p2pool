@@ -28,7 +28,7 @@
 #include "block_template.h"
 #include "p2pool_api.h"
 #include "stratum_server.h"
-#include <rapidjson/document.h>
+#include "rapidjson_wrapper.h"
 #include <fstream>
 #include <numeric>
 

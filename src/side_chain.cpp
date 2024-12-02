@@ -34,8 +34,12 @@
 #include "json_parsers.h"
 #include "crypto.h"
 #include "hardforks/hardforks.h"
+
+#if !defined(_MSC_VER) || !defined(__cppcheck__)
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#endif
+
 #include <fstream>
 #include <iterator>
 #include <numeric>
