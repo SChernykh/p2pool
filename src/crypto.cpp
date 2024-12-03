@@ -37,9 +37,7 @@ class RandomBytes
 public:
 	RandomBytes() : rng(RandomDeviceSeed::instance), dist(0, 255)
 	{
-		if (uv_mutex_init(&m) != 0) {
-			abort();
-		}
+		uv_mutex_init_checked(&m);
 
 		// Diffuse the initial state in case it has low quality
 		rng.discard(10000);
@@ -66,7 +64,7 @@ private:
 	std::uniform_int_distribution<> dist;
 };
 
-static RandomBytes randomBytes;
+static RandomBytes* randomBytes = nullptr;
 
 }
 
@@ -86,7 +84,7 @@ static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 void generate_keys(hash& pub, hash& sec)
 {
 	do {
-		do { randomBytes(sec.h); } while (!less32(sec.h, limit));
+		do { (*randomBytes)(sec.h); } while (!less32(sec.h, limit));
 		sc_reduce32(sec.h);
 	} while (!sc_isnonzero(sec.h));
 
@@ -472,6 +470,10 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 
 void init_crypto_cache()
 {
+	if (!randomBytes) {
+		randomBytes = new RandomBytes();
+	}
+
 	if (!cache) {
 		cache = new Cache();
 	}
@@ -479,9 +481,15 @@ void init_crypto_cache()
 
 void destroy_crypto_cache()
 {
-	if (cache) {
-		delete cache;
+	{
+		auto p = randomBytes;
+		randomBytes = nullptr;
+		delete p;
+	}
+	{
+		auto p = cache;
 		cache = nullptr;
+		delete p;
 	}
 }
 

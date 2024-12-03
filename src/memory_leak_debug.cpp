@@ -24,6 +24,8 @@
 #include <atomic>
 #include <type_traits>
 #include <iostream>
+#include <fstream>
+#include <mutex>
 
 #include <DbgHelp.h>
 
@@ -79,7 +81,7 @@ struct TrackedAllocation
 
 static_assert(sizeof(TrackedAllocation) == 256, "");
 
-uv_mutex_t allocation_lock;
+std::mutex allocation_lock;
 std::hash<void*> hasher;
 uint32_t first[N];
 uint32_t next[N];
@@ -98,7 +100,7 @@ void show_top_10_allocations()
 	const HANDLE h = GetCurrentProcess();
 
 	{
-		p2pool::MutexLock lock(allocation_lock);
+		std::lock_guard<std::mutex> lock(allocation_lock);
 
 		TrackedAllocation* end = buf;
 		for (size_t i = 0; i < N; ++i) {
@@ -173,7 +175,7 @@ FORCEINLINE static void add_alocation(void* p, size_t size)
 
 	const size_t index = hasher(p) & (N - 1);
 
-	p2pool::MutexLock lock(allocation_lock);
+	std::lock_guard<std::mutex> lock(allocation_lock);
 
 	++num_allocations;
 	if (num_allocations >= N / 2) {
@@ -204,7 +206,7 @@ FORCEINLINE static void remove_allocation(void* p)
 		return;
 	}
 
-	p2pool::MutexLock lock(allocation_lock);
+	std::lock_guard<std::mutex> lock(allocation_lock);
 
 	--num_allocations;
 
@@ -292,10 +294,14 @@ void memory_tracking_start()
 	// Trigger std::ostream initialization to avoid reporting it as leaks
 	std::cout << "Memory leak detection = " << 1 << std::endl;
 
+	// Trigger std::ofstream initialization to avoid reporting it as leaks
+	{
+		std::ofstream tmp("memory_tracking.tmp");
+	}
+
 	using namespace p2pool;
 
 	uv_replace_allocator(malloc_hook, realloc_hook, calloc_hook, free_hook);
-	uv_mutex_init_checked(&allocation_lock);
 	track_memory = true;
 }
 
@@ -304,7 +310,6 @@ bool memory_tracking_stop()
 	using namespace p2pool;
 
 	track_memory = false;
-	uv_mutex_destroy(&allocation_lock);
 
 	const HANDLE h = GetCurrentProcess();
 

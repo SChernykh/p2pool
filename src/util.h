@@ -233,10 +233,10 @@ private:
 	Impl* m_impl;
 };
 
-extern BackgroundJobTracker bkg_jobs_tracker;
+extern BackgroundJobTracker* bkg_jobs_tracker;
 
-#define BACKGROUND_JOB_START(x) do { bkg_jobs_tracker.start(#x); } while (0)
-#define BACKGROUND_JOB_STOP(x)  do { bkg_jobs_tracker.stop(#x);  } while (0)
+#define BACKGROUND_JOB_START(x) do { bkg_jobs_tracker->start(#x); } while (0)
+#define BACKGROUND_JOB_STOP(x)  do { bkg_jobs_tracker->stop(#x);  } while (0)
 
 void set_main_thread();
 bool is_main_thread();

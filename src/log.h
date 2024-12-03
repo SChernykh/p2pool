@@ -547,6 +547,7 @@ struct DummyStream
 
 #endif
 
+void start();
 void reopen();
 void stop();
 

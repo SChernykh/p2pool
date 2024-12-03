@@ -116,17 +116,14 @@ NOINLINE void keccakf_plain(std::array<uint64_t, 25>& st)
 	}
 }
 
-void (*keccakf)(std::array<uint64_t, 25>&) = keccakf_plain;
-
+keccakf_func keccakf = []() {
 #if defined(__x86_64__) || defined(_M_AMD64)
-static struct KeccakBMI_Check {
-	KeccakBMI_Check() {
-		if (randomx::Cpu().hasBmi()) {
-			keccakf = keccakf_bmi;
-		}
+	if (randomx::Cpu().hasBmi()) {
+		return keccakf_bmi;
 	}
-} keccak_bmi_check;
 #endif
+	return keccakf_plain;
+}();
 
 NOINLINE void keccak_step(const uint8_t* &in, int &inlen, std::array<uint64_t, 25>& st)
 {

@@ -73,6 +73,8 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_params = p;
 
+	bkg_jobs_tracker = new BackgroundJobTracker();
+
 #ifdef WITH_UPNP
 	if (p->m_upnp) {
 		init_upnp();
@@ -184,6 +186,8 @@ p2pool::p2pool(int argc, char* argv[])
 	m_hasher = new RandomX_Hasher_RPC(this);
 #endif
 
+	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
+
 	m_blockTemplate = new BlockTemplate(m_sideChain, m_hasher);
 	m_mempool = new Mempool();
 
@@ -232,6 +236,17 @@ p2pool::~p2pool()
 	delete m_blockTemplate;
 	delete m_mempool;
 	delete m_params;
+
+	{
+		auto p = bkg_jobs_tracker;
+		bkg_jobs_tracker = nullptr;
+		delete p;
+	}
+	{
+		auto p = PoolBlock::s_precalculatedSharesLock;
+		PoolBlock::s_precalculatedSharesLock = nullptr;
+		delete p;
+	}
 }
 
 void p2pool::update_host_ping(const std::string& display_name, double ping)
@@ -1955,7 +1970,7 @@ int p2pool::run()
 
 	m_stopped = true;
 
-	bkg_jobs_tracker.wait();
+	bkg_jobs_tracker->wait();
 
 #ifdef WITH_RANDOMX
 	delete m_miner;

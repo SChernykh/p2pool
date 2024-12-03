@@ -25,7 +25,9 @@ enum KeccakParams {
 };
 
 extern const uint64_t keccakf_rndc[24];
-extern void (*keccakf)(std::array<uint64_t, 25>& st);
+
+typedef void (*keccakf_func)(std::array<uint64_t, 25>&);
+extern keccakf_func keccakf;
 
 void keccakf_plain(std::array<uint64_t, 25>& st);
 void keccakf_bmi(std::array<uint64_t, 25>& st);

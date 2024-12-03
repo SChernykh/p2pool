@@ -1683,7 +1683,7 @@ void SideChain::verify(PoolBlock* block)
 	std::vector<MinerShare> shares;
 
 	if (block->m_precalculated) {
-		WriteLock lock(PoolBlock::s_precalculatedSharesLock);
+		WriteLock lock(*PoolBlock::s_precalculatedSharesLock);
 		shares = std::move(block->m_precalculatedShares);
 	}
 
@@ -2356,7 +2356,7 @@ void SideChain::launch_precalc(const PoolBlock* block)
 			if (get_shares(b, shares, nullptr, true)) {
 				b->m_precalculated = true;
 				{
-					WriteLock lock(PoolBlock::s_precalculatedSharesLock);
+					WriteLock lock(*PoolBlock::s_precalculatedSharesLock);
 					b->m_precalculatedShares = std::move(shares);
 				}
 				{
@@ -2401,7 +2401,7 @@ void SideChain::precalc_worker()
 
 			wallets.clear();
 
-			ReadLock lock2(PoolBlock::s_precalculatedSharesLock);
+			ReadLock lock2(*PoolBlock::s_precalculatedSharesLock);
 
 			const size_t n = job->m_precalculatedShares.size();
 

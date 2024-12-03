@@ -29,7 +29,7 @@ LOG_CATEGORY(PoolBlock)
 
 namespace p2pool {
 
-ReadWriteLock PoolBlock::s_precalculatedSharesLock;
+ReadWriteLock* PoolBlock::s_precalculatedSharesLock = nullptr;
 
 PoolBlock::PoolBlock()
 	: m_majorVersion(0)
@@ -118,7 +118,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_wantBroadcast = b.m_wantBroadcast;
 	m_precalculated = b.m_precalculated;
 	{
-		WriteLock lock(s_precalculatedSharesLock);
+		WriteLock lock(*s_precalculatedSharesLock);
 		m_precalculatedShares = b.m_precalculatedShares;
 	}
 
@@ -309,7 +309,7 @@ void PoolBlock::reset_offchain_data()
 
 	m_precalculated = false;
 	{
-		WriteLock lock(s_precalculatedSharesLock);
+		WriteLock lock(*s_precalculatedSharesLock);
 		m_precalculatedShares.clear();
 		m_precalculatedShares.shrink_to_fit();
 	}

@@ -452,7 +452,7 @@ void BackgroundJobTracker::print_status()
 	m_impl->print_status();
 }
 
-BackgroundJobTracker bkg_jobs_tracker;
+BackgroundJobTracker* bkg_jobs_tracker = nullptr;
 
 static thread_local bool main_thread = false;
 void set_main_thread() { main_thread = true; }

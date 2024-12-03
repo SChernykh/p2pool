@@ -209,7 +209,7 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 
 	m_pool->print_merge_mining_status();
 
-	bkg_jobs_tracker.print_status();
+	bkg_jobs_tracker->print_status();
 
 	if (p2p) {
 		p2p->check_for_updates(true);
@@ -313,7 +313,7 @@ static void do_stop_mining(p2pool* m_pool, const char* /*args*/)
 
 static void do_exit(p2pool *m_pool, const char * /* args */)
 {
-	bkg_jobs_tracker.wait();
+	bkg_jobs_tracker->wait();
 	m_pool->stop();
 }
 

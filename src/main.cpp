@@ -26,6 +26,14 @@
 #include "randomx.h"
 #endif
 
+#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
+
+#include <DbgHelp.h>
+
+#pragma comment(lib, "Dbghelp.lib")
+
+#endif
+
 void p2pool_usage()
 {
 	printf("P2Pool %s\n"
@@ -188,7 +196,16 @@ int main(int argc, char* argv[])
 		}
 	}
 
+#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
+	SymInitialize(GetCurrentProcess(), NULL, TRUE);
+#endif
+
 	memory_tracking_start();
+
+	// Create default loop here
+	uv_default_loop();
+
+	p2pool::log::start();
 
 	p2pool::init_crypto_cache();
 
@@ -209,9 +226,21 @@ int main(int argc, char* argv[])
 
 	p2pool::destroy_crypto_cache();
 
+	p2pool::log::stop();
+
+	uv_loop_close(uv_default_loop());
+
+#if ((UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 38)))
+	uv_library_shutdown();
+#endif
+
 	if (!memory_tracking_stop()) {
 		result = 1;
 	}
+
+#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
+	SymCleanup(GetCurrentProcess());
+#endif
 
 	return result;
 }

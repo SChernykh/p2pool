@@ -15,14 +15,26 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "common.h"
+#include "util.h"
+#include "pool_block.h"
+
 #include "gtest/gtest.h"
 
 void p2pool_usage() {}
-namespace p2pool { void set_main_thread(); }
+
+using namespace p2pool;
 
 int main(int argc, char** argv)
 {
-	p2pool::set_main_thread();
+	set_main_thread();
+
+	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
+
 	testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+	const int result = RUN_ALL_TESTS();
+
+	delete PoolBlock::s_precalculatedSharesLock;
+
+	return result;
 }

@@ -117,12 +117,10 @@ public:
 	FORCEINLINE Worker()
 		: m_writePos(0)
 		, m_readPos(0)
-		, m_started{ false }
 		, m_stopped(false)
 	{
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
-		SymInitialize(GetCurrentProcess(), NULL, TRUE);
 #endif
 
 		set_main_thread();
@@ -133,21 +131,8 @@ public:
 
 		m_buf.resize(BUF_SIZE);
 
-		// Create default loop here
-		uv_default_loop();
-
 		uv_cond_init(&m_cond);
 		uv_mutex_init(&m_mutex);
-
-		const int err = uv_thread_create(&m_worker, run_wrapper, this);
-		if (err) {
-			fprintf(stderr, "failed to start logger thread (%s), aborting\n", uv_err_name(err));
-			abort();
-		}
-
-		while (m_started.load() == false) {
-			std::this_thread::yield();
-		}
 
 #ifdef _WIN32
 		SetConsoleMode(hStdIn, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS);
@@ -163,13 +148,17 @@ public:
 			CONSOLE_COLORS = false;
 		}
 
-		LOGINFO(0, "started");
-
 		if (!m_logFile.is_open()) {
-			LOGERR(0, "failed to open " << log_file_name);
+			fprintf(stderr, "failed to open %s\n", log_file_name);
 		}
 
 		init_uv_threadpool();
+
+		const int err = uv_thread_create(&m_worker, run_wrapper, this);
+		if (err) {
+			fprintf(stderr, "failed to start logger thread (%s), aborting\n", uv_err_name(err));
+			abort();
+		}
 	}
 
 	~Worker()
@@ -196,17 +185,8 @@ public:
 		uv_thread_join(&m_worker);
 		uv_cond_destroy(&m_cond);
 		uv_mutex_destroy(&m_mutex);
-		uv_loop_close(uv_default_loop());
-
-#if ((UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 38)))
-		uv_library_shutdown();
-#endif
 
 		m_logFile.close();
-
-#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
-		SymCleanup(GetCurrentProcess());
-#endif
 	}
 
 	FORCEINLINE void write(const char* buf, uint32_t size)
@@ -252,13 +232,13 @@ private:
 		int err = putenv(buf);
 		if (err != 0) {
 			err = errno;
-			LOGWARN(0, "Couldn't set UV thread pool size to " << N << " threads, putenv returned error " << err);
+			fprintf(stderr, "Couldn't set UV thread pool size to %u threads, putenv returned error %d\n", N, err);
 		}
 
 		static uv_work_t dummy;
 		err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
 		if (err) {
-			LOGERR(0, "init_uv_threadpool: uv_queue_work failed, error " << uv_err_name(err));
+			fprintf(stderr, "init_uv_threadpool: uv_queue_work failed, error %s\n", uv_err_name(err));
 		}
 	}
 
@@ -267,8 +247,6 @@ private:
 
 	NOINLINE void run()
 	{
-		m_started.exchange(true);
-
 		do {
 			uv_mutex_lock(&m_mutex);
 			if (m_readPos == m_writePos.load()) {
@@ -392,13 +370,12 @@ private:
 	uv_mutex_t m_mutex;
 	uv_thread_t m_worker;
 
-	std::atomic<bool> m_started;
 	bool m_stopped;
 
 	std::ofstream m_logFile;
 };
 
-static Worker worker;
+static Worker* worker = nullptr;
 
 #endif // P2POOL_LOG_DISABLE
 
@@ -445,7 +422,16 @@ NOINLINE Writer::~Writer()
 	m_buf[2] = static_cast<uint8_t>(size >> 8);
 	m_buf[m_pos] = '\n';
 #ifndef P2POOL_LOG_DISABLE
-	worker.write(m_buf, size);
+	worker->write(m_buf, size);
+#endif
+}
+
+void start()
+{
+#ifndef P2POOL_LOG_DISABLE
+	worker = new Worker();
+
+	LOGINFO(0, "started");
 #endif
 }
 
@@ -458,7 +444,8 @@ void reopen()
 void stop()
 {
 #ifndef P2POOL_LOG_DISABLE
-	worker.stop();
+	delete worker;
+	worker = nullptr;
 #endif
 }
 
