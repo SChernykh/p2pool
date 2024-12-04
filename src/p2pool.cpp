@@ -1188,7 +1188,7 @@ void p2pool::load_found_blocks()
 		return;
 	}
 
-	std::ifstream f(FOUND_BLOCKS_FILE);
+	std::ifstream f(DATA_DIR + FOUND_BLOCKS_FILE);
 	if (!f.is_open()) {
 		return;
 	}
@@ -1721,14 +1721,15 @@ void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* bloc
 	difficulty_type diff;
 
 	if (data && get_difficulty_at_height(data->height, diff)) {
-		std::ofstream f(FOUND_BLOCKS_FILE, std::ios::app);
+		const std::string path = DATA_DIR + FOUND_BLOCKS_FILE;
+		std::ofstream f(path, std::ios::app);
 		if (f.is_open()) {
 			f << cur_time << ' ' << data->height << ' ' << data->id << ' ' << diff << ' ' << total_hashes << '\n';
 			f.flush();
 			f.close();
 		}
 		else {
-			LOGERR(1, "Failed to update " << FOUND_BLOCKS_FILE << ", error " << errno);
+			LOGERR(1, "Failed to update " << path << ": error " << errno);
 		}
 	}
 

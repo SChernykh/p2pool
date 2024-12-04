@@ -10,8 +10,9 @@
 --addpeers           Comma-separated list of IP:port of other p2pool nodes to connect to
 --light-mode         Don't allocate RandomX dataset, saves 2GB of RAM
 --loglevel           Verbosity of the log, integer number between 0 and 6
+--data-dir           Path to store general p2pool files (log, cache, peer data, etc.), default is current directory
 --config             Name of p2pool sidechain's config file (don't use it unless you want to mine to a different p2pool chain)
---data-api           Path to the p2pool JSON data (use it in tandem with an external web-server)
+--data-api           Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!
 --local-api          Enable /local/ path in api path for Stratum Server and built-in miner statistics
 --stratum-api        An alias for --local-api
 --no-cache           Disable p2pool.cache

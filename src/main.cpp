@@ -47,8 +47,9 @@ void p2pool_usage()
 		"--addpeers           Comma-separated list of IP:port of other p2pool nodes to connect to\n"
 		"--light-mode         Don't allocate RandomX dataset, saves 2GB of RAM\n"
 		"--loglevel           Verbosity of the log, integer number between 0 and %d\n"
+		"--data-dir           Path to store general p2pool files (log, cache, peer data, etc.), default is current directory\n"
 		"--config             Name of the p2pool config file\n"
-		"--data-api           Path to the p2pool JSON data (use it in tandem with an external web-server)\n"
+		"--data-api           Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!\n"
 		"--local-api          Enable /local/ path in api path for Stratum Server and built-in miner statistics\n"
 		"--stratum-api        An alias for --local-api\n"
 		"--no-cache           Disable p2pool.cache\n"
@@ -193,6 +194,20 @@ int main(int argc, char* argv[])
 
 		if (!strcmp(argv[i], "--test")) {
 			return p2pool_test();
+		}
+
+		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
+			std::string path = argv[++i];
+
+			if (!path.empty() && (path.back() != '/')
+#ifdef _WIN32
+				&& (path.back() != '\\')
+#endif
+				) {
+				path.append(1, '/');
+			}
+
+			p2pool::DATA_DIR = std::move(path);
 		}
 	}
 

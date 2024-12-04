@@ -60,6 +60,8 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 #endif
 " on " __DATE__ ")";
 
+std::string DATA_DIR;
+
 SoftwareID get_software_id(uint32_t value)
 {
 	switch (value) {

@@ -36,9 +36,11 @@ struct BlockCache::Impl : public nocopy_nomove
 
 	Impl()
 	{
-		m_fd = open(cache_name, O_RDWR | O_CREAT, static_cast<mode_t>(0600));
+		const std::string cache_path = DATA_DIR + cache_name;
+
+		m_fd = open(cache_path.c_str(), O_RDWR | O_CREAT, static_cast<mode_t>(0600));
 		if (m_fd == -1) {
-			LOGERR(1, "couldn't open/create " << cache_name);
+			LOGERR(1, "couldn't open/create " << cache_path << ": error " << errno);
 			return;
 		}
 
@@ -87,11 +89,12 @@ struct BlockCache::Impl : public nocopy_nomove
 #elif defined(_WIN32)
 
 	Impl()
-		: m_file(CreateFile(cache_name, GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL))
+		: m_cachePath(DATA_DIR + cache_name)
+		, m_file(CreateFile(m_cachePath.c_str(), GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL))
 		, m_map(0)
 	{
 		if (m_file == INVALID_HANDLE_VALUE) {
-			LOGERR(1, "couldn't open " << cache_name << ", error " << static_cast<uint32_t>(GetLastError()));
+			LOGERR(1, "couldn't open " << m_cachePath << ": error " << static_cast<uint32_t>(GetLastError()));
 			return;
 		}
 
@@ -142,6 +145,7 @@ struct BlockCache::Impl : public nocopy_nomove
 		}
 	}
 
+	std::string m_cachePath;
 	HANDLE m_file;
 	HANDLE m_map;
 

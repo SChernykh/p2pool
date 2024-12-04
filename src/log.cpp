@@ -127,7 +127,12 @@ public:
 
 		std::setlocale(LC_ALL, "en_001");
 
-		m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
+		m_logFilePath = DATA_DIR + log_file_name;
+		m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
+
+		if (!m_logFile.is_open()) {
+			fprintf(stderr, "failed to open %s: error %d\n", m_logFilePath.c_str(), errno);
+		}
 
 		m_buf.resize(BUF_SIZE);
 
@@ -146,10 +151,6 @@ public:
 		const char* no_color = getenv("NO_COLOR");
 		if (no_color && *no_color) {
 			CONSOLE_COLORS = false;
-		}
-
-		if (!m_logFile.is_open()) {
-			fprintf(stderr, "failed to open %s\n", log_file_name);
 		}
 
 		init_uv_threadpool();
@@ -215,6 +216,8 @@ public:
 		// Signal the worker thread
 		uv_cond_signal(&m_cond);
 	}
+
+	const std::string& log_file_path() const { return m_logFilePath; }
 
 private:
 	static void init_uv_threadpool()
@@ -324,9 +327,9 @@ private:
 
 				// Reopen the log file if it's been moved (logrotate support)
 				struct stat buf;
-				if (stat(log_file_name, &buf) != 0) {
+				if (stat(m_logFilePath.c_str(), &buf) != 0) {
 					m_logFile.close();
-					m_logFile.open(log_file_name, std::ios::app | std::ios::binary);
+					m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
 				}
 			}
 
@@ -373,6 +376,7 @@ private:
 	bool m_stopped;
 
 	std::ofstream m_logFile;
+	std::string m_logFilePath;
 };
 
 static Worker* worker = nullptr;
@@ -438,7 +442,9 @@ void start()
 void reopen()
 {
 	// This will trigger the worker thread which will then reopen log file if it's been moved
-	LOGINFO(0, "reopening " << log_file_name);
+#ifndef P2POOL_LOG_DISABLE
+	LOGINFO(0, "reopening " << worker->log_file_path());
+#endif
 }
 
 void stop()

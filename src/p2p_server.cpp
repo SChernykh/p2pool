@@ -447,10 +447,12 @@ void P2PServer::save_peer_list_async()
 
 void P2PServer::save_peer_list()
 {
-	std::ofstream f(saved_peer_list_file_name, std::ios::binary);
+	const std::string path = DATA_DIR + saved_peer_list_file_name;
+
+	std::ofstream f(path, std::ios::binary);
 
 	if (!f.is_open()) {
-		LOGERR(1, "failed to save peer list " << saved_peer_list_file_name << ", error " << errno);
+		LOGERR(1, "failed to save peer list " << path << ": error " << errno);
 		return;
 	}
 
@@ -579,7 +581,9 @@ void P2PServer::load_peer_list()
 	}
 
 	// Finally load peers from p2pool_peers.txt
-	std::ifstream f(saved_peer_list_file_name);
+	const std::string path = DATA_DIR + saved_peer_list_file_name;
+
+	std::ifstream f(path);
 	if (f.is_open()) {
 		std::string address;
 		while (f.good()) {

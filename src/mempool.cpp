@@ -17,7 +17,6 @@
 
 #include "common.h"
 #include "mempool.h"
-#include "util.h"
 
 LOG_CATEGORY(Mempool)
 
