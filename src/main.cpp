@@ -21,6 +21,7 @@
 #include "stratum_server.h"
 #include "p2p_server.h"
 #include <curl/curl.h>
+#include <filesystem>
 
 #ifdef WITH_RANDOMX
 #include "randomx.h"
@@ -208,6 +209,12 @@ int main(int argc, char* argv[])
 			}
 
 			p2pool::DATA_DIR = std::move(path);
+
+			// Try to create it if it doesn't exist
+			if (!p2pool::DATA_DIR.empty()) {
+				std::error_code err;
+				std::filesystem::create_directories(p2pool::DATA_DIR, err);
+			}
 		}
 	}
 
