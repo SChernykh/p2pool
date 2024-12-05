@@ -295,6 +295,7 @@ allowedAPIs = {
 	"GetOverlappedResult",
 	"CryptGenRandom",
 	"HeapQueryInformation",
+	"AreFileApisANSI",
 }
 
 f = open(sys.argv[1], 'r')
