@@ -576,13 +576,13 @@ void StratumServer::show_workers()
 		}
 
 #ifdef WITH_TLS
-		const bool is_tls = c->m_tls.is_empty();
+		const bool is_tls = !c->m_tls.is_empty();
 #else
 		constexpr bool is_tls = false;
 #endif
 
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
-				<< (is_tls ? "no     " : "yes    ")
+				<< (is_tls ? "yes    " : "no     ")
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
