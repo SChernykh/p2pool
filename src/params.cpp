@@ -213,6 +213,11 @@ Params::Params(int argc, char* const argv[])
 		}
 #endif
 
+		if (strcmp(argv[i], "--no-stratum-http") == 0) {
+			m_enableStratumHTTP = false;
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();

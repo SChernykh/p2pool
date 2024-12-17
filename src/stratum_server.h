@@ -102,6 +102,8 @@ public:
 
 	void reset_share_counters();
 
+	bool http_enabled() const;
+
 private:
 	[[nodiscard]] const char* get_log_category() const override;
 

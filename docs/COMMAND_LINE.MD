@@ -34,6 +34,7 @@
 --version            Print p2pool's version and build details
 --tls-cert file      Load TLS certificate chain from "file" in the PEM format
 --tls-cert-key file  Load TLS certificate private key from "file" in the PEM format
+--no-stratum-http    Disable HTTP on Stratum ports
 ```
 
 ### Example command line

@@ -602,6 +602,11 @@ void StratumServer::reset_share_counters()
 	m_totalFailedShares = 0;
 }
 
+bool StratumServer::http_enabled() const
+{
+	return m_pool->params().m_enableStratumHTTP;
+}
+
 const char* StratumServer::get_log_category() const
 {
 	return log_category_prefix;
@@ -1204,7 +1209,7 @@ bool StratumServer::StratumClient::on_read(const char* data, uint32_t size)
 		for (char *c = line_start + m_stratumReadBufBytes - size; c < e; ++c) {
 			if (*c == '\n') {
 				// Check if the line starts with "GET " or "HEAD" (an HTTP request)
-				if (c - line_start >= 4) {
+				if (static_cast<StratumServer*>(m_owner)->http_enabled() && (c - line_start >= 4)) {
 					const uint32_t line_start_data = read_unaligned(reinterpret_cast<uint32_t*>(line_start));
 
 					const bool is_http_get  = (line_start_data == 0x20544547U);

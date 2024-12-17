@@ -96,6 +96,7 @@ struct Params
 	std::string m_tlsCert;
 	std::string m_tlsCertKey;
 #endif
+	bool m_enableStratumHTTP = true;
 };
 
 } // namespace p2pool
