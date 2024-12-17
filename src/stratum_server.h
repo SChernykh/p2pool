@@ -201,8 +201,9 @@ private:
 	uint64_t m_hashrateDataTail_24h;
 
 	double m_cumulativeFoundSharesDiff;
-	uint32_t m_totalFoundShares;
-	uint32_t m_totalFailedShares;
+	uint32_t m_totalFoundSidechainShares;
+	uint32_t m_totalFailedSidechainShares;
+	uint64_t m_totalStratumShares;
 
 	std::atomic<uint64_t> m_apiLastUpdateTime;
 

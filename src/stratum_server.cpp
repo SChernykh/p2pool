@@ -56,8 +56,9 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_hashrateDataTail_1h(0)
 	, m_hashrateDataTail_24h(0)
 	, m_cumulativeFoundSharesDiff(0.0)
-	, m_totalFoundShares(0)
-	, m_totalFailedShares(0)
+	, m_totalFoundSidechainShares(0)
+	, m_totalFailedSidechainShares(0)
+	, m_totalStratumShares(0)
 	, m_apiLastUpdateTime(0)
 {
 	// Need a bigger buffer for the TLS handshake
@@ -598,8 +599,8 @@ void StratumServer::reset_share_counters()
 	WriteLock lock(m_hashrateDataLock);
 
 	m_cumulativeHashesAtLastShare = m_cumulativeHashes;
-	m_totalFoundShares = 0;
-	m_totalFailedShares = 0;
+	m_totalFoundSidechainShares = 0;
+	m_totalFailedSidechainShares = 0;
 }
 
 bool StratumServer::http_enabled() const
@@ -619,7 +620,8 @@ void StratumServer::print_stratum_status() const
 
 	uint64_t hashes_since_last_share;
 	double average_effort;
-	uint32_t shares_found, shares_failed;
+	uint32_t sidechain_shares_found, sidechain_shares_failed;
+	uint64_t total_stratum_shares;
 
 	{
 		ReadLock lock(m_hashrateDataLock);
@@ -648,8 +650,9 @@ void StratumServer::print_stratum_status() const
 			average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
 		}
 
-		shares_found = m_totalFoundShares;
-		shares_failed = m_totalFailedShares;
+		sidechain_shares_found = m_totalFoundSidechainShares;
+		sidechain_shares_failed = m_totalFailedSidechainShares;
+		total_stratum_shares = m_totalStratumShares;
 	}
 
 	const uint64_t hashrate_15m = (dt_15m > 0) ? (hashes_15m / dt_15m) : 0;
@@ -657,20 +660,21 @@ void StratumServer::print_stratum_status() const
 	const uint64_t hashrate_24h = (dt_24h > 0) ? (hashes_24h / dt_24h) : 0;
 
 	char shares_failed_buf[64] = {};
-	if (shares_failed) {
+	if (sidechain_shares_failed) {
 		log::Stream s(shares_failed_buf);
-		s << log::Yellow() << "\nShares failed      = " << shares_failed << log::NoColor();
+		s << log::Yellow() << "\nP2Pool shares failed = " << sidechain_shares_failed << log::NoColor();
 	}
 
 	LOGINFO(0, "status" <<
-		"\nHashrate (15m est) = " << log::Hashrate(hashrate_15m) <<
-		"\nHashrate (1h  est) = " << log::Hashrate(hashrate_1h) <<
-		"\nHashrate (24h est) = " << log::Hashrate(hashrate_24h) <<
-		"\nTotal hashes       = " << total_hashes <<
-		"\nShares found       = " << shares_found << static_cast<const char*>(shares_failed_buf) <<
-		"\nAverage effort     = " << average_effort << '%' <<
-		"\nCurrent effort     = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
-		"\nConnections        = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
+		"\nHashrate (15m est)   = " << log::Hashrate(hashrate_15m) <<
+		"\nHashrate (1h  est)   = " << log::Hashrate(hashrate_1h) <<
+		"\nHashrate (24h est)   = " << log::Hashrate(hashrate_24h) <<
+		"\nStratum hashes       = " << total_hashes <<
+		"\nStratum shares       = " << total_stratum_shares <<
+		"\nP2Pool shares found  = " << sidechain_shares_found << static_cast<const char*>(shares_failed_buf) <<
+		"\nAverage effort       = " << average_effort << '%' <<
+		"\nCurrent effort       = " << static_cast<double>(hashes_since_last_share) * 100.0 / m_pool->side_chain().difficulty().to_double() << '%' <<
+		"\nConnections          = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)"
 	);
 }
 
@@ -986,15 +990,15 @@ void StratumServer::on_share_found(uv_work_t* req)
 			server->m_cumulativeHashesAtLastShare = n;
 
 			server->m_cumulativeFoundSharesDiff += diff;
-			++server->m_totalFoundShares;
+			++server->m_totalFoundSidechainShares;
 		}
 
 		if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
 			WriteLock lock(server->m_hashrateDataLock);
 
-			if (server->m_totalFoundShares > 0) {
-				--server->m_totalFoundShares;
-				++server->m_totalFailedShares;
+			if (server->m_totalFoundSidechainShares > 0) {
+				--server->m_totalFoundSidechainShares;
+				++server->m_totalFailedSidechainShares;
 			}
 		}
 	}
@@ -1088,6 +1092,10 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	}
 	else if (bad_share) {
 		server->ban(share->m_clientIPv6, share->m_clientAddr, DEFAULT_BAN_TIME);
+	}
+
+	if (share->m_result == SubmittedShare::Result::OK) {
+		++server->m_totalStratumShares;
 	}
 
 	if (share->m_allocated) {
@@ -1467,6 +1475,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	uint64_t hashes_since_last_share;
 	double average_effort;
 	uint32_t shares_found, shares_failed;
+	uint64_t total_stratum_shares;
 
 	{
 		ReadLock lock(m_hashrateDataLock);
@@ -1495,8 +1504,9 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 			average_effort = static_cast<double>(m_cumulativeHashesAtLastShare) * 100.0 / diff;
 		}
 
-		shares_found = m_totalFoundShares;
-		shares_failed = m_totalFailedShares;
+		shares_found = m_totalFoundSidechainShares;
+		shares_failed = m_totalFailedSidechainShares;
+		total_stratum_shares = m_totalStratumShares;
 	}
 
 	const uint64_t hashrate_15m = (dt_15m > 0) ? (hashes_15m / dt_15m) : 0;
@@ -1516,6 +1526,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"hashrate_1h\":" << hashrate_1h
 				<< ",\"hashrate_24h\":" << hashrate_24h
 				<< ",\"total_hashes\":" << total_hashes
+				<< ",\"total_stratum_shares\":" << total_stratum_shares
 				<< ",\"shares_found\":" << shares_found
 				<< ",\"shares_failed\":" << shares_failed
 				<< ",\"average_effort\":" << average_effort
