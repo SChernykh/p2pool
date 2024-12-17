@@ -102,7 +102,13 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--config") == 0) && (i + 1 < argc)) {
-			m_config = argv[++i];
+			LOGWARN(0, "--config command line parameter is deprecated and will be removed in the next version. Use --sidechain-config instead");
+			m_sidechainConfig = argv[++i];
+			ok = true;
+		}
+
+		if ((strcmp(argv[i], "--sidechain-config") == 0) && (i + 1 < argc)) {
+			m_sidechainConfig = argv[++i];
 			ok = true;
 		}
 

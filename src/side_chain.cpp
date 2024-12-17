@@ -84,7 +84,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(1, log::LightCyan() << "network type  = " << type);
 
-	if (m_pool && !load_config(m_pool->params().m_config)) {
+	if (m_pool && !load_config(m_pool->params().m_sidechainConfig)) {
 		PANIC_STOP();
 	}
 

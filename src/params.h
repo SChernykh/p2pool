@@ -68,7 +68,7 @@ struct Params
 	std::string m_stratumAddresses;
 	std::string m_p2pAddresses;
 	std::string m_p2pPeerList;
-	std::string m_config;
+	std::string m_sidechainConfig;
 	std::string m_apiPath;
 	bool m_localStats = false;
 	bool m_blockCache = true;
