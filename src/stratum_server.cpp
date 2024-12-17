@@ -888,7 +888,10 @@ void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 
 	WriteLock lock(m_hashrateDataLock);
 
-	m_cumulativeHashes += hashes;
+	if (hashes) {
+		m_cumulativeHashes += hashes;
+		++m_totalStratumShares;
+	}
 
 	HashrateData* data = m_hashrateData;
 	HashrateData& head = data[m_hashrateDataHead];
@@ -1092,10 +1095,6 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	}
 	else if (bad_share) {
 		server->ban(share->m_clientIPv6, share->m_clientAddr, DEFAULT_BAN_TIME);
-	}
-
-	if (share->m_result == SubmittedShare::Result::OK) {
-		++server->m_totalStratumShares;
 	}
 
 	if (share->m_allocated) {
