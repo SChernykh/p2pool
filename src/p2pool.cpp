@@ -582,12 +582,12 @@ void p2pool::update_aux_data(const hash& chain_id)
 
 			aux_id.reserve(m_mergeMiningClients.size() + 1);
 
-			IMergeMiningClient::ChainParameters params;
+			IMergeMiningClient::ChainParameters chain_params;
 
 			for (const IMergeMiningClient* c : m_mergeMiningClients) {
-				if (c->get_params(params)) {
-					data.aux_chains.emplace_back(params.aux_id, params.aux_hash, params.aux_diff);
-					aux_id.emplace_back(params.aux_id);
+				if (c->get_params(chain_params)) {
+					data.aux_chains.emplace_back(chain_params.aux_id, chain_params.aux_hash, chain_params.aux_diff);
+					aux_id.emplace_back(chain_params.aux_id);
 				}
 			}
 			aux_id.emplace_back(m_sideChain->consensus_hash());

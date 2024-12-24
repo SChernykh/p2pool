@@ -101,7 +101,7 @@ public:
 
 		[[nodiscard]] bool send_handshake_challenge();
 		void send_handshake_solution(const uint8_t (&challenge)[CHALLENGE_SIZE]);
-		[[nodiscard]] bool check_handshake_solution(const hash& solution, const uint8_t (&solution_salt)[CHALLENGE_SIZE]);
+		[[nodiscard]] bool check_handshake_solution(const hash& solution, const uint8_t (&solution_salt)[CHALLENGE_SIZE]) const;
 
 		[[nodiscard]] bool on_handshake_challenge(const uint8_t* buf);
 		[[nodiscard]] bool on_handshake_solution(const uint8_t* buf);
@@ -115,7 +115,7 @@ public:
 		void on_block_notify(const uint8_t* buf);
 
 		[[nodiscard]] bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
-		void handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result);
+		static void handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result);
 		void post_handle_incoming_block(p2pool* pool, const PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks, const bool result);
 
 		[[nodiscard]] bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }

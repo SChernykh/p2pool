@@ -1944,11 +1944,9 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 	}
 }
 
-bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const uint8_t (&solution_salt)[CHALLENGE_SIZE])
+bool P2PServer::P2PClient::check_handshake_solution(const hash& solution, const uint8_t (&solution_salt)[CHALLENGE_SIZE]) const
 {
-	P2PServer* owner = static_cast<P2PServer*>(m_owner);
-
-	const std::vector<uint8_t>& consensus_id = owner->m_pool->side_chain().consensus_id();
+	const std::vector<uint8_t>& consensus_id = static_cast<const P2PServer*>(m_owner)->m_pool->side_chain().consensus_id();
 	const int consensus_id_size = static_cast<int>(consensus_id.size());
 
 	uint8_t challenge[CHALLENGE_SIZE];

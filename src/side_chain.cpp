@@ -511,7 +511,6 @@ void SideChain::cleanup_incoming_blocks()
 	MutexLock lock(m_incomingBlocksLock);
 
 	// Forget seen blocks that were added more than 10 minutes ago
-	hash h;
 	for (auto i = m_incomingBlocks.begin(); i != m_incomingBlocks.end();) {
 		if (cur_time < i->second + 10 * 60) {
 			++i;
