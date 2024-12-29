@@ -1425,7 +1425,7 @@ void P2PServer::api_update_local_stats()
 				}
 			}
 
-			s << "],\"uptime\":" << cur_time - m_pool->start_time() << '}';
+			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"zmq_last_active\":" << (seconds_since_epoch() - m_pool->zmq_last_active()) << '}';
 		});
 }
 
