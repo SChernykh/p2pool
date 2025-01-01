@@ -1,42 +1,18 @@
 {
-  "nodes": {
-    "nixpkgs": {
-      "locked": {
-        "lastModified": 1678349056,
-        "narHash": "sha256-kcL7Ap6IfUQRmGFeE2F0SkzIbQaPvZiylIuL2dD6mL0=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "6a231a6eb788a345b265e1f26e04b96d8a402bf5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "root": {
-      "inputs": {
-        "nixpkgs": "nixpkgs",
-        "utils": "utils"
-      }
-    },
-    "utils": {
-      "locked": {
-        "lastModified": 1676283394,
-        "narHash": "sha256-XX2f9c3iySLCw54rJ/CZs+ZK6IQy7GXNY4nSOyu2QG4=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "3db36a8b464d0c4532ba1c7dda728f4576d6d073",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    }
-  },
-  "root": "root",
-  "version": 7
+  description = "Your Project";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs";
+    utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, utils }: {
+    # Define your packages, overlays, and modules here.
+  };
 }
+nix flake update
+nix build .   # Builds your flake
+nix run .     # Runs your flake (if an entry point is defined)
+nix shell .   # Enters a shell environment with your flake dependencies
+nix log path/to/failed-build
+nix build --verbose
