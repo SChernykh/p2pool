@@ -6,15 +6,10 @@ networks:
     driver: bridge
 
 volumes:
-  p2pool: 
-
+  p2pool:
     name: p2pool
-
-
-
   monero:
     name: monero
-
 
 services:
   p2pool:
@@ -25,37 +20,20 @@ services:
       - p2pool
     privileged: true
     ports:
-
       - 37888:37888/tcp
-
-
     volumes:
       - p2pool:/home/p2pool/.p2pool:rw
       - /dev/null:/home/p2pool/.p2pool/p2pool.log:rw
       - /dev/hugepages:/dev/hugepages:rw
-
     depends_on:
       - monero
-
     restart: unless-stopped
-    command: >-
-
+    command: >
       --host monero
-
       --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg
       --loglevel 3
-
-
-
       --local-api
       --data-api /home/p2pool/.p2pool
-
-
-
-
-
-
-
 
   statistics:
     image: statistics:latest
@@ -72,9 +50,6 @@ services:
       - p2pool
     restart: unless-stopped
 
-
-
-
   monero:
     image: monero:latest
     build:
@@ -86,13 +61,12 @@ services:
       - p2pool
     ports:
       - 18080:18080/tcp
-
     volumes:
       - monero:/home/monero/.bitmonero:rw
       - /dev/null:/home/monero/.bitmonero/bitmonero.log:rw
       - /dev/hugepages:/dev/hugepages:rw
     restart: unless-stopped
-    command: >-
+    command: >
       --zmq-pub tcp://0.0.0.0:18083
       --disable-dns-checkpoints
       --enable-dns-blocklist
@@ -108,19 +82,8 @@ services:
       --restricted-rpc
       --confirm-external-bind
       --log-level=0
-
       --prune-blockchain
-
-
-
-
-
       --fast-block-sync=1
-
-
-
-
-
 
   xmrig:
     image: xmrig:latest
@@ -136,12 +99,9 @@ services:
     depends_on:
       - p2pool
     restart: unless-stopped
-    command: >-
+    command: >
       --randomx-1gb-pages
       -o p2pool:3333
-
       -u p2pool
-
       --cpu-max-threads-hint=100
       --cpu-priority=2
-
