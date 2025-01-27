@@ -112,7 +112,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 {
 	const std::string req = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_chain_id\"}";
 
-	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy,
+	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
 		[this](const char* data, size_t size, double ping) {
 			WriteLock lock(m_lock);
 
@@ -201,7 +201,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 	  << ",\"prev_id\":\"" << prev_id << '"'
 	  << "}}";
 
-	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
+	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
 		[this](const char* data, size_t size, double) {
 			bool changed = false;
 			hash chain_id;
@@ -310,7 +310,7 @@ void MergeMiningClientJSON_RPC::submit_solution(const BlockTemplate* /*block_tpl
 	s << "],\"path\":" << merkle_proof_path
 		<< ",\"seed_hash\":\"" << seed_hash << "\"}}";
 
-	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy,
+	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
 		[this](const char* data, size_t size, double) {
 			parse_merge_mining_submit_solution(data, size);
 		},

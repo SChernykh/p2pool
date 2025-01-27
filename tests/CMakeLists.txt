@@ -22,6 +22,10 @@ add_subdirectory(../external/src/RandomX RandomX)
 set(LIBS ${LIBS} randomx)
 add_definitions(-DWITH_RANDOMX)
 
+add_subdirectory(cmake/ssl)
+include_directories(../external/src/grpc/third_party/boringssl-with-bazel/src/include)
+add_definitions(-DWITH_TLS)
+
 add_definitions(-DP2POOL_UNIT_TESTS)
 add_definitions(-DP2POOL_SIDECHAIN_EXTRA_1=1)
 
@@ -69,6 +73,7 @@ set(SOURCES
 	../src/side_chain.cpp
 	../src/stratum_server.cpp
 	../src/tcp_server.cpp
+	../src/tls.cpp
 	../src/util.cpp
 	../src/wallet.cpp
 	../src/zmq_reader.cpp
@@ -136,8 +141,8 @@ else()
 		find_library(ZMQ_LIBRARY NAMES libzmq-v142-mt-s-4_3_6 PATHS "../external/lib/libzmq/Release")
 		find_library(UV_LIBRARY_DEBUG NAMES libuv PATHS "../external/lib/libuv/Debug")
 		find_library(UV_LIBRARY NAMES libuv PATHS "../external/lib/libuv/Release")
-		find_library(CURL_LIBRARY_DEBUG NAMES libcurl-d PATHS "../external/lib/libcurl/Debug")
-		find_library(CURL_LIBRARY NAMES libcurl PATHS "../external/lib/libcurl/Release")
+		find_library(CURL_LIBRARY_DEBUG NAMES libcurl-d PATHS "../external/lib/libcurl_tls/Debug")
+		find_library(CURL_LIBRARY NAMES libcurl PATHS "../external/lib/libcurl_tls/Release")
 		add_definitions(-D_DISABLE_VECTOR_ANNOTATION)
 		add_definitions(-D_DISABLE_STRING_ANNOTATION)
 	elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang)
@@ -177,6 +182,8 @@ if(APPLE)
 	find_library(SYSTEM_CONFIGURATION_LIB SystemConfiguration)
 	set(LIBS ${LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 endif()
+
+set(LIBS ${LIBS} ssl crypto)
 
 add_definitions(/DZMQ_STATIC /DP2POOL_LOG_DISABLE)
 

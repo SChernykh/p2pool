@@ -29,13 +29,14 @@ struct Params
 
 	struct Host
 	{
-		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083) {}
+		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083), m_rpcSSL(false) {}
 
 		Host(const char* address, uint32_t rpcPort, uint32_t zmqPort, const char* rpcLogin)
 			: m_address(address)
 			, m_rpcPort(rpcPort)
 			, m_zmqPort(zmqPort)
 			, m_rpcLogin(rpcLogin)
+			, m_rpcSSL(false)
 		{}
 
 		bool valid() const { return !m_address.empty() && m_rpcPort && m_zmqPort && (m_rpcPort != m_zmqPort); }
@@ -47,6 +48,9 @@ struct Params
 		uint32_t m_zmqPort;
 
 		std::string m_rpcLogin;
+
+		bool m_rpcSSL;
+		std::string m_rpcSSL_Fingerprint;
 
 		std::string m_displayName;
 	};

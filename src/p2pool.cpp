@@ -470,7 +470,7 @@ void p2pool::handle_miner_data(MinerData& data)
 			log::Stream s(buf);
 			s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
 
-			JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
+			JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 				[this, h](const char* data, size_t size, double)
 				{
 					ChainMain block;
@@ -874,7 +874,7 @@ void p2pool::submit_block() const
 
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const char* data, size_t size, double)
 		{
 			rapidjson::Document doc;
@@ -993,7 +993,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << height << "}}\0";
 
-		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
+		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 			[this, prev_seed_height, height](const char* data, size_t size, double)
 			{
 				ChainMain block;
@@ -1022,7 +1022,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, start_height, current_height, host](const char* data, size_t size, double)
 		{
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
@@ -1055,7 +1055,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 					for (const Params::Host& h : m_params->m_hosts) {
 						const std::string& name = h.m_displayName;
 						if (name != host.m_displayName) {
-							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params->m_socks5Proxy,
+							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 								[this, name](const char*, size_t, double tcp_ping) { update_host_ping(name, tcp_ping); },
 								[](const char*, size_t, double) {});
 						}
@@ -1164,7 +1164,7 @@ void p2pool::get_info()
 {
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this](const char* data, size_t size, double)
 		{
 			parse_get_info_rpc(data, size);
@@ -1172,7 +1172,7 @@ void p2pool::get_info()
 		[this, host](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: " << log::const_buf(data, size) << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					switch_host();
@@ -1280,7 +1280,7 @@ void p2pool::get_version()
 {
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this](const char* data, size_t size, double)
 		{
 			parse_get_version_rpc(data, size);
@@ -1288,7 +1288,7 @@ void p2pool::get_version()
 		[this](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_version RPC request failed: error " << log::const_buf(data, size) << ", trying again in 1 second");
+				LOGWARN(1, "get_version RPC request failed: " << log::const_buf(data, size) << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					get_version();
@@ -1357,7 +1357,7 @@ void p2pool::get_miner_data(bool retry)
 
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params->m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, host](const char* data, size_t size, double tcp_ping)
 		{
 			parse_get_miner_data_rpc(data, size);
@@ -1366,7 +1366,7 @@ void p2pool::get_miner_data(bool retry)
 		[this, host, retry](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGWARN(1, "get_miner_data RPC request to host " << host.m_displayName << " failed: error " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
+				LOGWARN(1, "get_miner_data RPC request to host " << host.m_displayName << " failed: " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
 				if (!m_stopped && retry) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;

@@ -173,6 +173,26 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+#ifdef WITH_TLS
+		if (strcmp(argv[i], "--rpc-ssl") == 0) {
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+			}
+
+			m_hosts.back().m_rpcSSL = true;
+			ok = true;
+		}
+
+		if ((strcmp(argv[i], "--rpc-ssl-fingerprint") == 0) && (i + 1 < argc)) {
+			if (m_hosts.empty()) {
+				m_hosts.emplace_back(Host());
+			}
+
+			m_hosts.back().m_rpcSSL_Fingerprint = argv[++i];
+			ok = true;
+		}
+#endif
+
 		if ((strcmp(argv[i], "--socks5") == 0) && (i + 1 < argc)) {
 			m_socks5Proxy = argv[++i];
 			ok = true;
@@ -301,7 +321,7 @@ bool Params::Host::init_display_name(const Params& p)
 	buf[0] = '\0';
 	log::Stream s(buf);
 
-	s << m_displayName << ':' << m_rpcPort << ":ZMQ:" << m_zmqPort;
+	s << m_displayName << (m_rpcSSL ? ":RPC-SSL " : ":RPC ") << m_rpcPort << ":ZMQ " << m_zmqPort;
 	if (m_address != m_displayName) {
 		s << " (" << m_address << ')';
 	}

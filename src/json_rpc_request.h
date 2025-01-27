@@ -22,15 +22,15 @@ namespace JSONRPCRequest {
 
 typedef Callback<void, const char*, size_t, double>::Base CallbackBase;
 
-void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
+void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 
 template<typename T, typename U>
-FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
+FORCEINLINE void call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, T&& cb, U&& close_cb, uv_loop_t* loop = nullptr)
 {
 	typedef Callback<void, const char*, size_t, double>::Derived<T> CallbackT;
 	typedef Callback<void, const char*, size_t, double>::Derived<U> CallbackU;
 
-	Call(address, port, req, auth, proxy, new CallbackT(std::move(cb)), new CallbackU(std::move(close_cb)), loop);
+	Call(address, port, req, auth, proxy, ssl, ssl_fingerprint, new CallbackT(std::move(cb)), new CallbackU(std::move(close_cb)), loop);
 }
 
 } // namespace JSONRPCRequest

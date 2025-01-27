@@ -17,7 +17,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wundef -Wformat=2 -Wpointer-arith -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wundef -Wformat=2 -Wpointer-arith -Werror -Wno-error=inline")
 
 	if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.5.0)
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")

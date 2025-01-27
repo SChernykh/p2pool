@@ -638,7 +638,7 @@ void P2PServer::load_monerod_peer_list()
 {
 	const Params::Host& host = m_pool->current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this](const char* data, size_t size, double)
 		{
 #define ERR_STR "/get_peer_list RPC request returned invalid JSON "

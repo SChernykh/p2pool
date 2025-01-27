@@ -27,7 +27,7 @@ namespace JSONRPCRequest {
 
 struct CurlContext
 {
-	CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
+	CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 	~CurlContext();
 
 	static int socket_func(CURL* easy, curl_socket_t s, int action, void* userp, void* socketp)
@@ -82,7 +82,7 @@ struct CurlContext
 	uint64_t m_connectedTime;
 };
 
-CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
+CurlContext::CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 	: m_callback(cb)
 	, m_closeCallback(close_cb)
 	, m_loop(loop)
@@ -100,8 +100,19 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		char buf[log::Stream::BUF_SIZE + 1];
 		buf[0] = '\0';
 
+		const char* protocol = "http://";
+
+#ifdef WITH_TLS
+		if (ssl) {
+			protocol = "https://";
+		}
+#else
+		(void)ssl;
+		(void)ssl_fingerprint;
+#endif
+
 		log::Stream s(buf);
-		s << "http://" << address << ':' << port;
+		s << protocol << address << ':' << port;
 
 		if (!m_req.empty() && (m_req.front() == '/')) {
 			s << m_req.c_str() << '\0';
@@ -200,9 +211,23 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		}
 	}
 
+#ifdef WITH_TLS
+	curl_easy_setopt_checked(m_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt_checked(m_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+
+	if (!ssl_fingerprint.empty()) {
+		char buf[64] = {};
+
+		log::Stream s(buf);
+		s << "sha256//" << ssl_fingerprint;
+
+		curl_easy_setopt_checked(m_handle, CURLOPT_PINNEDPUBLICKEY, buf);
+	}
+#endif
+
 	CURLMcode curl_err = curl_multi_add_handle(m_multiHandle, m_handle);
 	if (curl_err != CURLM_OK) {
-		LOGERR(1, "curl_multi_add_handle failed, error " << curl_multi_strerror(curl_err));
+		LOGERR(1, "curl_multi_add_handle failed: " << curl_multi_strerror(curl_err));
 		curl_easy_cleanup(m_handle);
 		curl_multi_cleanup(m_multiHandle);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
@@ -336,7 +361,7 @@ void CurlContext::on_timeout(uv_handle_t* req)
 	int running_handles = 0;
 	const CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
 	if (err != CURLM_OK) {
-		LOGERR(1, "curl_multi_socket_action failed, error " << curl_multi_strerror(err));
+		LOGERR(1, "curl_multi_socket_action failed: " << curl_multi_strerror(err));
 	}
 
 	ctx->check_multi_info();
@@ -382,7 +407,7 @@ void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 	if (it != ctx->m_pollHandles.end()) {
 		const CURLMcode err = curl_multi_socket_action(ctx->m_multiHandle, it->first, flags, &running_handles);
 		if (err != CURLM_OK) {
-			LOGERR(1, "curl_multi_socket_action failed, error " << curl_multi_strerror(err));
+			LOGERR(1, "curl_multi_socket_action failed: " << curl_multi_strerror(err));
 		}
 	}
 
@@ -449,7 +474,7 @@ void CurlContext::shutdown()
 	}
 }
 
-void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
+void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 {
 	if (!loop) {
 		loop = uv_default_loop();
@@ -459,7 +484,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 		[=]()
 		{
 			try {
-				new CurlContext(address, port, req, auth, proxy, cb, close_cb, loop);
+				new CurlContext(address, port, req, auth, proxy, ssl, ssl_fingerprint, cb, close_cb, loop);
 			}
 			catch (const std::exception& e) {
 				const char* msg = e.what();
