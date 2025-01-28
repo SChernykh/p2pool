@@ -18,9 +18,9 @@ jobs:
     strategy:
       matrix:
         config:
-          - {arch: x86_64, branch: latest-stable, flags: "-ffunction-sections -Wno-error=inline"}
-          - {arch: aarch64, branch: latest-stable, flags: "-ffunction-sections -Wno-error=inline -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
-          - {arch: riscv64, branch: edge, flags: "-ffunction-sections -Wno-error=inline"}
+          - {arch: x86_64, branch: latest-stable, flags: "-ffunction-sections"}
+          - {arch: aarch64, branch: latest-stable, flags: "-ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
+          - {arch: riscv64, branch: edge, flags: "-ffunction-sections"}
 
     steps:
     - name: Setup Alpine Linux
@@ -175,7 +175,7 @@ jobs:
     strategy:
       matrix:
         config:
-          - {flags: "-fuse-linker-plugin -ffunction-sections -Wno-error=inline"}
+          - {flags: "-fuse-linker-plugin -ffunction-sections"}
 
     steps:
     - name: Install dependencies
