@@ -94,12 +94,12 @@ Note that you need to use certificate files and `--tls...` parameters to be able
 
 ### RPC-SSL
 
-Starting from v4.4, P2Pool supports RPC-SSL connections to Monero nodes. You need to add `--rpc-ssl=enabled` to monerod command line to enable it on Monero side, and `--rpc-ssl` on P2Pool side.
+Starting from v4.4, P2Pool supports RPC-SSL connections to Monero nodes. Add `--rpc-ssl` to P2Pool command line to enable it.
 
-P2Pool supports certificate pinning on RPC-SSL connections. To get your node certificate's fingerprint, run
+P2Pool supports certificate pinning on RPC-SSL connections via `--rpc-ssl-fingerprint MONERO_NODE_FINGERPRINT_BASE64` parameter. To get your node certificate's fingerprint, run
 
 ```
 openssl x509 -in rpc_ssl.crt -pubkey -noout -inform pem | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
 ```
 
-where `rpc_ssl.crt` can be found in Monero data directory. By default, it's `/home/username/.bitmonero/rpc_ssl.crt` on Linux and `C:\ProgramData\bitmonero\rpc_ssl.crt` on Windows.
+By default, `rpc_ssl.crt` can be found in Monero data directory: `/home/username/.bitmonero/rpc_ssl.crt` on Linux and `C:\ProgramData\bitmonero\rpc_ssl.crt` on Windows.
