@@ -15,7 +15,7 @@ on:
 jobs:
   cppcheck-ubuntu:
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ubuntu-latest
 
     steps:
