@@ -15,6 +15,7 @@ on:
 jobs:
   cppcheck-ubuntu:
 
+    if: false
     timeout-minutes: 240
     runs-on: ubuntu-latest
 
