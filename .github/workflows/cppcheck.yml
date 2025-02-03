@@ -15,7 +15,6 @@ on:
 jobs:
   cppcheck-ubuntu:
 
-    if: false
     timeout-minutes: 240
     runs-on: ubuntu-latest
 
@@ -40,7 +39,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSTATIC_LIBS=ON -DWITH_GRPC=OFF
         python ../cppcheck/remove_external.py compile_commands.json
 
     - name: Run cppcheck
