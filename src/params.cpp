@@ -101,12 +101,6 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--config") == 0) && (i + 1 < argc)) {
-			LOGWARN(0, "--config command line parameter is deprecated and will be removed in the next version. Use --sidechain-config instead");
-			m_sidechainConfig = argv[++i];
-			ok = true;
-		}
-
 		if ((strcmp(argv[i], "--sidechain-config") == 0) && (i + 1 < argc)) {
 			m_sidechainConfig = argv[++i];
 			ok = true;
@@ -245,6 +239,9 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if (!ok) {
+			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();
 			throw std::exception();
