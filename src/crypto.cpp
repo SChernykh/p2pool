@@ -151,8 +151,7 @@ static FORCEINLINE void derivation_to_scalar(const hash& derivation, size_t outp
 	uint8_t* p = buf.output_index;
 	writeVarint(output_index, [&p](uint8_t b) { *(p++) = b; });
 
-	const uint8_t* data = buf.derivation;
-	hash_to_scalar(data, static_cast<int>(p - data), res);
+	hash_to_scalar(buf.derivation, static_cast<int>(sizeof(buf.derivation) + (p - buf.output_index)), res);
 }
 
 class Cache : public nocopy_nomove
