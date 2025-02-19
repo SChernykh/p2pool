@@ -19,28 +19,7 @@ add_subdirectory(googletest)
 set(LIBS gtest)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-	add_definitions(-D_DISABLE_VECTOR_ANNOTATION)
-	add_definitions(-D_DISABLE_STRING_ANNOTATION)
-
-	set(BUILD_TESTING OFF CACHE BOOL "")
-	set(LIBUV_BUILD_SHARED OFF CACHE BOOL "")
-	set(WITH_LIBSODIUM OFF CACHE BOOL "")
-	set(WITH_LIBBSD OFF CACHE BOOL "")
-	set(BUILD_TESTS OFF CACHE BOOL "")
-	set(ZMQ_HAVE_IPC OFF CACHE BOOL "")
-	set(WITH_DOCS OFF CACHE BOOL "")
-	set(ENABLE_DRAFTS OFF CACHE BOOL "")
-	set(BUILD_SHARED OFF CACHE BOOL "")
-	set(ENABLE_CLANG OFF CACHE BOOL "")
-
-	add_subdirectory(../external/src/libuv libuv)
-	add_subdirectory(../external/src/libzmq libzmq)
-
-	set(UV_LIBRARY_DEBUG uv_a)
-	set(UV_LIBRARY uv_a)
-
-	set(ZMQ_LIBRARY_DEBUG libzmq-static)
-	set(ZMQ_LIBRARY libzmq-static)
+	include(cmake/msvc_libs.cmake)
 endif()
 
 add_subdirectory(../external/src/RandomX RandomX)
@@ -111,7 +90,7 @@ if (AMD64)
 	endif()
 endif()
 
-if (NOT STATIC_BINARY AND NOT STATIC_LIBS)
+if (NOT ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS))
 	include(FindCURL)
 endif()
 
