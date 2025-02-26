@@ -301,7 +301,7 @@ void MergeMiningClientJSON_RPC::submit_solution(const BlockTemplate* /*block_tpl
 		<< ",\"merkle_proof\":[";
 
 	for (size_t i = 0, n = merkle_proof.size(); i < n; ++i) {
-		if (i > 0) {
+		if (i != 0) {
 			s << ',';
 		}
 		s << '"' << merkle_proof[i] << '"';
