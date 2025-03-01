@@ -117,9 +117,12 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, c: gcc-8, cpp: g++-8, flags: ""}
-          - {os: ubuntu-20.04, c: gcc-11, cpp: g++-11, flags: ""}
+          - {os: ubuntu-22.04, c: gcc-9, cpp: g++-9, flags: ""}
+          - {os: ubuntu-22.04, c: gcc-10, cpp: g++-10, flags: ""}
+          - {os: ubuntu-22.04, c: gcc-11, cpp: g++-11, flags: ""}
           - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
+          - {os: ubuntu-24.04, c: gcc-13, cpp: g++-13, flags: ""}
+          - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: ""}
 
     steps:
     - name: Install dependencies
@@ -255,8 +258,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-20.04, flags: "-fuse-linker-plugin -ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
           - {os: ubuntu-22.04, flags: "-fuse-linker-plugin -ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
+          - {os: ubuntu-24.04, flags: "-fuse-linker-plugin -ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
 
     steps:
     - name: Install dependencies
