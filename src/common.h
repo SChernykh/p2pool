@@ -501,4 +501,10 @@ extern const char* BLOCK_FOUND;
 } // namespace p2pool
 
 #include "util.h"
+
+#ifdef DEBUG_BUILD
+#undef FORCEINLINE
+#define FORCEINLINE NOINLINE
+#endif
+
 #include "log.h"

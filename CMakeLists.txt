@@ -432,8 +432,9 @@ else()
 endif()
 
 message(STATUS "Summary of build options:
-    C compiler:      ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})
-    CXX compiler:    ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})
-    C_FLAGS:         ${CMAKE_C_FLAGS}
-    CXX_FLAGS:       ${CMAKE_CXX_FLAGS}
+    C compiler:       ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})
+    CXX compiler:     ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})
+    C_FLAGS:          ${CMAKE_C_FLAGS}
+    CXX_FLAGS:        ${CMAKE_CXX_FLAGS}
+    CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}
 ")
