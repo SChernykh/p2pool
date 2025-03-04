@@ -474,7 +474,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_WITH_ASAN=ON
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_WITH_ASAN=ON
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool_tests.vcxproj
 
     - name: Run tests
