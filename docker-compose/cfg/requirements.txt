@@ -1,3 +1,3 @@
 npyscreen==4.10.5
 MarkupSafe==2.0.1
-jinja2==3.1.5
+jinja2==3.1.6
