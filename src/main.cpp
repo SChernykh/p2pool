@@ -111,17 +111,23 @@ int p2pool_test()
 	char hash[RANDOMX_HASH_SIZE];
 
 	const randomx_flags flags = randomx_get_flags() | RANDOMX_FLAG_FULL_MEM;
-	randomx_cache* myCache = randomx_alloc_cache(flags);
+	randomx_cache* myCache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
 	if (!myCache) {
-		printf("Cache allocation failed\n");
-		return 1;
+		myCache = randomx_alloc_cache(flags);
+		if (!myCache) {
+			printf("Cache allocation failed\n");
+			return 1;
+		}
 	}
 	randomx_init_cache(myCache, myKey, sizeof(myKey) - 1);
 
-	randomx_dataset* myDataset = randomx_alloc_dataset(flags);
+	randomx_dataset* myDataset = randomx_alloc_dataset(flags | RANDOMX_FLAG_LARGE_PAGES);
 	if (!myDataset) {
-		printf("Dataset allocation failed\n");
-		return 1;
+		myDataset = randomx_alloc_dataset(flags);
+		if (!myDataset) {
+			printf("Dataset allocation failed\n");
+			return 1;
+		}
 	}
 
 	{
@@ -146,10 +152,13 @@ int p2pool_test()
 
 	randomx_release_cache(myCache);
 
-	randomx_vm* myMachine = randomx_create_vm(flags, nullptr, myDataset);
+	randomx_vm* myMachine = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, nullptr, myDataset);
 	if (!myMachine) {
-		printf("Failed to create a virtual machine");
-		return 1;
+		myMachine = randomx_create_vm(flags, nullptr, myDataset);
+		if (!myMachine) {
+			printf("Failed to create a virtual machine");
+			return 1;
+		}
 	}
 
 	memset(hash, 0, sizeof(hash));
