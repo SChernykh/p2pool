@@ -1953,6 +1953,8 @@ int p2pool::run()
 	loop->data = nullptr;
 	GetLoopUserData(loop);
 
+	set_thread_name("Main");
+
 	try {
 		get_info();
 		load_found_blocks();

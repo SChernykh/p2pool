@@ -345,6 +345,16 @@ int main(int argc, char* argv[])
 	return 0;
 }" HAVE_RES_QUERY)
 
+check_c_source_compiles("
+#define _GNU_SOURCE
+#include <pthread.h>
+
+int main()
+{
+	pthread_setname_np(pthread_self(), \"Main\");
+	return 0;
+}" HAVE_PTHREAD_SETNAME_NP)
+
 set(CMAKE_REQUIRED_LIBRARIES)
 
 if (HAVE_BUILTIN_CLZLL)
@@ -364,6 +374,10 @@ if (HAVE_RES_QUERY)
 	if (HAVE_RESOLV_LIB)
 		set(LIBS ${LIBS} resolv)
 	endif()
+endif()
+
+if (HAVE_PTHREAD_SETNAME_NP)
+	add_definitions(/DHAVE_PTHREAD_SETNAME_NP)
 endif()
 
 add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")

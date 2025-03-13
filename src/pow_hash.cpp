@@ -244,6 +244,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 					{
 						// Background doesn't work very well with xmrig mining on all cores
 						//make_thread_background();
+						set_thread_name("Dataset init");
 						randomx_init_dataset(m_dataset, m_cache[m_index], a, b - a);
 					});
 			}
@@ -425,6 +426,8 @@ RandomX_Hasher_RPC::~RandomX_Hasher_RPC()
 void RandomX_Hasher_RPC::loop(void* data)
 {
 	LOGINFO(1, "event loop started");
+
+	set_thread_name("RX hash RPC");
 
 	RandomX_Hasher_RPC* hasher = static_cast<RandomX_Hasher_RPC*>(data);
 

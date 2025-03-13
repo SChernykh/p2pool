@@ -615,6 +615,17 @@ void TCPServer::loop(void* data)
 	TCPServer* server = static_cast<TCPServer*>(data);
 
 	log_category_prefix = server->get_log_category();
+	{
+		char buf[64] = {};
+		log::Stream s(buf);
+		s << log_category_prefix;
+
+		if (s.m_pos > 0) {
+			buf[s.m_pos - 1] = '\0';
+		}
+
+		set_thread_name(buf);
+	}
 
 	LOGINFO(1, "event loop started");
 	server_event_loop_thread = data;

@@ -250,6 +250,8 @@ private:
 
 	NOINLINE void run()
 	{
+		set_thread_name("Logger");
+		
 		do {
 			uv_mutex_lock(&m_mutex);
 			if (m_readPos == m_writePos.load()) {

@@ -2370,6 +2370,8 @@ void SideChain::launch_precalc(const PoolBlock* block)
 
 void SideChain::precalc_worker()
 {
+	set_thread_name("Precalc");
+
 	std::vector<std::pair<size_t, const Wallet*>> wallets;
 	wallets.reserve(m_chainWindowSize);
 

@@ -846,4 +846,21 @@ NOINLINE PerfTimer::~PerfTimer()
 	LOGINFO(m_level, m_name << " took " << dt.count() << " ms");
 }
 
+void set_thread_name(const char* name)
+{
+#if (UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 50))
+	const int err = uv_thread_setname(name);
+	if (err) {
+		LOGERR(1, "uv_thread_setname failed for " << name << ", error " << uv_err_name(err));
+	}
+#elif defined(HAVE_PTHREAD_SETNAME_NP)
+	const int err = pthread_setname_np(pthread_self(), name);
+	if (err) {
+		LOGERR(1, "pthread_setname_np failed for " << name << ", error " << err);
+	}
+#else
+	(void)name;
+#endif
+}
+
 } // namespace p2pool

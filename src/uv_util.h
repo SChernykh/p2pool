@@ -232,4 +232,6 @@ void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
 	}
 }
 
+void set_thread_name(const char* name);
+
 } // namespace p2pool

@@ -130,6 +130,8 @@ void ZMQReader::monitor_thread(void* arg)
 {
 	LOGINFO(1, "monitor thread ready");
 
+	set_thread_name("ZMQ monitor");
+
 	ZMQReader* r = reinterpret_cast<ZMQReader*>(arg);
 
 	do {} while (!r->m_stopped && r->m_monitor->m_connected && r->m_monitor->check_event(-1));
@@ -150,6 +152,8 @@ void ZMQReader::run()
 {
 	m_workerThreadRunning = true;
 	ON_SCOPE_LEAVE([this]() { m_workerThreadRunning = false; });
+
+	set_thread_name("ZMQ worker");
 
 	zmq_msg_t message = {};
 

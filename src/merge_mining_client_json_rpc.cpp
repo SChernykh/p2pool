@@ -404,6 +404,8 @@ void MergeMiningClientJSON_RPC::loop(void* data)
 {
 	LOGINFO(1, "event loop started");
 
+	set_thread_name("MM JSON RPC");
+
 	MergeMiningClientJSON_RPC* client = static_cast<MergeMiningClientJSON_RPC*>(data);
 
 	int err = uv_run(&client->m_loop, UV_RUN_DEFAULT);
