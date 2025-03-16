@@ -616,15 +616,32 @@ void TCPServer::loop(void* data)
 
 	log_category_prefix = server->get_log_category();
 	{
-		char buf[64] = {};
-		log::Stream s(buf);
-		s << log_category_prefix;
+		size_t n = strlen(log_category_prefix);
 
-		if (s.m_pos > 0) {
-			buf[s.m_pos - 1] = '\0';
+		if (n > 1) {
+			// Discard the last character (space)
+			--n;
+
+			char buf[16] = {};
+
+			if (n < sizeof(buf)) {
+				// Set the thread name as is
+				memcpy(buf, log_category_prefix, n);
+			}
+			else {
+				// Thread name is too long, use the "first 7 characters - last 7 characters" format
+				constexpr size_t k = sizeof(buf) / 2 - 1;
+
+				memcpy(buf, log_category_prefix, k);
+				buf[k] = '-';
+				memcpy(buf + k + 1, log_category_prefix + n - k, k);
+			}
+
+			set_thread_name(buf);
 		}
-
-		set_thread_name(buf);
+		else {
+			set_thread_name("TCPServer");
+		}
 	}
 
 	LOGINFO(1, "event loop started");

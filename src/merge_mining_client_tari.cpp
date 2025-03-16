@@ -334,6 +334,8 @@ void MergeMiningClientTari::run()
 {
 	LOGINFO(1, "worker thread ready");
 
+	set_thread_name("MM Tari poll");
+
 	using namespace std::chrono;
 
 	for (;;) {

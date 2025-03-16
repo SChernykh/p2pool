@@ -80,8 +80,8 @@ void p2pool_usage()
 		"--rpc-ssl             Enable SSL on RPC connections to the Monero node\n"
 		"--rpc-ssl-fingerprint base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)\n"
 #endif
-		"--no-stratum-http    Disable HTTP on Stratum ports\n"
-		"--help               Show this help message\n\n"
+		"--no-stratum-http     Disable HTTP on Stratum ports\n"
+		"--help                Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
 		p2pool::VERSION,
