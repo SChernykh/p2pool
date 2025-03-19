@@ -1232,6 +1232,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 	if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("result")) {
 		LOGWARN(1, "get_info RPC response is invalid (\"result\" not found), trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		switch_host();
 		get_info();
 		return;
 	}
@@ -1249,6 +1250,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 		!PARSE(result, info, stagenet)) {
 		LOGWARN(1, "get_info RPC response is invalid, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		switch_host();
 		get_info();
 		return;
 	}
@@ -1256,6 +1258,7 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 	if (info.busy_syncing || !info.synchronized) {
 		LOGINFO(1, "monerod is " << (info.busy_syncing ? "busy syncing" : "not synchronized") << ", trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		switch_host();
 		get_info();
 		return;
 	}
