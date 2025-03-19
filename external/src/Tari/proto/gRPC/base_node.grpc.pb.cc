@@ -59,6 +59,7 @@ static const char* BaseNode_method_names[] = {
   "/tari.rpc.BaseNode/GetShardKey",
   "/tari.rpc.BaseNode/GetTemplateRegistrations",
   "/tari.rpc.BaseNode/GetSideChainUtxos",
+  "/tari.rpc.BaseNode/GetNetworkState",
 };
 
 std::unique_ptr< BaseNode::Stub> BaseNode::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -104,6 +105,7 @@ BaseNode::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, 
   , rpcmethod_GetShardKey_(BaseNode_method_names[33], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetTemplateRegistrations_(BaseNode_method_names[34], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
   , rpcmethod_GetSideChainUtxos_(BaseNode_method_names[35], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetNetworkState_(BaseNode_method_names[36], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::ClientReader< ::tari::rpc::BlockHeaderResponse>* BaseNode::Stub::ListHeadersRaw(::grpc::ClientContext* context, const ::tari::rpc::ListHeadersRequest& request) {
@@ -850,6 +852,29 @@ void BaseNode::Stub::async::GetSideChainUtxos(::grpc::ClientContext* context, co
   return ::grpc::internal::ClientAsyncReaderFactory< ::tari::rpc::GetSideChainUtxosResponse>::Create(channel_.get(), cq, rpcmethod_GetSideChainUtxos_, context, request, false, nullptr);
 }
 
+::grpc::Status BaseNode::Stub::GetNetworkState(::grpc::ClientContext* context, const ::tari::rpc::GetNetworkStateRequest& request, ::tari::rpc::GetNetworkStateResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::tari::rpc::GetNetworkStateRequest, ::tari::rpc::GetNetworkStateResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetNetworkState_, context, request, response);
+}
+
+void BaseNode::Stub::async::GetNetworkState(::grpc::ClientContext* context, const ::tari::rpc::GetNetworkStateRequest* request, ::tari::rpc::GetNetworkStateResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::tari::rpc::GetNetworkStateRequest, ::tari::rpc::GetNetworkStateResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNetworkState_, context, request, response, std::move(f));
+}
+
+void BaseNode::Stub::async::GetNetworkState(::grpc::ClientContext* context, const ::tari::rpc::GetNetworkStateRequest* request, ::tari::rpc::GetNetworkStateResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetNetworkState_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNetworkStateResponse>* BaseNode::Stub::PrepareAsyncGetNetworkStateRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNetworkStateRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::tari::rpc::GetNetworkStateResponse, ::tari::rpc::GetNetworkStateRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetNetworkState_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::tari::rpc::GetNetworkStateResponse>* BaseNode::Stub::AsyncGetNetworkStateRaw(::grpc::ClientContext* context, const ::tari::rpc::GetNetworkStateRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetNetworkStateRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 BaseNode::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       BaseNode_method_names[0],
@@ -1211,6 +1236,16 @@ BaseNode::Service::Service() {
              ::grpc::ServerWriter<::tari::rpc::GetSideChainUtxosResponse>* writer) {
                return service->GetSideChainUtxos(ctx, req, writer);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      BaseNode_method_names[36],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::GetNetworkStateRequest, ::tari::rpc::GetNetworkStateResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](BaseNode::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::tari::rpc::GetNetworkStateRequest* req,
+             ::tari::rpc::GetNetworkStateResponse* resp) {
+               return service->GetNetworkState(ctx, req, resp);
+             }, this)));
 }
 
 BaseNode::Service::~Service() {
@@ -1465,6 +1500,13 @@ BaseNode::Service::~Service() {
   (void) context;
   (void) request;
   (void) writer;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status BaseNode::Service::GetNetworkState(::grpc::ServerContext* context, const ::tari::rpc::GetNetworkStateRequest* request, ::tari::rpc::GetNetworkStateResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

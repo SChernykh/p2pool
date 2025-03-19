@@ -107,6 +107,9 @@ inline constexpr BlockHeader::Impl_::Impl_(
         output_mr_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
+        block_output_mr_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
         kernel_mr_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
@@ -149,7 +152,8 @@ inline constexpr NewBlockTemplate::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
         header_{nullptr},
-        body_{nullptr} {}
+        body_{nullptr},
+        is_mempool_in_sync_{false} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR NewBlockTemplate::NewBlockTemplate(::_pbi::ConstantInitialized)
@@ -227,6 +231,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.prev_hash_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.timestamp_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.output_mr_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.block_output_mr_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.kernel_mr_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.input_mr_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.total_kernel_offset_),
@@ -237,6 +242,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.total_script_offset_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.validator_node_mr_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::BlockHeader, _impl_.validator_node_size_),
+        ~0u,
         ~0u,
         ~0u,
         ~0u,
@@ -326,19 +332,21 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockTemplate, _impl_.header_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockTemplate, _impl_.body_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::NewBlockTemplate, _impl_.is_mempool_in_sync_),
         0,
         1,
+        ~0u,
 };
 
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-        {0, 24, -1, sizeof(::tari::rpc::BlockHeader)},
-        {40, -1, -1, sizeof(::tari::rpc::ProofOfWork)},
-        {50, -1, -1, sizeof(::tari::rpc::PowAlgo)},
-        {59, 69, -1, sizeof(::tari::rpc::Block)},
-        {71, 81, -1, sizeof(::tari::rpc::HistoricalBlock)},
-        {83, 97, -1, sizeof(::tari::rpc::NewBlockHeaderTemplate)},
-        {103, 113, -1, sizeof(::tari::rpc::NewBlockTemplate)},
+        {0, 25, -1, sizeof(::tari::rpc::BlockHeader)},
+        {42, -1, -1, sizeof(::tari::rpc::ProofOfWork)},
+        {52, -1, -1, sizeof(::tari::rpc::PowAlgo)},
+        {61, 71, -1, sizeof(::tari::rpc::Block)},
+        {73, 83, -1, sizeof(::tari::rpc::HistoricalBlock)},
+        {85, 99, -1, sizeof(::tari::rpc::NewBlockHeaderTemplate)},
+        {105, 116, -1, sizeof(::tari::rpc::NewBlockTemplate)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_BlockHeader_default_instance_._instance,
@@ -352,31 +360,33 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_block_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\013block.proto\022\010tari.rpc\032\021transaction.pro"
-    "to\"\361\002\n\013BlockHeader\022\014\n\004hash\030\001 \001(\014\022\017\n\007vers"
+    "to\"\212\003\n\013BlockHeader\022\014\n\004hash\030\001 \001(\014\022\017\n\007vers"
     "ion\030\002 \001(\r\022\016\n\006height\030\003 \001(\004\022\021\n\tprev_hash\030\004"
     " \001(\014\022\021\n\ttimestamp\030\005 \001(\004\022\021\n\toutput_mr\030\006 \001"
-    "(\014\022\021\n\tkernel_mr\030\010 \001(\014\022\020\n\010input_mr\030\t \001(\014\022"
-    "\033\n\023total_kernel_offset\030\n \001(\014\022\r\n\005nonce\030\013 "
-    "\001(\004\022\"\n\003pow\030\014 \001(\0132\025.tari.rpc.ProofOfWork\022"
-    "\027\n\017kernel_mmr_size\030\r \001(\004\022\027\n\017output_mmr_s"
-    "ize\030\016 \001(\004\022\033\n\023total_script_offset\030\017 \001(\014\022\031"
-    "\n\021validator_node_mr\030\020 \001(\014\022\033\n\023validator_n"
-    "ode_size\030\021 \001(\004\"1\n\013ProofOfWork\022\020\n\010pow_alg"
-    "o\030\001 \001(\004\022\020\n\010pow_data\030\004 \001(\014\"o\n\007PowAlgo\022,\n\010"
-    "pow_algo\030\001 \001(\0162\032.tari.rpc.PowAlgo.PowAlg"
-    "os\"6\n\010PowAlgos\022\025\n\021POW_ALGOS_RANDOMX\020\000\022\023\n"
-    "\017POW_ALGOS_SHA3X\020\001\"U\n\005Block\022%\n\006header\030\001 "
-    "\001(\0132\025.tari.rpc.BlockHeader\022%\n\004body\030\002 \001(\013"
-    "2\027.tari.rpc.AggregateBody\"H\n\017HistoricalB"
-    "lock\022\025\n\rconfirmations\030\001 \001(\004\022\036\n\005block\030\002 \001"
-    "(\0132\017.tari.rpc.Block\"\252\001\n\026NewBlockHeaderTe"
-    "mplate\022\017\n\007version\030\001 \001(\r\022\016\n\006height\030\002 \001(\004\022"
-    "\021\n\tprev_hash\030\003 \001(\014\022\033\n\023total_kernel_offse"
-    "t\030\004 \001(\014\022\"\n\003pow\030\005 \001(\0132\025.tari.rpc.ProofOfW"
-    "ork\022\033\n\023total_script_offset\030\007 \001(\014\"k\n\020NewB"
-    "lockTemplate\0220\n\006header\030\001 \001(\0132 .tari.rpc."
-    "NewBlockHeaderTemplate\022%\n\004body\030\002 \001(\0132\027.t"
-    "ari.rpc.AggregateBodyb\006proto3"
+    "(\014\022\027\n\017block_output_mr\030\007 \001(\014\022\021\n\tkernel_mr"
+    "\030\010 \001(\014\022\020\n\010input_mr\030\t \001(\014\022\033\n\023total_kernel"
+    "_offset\030\n \001(\014\022\r\n\005nonce\030\013 \001(\004\022\"\n\003pow\030\014 \001("
+    "\0132\025.tari.rpc.ProofOfWork\022\027\n\017kernel_mmr_s"
+    "ize\030\r \001(\004\022\027\n\017output_mmr_size\030\016 \001(\004\022\033\n\023to"
+    "tal_script_offset\030\017 \001(\014\022\031\n\021validator_nod"
+    "e_mr\030\020 \001(\014\022\033\n\023validator_node_size\030\021 \001(\004\""
+    "1\n\013ProofOfWork\022\020\n\010pow_algo\030\001 \001(\004\022\020\n\010pow_"
+    "data\030\004 \001(\014\"o\n\007PowAlgo\022,\n\010pow_algo\030\001 \001(\0162"
+    "\032.tari.rpc.PowAlgo.PowAlgos\"6\n\010PowAlgos\022"
+    "\025\n\021POW_ALGOS_RANDOMX\020\000\022\023\n\017POW_ALGOS_SHA3"
+    "X\020\001\"U\n\005Block\022%\n\006header\030\001 \001(\0132\025.tari.rpc."
+    "BlockHeader\022%\n\004body\030\002 \001(\0132\027.tari.rpc.Agg"
+    "regateBody\"H\n\017HistoricalBlock\022\025\n\rconfirm"
+    "ations\030\001 \001(\004\022\036\n\005block\030\002 \001(\0132\017.tari.rpc.B"
+    "lock\"\252\001\n\026NewBlockHeaderTemplate\022\017\n\007versi"
+    "on\030\001 \001(\r\022\016\n\006height\030\002 \001(\004\022\021\n\tprev_hash\030\003 "
+    "\001(\014\022\033\n\023total_kernel_offset\030\004 \001(\014\022\"\n\003pow\030"
+    "\005 \001(\0132\025.tari.rpc.ProofOfWork\022\033\n\023total_sc"
+    "ript_offset\030\007 \001(\014\"\207\001\n\020NewBlockTemplate\0220"
+    "\n\006header\030\001 \001(\0132 .tari.rpc.NewBlockHeader"
+    "Template\022%\n\004body\030\002 \001(\0132\027.tari.rpc.Aggreg"
+    "ateBody\022\032\n\022is_mempool_in_sync\030\003 \001(\010b\006pro"
+    "to3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_block_2eproto_deps[1] =
     {
@@ -386,7 +396,7 @@ static ::absl::once_flag descriptor_table_block_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_block_2eproto = {
     false,
     false,
-    1029,
+    1083,
     descriptor_table_protodef_block_2eproto,
     "block.proto",
     &descriptor_table_block_2eproto_once,
@@ -459,6 +469,7 @@ inline PROTOBUF_NDEBUG_INLINE BlockHeader::Impl_::Impl_(
         hash_(arena, from.hash_),
         prev_hash_(arena, from.prev_hash_),
         output_mr_(arena, from.output_mr_),
+        block_output_mr_(arena, from.block_output_mr_),
         kernel_mr_(arena, from.kernel_mr_),
         input_mr_(arena, from.input_mr_),
         total_kernel_offset_(arena, from.total_kernel_offset_),
@@ -495,6 +506,7 @@ inline PROTOBUF_NDEBUG_INLINE BlockHeader::Impl_::Impl_(
         hash_(arena),
         prev_hash_(arena),
         output_mr_(arena),
+        block_output_mr_(arena),
         kernel_mr_(arena),
         input_mr_(arena),
         total_kernel_offset_(arena),
@@ -520,6 +532,7 @@ inline void BlockHeader::SharedDtor() {
   _impl_.hash_.Destroy();
   _impl_.prev_hash_.Destroy();
   _impl_.output_mr_.Destroy();
+  _impl_.block_output_mr_.Destroy();
   _impl_.kernel_mr_.Destroy();
   _impl_.input_mr_.Destroy();
   _impl_.total_kernel_offset_.Destroy();
@@ -553,6 +566,7 @@ PROTOBUF_NOINLINE void BlockHeader::Clear() {
   _impl_.hash_.ClearToEmpty();
   _impl_.prev_hash_.ClearToEmpty();
   _impl_.output_mr_.ClearToEmpty();
+  _impl_.block_output_mr_.ClearToEmpty();
   _impl_.kernel_mr_.ClearToEmpty();
   _impl_.input_mr_.ClearToEmpty();
   _impl_.total_kernel_offset_.ClearToEmpty();
@@ -578,15 +592,15 @@ const char* BlockHeader::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 16, 1, 0, 2> BlockHeader::_table_ = {
+const ::_pbi::TcParseTable<5, 17, 1, 0, 2> BlockHeader::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_._has_bits_),
     0, // no _extensions_
     17, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294836288,  // skipmap
+    4294836224,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    16,  // num_field_entries
+    17,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_BlockHeader_default_instance_._instance,
@@ -614,7 +628,9 @@ const ::_pbi::TcParseTable<5, 16, 1, 0, 2> BlockHeader::_table_ = {
     // bytes output_mr = 6;
     {::_pbi::TcParser::FastBS1,
      {50, 63, 0, PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.output_mr_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // bytes block_output_mr = 7;
+    {::_pbi::TcParser::FastBS1,
+     {58, 63, 0, PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.block_output_mr_)}},
     // bytes kernel_mr = 8;
     {::_pbi::TcParser::FastBS1,
      {66, 63, 0, PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.kernel_mr_)}},
@@ -679,6 +695,9 @@ const ::_pbi::TcParseTable<5, 16, 1, 0, 2> BlockHeader::_table_ = {
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
     // bytes output_mr = 6;
     {PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.output_mr_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
+    // bytes block_output_mr = 7;
+    {PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.block_output_mr_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
     // bytes kernel_mr = 8;
     {PROTOBUF_FIELD_OFFSET(BlockHeader, _impl_.kernel_mr_), -1, 0,
@@ -760,6 +779,12 @@ const ::_pbi::TcParseTable<5, 16, 1, 0, 2> BlockHeader::_table_ = {
   if (!this->_internal_output_mr().empty()) {
     const std::string& _s = this->_internal_output_mr();
     target = stream->WriteBytesMaybeAliased(6, _s, target);
+  }
+
+  // bytes block_output_mr = 7;
+  if (!this->_internal_block_output_mr().empty()) {
+    const std::string& _s = this->_internal_block_output_mr();
+    target = stream->WriteBytesMaybeAliased(7, _s, target);
   }
 
   // bytes kernel_mr = 8;
@@ -860,6 +885,12 @@ const ::_pbi::TcParseTable<5, 16, 1, 0, 2> BlockHeader::_table_ = {
   if (!this->_internal_output_mr().empty()) {
     total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
                                     this->_internal_output_mr());
+  }
+
+  // bytes block_output_mr = 7;
+  if (!this->_internal_block_output_mr().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
+                                    this->_internal_block_output_mr());
   }
 
   // bytes kernel_mr = 8;
@@ -963,6 +994,9 @@ void BlockHeader::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::goo
   if (!from._internal_output_mr().empty()) {
     _this->_internal_set_output_mr(from._internal_output_mr());
   }
+  if (!from._internal_block_output_mr().empty()) {
+    _this->_internal_set_block_output_mr(from._internal_block_output_mr());
+  }
   if (!from._internal_kernel_mr().empty()) {
     _this->_internal_set_kernel_mr(from._internal_kernel_mr());
   }
@@ -1033,6 +1067,7 @@ void BlockHeader::InternalSwap(BlockHeader* PROTOBUF_RESTRICT other) {
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.hash_, &other->_impl_.hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.prev_hash_, &other->_impl_.prev_hash_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.output_mr_, &other->_impl_.output_mr_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.block_output_mr_, &other->_impl_.block_output_mr_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.kernel_mr_, &other->_impl_.kernel_mr_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.input_mr_, &other->_impl_.input_mr_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.total_kernel_offset_, &other->_impl_.total_kernel_offset_, arena);
@@ -2366,6 +2401,7 @@ NewBlockTemplate::NewBlockTemplate(
   _impl_.body_ = (cached_has_bits & 0x00000002u) ? ::google::protobuf::Message::CopyConstruct<::tari::rpc::AggregateBody>(
                               arena, *from._impl_.body_)
                         : nullptr;
+  _impl_.is_mempool_in_sync_ = from._impl_.is_mempool_in_sync_;
 
   // @@protoc_insertion_point(copy_constructor:tari.rpc.NewBlockTemplate)
 }
@@ -2379,9 +2415,9 @@ inline void NewBlockTemplate::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, header_),
            0,
-           offsetof(Impl_, body_) -
+           offsetof(Impl_, is_mempool_in_sync_) -
                offsetof(Impl_, header_) +
-               sizeof(Impl_::body_));
+               sizeof(Impl_::is_mempool_in_sync_));
 }
 NewBlockTemplate::~NewBlockTemplate() {
   // @@protoc_insertion_point(destructor:tari.rpc.NewBlockTemplate)
@@ -2427,6 +2463,7 @@ PROTOBUF_NOINLINE void NewBlockTemplate::Clear() {
       _impl_.body_->Clear();
     }
   }
+  _impl_.is_mempool_in_sync_ = false;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -2439,15 +2476,15 @@ const char* NewBlockTemplate::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 2, 0, 2> NewBlockTemplate::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 2, 0, 2> NewBlockTemplate::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_._has_bits_),
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
+    3,  // num_field_entries
     2,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_NewBlockTemplate_default_instance_._instance,
@@ -2456,12 +2493,16 @@ const ::_pbi::TcParseTable<1, 2, 2, 0, 2> NewBlockTemplate::_table_ = {
     ::_pbi::TcParser::GetTable<::tari::rpc::NewBlockTemplate>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .tari.rpc.AggregateBody body = 2;
-    {::_pbi::TcParser::FastMtS1,
-     {18, 1, 1, PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.body_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // .tari.rpc.NewBlockHeaderTemplate header = 1;
     {::_pbi::TcParser::FastMtS1,
      {10, 0, 0, PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.header_)}},
+    // .tari.rpc.AggregateBody body = 2;
+    {::_pbi::TcParser::FastMtS1,
+     {18, 1, 1, PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.body_)}},
+    // bool is_mempool_in_sync = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(NewBlockTemplate, _impl_.is_mempool_in_sync_), 63>(),
+     {24, 63, 0, PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.is_mempool_in_sync_)}},
   }}, {{
     65535, 65535
   }}, {{
@@ -2471,6 +2512,9 @@ const ::_pbi::TcParseTable<1, 2, 2, 0, 2> NewBlockTemplate::_table_ = {
     // .tari.rpc.AggregateBody body = 2;
     {PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.body_), _Internal::kHasBitsOffset + 1, 1,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // bool is_mempool_in_sync = 3;
+    {PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.is_mempool_in_sync_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::NewBlockHeaderTemplate>()},
     {::_pbi::TcParser::GetTable<::tari::rpc::AggregateBody>()},
@@ -2496,6 +2540,13 @@ const ::_pbi::TcParseTable<1, 2, 2, 0, 2> NewBlockTemplate::_table_ = {
   if (cached_has_bits & 0x00000002u) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         2, *_impl_.body_, _impl_.body_->GetCachedSize(), target, stream);
+  }
+
+  // bool is_mempool_in_sync = 3;
+  if (this->_internal_is_mempool_in_sync() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        3, this->_internal_is_mempool_in_sync(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -2530,6 +2581,11 @@ const ::_pbi::TcParseTable<1, 2, 2, 0, 2> NewBlockTemplate::_table_ = {
     }
 
   }
+  // bool is_mempool_in_sync = 3;
+  if (this->_internal_is_mempool_in_sync() != 0) {
+    total_size += 2;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -2564,6 +2620,9 @@ void NewBlockTemplate::MergeImpl(::google::protobuf::MessageLite& to_msg, const 
       }
     }
   }
+  if (from._internal_is_mempool_in_sync() != 0) {
+    _this->_impl_.is_mempool_in_sync_ = from._impl_.is_mempool_in_sync_;
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -2584,8 +2643,8 @@ void NewBlockTemplate::InternalSwap(NewBlockTemplate* PROTOBUF_RESTRICT other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.body_)
-      + sizeof(NewBlockTemplate::_impl_.body_)
+      PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.is_mempool_in_sync_)
+      + sizeof(NewBlockTemplate::_impl_.is_mempool_in_sync_)
       - PROTOBUF_FIELD_OFFSET(NewBlockTemplate, _impl_.header_)>(
           reinterpret_cast<char*>(&_impl_.header_),
           reinterpret_cast<char*>(&other->_impl_.header_));

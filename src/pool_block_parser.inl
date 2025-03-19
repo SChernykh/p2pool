@@ -370,14 +370,15 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			if (mm_extra_data_count > MERGE_MINING_MAX_CHAINS) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < mm_extra_data_count * (HASH_SIZE + 1)) return __LINE__;
 
-			m_mergeMiningExtra.reserve(mm_extra_data_count);
-
+			hash prev_chain_id;
+			
 			for (uint64_t i = 0; i < mm_extra_data_count; ++i) {
 				hash chain_id;
 				READ_BUF(chain_id.h, HASH_SIZE);
 
 				// IDs must be ordered to avoid duplicates
-				if (i && !(m_mergeMiningExtra[i - 1].first < chain_id)) return __LINE__;
+				if (i && !(prev_chain_id < chain_id)) return __LINE__;
+				prev_chain_id = chain_id;
 
 				uint64_t n;
 				READ_VARINT(n);
@@ -390,7 +391,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				READ_BUF(t.data(), n);
 
-				m_mergeMiningExtra.emplace_back(chain_id, std::move(t));
+				m_mergeMiningExtra.emplace(chain_id, std::move(t));
 			}
 		}
 

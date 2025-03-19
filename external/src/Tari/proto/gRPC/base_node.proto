@@ -99,6 +99,7 @@ service BaseNode {
     // Get templates
     rpc GetTemplateRegistrations(GetTemplateRegistrationsRequest) returns (stream GetTemplateRegistrationResponse);
     rpc GetSideChainUtxos(GetSideChainUtxosRequest) returns (stream GetSideChainUtxosResponse);
+    rpc GetNetworkState(GetNetworkStateRequest) returns (GetNetworkStateResponse);
 }
 
 message GetAssetMetadataRequest {
@@ -160,6 +161,7 @@ message TipInfoResponse {
     MetaData metadata = 1;
     bool initial_sync_achieved = 2;
     BaseNodeState base_node_state = 3;
+    bool failed_checkpoints = 4;
 }
 
 enum BaseNodeState{
@@ -217,6 +219,8 @@ message NetworkDifficultyResponse {
     uint64 pow_algo = 5;
     uint64 sha3x_estimated_hash_rate = 6;
     uint64 randomx_estimated_hash_rate = 7;
+    uint64 num_coinbases = 8;
+    repeated  bytes coinbase_extras = 9;
 }
 
 // A generic single value response for a specific height
@@ -339,10 +343,11 @@ message MetaData {
     uint64 best_block_height = 1;
     // The block hash of the current tip of the longest valid chain, or `None` for an empty chain
     bytes best_block_hash = 2;
-    // This is the min height this node can provide complete blocks for. A 0 here means this node is archival and can provide complete blocks for every height.
-    uint64 pruned_height = 6;
     // The current geometric mean of the pow of the chain tip, or `None` if there is no chain
     bytes accumulated_difficulty = 5;
+    // This is the min height this node can provide complete blocks for. A 0 here means this node is archival and can provide complete blocks for every height.
+    uint64 pruned_height = 6;
+    uint64 timestamp = 7;
 }
 
 message SyncInfoResponse {
@@ -355,6 +360,8 @@ message SyncProgressResponse {
     uint64 tip_height = 1;
     uint64 local_height = 2;
     SyncState state = 3;
+    string short_desc = 4;
+    uint64 initial_connected_peers = 5;
 }
 
 enum SyncState {
@@ -513,5 +520,25 @@ message GetSideChainUtxosRequest {
 message GetSideChainUtxosResponse {
     BlockInfo block_info = 1;
     repeated TransactionOutput outputs = 2;
+}
+
+message GetNetworkStateRequest {
+}
+
+message GetNetworkStateResponse {
+   // metadata
+    MetaData metadata = 1;
+    // has the base node synced
+    bool initial_sync_achieved = 2;
+    //current state of the base node
+    BaseNodeState base_node_state = 3;
+    // do we have failed checkpoints
+    bool failed_checkpoints = 4;
+    // The block reward of the next tip
+    uint64 reward = 5;
+    // estimate sha3x hash rate
+    uint64 sha3x_estimated_hash_rate = 6;
+    // estimate randomx hash rate
+    uint64 randomx_estimated_hash_rate = 7;
 }
 

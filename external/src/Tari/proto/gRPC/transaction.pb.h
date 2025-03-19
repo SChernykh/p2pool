@@ -737,6 +737,7 @@ class UnblindedOutput final : public ::google::protobuf::Message
     kEncryptedDataFieldNumber = 12,
     kFeaturesFieldNumber = 3,
     kMetadataSignatureFieldNumber = 9,
+    kRangeProofFieldNumber = 14,
     kValueFieldNumber = 1,
     kScriptLockHeightFieldNumber = 10,
     kMinimumValuePromiseFieldNumber = 13,
@@ -883,6 +884,21 @@ class UnblindedOutput final : public ::google::protobuf::Message
   ::tari::rpc::ComAndPubSignature* _internal_mutable_metadata_signature();
 
   public:
+  // .tari.rpc.RangeProof range_proof = 14;
+  bool has_range_proof() const;
+  void clear_range_proof() ;
+  const ::tari::rpc::RangeProof& range_proof() const;
+  PROTOBUF_NODISCARD ::tari::rpc::RangeProof* release_range_proof();
+  ::tari::rpc::RangeProof* mutable_range_proof();
+  void set_allocated_range_proof(::tari::rpc::RangeProof* value);
+  void unsafe_arena_set_allocated_range_proof(::tari::rpc::RangeProof* value);
+  ::tari::rpc::RangeProof* unsafe_arena_release_range_proof();
+
+  private:
+  const ::tari::rpc::RangeProof& _internal_range_proof() const;
+  ::tari::rpc::RangeProof* _internal_mutable_range_proof();
+
+  public:
   // uint64 value = 1;
   void clear_value() ;
   ::uint64_t value() const;
@@ -918,7 +934,7 @@ class UnblindedOutput final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      4, 12, 2,
+      4, 13, 3,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -945,6 +961,7 @@ class UnblindedOutput final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr encrypted_data_;
     ::tari::rpc::OutputFeatures* features_;
     ::tari::rpc::ComAndPubSignature* metadata_signature_;
+    ::tari::rpc::RangeProof* range_proof_;
     ::uint64_t value_;
     ::uint64_t script_lock_height_;
     ::uint64_t minimum_value_promise_;
@@ -5043,6 +5060,97 @@ inline ::uint64_t UnblindedOutput::_internal_minimum_value_promise() const {
 inline void UnblindedOutput::_internal_set_minimum_value_promise(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   _impl_.minimum_value_promise_ = value;
+}
+
+// .tari.rpc.RangeProof range_proof = 14;
+inline bool UnblindedOutput::has_range_proof() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000004u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.range_proof_ != nullptr);
+  return value;
+}
+inline const ::tari::rpc::RangeProof& UnblindedOutput::_internal_range_proof() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::tari::rpc::RangeProof* p = _impl_.range_proof_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::RangeProof&>(::tari::rpc::_RangeProof_default_instance_);
+}
+inline const ::tari::rpc::RangeProof& UnblindedOutput::range_proof() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.UnblindedOutput.range_proof)
+  return _internal_range_proof();
+}
+inline void UnblindedOutput::unsafe_arena_set_allocated_range_proof(::tari::rpc::RangeProof* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.range_proof_);
+  }
+  _impl_.range_proof_ = reinterpret_cast<::tari::rpc::RangeProof*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000004u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000004u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.UnblindedOutput.range_proof)
+}
+inline ::tari::rpc::RangeProof* UnblindedOutput::release_range_proof() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000004u;
+  ::tari::rpc::RangeProof* released = _impl_.range_proof_;
+  _impl_.range_proof_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::tari::rpc::RangeProof* UnblindedOutput::unsafe_arena_release_range_proof() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.UnblindedOutput.range_proof)
+
+  _impl_._has_bits_[0] &= ~0x00000004u;
+  ::tari::rpc::RangeProof* temp = _impl_.range_proof_;
+  _impl_.range_proof_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::RangeProof* UnblindedOutput::_internal_mutable_range_proof() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.range_proof_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::tari::rpc::RangeProof>(GetArena());
+    _impl_.range_proof_ = reinterpret_cast<::tari::rpc::RangeProof*>(p);
+  }
+  return _impl_.range_proof_;
+}
+inline ::tari::rpc::RangeProof* UnblindedOutput::mutable_range_proof() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000004u;
+  ::tari::rpc::RangeProof* _msg = _internal_mutable_range_proof();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.UnblindedOutput.range_proof)
+  return _msg;
+}
+inline void UnblindedOutput::set_allocated_range_proof(::tari::rpc::RangeProof* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.range_proof_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::MessageLite*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000004u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000004u;
+  }
+
+  _impl_.range_proof_ = reinterpret_cast<::tari::rpc::RangeProof*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.UnblindedOutput.range_proof)
 }
 
 #ifdef __GNUC__

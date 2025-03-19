@@ -108,6 +108,7 @@ inline constexpr UnblindedOutput::Impl_::Impl_(
             ::_pbi::ConstantInitialized()),
         features_{nullptr},
         metadata_signature_{nullptr},
+        range_proof_{nullptr},
         value_{::uint64_t{0u}},
         script_lock_height_{::uint64_t{0u}},
         minimum_value_promise_{::uint64_t{0u}} {}
@@ -427,6 +428,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::UnblindedOutput, _impl_.covenant_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::UnblindedOutput, _impl_.encrypted_data_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::UnblindedOutput, _impl_.minimum_value_promise_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::UnblindedOutput, _impl_.range_proof_),
         ~0u,
         ~0u,
         0,
@@ -439,6 +441,7 @@ const ::uint32_t
         ~0u,
         ~0u,
         ~0u,
+        2,
 };
 
 static const ::_pbi::MigrationSchema
@@ -449,7 +452,7 @@ static const ::_pbi::MigrationSchema
         {90, 104, -1, sizeof(::tari::rpc::OutputFeatures)},
         {110, -1, -1, sizeof(::tari::rpc::AggregateBody)},
         {121, 132, -1, sizeof(::tari::rpc::Transaction)},
-        {135, 155, -1, sizeof(::tari::rpc::UnblindedOutput)},
+        {135, 156, -1, sizeof(::tari::rpc::UnblindedOutput)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_TransactionKernel_default_instance_._instance,
@@ -498,7 +501,7 @@ const char descriptor_table_protodef_transaction_2eproto[] ABSL_ATTRIBUTE_SECTIO
     "tari.rpc.TransactionKernel\"[\n\013Transactio"
     "n\022\016\n\006offset\030\001 \001(\014\022%\n\004body\030\002 \001(\0132\027.tari.r"
     "pc.AggregateBody\022\025\n\rscript_offset\030\003 \001(\014\""
-    "\343\002\n\017UnblindedOutput\022\r\n\005value\030\001 \001(\004\022\024\n\014sp"
+    "\216\003\n\017UnblindedOutput\022\r\n\005value\030\001 \001(\004\022\024\n\014sp"
     "ending_key\030\002 \001(\014\022*\n\010features\030\003 \001(\0132\030.tar"
     "i.rpc.OutputFeatures\022\016\n\006script\030\004 \001(\014\022\022\n\n"
     "input_data\030\005 \001(\014\022\032\n\022script_private_key\030\007"
@@ -506,8 +509,9 @@ const char descriptor_table_protodef_transaction_2eproto[] ABSL_ATTRIBUTE_SECTIO
     "\n\022metadata_signature\030\t \001(\0132\034.tari.rpc.Co"
     "mAndPubSignature\022\032\n\022script_lock_height\030\n"
     " \001(\004\022\020\n\010covenant\030\013 \001(\014\022\026\n\016encrypted_data"
-    "\030\014 \001(\014\022\035\n\025minimum_value_promise\030\r \001(\004b\006p"
-    "roto3"
+    "\030\014 \001(\014\022\035\n\025minimum_value_promise\030\r \001(\004\022)\n"
+    "\013range_proof\030\016 \001(\0132\024.tari.rpc.RangeProof"
+    "b\006proto3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_transaction_2eproto_deps[2] =
     {
@@ -518,7 +522,7 @@ static ::absl::once_flag descriptor_table_transaction_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_transaction_2eproto = {
     false,
     false,
-    1805,
+    1848,
     descriptor_table_protodef_transaction_2eproto,
     "transaction.proto",
     &descriptor_table_transaction_2eproto_once,
@@ -2988,6 +2992,11 @@ void UnblindedOutput::clear_metadata_signature() {
   if (_impl_.metadata_signature_ != nullptr) _impl_.metadata_signature_->Clear();
   _impl_._has_bits_[0] &= ~0x00000002u;
 }
+void UnblindedOutput::clear_range_proof() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.range_proof_ != nullptr) _impl_.range_proof_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000004u;
+}
 UnblindedOutput::UnblindedOutput(::google::protobuf::Arena* arena)
     : ::google::protobuf::Message(arena) {
   SharedCtor(arena);
@@ -3021,6 +3030,9 @@ UnblindedOutput::UnblindedOutput(
                         : nullptr;
   _impl_.metadata_signature_ = (cached_has_bits & 0x00000002u) ? ::google::protobuf::Message::CopyConstruct<::tari::rpc::ComAndPubSignature>(
                               arena, *from._impl_.metadata_signature_)
+                        : nullptr;
+  _impl_.range_proof_ = (cached_has_bits & 0x00000004u) ? ::google::protobuf::Message::CopyConstruct<::tari::rpc::RangeProof>(
+                              arena, *from._impl_.range_proof_)
                         : nullptr;
   ::memcpy(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, value_),
@@ -3069,6 +3081,7 @@ inline void UnblindedOutput::SharedDtor() {
   _impl_.encrypted_data_.Destroy();
   delete _impl_.features_;
   delete _impl_.metadata_signature_;
+  delete _impl_.range_proof_;
   _impl_.~Impl_();
 }
 
@@ -3101,7 +3114,7 @@ PROTOBUF_NOINLINE void UnblindedOutput::Clear() {
   _impl_.covenant_.ClearToEmpty();
   _impl_.encrypted_data_.ClearToEmpty();
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000003u) {
+  if (cached_has_bits & 0x00000007u) {
     if (cached_has_bits & 0x00000001u) {
       ABSL_DCHECK(_impl_.features_ != nullptr);
       _impl_.features_->Clear();
@@ -3109,6 +3122,10 @@ PROTOBUF_NOINLINE void UnblindedOutput::Clear() {
     if (cached_has_bits & 0x00000002u) {
       ABSL_DCHECK(_impl_.metadata_signature_ != nullptr);
       _impl_.metadata_signature_->Clear();
+    }
+    if (cached_has_bits & 0x00000004u) {
+      ABSL_DCHECK(_impl_.range_proof_ != nullptr);
+      _impl_.range_proof_->Clear();
     }
   }
   ::memset(&_impl_.value_, 0, static_cast<::size_t>(
@@ -3126,16 +3143,16 @@ const char* UnblindedOutput::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
+const ::_pbi::TcParseTable<4, 13, 3, 0, 2> UnblindedOutput::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(UnblindedOutput, _impl_._has_bits_),
     0, // no _extensions_
-    13, 120,  // max_field_number, fast_idx_mask
+    14, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294959136,  // skipmap
+    4294950944,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    12,  // num_field_entries
-    2,  // num_aux_entries
+    13,  // num_field_entries
+    3,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_UnblindedOutput_default_instance_._instance,
     ::_pbi::TcParser::GenericFallback,  // fallback
@@ -3181,7 +3198,9 @@ const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
     // uint64 minimum_value_promise = 13;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(UnblindedOutput, _impl_.minimum_value_promise_), 63>(),
      {104, 63, 0, PROTOBUF_FIELD_OFFSET(UnblindedOutput, _impl_.minimum_value_promise_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // .tari.rpc.RangeProof range_proof = 14;
+    {::_pbi::TcParser::FastMtS1,
+     {114, 2, 2, PROTOBUF_FIELD_OFFSET(UnblindedOutput, _impl_.range_proof_)}},
     {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
@@ -3222,9 +3241,13 @@ const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
     // uint64 minimum_value_promise = 13;
     {PROTOBUF_FIELD_OFFSET(UnblindedOutput, _impl_.minimum_value_promise_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // .tari.rpc.RangeProof range_proof = 14;
+    {PROTOBUF_FIELD_OFFSET(UnblindedOutput, _impl_.range_proof_), _Internal::kHasBitsOffset + 2, 2,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::OutputFeatures>()},
     {::_pbi::TcParser::GetTable<::tari::rpc::ComAndPubSignature>()},
+    {::_pbi::TcParser::GetTable<::tari::rpc::RangeProof>()},
   }}, {{
   }},
 };
@@ -3312,6 +3335,12 @@ const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
         13, this->_internal_minimum_value_promise(), target);
   }
 
+  // .tari.rpc.RangeProof range_proof = 14;
+  if (cached_has_bits & 0x00000004u) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        14, *_impl_.range_proof_, _impl_.range_proof_->GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -3372,7 +3401,7 @@ const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
   }
 
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000003u) {
+  if (cached_has_bits & 0x00000007u) {
     // .tari.rpc.OutputFeatures features = 3;
     if (cached_has_bits & 0x00000001u) {
       total_size +=
@@ -3383,6 +3412,12 @@ const ::_pbi::TcParseTable<4, 12, 2, 0, 2> UnblindedOutput::_table_ = {
     if (cached_has_bits & 0x00000002u) {
       total_size +=
           1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.metadata_signature_);
+    }
+
+    // .tari.rpc.RangeProof range_proof = 14;
+    if (cached_has_bits & 0x00000004u) {
+      total_size +=
+          1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.range_proof_);
     }
 
   }
@@ -3439,7 +3474,7 @@ void UnblindedOutput::MergeImpl(::google::protobuf::MessageLite& to_msg, const :
     _this->_internal_set_encrypted_data(from._internal_encrypted_data());
   }
   cached_has_bits = from._impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000003u) {
+  if (cached_has_bits & 0x00000007u) {
     if (cached_has_bits & 0x00000001u) {
       ABSL_DCHECK(from._impl_.features_ != nullptr);
       if (_this->_impl_.features_ == nullptr) {
@@ -3456,6 +3491,15 @@ void UnblindedOutput::MergeImpl(::google::protobuf::MessageLite& to_msg, const :
             ::google::protobuf::Message::CopyConstruct<::tari::rpc::ComAndPubSignature>(arena, *from._impl_.metadata_signature_);
       } else {
         _this->_impl_.metadata_signature_->MergeFrom(*from._impl_.metadata_signature_);
+      }
+    }
+    if (cached_has_bits & 0x00000004u) {
+      ABSL_DCHECK(from._impl_.range_proof_ != nullptr);
+      if (_this->_impl_.range_proof_ == nullptr) {
+        _this->_impl_.range_proof_ =
+            ::google::protobuf::Message::CopyConstruct<::tari::rpc::RangeProof>(arena, *from._impl_.range_proof_);
+      } else {
+        _this->_impl_.range_proof_->MergeFrom(*from._impl_.range_proof_);
       }
     }
   }

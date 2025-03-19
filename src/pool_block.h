@@ -20,6 +20,8 @@
 #include "uv_util.h"
 #include "wallet.h"
 
+#include <map>
+
 #if defined(_DEBUG) || defined(DEV_DEBUG)
 #define POOL_BLOCK_DEBUG 1
 #else
@@ -143,7 +145,7 @@ struct PoolBlock
 	// Merge mining extra data
 	// Format: vector of (chain ID, chain data) pairs
 	// Chain data format is arbitrary and depends on the merge mined chain's requirements
-	std::vector<std::pair<hash, std::vector<uint8_t>>> m_mergeMiningExtra;
+	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 
 	// Arbitrary extra data
 	uint32_t m_sidechainExtraBuf[4];

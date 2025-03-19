@@ -302,7 +302,7 @@ inline constexpr ConsensusConstants::Impl_::Impl_(
         block_weight_inputs_{::uint64_t{0u}},
         block_weight_outputs_{::uint64_t{0u}},
         block_weight_kernels_{::uint64_t{0u}},
-        faucet_value_{::uint64_t{0u}},
+        pre_mine_value_{::uint64_t{0u}},
         max_script_byte_size_{::uint64_t{0u}},
         validator_node_validity_period_{::uint64_t{0u}},
         effective_from_height_{::uint64_t{0u}},
@@ -313,6 +313,7 @@ inline constexpr ConsensusConstants::Impl_::Impl_(
         validator_node_registration_shuffle_interval_epoch_{::uint64_t{0u}},
         inflation_bips_{::uint64_t{0u}},
         tail_epoch_length_{::uint64_t{0u}},
+        max_block_coinbase_count_{::uint64_t{0u}},
         blockchain_version_{0u} {}
 
 template <typename>
@@ -486,7 +487,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.block_weight_inputs_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.block_weight_outputs_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.block_weight_kernels_),
-        PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.faucet_value_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.pre_mine_value_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.max_script_byte_size_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.validator_node_validity_period_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.effective_from_height_),
@@ -505,6 +506,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.permitted_range_proof_types_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.inflation_bips_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.tail_epoch_length_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::ConsensusConstants, _impl_.max_block_coinbase_count_),
         ~0u,
         ~0u,
         ~0u,
@@ -538,6 +540,7 @@ const ::uint32_t
         ~0u,
         ~0u,
         ~0u,
+        ~0u,
 };
 
 static const ::_pbi::MigrationSchema
@@ -554,7 +557,7 @@ static const ::_pbi::MigrationSchema
         {96, -1, -1, sizeof(::tari::rpc::PermittedRangeProofs)},
         {106, -1, -1, sizeof(::tari::rpc::RangeProof)},
         {115, 125, -1, sizeof(::tari::rpc::ConsensusConstants_ProofOfWorkEntry_DoNotUse)},
-        {127, 168, -1, sizeof(::tari::rpc::ConsensusConstants)},
+        {127, 169, -1, sizeof(::tari::rpc::ConsensusConstants)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::tari::rpc::_Range_default_instance_._instance,
@@ -593,7 +596,7 @@ const char descriptor_table_protodef_types_2eproto[] ABSL_ATTRIBUTE_SECTION_VARI
     "output_type\030\001 \001(\0162\024.tari.rpc.OutputType\022"
     "3\n\021range_proof_types\030\002 \003(\0162\030.tari.rpc.Ra"
     "ngeProofType\"!\n\nRangeProof\022\023\n\013proof_byte"
-    "s\030\001 \001(\014\"\327\n\n\022ConsensusConstants\022\035\n\025coinba"
+    "s\030\001 \001(\014\"\373\n\n\022ConsensusConstants\022\035\n\025coinba"
     "se_min_maturity\030\001 \001(\004\022\032\n\022blockchain_vers"
     "ion\030\002 \001(\r\022\031\n\021future_time_limit\030\003 \001(\004\022\037\n\027"
     "difficulty_block_window\030\005 \001(\004\022$\n\034max_blo"
@@ -604,41 +607,41 @@ const char descriptor_table_protodef_types_2eproto[] ABSL_ATTRIBUTE_SECTION_VARI
     "\022 \n\030min_sha3x_pow_difficulty\030\r \001(\004\022\033\n\023bl"
     "ock_weight_inputs\030\016 \001(\004\022\034\n\024block_weight_"
     "outputs\030\017 \001(\004\022\034\n\024block_weight_kernels\030\020 "
-    "\001(\004\022\024\n\014faucet_value\030\021 \001(\004\022\034\n\024max_script_"
-    "byte_size\030\022 \001(\004\022&\n\036validator_node_validi"
-    "ty_period\030\023 \001(\004\022\035\n\025effective_from_height"
-    "\030\024 \001(\004\0227\n\036valid_blockchain_version_range"
-    "\030\025 \001(\0132\017.tari.rpc.Range\022\037\n\027max_randomx_s"
-    "eed_height\030\026 \001(\004\022D\n\rproof_of_work\030\027 \003(\0132"
-    "-.tari.rpc.ConsensusConstants.ProofOfWor"
-    "kEntry\0222\n\022transaction_weight\030\030 \001(\0132\026.tar"
-    "i.rpc.WeightParams\022,\n\023input_version_rang"
-    "e\030\032 \001(\0132\017.tari.rpc.Range\0226\n\024output_versi"
-    "on_range\030\033 \001(\0132\030.tari.rpc.OutputsVersion"
-    "\022-\n\024kernel_version_range\030\034 \001(\0132\017.tari.rp"
-    "c.Range\0224\n\026permitted_output_types\030\035 \003(\0162"
-    "\024.tari.rpc.OutputType\022\024\n\014epoch_length\030\036 "
-    "\001(\004\0226\n.validator_node_registration_min_d"
-    "eposit_amount\030\037 \001(\004\0223\n+validator_node_re"
-    "gistration_min_lock_height\030  \001(\004\022:\n2vali"
-    "dator_node_registration_shuffle_interval"
-    "_epoch\030! \001(\004\022C\n\033permitted_range_proof_ty"
-    "pes\030\" \003(\0132\036.tari.rpc.PermittedRangeProof"
-    "s\022\026\n\016inflation_bips\030# \001(\004\022\031\n\021tail_epoch_"
-    "length\030$ \001(\004\032S\n\020ProofOfWorkEntry\022\013\n\003key\030"
-    "\001 \001(\r\022.\n\005value\030\002 \001(\0132\037.tari.rpc.PowAlgor"
-    "ithmConstants:\0028\001*s\n\nOutputType\022\014\n\010STAND"
-    "ARD\020\000\022\014\n\010COINBASE\020\001\022\010\n\004BURN\020\002\022\037\n\033VALIDAT"
-    "OR_NODE_REGISTRATION\020\003\022\036\n\032CODE_TEMPLATE_"
-    "REGISTRATION\020\004*:\n\016RangeProofType\022\024\n\020BULL"
-    "ETPROOF_PLUS\020\000\022\022\n\016REVEALED_VALUE\020\001b\006prot"
-    "o3"
+    "\001(\004\022\026\n\016pre_mine_value\030\021 \001(\004\022\034\n\024max_scrip"
+    "t_byte_size\030\022 \001(\004\022&\n\036validator_node_vali"
+    "dity_period\030\023 \001(\004\022\035\n\025effective_from_heig"
+    "ht\030\024 \001(\004\0227\n\036valid_blockchain_version_ran"
+    "ge\030\025 \001(\0132\017.tari.rpc.Range\022\037\n\027max_randomx"
+    "_seed_height\030\026 \001(\004\022D\n\rproof_of_work\030\027 \003("
+    "\0132-.tari.rpc.ConsensusConstants.ProofOfW"
+    "orkEntry\0222\n\022transaction_weight\030\030 \001(\0132\026.t"
+    "ari.rpc.WeightParams\022,\n\023input_version_ra"
+    "nge\030\032 \001(\0132\017.tari.rpc.Range\0226\n\024output_ver"
+    "sion_range\030\033 \001(\0132\030.tari.rpc.OutputsVersi"
+    "on\022-\n\024kernel_version_range\030\034 \001(\0132\017.tari."
+    "rpc.Range\0224\n\026permitted_output_types\030\035 \003("
+    "\0162\024.tari.rpc.OutputType\022\024\n\014epoch_length\030"
+    "\036 \001(\004\0226\n.validator_node_registration_min"
+    "_deposit_amount\030\037 \001(\004\0223\n+validator_node_"
+    "registration_min_lock_height\030  \001(\004\022:\n2va"
+    "lidator_node_registration_shuffle_interv"
+    "al_epoch\030! \001(\004\022C\n\033permitted_range_proof_"
+    "types\030\" \003(\0132\036.tari.rpc.PermittedRangePro"
+    "ofs\022\026\n\016inflation_bips\030# \001(\004\022\031\n\021tail_epoc"
+    "h_length\030$ \001(\004\022 \n\030max_block_coinbase_cou"
+    "nt\030% \001(\004\032S\n\020ProofOfWorkEntry\022\013\n\003key\030\001 \001("
+    "\r\022.\n\005value\030\002 \001(\0132\037.tari.rpc.PowAlgorithm"
+    "Constants:\0028\001*s\n\nOutputType\022\014\n\010STANDARD\020"
+    "\000\022\014\n\010COINBASE\020\001\022\010\n\004BURN\020\002\022\037\n\033VALIDATOR_N"
+    "ODE_REGISTRATION\020\003\022\036\n\032CODE_TEMPLATE_REGI"
+    "STRATION\020\004*:\n\016RangeProofType\022\024\n\020BULLETPR"
+    "OOF_PLUS\020\000\022\022\n\016REVEALED_VALUE\020\001b\006proto3"
 };
 static ::absl::once_flag descriptor_table_types_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_types_2eproto = {
     false,
     false,
-    2362,
+    2398,
     descriptor_table_protodef_types_2eproto,
     "types.proto",
     &descriptor_table_types_2eproto_once,
@@ -3217,15 +3220,15 @@ const char* ConsensusConstants::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
+const ::_pbi::TcParseTable<5, 34, 8, 0, 7> ConsensusConstants::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_._has_bits_),
     0, // no _extensions_
-    36, 248,  // max_field_number, fast_idx_mask
+    37, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
     16777256,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    33,  // num_field_entries
+    34,  // num_field_entries
     8,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_ConsensusConstants_default_instance_._instance,
@@ -3279,9 +3282,9 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
     // uint64 block_weight_kernels = 16;
     {::_pbi::TcParser::FastV64S2,
      {384, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.block_weight_kernels_)}},
-    // uint64 faucet_value = 17;
+    // uint64 pre_mine_value = 17;
     {::_pbi::TcParser::FastV64S2,
-     {392, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.faucet_value_)}},
+     {392, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.pre_mine_value_)}},
     // uint64 max_script_byte_size = 18;
     {::_pbi::TcParser::FastV64S2,
      {400, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.max_script_byte_size_)}},
@@ -3322,7 +3325,7 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
      {504, 63, 0, PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.validator_node_registration_min_deposit_amount_)}},
   }}, {{
     33, 0, 1,
-    65520, 29,
+    65504, 29,
     65535, 65535
   }}, {{
     // uint64 coinbase_min_maturity = 1;
@@ -3367,8 +3370,8 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
     // uint64 block_weight_kernels = 16;
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.block_weight_kernels_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // uint64 faucet_value = 17;
-    {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.faucet_value_), -1, 0,
+    // uint64 pre_mine_value = 17;
+    {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.pre_mine_value_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
     // uint64 max_script_byte_size = 18;
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.max_script_byte_size_), -1, 0,
@@ -3423,6 +3426,9 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
     // uint64 tail_epoch_length = 36;
     {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.tail_epoch_length_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // uint64 max_block_coinbase_count = 37;
+    {PROTOBUF_FIELD_OFFSET(ConsensusConstants, _impl_.max_block_coinbase_count_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
   }}, {{
     {::_pbi::TcParser::GetTable<::tari::rpc::Range>()},
@@ -3547,11 +3553,11 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
         16, this->_internal_block_weight_kernels(), target);
   }
 
-  // uint64 faucet_value = 17;
-  if (this->_internal_faucet_value() != 0) {
+  // uint64 pre_mine_value = 17;
+  if (this->_internal_pre_mine_value() != 0) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
-        17, this->_internal_faucet_value(), target);
+        17, this->_internal_pre_mine_value(), target);
   }
 
   // uint64 max_script_byte_size = 18;
@@ -3694,6 +3700,13 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
         36, this->_internal_tail_epoch_length(), target);
+  }
+
+  // uint64 max_block_coinbase_count = 37;
+  if (this->_internal_max_block_coinbase_count() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+        37, this->_internal_max_block_coinbase_count(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -3860,10 +3873,10 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
                                     this->_internal_block_weight_kernels());
   }
 
-  // uint64 faucet_value = 17;
-  if (this->_internal_faucet_value() != 0) {
+  // uint64 pre_mine_value = 17;
+  if (this->_internal_pre_mine_value() != 0) {
     total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
-                                    this->_internal_faucet_value());
+                                    this->_internal_pre_mine_value());
   }
 
   // uint64 max_script_byte_size = 18;
@@ -3924,6 +3937,12 @@ const ::_pbi::TcParseTable<5, 33, 8, 0, 7> ConsensusConstants::_table_ = {
   if (this->_internal_tail_epoch_length() != 0) {
     total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
                                     this->_internal_tail_epoch_length());
+  }
+
+  // uint64 max_block_coinbase_count = 37;
+  if (this->_internal_max_block_coinbase_count() != 0) {
+    total_size += 2 + ::_pbi::WireFormatLite::UInt64Size(
+                                    this->_internal_max_block_coinbase_count());
   }
 
   // uint32 blockchain_version = 2;
@@ -4034,8 +4053,8 @@ void ConsensusConstants::MergeImpl(::google::protobuf::MessageLite& to_msg, cons
   if (from._internal_block_weight_kernels() != 0) {
     _this->_impl_.block_weight_kernels_ = from._impl_.block_weight_kernels_;
   }
-  if (from._internal_faucet_value() != 0) {
-    _this->_impl_.faucet_value_ = from._impl_.faucet_value_;
+  if (from._internal_pre_mine_value() != 0) {
+    _this->_impl_.pre_mine_value_ = from._impl_.pre_mine_value_;
   }
   if (from._internal_max_script_byte_size() != 0) {
     _this->_impl_.max_script_byte_size_ = from._impl_.max_script_byte_size_;
@@ -4066,6 +4085,9 @@ void ConsensusConstants::MergeImpl(::google::protobuf::MessageLite& to_msg, cons
   }
   if (from._internal_tail_epoch_length() != 0) {
     _this->_impl_.tail_epoch_length_ = from._impl_.tail_epoch_length_;
+  }
+  if (from._internal_max_block_coinbase_count() != 0) {
+    _this->_impl_.max_block_coinbase_count_ = from._impl_.max_block_coinbase_count_;
   }
   if (from._internal_blockchain_version() != 0) {
     _this->_impl_.blockchain_version_ = from._impl_.blockchain_version_;

@@ -124,7 +124,7 @@ message ConsensusConstants {
     uint64 block_weight_inputs = 14;
     uint64 block_weight_outputs = 15;
     uint64 block_weight_kernels = 16;
-    uint64 faucet_value = 17;
+    uint64 pre_mine_value = 17;
     uint64 max_script_byte_size = 18;
     uint64 validator_node_validity_period = 19;
     uint64 effective_from_height = 20;
@@ -143,4 +143,5 @@ message ConsensusConstants {
     repeated PermittedRangeProofs permitted_range_proof_types = 34;
     uint64 inflation_bips = 35;
     uint64 tail_epoch_length = 36;
+    uint64 max_block_coinbase_count = 37;
 }

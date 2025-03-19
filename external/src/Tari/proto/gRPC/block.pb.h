@@ -872,6 +872,7 @@ class BlockHeader final : public ::google::protobuf::Message
     kHashFieldNumber = 1,
     kPrevHashFieldNumber = 4,
     kOutputMrFieldNumber = 6,
+    kBlockOutputMrFieldNumber = 7,
     kKernelMrFieldNumber = 8,
     kInputMrFieldNumber = 9,
     kTotalKernelOffsetFieldNumber = 10,
@@ -932,6 +933,22 @@ class BlockHeader final : public ::google::protobuf::Message
   inline PROTOBUF_ALWAYS_INLINE void _internal_set_output_mr(
       const std::string& value);
   std::string* _internal_mutable_output_mr();
+
+  public:
+  // bytes block_output_mr = 7;
+  void clear_block_output_mr() ;
+  const std::string& block_output_mr() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_block_output_mr(Arg_&& arg, Args_... args);
+  std::string* mutable_block_output_mr();
+  PROTOBUF_NODISCARD std::string* release_block_output_mr();
+  void set_allocated_block_output_mr(std::string* value);
+
+  private:
+  const std::string& _internal_block_output_mr() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_block_output_mr(
+      const std::string& value);
+  std::string* _internal_mutable_block_output_mr();
 
   public:
   // bytes kernel_mr = 8;
@@ -1104,7 +1121,7 @@ class BlockHeader final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      5, 16, 1,
+      5, 17, 1,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -1125,6 +1142,7 @@ class BlockHeader final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr hash_;
     ::google::protobuf::internal::ArenaStringPtr prev_hash_;
     ::google::protobuf::internal::ArenaStringPtr output_mr_;
+    ::google::protobuf::internal::ArenaStringPtr block_output_mr_;
     ::google::protobuf::internal::ArenaStringPtr kernel_mr_;
     ::google::protobuf::internal::ArenaStringPtr input_mr_;
     ::google::protobuf::internal::ArenaStringPtr total_kernel_offset_;
@@ -1272,6 +1290,7 @@ class NewBlockTemplate final : public ::google::protobuf::Message
   enum : int {
     kHeaderFieldNumber = 1,
     kBodyFieldNumber = 2,
+    kIsMempoolInSyncFieldNumber = 3,
   };
   // .tari.rpc.NewBlockHeaderTemplate header = 1;
   bool has_header() const;
@@ -1303,12 +1322,22 @@ class NewBlockTemplate final : public ::google::protobuf::Message
   ::tari::rpc::AggregateBody* _internal_mutable_body();
 
   public:
+  // bool is_mempool_in_sync = 3;
+  void clear_is_mempool_in_sync() ;
+  bool is_mempool_in_sync() const;
+  void set_is_mempool_in_sync(bool value);
+
+  private:
+  bool _internal_is_mempool_in_sync() const;
+  void _internal_set_is_mempool_in_sync(bool value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tari.rpc.NewBlockTemplate)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 2,
+      2, 3, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -1328,6 +1357,7 @@ class NewBlockTemplate final : public ::google::protobuf::Message
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     ::tari::rpc::NewBlockHeaderTemplate* header_;
     ::tari::rpc::AggregateBody* body_;
+    bool is_mempool_in_sync_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1939,6 +1969,56 @@ inline void BlockHeader::set_allocated_output_mr(std::string* value) {
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.BlockHeader.output_mr)
+}
+
+// bytes block_output_mr = 7;
+inline void BlockHeader::clear_block_output_mr() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.block_output_mr_.ClearToEmpty();
+}
+inline const std::string& BlockHeader::block_output_mr() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.BlockHeader.block_output_mr)
+  return _internal_block_output_mr();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void BlockHeader::set_block_output_mr(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.block_output_mr_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.BlockHeader.block_output_mr)
+}
+inline std::string* BlockHeader::mutable_block_output_mr() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_block_output_mr();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.BlockHeader.block_output_mr)
+  return _s;
+}
+inline const std::string& BlockHeader::_internal_block_output_mr() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.block_output_mr_.Get();
+}
+inline void BlockHeader::_internal_set_block_output_mr(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.block_output_mr_.Set(value, GetArena());
+}
+inline std::string* BlockHeader::_internal_mutable_block_output_mr() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _impl_.block_output_mr_.Mutable( GetArena());
+}
+inline std::string* BlockHeader::release_block_output_mr() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.BlockHeader.block_output_mr)
+  return _impl_.block_output_mr_.Release();
+}
+inline void BlockHeader::set_allocated_block_output_mr(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.block_output_mr_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.block_output_mr_.IsDefault()) {
+          _impl_.block_output_mr_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.BlockHeader.block_output_mr)
 }
 
 // bytes kernel_mr = 8;
@@ -3273,6 +3353,28 @@ inline void NewBlockTemplate::set_allocated_body(::tari::rpc::AggregateBody* val
 
   _impl_.body_ = reinterpret_cast<::tari::rpc::AggregateBody*>(value);
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.NewBlockTemplate.body)
+}
+
+// bool is_mempool_in_sync = 3;
+inline void NewBlockTemplate::clear_is_mempool_in_sync() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.is_mempool_in_sync_ = false;
+}
+inline bool NewBlockTemplate::is_mempool_in_sync() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NewBlockTemplate.is_mempool_in_sync)
+  return _internal_is_mempool_in_sync();
+}
+inline void NewBlockTemplate::set_is_mempool_in_sync(bool value) {
+  _internal_set_is_mempool_in_sync(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NewBlockTemplate.is_mempool_in_sync)
+}
+inline bool NewBlockTemplate::_internal_is_mempool_in_sync() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.is_mempool_in_sync_;
+}
+inline void NewBlockTemplate::_internal_set_is_mempool_in_sync(bool value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.is_mempool_in_sync_ = value;
 }
 
 #ifdef __GNUC__

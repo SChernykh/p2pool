@@ -178,5 +178,7 @@ message UnblindedOutput {
     bytes encrypted_data = 12;
     // The minimum value of the commitment that is proven by the range proof (in MicroMinotari)
     uint64 minimum_value_promise = 13;
+    // The range proof
+    RangeProof range_proof = 14;
 }
 

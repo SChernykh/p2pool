@@ -2416,7 +2416,7 @@ class ConsensusConstants final : public ::google::protobuf::Message
     kBlockWeightInputsFieldNumber = 14,
     kBlockWeightOutputsFieldNumber = 15,
     kBlockWeightKernelsFieldNumber = 16,
-    kFaucetValueFieldNumber = 17,
+    kPreMineValueFieldNumber = 17,
     kMaxScriptByteSizeFieldNumber = 18,
     kValidatorNodeValidityPeriodFieldNumber = 19,
     kEffectiveFromHeightFieldNumber = 20,
@@ -2427,6 +2427,7 @@ class ConsensusConstants final : public ::google::protobuf::Message
     kValidatorNodeRegistrationShuffleIntervalEpochFieldNumber = 33,
     kInflationBipsFieldNumber = 35,
     kTailEpochLengthFieldNumber = 36,
+    kMaxBlockCoinbaseCountFieldNumber = 37,
     kBlockchainVersionFieldNumber = 2,
   };
   // repeated uint64 emission_decay = 11;
@@ -2693,14 +2694,14 @@ class ConsensusConstants final : public ::google::protobuf::Message
   void _internal_set_block_weight_kernels(::uint64_t value);
 
   public:
-  // uint64 faucet_value = 17;
-  void clear_faucet_value() ;
-  ::uint64_t faucet_value() const;
-  void set_faucet_value(::uint64_t value);
+  // uint64 pre_mine_value = 17;
+  void clear_pre_mine_value() ;
+  ::uint64_t pre_mine_value() const;
+  void set_pre_mine_value(::uint64_t value);
 
   private:
-  ::uint64_t _internal_faucet_value() const;
-  void _internal_set_faucet_value(::uint64_t value);
+  ::uint64_t _internal_pre_mine_value() const;
+  void _internal_set_pre_mine_value(::uint64_t value);
 
   public:
   // uint64 max_script_byte_size = 18;
@@ -2803,6 +2804,16 @@ class ConsensusConstants final : public ::google::protobuf::Message
   void _internal_set_tail_epoch_length(::uint64_t value);
 
   public:
+  // uint64 max_block_coinbase_count = 37;
+  void clear_max_block_coinbase_count() ;
+  ::uint64_t max_block_coinbase_count() const;
+  void set_max_block_coinbase_count(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_max_block_coinbase_count() const;
+  void _internal_set_max_block_coinbase_count(::uint64_t value);
+
+  public:
   // uint32 blockchain_version = 2;
   void clear_blockchain_version() ;
   ::uint32_t blockchain_version() const;
@@ -2818,7 +2829,7 @@ class ConsensusConstants final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      5, 33, 8,
+      5, 34, 8,
       0, 7>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -2862,7 +2873,7 @@ class ConsensusConstants final : public ::google::protobuf::Message
     ::uint64_t block_weight_inputs_;
     ::uint64_t block_weight_outputs_;
     ::uint64_t block_weight_kernels_;
-    ::uint64_t faucet_value_;
+    ::uint64_t pre_mine_value_;
     ::uint64_t max_script_byte_size_;
     ::uint64_t validator_node_validity_period_;
     ::uint64_t effective_from_height_;
@@ -2873,6 +2884,7 @@ class ConsensusConstants final : public ::google::protobuf::Message
     ::uint64_t validator_node_registration_shuffle_interval_epoch_;
     ::uint64_t inflation_bips_;
     ::uint64_t tail_epoch_length_;
+    ::uint64_t max_block_coinbase_count_;
     ::uint32_t blockchain_version_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -4302,26 +4314,26 @@ inline void ConsensusConstants::_internal_set_block_weight_kernels(::uint64_t va
   _impl_.block_weight_kernels_ = value;
 }
 
-// uint64 faucet_value = 17;
-inline void ConsensusConstants::clear_faucet_value() {
+// uint64 pre_mine_value = 17;
+inline void ConsensusConstants::clear_pre_mine_value() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.faucet_value_ = ::uint64_t{0u};
+  _impl_.pre_mine_value_ = ::uint64_t{0u};
 }
-inline ::uint64_t ConsensusConstants::faucet_value() const {
-  // @@protoc_insertion_point(field_get:tari.rpc.ConsensusConstants.faucet_value)
-  return _internal_faucet_value();
+inline ::uint64_t ConsensusConstants::pre_mine_value() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ConsensusConstants.pre_mine_value)
+  return _internal_pre_mine_value();
 }
-inline void ConsensusConstants::set_faucet_value(::uint64_t value) {
-  _internal_set_faucet_value(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.ConsensusConstants.faucet_value)
+inline void ConsensusConstants::set_pre_mine_value(::uint64_t value) {
+  _internal_set_pre_mine_value(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ConsensusConstants.pre_mine_value)
 }
-inline ::uint64_t ConsensusConstants::_internal_faucet_value() const {
+inline ::uint64_t ConsensusConstants::_internal_pre_mine_value() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.faucet_value_;
+  return _impl_.pre_mine_value_;
 }
-inline void ConsensusConstants::_internal_set_faucet_value(::uint64_t value) {
+inline void ConsensusConstants::_internal_set_pre_mine_value(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.faucet_value_ = value;
+  _impl_.pre_mine_value_ = value;
 }
 
 // uint64 max_script_byte_size = 18;
@@ -5144,6 +5156,28 @@ inline ::uint64_t ConsensusConstants::_internal_tail_epoch_length() const {
 inline void ConsensusConstants::_internal_set_tail_epoch_length(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   _impl_.tail_epoch_length_ = value;
+}
+
+// uint64 max_block_coinbase_count = 37;
+inline void ConsensusConstants::clear_max_block_coinbase_count() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.max_block_coinbase_count_ = ::uint64_t{0u};
+}
+inline ::uint64_t ConsensusConstants::max_block_coinbase_count() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ConsensusConstants.max_block_coinbase_count)
+  return _internal_max_block_coinbase_count();
+}
+inline void ConsensusConstants::set_max_block_coinbase_count(::uint64_t value) {
+  _internal_set_max_block_coinbase_count(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ConsensusConstants.max_block_coinbase_count)
+}
+inline ::uint64_t ConsensusConstants::_internal_max_block_coinbase_count() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.max_block_coinbase_count_;
+}
+inline void ConsensusConstants::_internal_set_max_block_coinbase_count(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.max_block_coinbase_count_ = value;
 }
 
 #ifdef __GNUC__

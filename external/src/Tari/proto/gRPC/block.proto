@@ -38,9 +38,10 @@ message BlockHeader {
     bytes prev_hash = 4;
     // Timestamp at which the block was built.
     uint64 timestamp = 5;
-    // This is the UTXO merkle root of the outputs
-    // This is calculated as Hash (txo MMR root  || roaring bitmap hash of UTXO indices)
+    // This is the UTXO merkle root of the outputs in the blockchain
     bytes output_mr = 6;
+    // This is the merkle root of all outputs in this block
+    bytes block_output_mr = 7;
     // This is the MMR root of the kernels
     bytes kernel_mr = 8;
     // This is the Merkle root of the inputs in this block
@@ -133,5 +134,8 @@ message NewBlockTemplate {
     // This flag indicates if the inputs, outputs and kernels have been sorted internally, that is, the sort() method
     // has been called. This may be false even if all components are sorted.
     AggregateBody body = 2;
+    // Sometimes the mempool has not synced to the latest tip, this flag indicates if the mempool is out of sync.
+    // In most cases the next call to get_new_block_template will return a block with the mempool in sync.
+    bool is_mempool_in_sync = 3;
 }
 
