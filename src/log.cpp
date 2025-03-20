@@ -369,7 +369,7 @@ private:
 
 	std::vector<char> m_buf;
 	std::atomic<uint32_t> m_writePos;
-	uint32_t m_readPos;
+	std::atomic<uint32_t> m_readPos;
 
 	uv_cond_t m_cond;
 	uv_mutex_t m_mutex;
