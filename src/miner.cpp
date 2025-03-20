@@ -152,8 +152,16 @@ void Miner::run(void* data)
 {
 	WorkerData* d = static_cast<WorkerData*>(data);
 	LOGINFO(1, "worker thread " << d->m_index << '/' << d->m_count << " started");
+
+	char buf[16] = {};
+	log::Stream s(buf);
+	s << "Miner " << d->m_index << '/' << d->m_count;
+
+	set_thread_name(buf);
+
 	make_thread_background();
 	d->m_miner->run(d);
+	
 	LOGINFO(1, "worker thread " << d->m_index << '/' << d->m_count << " stopped");
 }
 

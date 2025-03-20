@@ -42,7 +42,7 @@ public:
 		bool on_connect() override { return true; };
 		bool on_read(const char* data, uint32_t size) override { static_cast<ConsoleCommands*>(m_owner)->process_input(m_command, data, size); return true; };
 
-		char m_consoleReadBuf[1024] = {};
+		alignas(8) char m_consoleReadBuf[1024] = {};
 
 		std::string m_command;
 	};
