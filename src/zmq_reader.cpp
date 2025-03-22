@@ -231,6 +231,9 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	m_subscriber.connect(address);
 
 	while (!monitor->m_connected && monitor->check_event(-1)) {
+		if (monitor->m_connected) {
+			break;
+		}
 		if (duration_cast<milliseconds>(steady_clock::now() - start_time).count() >= 1000) {
 			LOGERR(1, "failed to connect to " << address);
 			delete monitor;
