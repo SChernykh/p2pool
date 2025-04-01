@@ -31,7 +31,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DDEV_CLANG_TIDY=ON -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DDEV_CLANG_TIDY=ON -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
 
     - name: Run clang-tidy
       run: |

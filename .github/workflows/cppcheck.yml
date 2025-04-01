@@ -39,7 +39,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSTATIC_LIBS=ON -DWITH_GRPC=OFF
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSTATIC_LIBS=ON -DWITH_GRPC=OFF -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         python ../cppcheck/remove_external.py compile_commands.json
 
     - name: Run cppcheck
