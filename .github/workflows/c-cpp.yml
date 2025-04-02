@@ -155,7 +155,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}'
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc)
 
     - name: Run tests
@@ -213,14 +213,14 @@ jobs:
         cd external/src/libzmq
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='-Os -flto=auto ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os -flto=auto ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='-Os -flto=auto ${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='-Os -flto=auto ${{ matrix.config.flags }}' -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DBUILD_TESTS=OFF -DWITH_DOCS=OFF -DENABLE_DRAFTS=OFF -DBUILD_SHARED=OFF -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc)
 
     - name: Build p2pool
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc) p2pool
 
     - name: Run RandomX tests
@@ -235,7 +235,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc)
 
     - name: Run tests
@@ -314,7 +314,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_STRIP=/usr/bin/aarch64-linux-gnu-strip -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=aarch64
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_STRIP=/usr/bin/aarch64-linux-gnu-strip -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=aarch64 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc)
 
     - name: Run tests

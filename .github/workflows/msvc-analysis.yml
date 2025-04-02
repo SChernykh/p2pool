@@ -38,7 +38,7 @@ jobs:
           submodules: recursive
 
       - name: Configure CMake
-        run: cmake -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{ env.config }}
+        run: cmake -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{ env.config }} -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
 
       # Build is not required unless generated source files are used
       # - name: Build CMake
