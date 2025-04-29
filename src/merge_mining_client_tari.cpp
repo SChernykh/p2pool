@@ -453,9 +453,10 @@ MergeMiningClientTari::TariServer::TariServer(const std::string& socks5Proxy)
 bool MergeMiningClientTari::TariServer::start()
 {
 	std::random_device rd;
+	std::mt19937_64 rng(rd());
 
 	for (size_t i = 0; i < 10; ++i) {
-		if (start_listening(false, "127.0.0.1", 49152 + (rd() % 16384))) {
+		if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
 			break;
 		}
 	}

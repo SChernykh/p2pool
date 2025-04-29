@@ -85,9 +85,10 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	}
 
 	std::random_device rd;
+	std::mt19937_64 rng(rd());
 
 	for (int i = 0; i < 10; ++i) {
-		if (start_listening(false, "127.0.0.1", 49152 + (rd() % 16384))) {
+		if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
 			break;
 		}
 	}

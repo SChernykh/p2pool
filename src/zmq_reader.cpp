@@ -42,9 +42,10 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	addr_buf[0] = '\0';
 
 	std::random_device rd;
+	std::mt19937_64 rng(rd());
 
 	for (uint32_t i = 0; i < 100; ++i) {
-		const uint32_t port = 49152 + (rd() % 16384);
+		const uint32_t port = 49152 + (rng() % 16384);
 
 		try {
 			log::Stream s(addr_buf);
@@ -215,6 +216,7 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	if (!id) {
 		std::random_device rd;
 		id = (static_cast<uint64_t>(rd()) << 32) | static_cast<uint32_t>(rd());
+		id >>= 1; // to avoid MAX_UINT64 case
 	}
 
 	char buf[64];
