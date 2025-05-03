@@ -1956,7 +1956,7 @@ int p2pool::run()
 	loop->data = nullptr;
 	GetLoopUserData(loop);
 
-	set_thread_name("Main");
+	set_thread_name("p2pool");
 
 	try {
 		get_info();
