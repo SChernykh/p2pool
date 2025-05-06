@@ -69,15 +69,27 @@ Merge mining will be available in P2Pool after the fork on October 12th, 2024. V
   p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
   ```
 
-- [Tari](https://www.tari.com/) uses their own gRPC API and requires a different command line:
-  ```
-  ./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://IP:port TARI_WALLET_ADDRESS
-  ```
-  and on the Tari side
-  ```
-  ./minotari_node --grpc-enabled --mining-enabled
-  ```
-  Merge mining is available for testing in Tari's [latest release](https://github.com/tari-project/tari/releases) (Esmeralda testnet).
+### Tari merge mining
+
+[Tari](https://www.tari.com/) uses their own gRPC API and requires a different command line:
+```
+./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://TARI_NODE_IP:18102 TARI_WALLET_ADDRESS
+```
+and on the Tari side
+```
+./minotari_node --grpc-enabled --mining-enabled
+```
+TARI_NODE_IP is 127.0.0.1 if you run both on the same machine (recommended).
+
+Merge mining is available on Tari's mainnet:
+- Download [Tari suite](https://github.com/tari-project/tari/releases/latest) for your OS
+- Run Minotari node and wait until in synchronizes
+- Run Minotari console wallet to create a Tari wallet
+- Copy the interactive wallet address from the "Receive" tab of the wallet
+- Paste it into the P2Pool command line above
+- Everything is ready now to start merge mining Monero and Tari!
+
+Note that Tari will be mined in solo mode (only full Tari blocks can be mined for now). This doesn't affect P2Pool payouts - they will stay the same.
 
 ### TLS
 
