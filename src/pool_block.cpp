@@ -325,14 +325,22 @@ void PoolBlock::reset_offchain_data()
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)
 {
+	// Calculate the coinbase tx hash, then the merkle root of all transactions in the block - this merkle root is what goes into the hashing blob
+
+	// Monero transactions are hashed in 3 separate parts, the resulting 3 hashes are then hashed together to get the final result
+	// For the reference, see "calculate_transaction_hash" in Monero's src/cryptonote_basic/cryptonote_format_utils.cpp
+
 	alignas(8) uint8_t hashes[HASH_SIZE * 3];
 
 	uint64_t* second_hash = reinterpret_cast<uint64_t*>(hashes + HASH_SIZE);
+
+	// Second hash is keccak of base rct data (it doesn't exist for the coinbase transaction, so it's a hash of a single 0x00 byte)
 	second_hash[0] = 0x14281e7a9e7836bcull;
 	second_hash[1] = 0x7d818f8229424636ull;
 	second_hash[2] = 0x9165d677b4f71266ull;
 	second_hash[3] = 0x8ac9bc64e0a996ffull;
 
+	// Third hash is null because there is no rct data in the coinbase transaction
 	memset(hashes + HASH_SIZE * 2, 0, HASH_SIZE);
 
 	uint64_t count;
@@ -354,6 +362,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 		const uint8_t* miner_tx = mainchain_data.data() + header_size;
 		hash tmp;
+
+		// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
 		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, tmp.h);
 		memcpy(hashes, tmp.h, HASH_SIZE);
 
@@ -361,6 +371,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		uint8_t* h = reinterpret_cast<uint8_t*>(m_transactions.data());
 
 		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
+
+		// Save the coinbase tx hash into the first element of m_transactions
 		memcpy(h, tmp.h, HASH_SIZE);
 
 		root_hash tmp_root;
