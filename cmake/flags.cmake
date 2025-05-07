@@ -23,6 +23,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")
 	endif()
 
+	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15))
+		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-error=cpp")
+	endif()
+
 	if (DISABLE_WARNINGS)
 		set(WARNING_FLAGS "-w")
 	endif()
@@ -110,6 +114,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
+
+	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20))
+		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-error=cpp")
+	endif()
 
 	if (DISABLE_WARNINGS)
 		set(WARNING_FLAGS "-w")
