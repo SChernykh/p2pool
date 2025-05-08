@@ -60,6 +60,9 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 #endif
 " on " __DATE__ ")";
 
+// TODO: before the release - replace it with a key generated on an airgapped PC!!!
+const uint8_t ED25519_MASTER_PUBLIC_KEY[32] = {219,176,194,188,152,246,179,126,178,5,35,248,164,187,159,126,8,119,118,146,209,11,59,224,41,110,48,88,226,29,13,54};
+
 std::string DATA_DIR;
 
 SoftwareID get_software_id(uint32_t value)

@@ -29,6 +29,16 @@
 #include "p2pool_api.h"
 #include "stratum_server.h"
 #include "rapidjson_wrapper.h"
+#include "merge_mining_client.h"
+#include "sha256.h"
+
+#ifdef WITH_TLS
+#include <openssl/curve25519.h>
+#else
+#define ED25519_PUBLIC_KEY_LEN 32
+#define ED25519_SIGNATURE_LEN 64
+#endif
+
 #include <fstream>
 #include <numeric>
 
@@ -65,6 +75,8 @@ P2PServer::P2PServer(p2pool* pool)
 {
 	m_callbackBuf.resize(P2P_BUF_SIZE);
 	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE);
+
+	m_auxJobMessages.reserve(1024);
 
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
@@ -105,6 +117,17 @@ P2PServer::P2PServer(p2pool* pool)
 	}
 	m_showPeersAsync.data = this;
 
+#ifdef WITH_MERGE_MINING_DONATION
+	uv_mutex_init_checked(&m_AuxJobBroadcastLock);
+
+	err = uv_async_init(&m_loop, &m_AuxJobBroadcastAsync, on_aux_job_broadcast);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		PANIC_STOP();
+	}
+	m_AuxJobBroadcastAsync.data = this;
+#endif
+
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
 		LOGERR(1, "failed to create timer, error " << uv_err_name(err));
@@ -141,6 +164,10 @@ P2PServer::~P2PServer()
 
 	uv_mutex_destroy(&m_connectToPeersLock);
 	uv_mutex_destroy(&m_showPeersLock);
+
+#ifdef WITH_MERGE_MINING_DONATION
+	uv_mutex_destroy(&m_AuxJobBroadcastLock);
+#endif
 
 	delete m_block;
 	delete m_cache;
@@ -1008,7 +1035,7 @@ void P2PServer::on_broadcast()
 				return p - buf;
 			});
 			if (!result) {
-				LOGWARN(5, "failed to broadcast to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
+				LOGWARN(5, "failed to broadcast a block to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
 				client->close();
 				break;
 			}
@@ -1132,6 +1159,7 @@ void P2PServer::on_timer()
 	check_block_template();
 	check_for_updates();
 	api_update_local_stats();
+	clean_aux_job_messages();
 }
 
 void P2PServer::flush_cache()
@@ -1374,6 +1402,13 @@ void P2PServer::on_shutdown()
 		MutexLock lock(m_showPeersLock);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_showPeersAsync), nullptr);
 	}
+
+#ifdef WITH_MERGE_MINING_DONATION
+	{
+		MutexLock lock(m_AuxJobBroadcastLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_AuxJobBroadcastAsync), nullptr);
+	}
+#endif
 }
 
 void P2PServer::api_update_local_stats()
@@ -1427,6 +1462,101 @@ void P2PServer::api_update_local_stats()
 
 			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"zmq_last_active\":" << (seconds_since_epoch() - m_pool->zmq_last_active()) << '}';
 		});
+}
+
+#ifdef WITH_MERGE_MINING_DONATION
+void P2PServer::broadcast_aux_job_donation_async(const uint8_t* data, uint32_t data_size, uint64_t timestamp)
+{
+	MutexLock lock(m_AuxJobBroadcastLock);
+
+	m_AuxJobBroadcast.job.assign(data, data + data_size);
+	m_AuxJobBroadcast.timestamp = timestamp;
+
+	const int err = uv_async_send(&m_AuxJobBroadcastAsync);
+	if (err) {
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	}
+}
+
+void P2PServer::broadcast_aux_job_donation_handler()
+{
+	AuxJobBroadcast auxJobBroadcast;
+	{
+		MutexLock lock(m_AuxJobBroadcastLock);
+		auxJobBroadcast = std::move(m_AuxJobBroadcast);
+	}
+
+	if (auxJobBroadcast.job.empty()) {
+		return;
+	}
+
+	broadcast_aux_job_donation(auxJobBroadcast.job.data(), static_cast<uint32_t>(auxJobBroadcast.job.size()), auxJobBroadcast.timestamp, nullptr);
+}
+
+void P2PServer::broadcast_aux_job_donation(const uint8_t* data, uint32_t data_size, uint64_t timestamp, const P2PClient* source)
+{
+	check_event_loop_thread(__func__);
+
+	hash digest;
+	sha256(data, data_size, digest.h);
+
+	// Every message can be received from multiple peers, so broadcast it only once
+	if (!m_auxJobMessages.emplace(*digest.u64(), timestamp).second) {
+		return;
+	}
+
+	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if ((source && (client == source)) || !client->is_good() || (client->m_protocolVersion < PROTOCOL_VERSION_1_3)) {
+			continue;
+		}
+
+		const bool result = send(client, [client, data, data_size](uint8_t* buf, size_t buf_size) {
+			LOGINFO(6, "sending AUX_JOB_DONATION to " << static_cast<char*>(client->m_addrString));
+
+			if (buf_size < 1 + sizeof(uint32_t) + data_size) {
+				return 0;
+			}
+
+			*buf = static_cast<uint8_t>(MessageId::AUX_JOB_DONATION);
+			++buf;
+
+			memcpy(buf, &data_size, sizeof(uint32_t));
+			buf += sizeof(uint32_t);
+
+			memcpy(buf, data, data_size);
+
+			return 1;
+		});
+
+		if (!result) {
+			LOGWARN(5, "failed to broadcast AUX_JOB_DONATION to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
+			client->close();
+		}
+	}
+}
+#endif
+
+void P2PServer::clean_aux_job_messages()
+{
+	if ((m_timerCounter & 255) != 0) {
+		return;
+	}
+
+	if (m_auxJobMessages.empty()) {
+		return;
+	}
+
+	const uint64_t cur_time = time(nullptr);
+
+	for (auto it = m_auxJobMessages.begin(); it != m_auxJobMessages.end();) {
+		// Delete old messages only after 2x the timeout to give some leeway for system clock adjustments
+		if (cur_time > it->second + AUX_JOB_TIMEOUT * 2) {
+			it = m_auxJobMessages.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
 }
 
 P2PServer::P2PClient::~P2PClient()
@@ -1723,6 +1853,23 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			if (bytes_left >= 1 + HASH_SIZE) {
 				bytes_read = 1 + HASH_SIZE;
 				on_block_notify(buf + 1);
+			}
+			break;
+
+		case MessageId::AUX_JOB_DONATION:
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent AUX_JOB_DONATION");
+
+			if (bytes_left >= 1 + sizeof(uint32_t)) {
+				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+				if (bytes_left >= 1 + sizeof(uint32_t) + msg_size) {
+					bytes_read = 1 + sizeof(uint32_t) + msg_size;
+
+					if (!on_aux_job_donation(buf + 1 + sizeof(uint32_t), msg_size)) {
+						ban(DEFAULT_BAN_TIME);
+						server->remove_peer_from_list(this);
+						return false;
+					}
+				}
 			}
 			break;
 		}
@@ -2508,6 +2655,127 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			m_blockPendingRequests.push_back(*id.u64());
 		}
 	}
+}
+
+bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size)
+{
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+#ifdef WITH_MERGE_MINING_DONATION
+	if (!server->m_pool->params().m_authorKeyFile.empty()) {
+		// This node sends donate messages, so it should ignore any incoming messages
+		return true;
+	}
+#endif
+
+	const time_t cur_time = time(nullptr);
+
+	// Layout of the message:
+	// 
+	// 32 bytes           | Secondary public key
+	// 8 bytes            | Secondary public key's expiration timestamp
+	// 64 bytes           | Master key signature signing the above 40 bytes
+	// (size - 168) bytes | Data
+	// 64 bytes           | Secondary key signature signing the data
+
+	constexpr uint32_t DATA_OFFSET = ED25519_PUBLIC_KEY_LEN + 8 + ED25519_SIGNATURE_LEN;
+	constexpr uint32_t OVERHEAD = DATA_OFFSET + ED25519_SIGNATURE_LEN;
+	constexpr uint32_t DATA_ENTRY_SIZE = HASH_SIZE * 2 + sizeof(difficulty_type);
+	constexpr uint32_t MIN_DATA_SIZE = sizeof(uint64_t) + DATA_ENTRY_SIZE;
+
+	// Ignore invalid or empty messages
+	if (size < OVERHEAD + MIN_DATA_SIZE) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an invalid AUX_JOB_DONATION message (" << size << " < " << (OVERHEAD + MIN_DATA_SIZE) << ')');
+		return false;
+	}
+
+	// Layout of the data:
+	// 
+	// 8 bytes  | timestamp
+	// 
+	// Next come one or multiple data entries:
+	// 
+	// 32 bytes | aux_id
+	// 32 bytes | aux_hash
+	// 16 bytes | aux_diff
+
+	const uint32_t data_size = size - OVERHEAD;
+
+	const int64_t secondary_key_expiration_time = read_unaligned(reinterpret_cast<const int64_t*>(buf + ED25519_PUBLIC_KEY_LEN));
+
+	// Ignore messages signed with an outdated secondary key
+	if (cur_time >= secondary_key_expiration_time) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an AUX_JOB_DONATION message with an expired secondary key (" << cur_time << " >= " << secondary_key_expiration_time << ")");
+		return true;
+	}
+
+	// Check secondary public key's signature
+	uint8_t signature[ED25519_SIGNATURE_LEN];
+	memcpy(signature, buf + ED25519_PUBLIC_KEY_LEN + 8, sizeof(signature));
+
+	// Ignore messages with invalid signatures
+#ifdef WITH_TLS // Need BoringSSL to verify signatures
+	if (!ED25519_verify(buf, ED25519_PUBLIC_KEY_LEN + 8, signature, ED25519_MASTER_PUBLIC_KEY)) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an AUX_JOB_DONATION message with an invalid master key signature");
+		return true;
+	}
+#endif
+
+	const uint8_t* p = buf + DATA_OFFSET;
+	const uint8_t* data_end = p + data_size;
+
+	memcpy(signature, data_end, sizeof(signature));
+
+	uint8_t secondary_public_key[ED25519_PUBLIC_KEY_LEN];
+	memcpy(secondary_public_key, buf, sizeof(secondary_public_key));
+
+	// Ignore messages with invalid signatures
+#ifdef WITH_TLS // Need BoringSSL to verify signatures
+	if (!ED25519_verify(p, data_size, signature, secondary_public_key)) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an AUX_JOB_DONATION message with an invalid secondary key signature");
+		return true;
+	}
+#endif
+
+	const int64_t data_timestamp = read_unaligned(reinterpret_cast<const int64_t*>(p));
+	p += sizeof(int64_t);
+
+	// Ignore outdated messages
+	if (cur_time > data_timestamp + AUX_JOB_TIMEOUT) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an outdated AUX_JOB_DONATION message ("  << cur_time << " > " << data_timestamp << " + " << static_cast<int>(AUX_JOB_TIMEOUT) << ')');
+		return true;
+	}
+
+	if ((data_end - p) % DATA_ENTRY_SIZE) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an invalid AUX_JOB_DONATION message (" << (data_end - p) << " is not a multiple of " << DATA_ENTRY_SIZE << ')');
+		return true;
+	}
+
+#if defined(WITH_MERGE_MINING_DONATION) && defined(WITH_TLS) // Only work on verified jobs
+	std::vector<IMergeMiningClient::ChainParameters> chain_params_vec;
+	IMergeMiningClient::ChainParameters chain_params;
+
+	while (data_end - p >= DATA_ENTRY_SIZE) {
+		memcpy(chain_params.aux_id.h, p, HASH_SIZE);
+		p += HASH_SIZE;
+
+		memcpy(chain_params.aux_hash.h, p, HASH_SIZE);
+		p += HASH_SIZE;
+
+		chain_params.aux_diff.lo = read_unaligned(reinterpret_cast<const uint64_t*>(p));
+		p += sizeof(uint64_t);
+
+		chain_params.aux_diff.hi = read_unaligned(reinterpret_cast<const uint64_t*>(p));
+		p += sizeof(uint64_t);
+
+		chain_params_vec.push_back(chain_params);
+	}
+
+	server->m_pool->set_aux_job_donation(chain_params_vec);
+#endif
+
+	server->broadcast_aux_job_donation(buf, size, data_timestamp, this);
+	return true;
 }
 
 bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta)

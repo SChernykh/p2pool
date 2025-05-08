@@ -612,6 +612,20 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_auxChains = data.aux_chains;
 	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
 
+	m_poolBlockTemplate->m_mergeMiningExtra.clear();
+	
+	for (const AuxChainData& c : data.aux_chains) {
+		std::vector<uint8_t> v;
+		v.reserve(HASH_SIZE + 16);
+
+		v.assign(c.data.h, c.data.h + HASH_SIZE);
+
+		writeVarint(c.difficulty.lo, v);
+		writeVarint(c.difficulty.hi, v);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
+	}
+
 	init_merge_mining_merkle_proof();
 
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();

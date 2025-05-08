@@ -38,6 +38,11 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "merge_mining_client.h"
+
+#ifdef WITH_TLS
+#include <openssl/curve25519.h>
+#endif
+
 #include <thread>
 #include <fstream>
 #include <numeric>
@@ -148,11 +153,18 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_rwlock_init_checked(&m_minerDataLock);
 	uv_rwlock_init_checked(&m_ZMQReaderLock);
 	uv_rwlock_init_checked(&m_mergeMiningClientsLock);
+
+#ifdef WITH_MERGE_MINING_DONATION
+	uv_rwlock_init_checked(&m_auxJobDonationLock);
+#endif
+
 	uv_rwlock_init_checked(&m_auxIdLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
+
 #ifdef WITH_RANDOMX
 	uv_mutex_init_checked(&m_minerLock);
 #endif
+
 	uv_mutex_init_checked(&m_submitBlockDataLock);
 	uv_mutex_init_checked(&m_submitAuxBlockDataLock);
 
@@ -222,11 +234,18 @@ p2pool::~p2pool()
 	uv_rwlock_destroy(&m_minerDataLock);
 	uv_rwlock_destroy(&m_ZMQReaderLock);
 	uv_rwlock_destroy(&m_mergeMiningClientsLock);
+
+#ifdef WITH_MERGE_MINING_DONATION
+	uv_rwlock_destroy(&m_auxJobDonationLock);
+#endif
+
 	uv_rwlock_destroy(&m_auxIdLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
+
 #ifdef WITH_RANDOMX
 	uv_mutex_destroy(&m_minerLock);
 #endif
+
 	uv_mutex_destroy(&m_submitBlockDataLock);
 	uv_mutex_destroy(&m_submitAuxBlockDataLock);
 
@@ -565,6 +584,27 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	m_zmqLastActive = seconds_since_epoch();
 }
 
+
+#ifdef WITH_MERGE_MINING_DONATION
+void p2pool::set_aux_job_donation(const std::vector<IMergeMiningClient::ChainParameters>& chain_params)
+{
+	if (m_stopped) {
+		return;
+	}
+
+	const uint64_t t = seconds_since_epoch();
+	{
+		WriteLock lock(m_auxJobDonationLock);
+		m_auxJobDonation = chain_params;
+		m_auxJobDonationLastUpdated = t;
+	}
+
+	if (!chain_params.empty()) {
+		update_aux_data(chain_params.front().aux_id);
+	}
+}
+#endif
+
 void p2pool::update_aux_data(const hash& chain_id)
 {
 	if (m_stopped) {
@@ -573,6 +613,16 @@ void p2pool::update_aux_data(const hash& chain_id)
 
 	MinerData data;
 	std::vector<hash> aux_id;
+
+#ifdef WITH_MERGE_MINING_DONATION
+	std::vector<IMergeMiningClient::ChainParameters> mm_donation_params;
+	uint64_t mm_donation_params_last_updated;
+	{
+		ReadLock lock(m_auxJobDonationLock);
+		mm_donation_params = m_auxJobDonation;
+		mm_donation_params_last_updated = m_auxJobDonationLastUpdated;
+	}
+#endif
 
 	{
 		ReadLock lock(m_mergeMiningClientsLock);
@@ -588,13 +638,28 @@ void p2pool::update_aux_data(const hash& chain_id)
 				if (c->get_params(chain_params)) {
 					data.aux_chains.emplace_back(chain_params.aux_id, chain_params.aux_hash, chain_params.aux_diff);
 					aux_id.emplace_back(chain_params.aux_id);
+
+#ifdef WITH_MERGE_MINING_DONATION
+					// If the user is already merge mining this chain, don't use it for donation
+					mm_donation_params.erase(std::remove_if(mm_donation_params.begin(), mm_donation_params.end(), [&chain_params](const auto& t) { return t.aux_id == chain_params.aux_id; }), mm_donation_params.end());
+#endif
 				}
 			}
-			aux_id.emplace_back(m_sideChain->consensus_hash());
 		}
 	}
 
-	if (!aux_id.empty()) {
+#ifdef WITH_MERGE_MINING_DONATION
+	// Use the donation job for 30 minutes at most if it doesn't get updated anymore
+	if (seconds_since_epoch() <= mm_donation_params_last_updated + 1800) {
+		for (const IMergeMiningClient::ChainParameters& c : mm_donation_params) {
+			data.aux_chains.emplace_back(c.aux_id, c.aux_hash, c.aux_diff);
+			aux_id.emplace_back(c.aux_id);
+		}
+	}
+#endif
+
+	aux_id.emplace_back(m_sideChain->consensus_hash());
+	{
 		WriteLock lock(m_auxIdLock);
 
 		if (aux_id == m_auxId) {
@@ -624,14 +689,103 @@ void p2pool::update_aux_data(const hash& chain_id)
 
 	if (!chain_id.empty()) {
 		LOGINFO(4, "New aux data from chain " << chain_id);
+
 		if (!is_main_thread()) {
 			update_block_template_async();
 		}
 		else {
 			update_block_template();
 		}
+
+#if defined(WITH_MERGE_MINING_DONATION) && defined(WITH_TLS)
+		send_aux_job_donation();
+#endif
 	}
 }
+
+#ifdef WITH_MERGE_MINING_DONATION
+void p2pool::send_aux_job_donation()
+{
+#ifdef WITH_TLS
+	if (m_params->m_authorKeyFile.empty()) {
+		return;
+	}
+
+	std::ifstream f(m_params->m_authorKeyFile, std::ios::binary | std::ios::ate);
+
+	if (!f.good()) {
+		LOGERR(1, "send_aux_job_donation: failed to open " << m_params->m_authorKeyFile);
+		return;
+	}
+
+	Params::AuthorKey key;
+
+	if (f.tellg() != static_cast<std::streampos>(sizeof(key))) {
+		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << " has an invalid size");
+		return;
+	}
+
+	f.seekg(0);
+	f.read(reinterpret_cast<char*>(&key), sizeof(key));
+
+	if (!f.good()) {
+		LOGERR(1, "send_aux_job_donation: failed to read data from " << m_params->m_authorKeyFile);
+		return;
+	}
+
+	const uint64_t timestamp = time(nullptr);
+
+	if (timestamp >= read_unaligned(reinterpret_cast<uint64_t*>(key.expiration_time))) {
+		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << " is expired");
+		return;
+	}
+
+	const uint8_t* p = reinterpret_cast<uint8_t*>(&key);
+
+	if (!ED25519_verify(p, sizeof(key.pub_key) + sizeof(key.expiration_time), key.master_key_signature, ED25519_MASTER_PUBLIC_KEY)) {
+		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << ": signature verification failed");
+		return;
+	}
+
+	std::vector<uint8_t> job;
+	job.reserve(512);
+
+	constexpr uint32_t DATA_OFFSET = sizeof(key.pub_key) + sizeof(key.expiration_time) + sizeof(key.master_key_signature);
+
+	job.assign(p, p + DATA_OFFSET);
+
+	job.insert(job.end(), reinterpret_cast<const uint8_t*>(&timestamp), reinterpret_cast<const uint8_t*>(&timestamp) + sizeof(uint64_t));
+
+	{
+		ReadLock lock(m_minerDataLock);
+
+		if (m_minerData.aux_chains.empty()) {
+			LOGERR(1, "send_aux_job_donation: no merge mined chains found");
+			return;
+		}
+
+		for (const AuxChainData& c : m_minerData.aux_chains) {
+			job.insert(job.end(), c.unique_id.h, c.unique_id.h + HASH_SIZE);
+			job.insert(job.end(), c.data.h, c.data.h + HASH_SIZE);
+			job.insert(job.end(), reinterpret_cast<const uint8_t*>(&c.difficulty), reinterpret_cast<const uint8_t*>(&c.difficulty) + sizeof(difficulty_type));
+		}
+	}
+
+	uint8_t signature[64];
+	if (!ED25519_sign(signature, job.data() + DATA_OFFSET, job.size() - DATA_OFFSET, key.priv_key)) {
+		LOGERR(1, "send_aux_job_donation: failed to sign the donation job");
+		return;
+	}
+	OPENSSL_cleanse(&key, sizeof(key));
+
+	job.insert(job.end(), signature, signature + sizeof(signature));
+
+	m_p2pServer->broadcast_aux_job_donation_async(job.data(), static_cast<uint32_t>(job.size()), timestamp);
+#else
+	LOGERR(1, "p2pool::send_aux_job_donation() must be built with TLS");
+#endif
+}
+#endif
 
 void p2pool::submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
 {

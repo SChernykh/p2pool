@@ -144,7 +144,7 @@ struct PoolBlock
 
 	// Merge mining extra data
 	// Format: vector of (chain ID, chain data) pairs
-	// Chain data format is arbitrary and depends on the merge mined chain's requirements
+	// Chain data always has merge mining hash and difficulty in the beginning, the rest is arbitrary and depends on the merge mined chain's requirements
 	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 
 	// Arbitrary extra data

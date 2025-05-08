@@ -101,6 +101,17 @@ struct Params
 	std::string m_tlsCertKey;
 #endif
 	bool m_enableStratumHTTP = true;
+
+#ifdef WITH_MERGE_MINING_DONATION
+	std::string m_authorKeyFile;
+
+	struct AuthorKey {
+		uint8_t pub_key[32];
+		uint8_t expiration_time[8];
+		uint8_t master_key_signature[64];
+		uint8_t priv_key[64];
+	};
+#endif
 };
 
 } // namespace p2pool

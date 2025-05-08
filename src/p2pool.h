@@ -19,6 +19,7 @@
 
 #include "uv_util.h"
 #include "params.h"
+#include "merge_mining_client.h"
 #include <map>
 
 namespace p2pool {
@@ -85,6 +86,11 @@ public:
 	virtual void handle_tx(TxMempoolData& tx) override;
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
+
+#ifdef WITH_MERGE_MINING_DONATION
+	void set_aux_job_donation(const std::vector<IMergeMiningClient::ChainParameters>& chain_params);
+	void send_aux_job_donation();
+#endif
 
 	void update_aux_data(const hash& chain_id);
 
@@ -250,6 +256,12 @@ private:
 
 	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<IMergeMiningClient*> m_mergeMiningClients;
+
+#ifdef WITH_MERGE_MINING_DONATION
+	mutable uv_rwlock_t m_auxJobDonationLock;
+	std::vector<IMergeMiningClient::ChainParameters> m_auxJobDonation;
+	uint64_t m_auxJobDonationLastUpdated = 0;
+#endif
 
 	mutable uv_rwlock_t m_auxIdLock;
 	std::vector<hash> m_auxId;

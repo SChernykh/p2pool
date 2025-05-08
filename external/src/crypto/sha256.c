@@ -21,6 +21,14 @@
 #include <memory.h>
 
 /****************************** MACROS ******************************/
+typedef struct {
+	uint8_t data[64];
+	uint32_t datalen;
+	uint32_t padding;
+	uint64_t bitlen;
+	uint32_t state[8];
+} SHA256_CTX;
+
 #define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
 #define ROTRIGHT(a,b) (((a) >> (b)) | ((a) << (32-(b))))
 
