@@ -21,6 +21,7 @@ namespace p2pool {
 
 class p2pool;
 class BlockTemplate;
+struct PoolBlock;
 
 class IMergeMiningClient
 {
@@ -38,7 +39,8 @@ public:
 	virtual ~IMergeMiningClient() {}
 
 	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;
-	virtual void submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) = 0;
+	virtual void on_external_block(const PoolBlock& block) = 0;
+	virtual void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) = 0;
 
 	virtual void print_status() const = 0;
 };

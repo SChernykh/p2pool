@@ -38,8 +38,9 @@ static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 static constexpr uint32_t PROTOCOL_VERSION_1_0 = 0x00010000UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_2 = 0x00010002UL;
+static constexpr uint32_t PROTOCOL_VERSION_1_3 = 0x00010003UL;
 
-static constexpr uint32_t SUPPORTED_PROTOCOL_VERSION = PROTOCOL_VERSION_1_2;
+static constexpr uint32_t SUPPORTED_PROTOCOL_VERSION = PROTOCOL_VERSION_1_3;
 
 class P2PServer : public TCPServer
 {
@@ -55,7 +56,9 @@ public:
 		PEER_LIST_RESPONSE,
 		BLOCK_BROADCAST_COMPACT,
 		BLOCK_NOTIFY,
-		LAST = BLOCK_NOTIFY,
+		// Donation messages are signed by author's private keys to prevent their abuse/misuse.
+		AUX_JOB_DONATION,
+		LAST = AUX_JOB_DONATION,
 	};
 
 	explicit P2PServer(p2pool *pool);
@@ -113,6 +116,7 @@ public:
 		[[nodiscard]] bool on_peer_list_request(const uint8_t* buf);
 		void on_peer_list_response(const uint8_t* buf);
 		void on_block_notify(const uint8_t* buf);
+		[[nodiscard]] bool on_aux_job_donation(const uint8_t* buf, uint32_t size);
 
 		[[nodiscard]] bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
 		static void handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result);
@@ -187,6 +191,12 @@ public:
 	void check_for_updates(bool forced = false) const;
 
 	bool disconnected() const { return m_seenGoodPeers && (m_numConnections == 0); };
+
+#ifdef WITH_MERGE_MINING_DONATION
+	void broadcast_aux_job_donation_async(const uint8_t* data, uint32_t data_size, uint64_t timestamp);
+#endif
+
+	void broadcast_aux_job_donation(const uint8_t* data, uint32_t data_size, uint64_t timestamp, const P2PClient* source, bool duplicate_check_done);
 
 private:
 	[[nodiscard]] const char* get_log_category() const override;
@@ -291,6 +301,34 @@ private:
 	void on_shutdown() override;
 
 	void api_update_local_stats();
+
+	enum {
+		AUX_JOB_TIMEOUT = 3600,
+	};
+
+	unordered_set<std::pair<uint64_t, uint64_t>> m_auxJobMessages;
+	std::vector<uint8_t> m_auxJobLastMessage;
+	uint64_t m_auxJobLastMessageTimestamp;
+
+	void send_aux_job_donation(P2PServer::P2PClient* client, const uint8_t* data, uint32_t data_size);
+
+	void clean_aux_job_messages();
+
+#ifdef WITH_MERGE_MINING_DONATION
+	struct AuxJobBroadcast
+	{
+		std::vector<uint8_t> job;
+		uint64_t timestamp = 0;
+	};
+
+	uv_mutex_t m_AuxJobBroadcastLock;
+	AuxJobBroadcast m_AuxJobBroadcast;
+
+	uv_async_t m_AuxJobBroadcastAsync;
+
+	static void on_aux_job_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->broadcast_aux_job_donation_handler(); }
+	void broadcast_aux_job_donation_handler();
+#endif
 };
 
 } // namespace p2pool

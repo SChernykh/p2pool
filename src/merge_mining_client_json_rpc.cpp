@@ -287,7 +287,7 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* dat
 	return true;
 }
 
-void MergeMiningClientJSON_RPC::submit_solution(const BlockTemplate* /*block_tpl*/, const uint8_t (&/*hashing_blob*/)[128], size_t /*nonce_offset*/, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
+void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*coinbase_merkle_proof*/, const uint8_t (&/*hashing_blob*/)[128], size_t /*nonce_offset*/, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
 {
 	ReadLock lock(m_lock);
 

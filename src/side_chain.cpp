@@ -573,15 +573,13 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		LOGWARN(3, "add_external_block: block is built on top of an unknown mainchain block " << block.m_prevId << ", mainchain reorg might've happened");
 	}
 
-	hash seed;
-	if (!m_pool->get_seed(block.m_txinGenHeight, seed)) {
+	if (!m_pool->get_seed(block.m_txinGenHeight, block.m_seed)) {
 		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
 		forget_incoming_block(block);
 		return false;
 	}
 
-	hash pow_hash;
-	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, seed, pow_hash)) {
+	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, block.m_powHash)) {
 		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight << ". Ignoring it.");
 		forget_incoming_block(block);
 		return true;
@@ -589,7 +587,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 	// Check if it has the correct parent and difficulty to go right to monerod for checking
 	MinerData miner_data = m_pool->miner_data();
-	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(pow_hash)) {
+	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(block.m_powHash)) {
 		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
 		m_pool->submit_block_async(block.serialize_mainchain_data());
 	}
@@ -598,13 +596,13 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		if (!m_pool->get_difficulty_at_height(block.m_txinGenHeight, diff)) {
 			LOGWARN(3, "add_external_block: couldn't get mainchain difficulty for height = " << block.m_txinGenHeight);
 		}
-		else if (diff.check_pow(pow_hash)) {
+		else if (diff.check_pow(block.m_powHash)) {
 			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
 			m_pool->submit_block_async(block.serialize_mainchain_data());
 		}
 	}
 
-	if (!block.m_difficulty.check_pow(pow_hash)) {
+	if (!block.m_difficulty.check_pow(block.m_powHash)) {
 		LOGWARN(3,
 			"add_external_block mined by " << block.m_minerWallet <<
 			": not enough PoW for height = " << block.m_sidechainHeight <<
@@ -617,8 +615,8 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 		// Calculate the same hash second time to check if it's an unstable hardware that caused this
 		hash pow_hash2;
-		if (block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, seed, pow_hash2, true) && (pow_hash2 != pow_hash)) {
-			LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << pow_hash << " != " << pow_hash2 << " (sidechain id = " << block.m_sidechainId << ')');
+		if (block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, pow_hash2, true) && (pow_hash2 != block.m_powHash)) {
+			LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << block.m_powHash << " != " << pow_hash2 << " (sidechain id = " << block.m_sidechainId << ')');
 			if (block.m_difficulty.check_pow(pow_hash2)) {
 				LOGINFO(3, "add_external_block second result has enough PoW for height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId);
 				not_enough_pow = false;
@@ -629,6 +627,8 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			return false;
 		}
 	}
+
+	m_pool->on_external_block(block);
 
 	bool block_found = false;
 

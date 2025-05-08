@@ -144,7 +144,7 @@ struct PoolBlock
 
 	// Merge mining extra data
 	// Format: vector of (chain ID, chain data) pairs
-	// Chain data format is arbitrary and depends on the merge mined chain's requirements
+	// Chain data always has merge mining hash and difficulty in the beginning, the rest is arbitrary and depends on the merge mined chain's requirements
 	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 
 	// Arbitrary extra data
@@ -172,6 +172,10 @@ struct PoolBlock
 
 	std::vector<AuxChainData> m_auxChains;
 	uint32_t m_auxNonce;
+
+	std::vector<uint8_t> m_hashingBlob;
+	hash m_powHash;
+	hash m_seed;
 
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;

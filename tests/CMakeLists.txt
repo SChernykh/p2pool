@@ -30,6 +30,8 @@ add_subdirectory(cmake/ssl)
 include_directories(../external/src/grpc/third_party/boringssl-with-bazel/src/include)
 add_definitions(-DWITH_TLS)
 
+add_definitions(-DWITH_MERGE_MINING_DONATION)
+
 add_definitions(-DP2POOL_UNIT_TESTS)
 add_definitions(-DP2POOL_SIDECHAIN_EXTRA_1=1)
 

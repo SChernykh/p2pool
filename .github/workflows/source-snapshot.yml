@@ -1,6 +1,10 @@
 name: source-snapshot
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ["master"]
+
+  pull_request:
 
 jobs:
   source-snapshot:

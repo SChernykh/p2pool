@@ -42,6 +42,8 @@ constexpr uint32_t P2POOL_VERSION = (P2POOL_VERSION_MAJOR << 16) | (P2POOL_VERSI
 
 extern const char* VERSION;
 
+extern const uint8_t ED25519_MASTER_PUBLIC_KEY[32];
+
 extern std::string DATA_DIR;
 
 enum class SoftwareID : uint32_t {

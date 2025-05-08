@@ -22,6 +22,9 @@
 #include "params.h"
 #include "block_template.h"
 #include "keccak.h"
+#include "pool_block.h"
+#include "merkle.h"
+#include "side_chain.h"
 
 LOG_CATEGORY(MergeMiningClientTari)
 
@@ -79,7 +82,14 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	log::Stream s(buf);
 	s << "127.0.0.1:" << m_server->external_listen_port();
 
-	m_TariNode = new BaseNode::Stub(grpc::CreateChannel(buf, grpc::InsecureChannelCredentials()));
+	grpc::ChannelArguments cArgs;
+	
+	cArgs.SetInt(GRPC_ARG_INITIAL_RECONNECT_BACKOFF_MS, 1000);
+	
+	cArgs.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, 1000);
+	cArgs.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS, 10000);
+
+	m_TariNode = new BaseNode::Stub(grpc::CreateCustomChannel(buf, grpc::InsecureChannelCredentials(), cArgs));
 
 	uv_mutex_init_checked(&m_workerLock);
 	uv_cond_init_checked(&m_workerCond);
@@ -127,7 +137,148 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
+void MergeMiningClientTari::on_external_block(const PoolBlock& block)
+{
+	// Sanity check
+	if (block.m_transactions.empty() || (block.m_hashingBlob.size() > 128)) {
+		return;
+	}
+
+	// Don't continue if our aux chain is not there
+	if (block.m_mergeMiningExtra.find(m_chainParams.aux_id) == block.m_mergeMiningExtra.end()) {
+		return;
+	}
+
+	std::vector<hash> aux_ids;
+	std::vector<AuxChainData> aux_chains;
+
+	// All aux chains in this block + the P2Pool sidechain
+	aux_ids.reserve(block.m_mergeMiningExtra.size() + 1);
+
+	// All aux chains in this block
+	aux_chains.reserve(block.m_mergeMiningExtra.size());
+
+	for (const auto& i : block.m_mergeMiningExtra) {
+		const std::vector<uint8_t>& v = i.second;
+
+		const uint8_t* p = v.data();
+		const uint8_t* e = v.data() + v.size();
+
+		if (p + HASH_SIZE > e) {
+			return;
+		}
+
+		hash data;
+		memcpy(data.h, p, HASH_SIZE);
+		p += HASH_SIZE;
+
+		difficulty_type diff;
+		p = readVarint(p, e, diff.lo);
+		if (!p) {
+			return;
+		}
+
+		p = readVarint(p, e, diff.hi);
+		if (!p) {
+			return;
+		}
+
+		// If it's our aux chain, check that it's the same job and that there is enough PoW
+		if (i.first == m_chainParams.aux_id) {
+			if ((data != m_chainParams.aux_hash) || (diff != m_chainParams.aux_diff)) {
+				LOGWARN(3, "External aux job solution found, but it's stale");
+				return;
+			}
+			if (!diff.check_pow(block.m_powHash)) {
+				LOGINFO(3, "External aux job solution found, but it doesn't have enough PoW");
+				return;
+			}
+		}
+
+		aux_ids.emplace_back(i.first);
+		aux_chains.emplace_back(i.first, data, diff);
+	}
+
+	aux_ids.emplace_back(m_pool->side_chain().consensus_hash());
+
+	LOGINFO(3, log::LightGreen() << "External aux job solution found. Processing it!");
+
+	// coinbase_merkle_proof
+
+	std::vector<std::vector<hash>> tree;
+
+	merkle_hash_full_tree(block.m_transactions, tree);
+
+	std::vector<hash> proof;
+	uint32_t path;
+
+	if (!get_merkle_proof(tree, block.m_transactions[0], proof, path)) {
+		LOGWARN(3, "on_external_block: get_merkle_proof failed for coinbase transaction");
+		return;
+	}
+
+	std::vector<uint8_t> coinbase_merkle_proof;
+	for (const hash& h : proof) {
+		coinbase_merkle_proof.insert(coinbase_merkle_proof.end(), h.h, h.h + HASH_SIZE);
+	}
+
+	// hashing_blob
+
+	uint8_t hashing_blob[128] = {};
+	memcpy(hashing_blob, block.m_hashingBlob.data(), block.m_hashingBlob.size());
+
+	// nonce_offset and blob
+
+	size_t header_size = 0;
+	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&header_size);
+
+	if (header_size <= NONCE_SIZE) {
+		LOGWARN(3, "on_external_block: invalid header_size");
+		return;
+	}
+
+	const uint32_t nonce_offset = static_cast<uint32_t>(header_size - NONCE_SIZE);
+
+	// aux_merkle_proof, aux_merkle_proof_path
+
+	std::vector<hash> aux_merkle_proof;
+	uint32_t aux_merkle_proof_path = 0;
+
+	const hash sidechain_id = block.m_sidechainId;
+	const uint32_t n_aux_chains = static_cast<uint32_t>(block.m_mergeMiningExtra.size() + 1);
+
+	std::vector<hash> hashes(n_aux_chains);
+
+	uint32_t aux_nonce;
+	if (!find_aux_nonce(aux_ids, aux_nonce, 1000)) {
+		LOGWARN(3, "on_external_block: failed to find aux_nonce");
+		return;
+	}
+
+	for (const AuxChainData& aux_data : aux_chains) {
+		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, aux_nonce, n_aux_chains);
+		hashes[aux_slot] = aux_data.data;
+	}
+
+	const uint32_t aux_slot = get_aux_slot(m_pool->side_chain().consensus_hash(), aux_nonce, n_aux_chains);
+	hashes[aux_slot] = sidechain_id;
+
+	merkle_hash_full_tree(hashes, tree);
+
+	if (tree.empty() || tree.back().empty() || (tree.back().front() != block.m_merkleRoot)) {
+		LOGWARN(3, "on_external_block: merkle root didn't match");
+		return;
+	}
+
+	if (!get_merkle_proof(tree, m_chainParams.aux_hash, aux_merkle_proof, aux_merkle_proof_path)) {
+		LOGWARN(3, "on_external_block: get_merkle_proof failed for the aux hash");
+		return;
+	}
+
+	submit_solution(coinbase_merkle_proof, hashing_blob, nonce_offset, block.m_seed, blob, aux_merkle_proof, aux_merkle_proof_path);
+}
+
+void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
 {
 	Block block;
 	{
@@ -164,8 +315,6 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		data.append(reinterpret_cast<const char*>(hashing_blob + nonce_offset + sizeof(uint32_t)), HASH_SIZE);
 
 		// Coinbase transaction's Merkle proof
-		const std::vector<uint8_t> coinbase_merkle_proof = block_tpl->get_coinbase_merkle_proof();
-
 		// Number of hashes in the proof (varint, but an O(logN) proof will never get bigger than 127)
 		data.append(1, static_cast<char>(coinbase_merkle_proof.size() / HASH_SIZE));
 
@@ -247,7 +396,35 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		uv_work_t req;
 		MergeMiningClientTari* client;
 		Block block;
-	} *work = new Work{ {}, this, std::move(block) };
+
+		FORCEINLINE Work(MergeMiningClientTari* c, Block&& b) : req{}, client(c), block(std::move(b)) {}
+
+		void process() const
+		{
+			grpc::ClientContext ctx;
+			SubmitBlockResponse response;
+
+			const grpc::Status status = client->m_TariNode->SubmitBlock(&ctx, block, &response);
+
+			if (!status.ok()) {
+				LOGWARN(4, "SubmitBlock failed: " << status.error_message());
+				if (!status.error_details().empty()) {
+					LOGWARN(4, "SubmitBlock failed: " << status.error_details());
+				}
+			}
+			else {
+				const std::string& h = response.block_hash();
+				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << block.header().height());
+			}
+		}
+	} *work = new Work(this, std::move(block));
+
+	if (!is_main_thread()) {
+		LOGINFO(5, "Running SubmitBlock in the current thread because uv_default_loop can only be used in the main thread");
+		work->process();
+		delete work;
+		return;
+	}
 
 	work->req.data = work;
 
@@ -255,23 +432,7 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		[](uv_work_t* req)
 		{
 			BACKGROUND_JOB_START(MergeMiningClientTari::submit_solution);
-
-			grpc::ClientContext ctx;
-			SubmitBlockResponse response;
-
-			const Work* w = reinterpret_cast<Work*>(req->data);
-			const grpc::Status status = w->client->m_TariNode->SubmitBlock(&ctx, w->block, &response);
-
-			if (!status.ok()) {
-				LOGWARN(5, "SubmitBlock failed: " << status.error_message());
-				if (!status.error_details().empty()) {
-					LOGWARN(5, "SubmitBlock failed: " << status.error_details());
-				}
-			}
-			else {
-				const std::string& h = response.block_hash();
-				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << w->block.header().height());
-			}
+			reinterpret_cast<Work*>(req->data)->process();
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
@@ -366,9 +527,9 @@ void MergeMiningClientTari::run()
 		const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
 
 		if (!status.ok()) {
-			LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
+			LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
 			if (!status.error_details().empty()) {
-				LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
+				LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
 			}
 		}
 		else {
@@ -414,7 +575,7 @@ void MergeMiningClientTari::run()
 
 						m_tariBlock = response.block();
 
-						LOGINFO(5, "Tari block template: height = " << job_params.height
+						LOGINFO(4, "Tari aux block template: height = " << job_params.height
 							<< ", diff = " << job_params.diff
 							<< ", reward = " << job_params.reward
 							<< ", fees = " << job_params.fees

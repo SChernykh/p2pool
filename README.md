@@ -349,3 +349,13 @@ If you'd like to support further development of Monero P2Pool, you're welcome to
 ```
 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg
 ```
+
+Starting from v4.6, P2Pool will also have an ability to merge mine donations for the author.
+
+Note that this will not affect your hashrate or payouts in any way. P2Pool will always (100% of the time) keep mining to your configured Monero wallet address, but it might also use the available merge mining capacity to donate to the author.
+
+If you merge mine yourself, your settings will take priority.
+
+The merge mining donation runs without a donation server - there is no "phoning home" to a server, everything is done through the P2Pool's network in a decentralized way.
+
+To opt out of this, build P2Pool with `-DWITH_MERGE_MINING_DONATION=OFF` in cmake command line. Due to the architecture of the decentralized P2Pool network, your node will still relay donation messages to other nodes even if you opted out (but it will not process them).
