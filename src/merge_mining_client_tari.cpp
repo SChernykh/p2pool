@@ -79,7 +79,14 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	log::Stream s(buf);
 	s << "127.0.0.1:" << m_server->external_listen_port();
 
-	m_TariNode = new BaseNode::Stub(grpc::CreateChannel(buf, grpc::InsecureChannelCredentials()));
+	grpc::ChannelArguments cArgs;
+	
+	cArgs.SetInt(GRPC_ARG_INITIAL_RECONNECT_BACKOFF_MS, 1000);
+	
+	cArgs.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, 1000);
+	cArgs.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS, 10000);
+
+	m_TariNode = new BaseNode::Stub(grpc::CreateCustomChannel(buf, grpc::InsecureChannelCredentials(), cArgs));
 
 	uv_mutex_init_checked(&m_workerLock);
 	uv_cond_init_checked(&m_workerCond);
