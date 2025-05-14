@@ -499,6 +499,8 @@ void MergeMiningClientTari::run()
 
 	using namespace std::chrono;
 
+	auto last_update_time = high_resolution_clock::now();
+
 	for (;;) {
 		const auto t1 = high_resolution_clock::now();
 
@@ -557,11 +559,20 @@ void MergeMiningClientTari::run()
 				job_params.fees = response.miner_data().total_fees();
 
 				hash chain_id;
-				{
+				do {
 					WriteLock lock2(m_chainParamsLock);
 
 					if (job_params != m_tariJobParams) {
+						// Don't update if only fees changed and it's been less than 10 seconds since the last update
+						if ((job_params.height == m_tariJobParams.height) &&
+							(job_params.diff == m_tariJobParams.diff) &&
+							(job_params.reward == m_tariJobParams.reward) &&
+							(duration_cast<milliseconds>(t1 - last_update_time).count() < 10'000)) {
+							break;
+						}
+
 						m_tariJobParams = job_params;
+						last_update_time = t1;
 
 						if (m_chainParams.aux_id.empty()) {
 							LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
@@ -582,7 +593,7 @@ void MergeMiningClientTari::run()
 							<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
 						);
 					}
-				}
+				} while (0);
 
 				if (!chain_id.empty()) {
 					m_pool->update_aux_data(chain_id);
