@@ -499,109 +499,139 @@ void MergeMiningClientTari::run()
 
 	using namespace std::chrono;
 
-	auto last_update_time = high_resolution_clock::now();
+	TipInfoResponse prev_tip_info{};
+	auto prev_tip_info_update_time = high_resolution_clock::now();
+
+	auto same_tip = [](const TipInfoResponse& a, const TipInfoResponse& b) -> bool {
+		return
+			(a.metadata().best_block_height() == b.metadata().best_block_height()) &&
+			(a.metadata().best_block_hash() == b.metadata().best_block_hash()) &&
+			(a.metadata().accumulated_difficulty() == b.metadata().accumulated_difficulty()) &&
+			(a.initial_sync_achieved() == b.initial_sync_achieved()) &&
+			(a.base_node_state() == b.base_node_state()) &&
+			(a.failed_checkpoints() == b.failed_checkpoints());
+	};
 
 	for (;;) {
-		const auto t1 = high_resolution_clock::now();
+		const auto start_time = high_resolution_clock::now();
+
+		// Force frequent enough updates (at least every 30 seconds)
+		if (duration_cast<seconds>(start_time - prev_tip_info_update_time).count() >= 30) {
+			prev_tip_info.mutable_metadata()->set_best_block_height(0);
+		}
 
 		MutexLock lock(m_workerLock);
 
-		GetNewBlockTemplateWithCoinbasesRequest request;
-		PowAlgo* algo = new PowAlgo();
-		algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
-		request.clear_algo();
-		request.set_allocated_algo(algo);
-		request.set_max_weight(0);
+		grpc::ClientContext get_tip_info_ctx{};
+		Empty get_tip_info_request{};
+		TipInfoResponse cur_tip_info{};
 
-		NewBlockCoinbase* coinbase = request.add_coinbases();
-		coinbase->set_address(m_auxWallet);
+		const grpc::Status get_tip_info_status = m_TariNode->GetTipInfo(&get_tip_info_ctx, get_tip_info_request, &cur_tip_info);
 
-		// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
-		coinbase->set_value(1);
-
-		coinbase->set_stealth_payment(false);
-		coinbase->set_revealed_value_proof(true);
-		coinbase->clear_coinbase_extra();
-
-		grpc::ClientContext ctx;
-		GetNewBlockResult response;
-
-		const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
-
-		if (!status.ok()) {
-			LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
-			if (!status.error_details().empty()) {
-				LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
+		if (!get_tip_info_status.ok()) {
+			LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_message());
+			if (!get_tip_info_status.error_details().empty()) {
+				LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_details());
 			}
 		}
-		else {
-			const std::string& id = response.tari_unique_id();
-			const std::string& mm_hash = response.merge_mining_hash();
+		else if (!same_tip(cur_tip_info, prev_tip_info)) {
+			GetNewBlockTemplateWithCoinbasesRequest request{};
 
-			bool ok = true;
+			PowAlgo* algo = new PowAlgo();
+			algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
 
-			if (id.size() != HASH_SIZE) {
-				LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
-				ok = false;
+			request.clear_algo();
+			request.set_allocated_algo(algo);
+			request.set_max_weight(0);
+
+			NewBlockCoinbase* coinbase = request.add_coinbases();
+			coinbase->set_address(m_auxWallet);
+
+			// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
+			coinbase->set_value(1);
+
+			coinbase->set_stealth_payment(false);
+			coinbase->set_revealed_value_proof(true);
+			coinbase->clear_coinbase_extra();
+
+			grpc::ClientContext ctx{};
+			GetNewBlockResult response{};
+
+			const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
+
+			if (!status.ok()) {
+				LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
+				if (!status.error_details().empty()) {
+					LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
+				}
 			}
+			else {
+				prev_tip_info = cur_tip_info;
+				prev_tip_info_update_time = start_time;
 
-			if (mm_hash.size() != HASH_SIZE) {
-				LOGERR(1, "Tari merge mining hash has invalid size (" << mm_hash.size() << ')');
-				ok = false;
-			}
+				const std::string& id = response.tari_unique_id();
+				const std::string& mm_hash = response.merge_mining_hash();
 
-			if (ok) {
-				TariJobParams job_params;
+				bool ok = true;
 
-				job_params.height = response.block().header().height();
-				job_params.diff = response.miner_data().target_difficulty();
-				job_params.reward = response.miner_data().reward();
-				job_params.fees = response.miner_data().total_fees();
+				if (id.size() != HASH_SIZE) {
+					LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
+					ok = false;
+				}
 
-				hash chain_id;
-				do {
-					WriteLock lock2(m_chainParamsLock);
+				if (mm_hash.size() != HASH_SIZE) {
+					LOGERR(1, "Tari merge mining hash has invalid size (" << mm_hash.size() << ')');
+					ok = false;
+				}
 
-					if (job_params != m_tariJobParams) {
-						// Don't update if only fees changed and it's been less than 10 seconds since the last update
-						if ((job_params.height == m_tariJobParams.height) &&
-							(job_params.diff == m_tariJobParams.diff) &&
-							(job_params.reward == m_tariJobParams.reward) &&
-							(duration_cast<milliseconds>(t1 - last_update_time).count() < 10'000)) {
-							break;
+				if (ok) {
+					TariJobParams job_params;
+
+					job_params.height = response.block().header().height();
+					job_params.diff = response.miner_data().target_difficulty();
+					job_params.reward = response.miner_data().reward();
+					job_params.fees = response.miner_data().total_fees();
+
+					hash chain_id;
+					do {
+						WriteLock lock2(m_chainParamsLock);
+
+						if (job_params != m_tariJobParams) {
+							m_tariJobParams = job_params;
+
+							if (m_chainParams.aux_id.empty()) {
+								LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+								std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+							}
+
+							chain_id = m_chainParams.aux_id;
+
+							std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
+							m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+
+							m_tariBlock = response.block();
+
+							LOGINFO(4, "Tari aux block template: height = " << job_params.height
+								<< ", diff = " << job_params.diff
+								<< ", reward = " << job_params.reward
+								<< ", fees = " << job_params.fees
+								<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
+							);
 						}
+					} while (0);
 
-						m_tariJobParams = job_params;
-						last_update_time = t1;
-
-						if (m_chainParams.aux_id.empty()) {
-							LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
-							std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
-						}
-
-						chain_id = m_chainParams.aux_id;
-
-						std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
-						m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
-
-						m_tariBlock = response.block();
-
-						LOGINFO(4, "Tari aux block template: height = " << job_params.height
-							<< ", diff = " << job_params.diff
-							<< ", reward = " << job_params.reward
-							<< ", fees = " << job_params.fees
-							<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
-						);
+					if (!chain_id.empty()) {
+						m_pool->update_aux_data(chain_id);
 					}
-				} while (0);
-
-				if (!chain_id.empty()) {
-					m_pool->update_aux_data(chain_id);
 				}
 			}
 		}
 
-		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
+		auto dt = duration_cast<nanoseconds>(high_resolution_clock::now() - start_time).count();
+
+		LOGINFO(6, "Polling loop took " << (static_cast<double>(dt) * 1e-6) << " ms");
+
+		const int64_t timeout = std::max<int64_t>(500'000'000 - dt, 1'000'000);
 
 		if ((m_workerStop.load() != 0) || (uv_cond_timedwait(&m_workerCond, &m_workerLock, timeout) != UV_ETIMEDOUT)) {
 			return;
