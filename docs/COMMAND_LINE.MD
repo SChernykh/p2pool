@@ -60,7 +60,7 @@ p2pool.exe --host 127.0.0.1 --host node.monerodevs.org --rpc-port 18089 --zmq-po
 
 ### Merge mining
 
-Merge mining will be available in P2Pool after the fork on October 12th, 2024. Version 4.0 or newer is required to use it.
+Merge mining is available in P2Pool since the fork that happened on October 12th, 2024. Version 4.0 or newer is required to use it.
 
 - Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api)
   - [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
