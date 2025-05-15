@@ -205,17 +205,17 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 				const uint64_t* b = previous_aux_hashes + NUM_PREVIOUS_HASHES;
 
 				if (std::find(a, b, *data.u64()) == b) {
-					LOGWARN(4, "External aux job solution found, but it's not our");
+					LOGINFO(4, "External aux job solution found, but it's not our");
 				}
 				else {
-					LOGWARN(3, "External aux job solution found, but it's stale");
+					LOGINFO(4, "External aux job solution found, but it's stale");
 				}
 
 				return;
 			}
 
 			if (!diff.check_pow(block.m_powHash)) {
-				LOGINFO(3, "External aux job solution found, but it doesn't have enough PoW");
+				LOGINFO(4, "External aux job solution found, but it doesn't have enough PoW (block diff = " << block.m_difficulty << ", Tari diff = " << diff << ')');
 				return;
 			}
 		}
