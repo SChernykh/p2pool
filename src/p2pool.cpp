@@ -2159,7 +2159,12 @@ int p2pool::run()
 	bkg_jobs_tracker->wait();
 
 #ifdef WITH_RANDOMX
-	delete m_miner;
+	{
+		MutexLock lock(m_minerLock);
+
+		delete m_miner;
+		m_miner = nullptr;
+	}
 #endif
 	delete m_stratumServer;
 	delete m_p2pServer;
