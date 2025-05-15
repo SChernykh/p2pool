@@ -141,6 +141,12 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 
 void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 {
+#ifdef WITH_MERGE_MINING_DONATION
+	// The rest of the code is needed only when this node is sending donation messages
+	if (m_pool->params().m_authorKeyFile.empty()) {
+		return;
+	}
+
 	// Sanity check
 	if (block.m_transactions.empty() || block.m_hashingBlob.empty() || (block.m_hashingBlob.size() > 128)) {
 		LOGWARN(3, "on_external_block: sanity check failed - " << block.m_transactions.size() << " transactions, hashing blob size = " << block.m_hashingBlob.size());
@@ -205,7 +211,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 				const uint64_t* b = previous_aux_hashes + NUM_PREVIOUS_HASHES;
 
 				if (std::find(a, b, *data.u64()) == b) {
-					LOGINFO(4, "External aux job solution found, but it's not our");
+					LOGINFO(4, "External aux job solution found, but it's for another miner");
 				}
 				else {
 					LOGINFO(4, "External aux job solution found, but it's stale");
@@ -313,6 +319,9 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 	}
 
 	submit_solution(coinbase_merkle_proof, hashing_blob, nonce_offset, block.m_seed, blob, aux_merkle_proof, aux_merkle_proof_path);
+#else // WITH_MERGE_MINING_DONATION
+	(void) block;
+#endif // WITH_MERGE_MINING_DONATION
 }
 
 void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
