@@ -17,7 +17,9 @@ option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
-option(WITH_TLS "Include TLS support. If this is turned off, p2pool will not support Stratum TLS connections." ON)
+option(WITH_TLS "Include TLS support. If this is turned off, p2pool will not support Stratum TLS connections, and lack many other security features. It's recommended to keep it ON!" ON)
+
+option(WITH_MERGE_MINING_DONATION "Merge mine donations to the author. This doesn't affect your hashrate or payouts in any way - only unused merge mining capacity will be utilised. If you merge mine yourself, your settings will take priority." ON)
 
 option(DEV_TEST_SYNC "[Developer only] Sync test, stop p2pool after sync is complete" OFF)
 option(DEV_WITH_TSAN "[Developer only] Compile with thread sanitizer" OFF)
@@ -54,6 +56,10 @@ if (WITH_UPNP)
 	add_definitions(-DWITH_UPNP)
 	add_subdirectory(external/src/miniupnp/miniupnpc)
 	set(LIBS ${LIBS} libminiupnpc-static)
+endif()
+
+if (WITH_MERGE_MINING_DONATION)
+	add_definitions(-DWITH_MERGE_MINING_DONATION)
 endif()
 
 if (DEV_TEST_SYNC)

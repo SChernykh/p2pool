@@ -22,6 +22,9 @@
 #include "params.h"
 #include "block_template.h"
 #include "keccak.h"
+#include "pool_block.h"
+#include "merkle.h"
+#include "side_chain.h"
 
 LOG_CATEGORY(MergeMiningClientTari)
 
@@ -31,6 +34,8 @@ namespace p2pool {
 
 MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet)
 	: m_chainParams{}
+	, m_previousAuxHashes{}
+	, m_previousAuxHashesIndex(0)
 	, m_auxWallet(wallet)
 	, m_pool(pool)
 	, m_tariJobParams{}
@@ -134,7 +139,183 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
+void MergeMiningClientTari::on_external_block(const PoolBlock& block)
+{
+	// Sanity check
+	if (block.m_transactions.empty() || block.m_hashingBlob.empty() || (block.m_hashingBlob.size() > 128)) {
+		LOGWARN(3, "on_external_block: sanity check failed - " << block.m_transactions.size() << " transactions, hashing blob size = " << block.m_hashingBlob.size());
+		return;
+	}
+
+	ChainParameters chain_params;
+	uint64_t previous_aux_hashes[NUM_PREVIOUS_HASHES];
+	{
+		ReadLock lock(m_chainParamsLock);
+
+		chain_params = m_chainParams;
+		memcpy(previous_aux_hashes, m_previousAuxHashes, sizeof(m_previousAuxHashes));
+	}
+
+	// Don't continue if our aux chain is not there
+	if (block.m_mergeMiningExtra.find(chain_params.aux_id) == block.m_mergeMiningExtra.end()) {
+		return;
+	}
+
+	std::vector<hash> aux_ids;
+	std::vector<AuxChainData> aux_chains;
+
+	// All aux chains in this block + the P2Pool sidechain
+	aux_ids.reserve(block.m_mergeMiningExtra.size() + 1);
+
+	// All aux chains in this block
+	aux_chains.reserve(block.m_mergeMiningExtra.size());
+
+	for (const auto& i : block.m_mergeMiningExtra) {
+		const std::vector<uint8_t>& v = i.second;
+
+		const uint8_t* p = v.data();
+		const uint8_t* e = v.data() + v.size();
+
+		if (p + HASH_SIZE > e) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '1');
+			return;
+		}
+
+		hash data;
+		memcpy(data.h, p, HASH_SIZE);
+		p += HASH_SIZE;
+
+		difficulty_type diff;
+		p = readVarint(p, e, diff.lo);
+		if (!p) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '2');
+			return;
+		}
+
+		p = readVarint(p, e, diff.hi);
+		if (!p) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '3');
+			return;
+		}
+
+		// If it's our aux chain, check that it's the same job and that there is enough PoW
+		if (i.first == chain_params.aux_id) {
+			if ((data != chain_params.aux_hash) || (diff != chain_params.aux_diff)) {
+				const uint64_t* a = previous_aux_hashes;
+				const uint64_t* b = previous_aux_hashes + NUM_PREVIOUS_HASHES;
+
+				if (std::find(a, b, *data.u64()) == b) {
+					LOGWARN(4, "External aux job solution found, but it's not our");
+				}
+				else {
+					LOGWARN(3, "External aux job solution found, but it's stale");
+				}
+
+				return;
+			}
+
+			if (!diff.check_pow(block.m_powHash)) {
+				LOGINFO(3, "External aux job solution found, but it doesn't have enough PoW");
+				return;
+			}
+		}
+
+		aux_ids.emplace_back(i.first);
+		aux_chains.emplace_back(i.first, data, diff);
+	}
+
+	aux_ids.emplace_back(m_pool->side_chain().consensus_hash());
+
+	LOGINFO(0, log::LightGreen() << "External aux job solution found. Processing it!");
+
+	// coinbase_merkle_proof
+
+	std::vector<std::vector<hash>> tree;
+
+	merkle_hash_full_tree(block.m_transactions, tree);
+
+	std::vector<hash> proof;
+	uint32_t path;
+
+	if (!get_merkle_proof(tree, block.m_transactions[0], proof, path)) {
+		LOGWARN(3, "on_external_block: get_merkle_proof failed for coinbase transaction");
+		return;
+	}
+
+	std::vector<uint8_t> coinbase_merkle_proof;
+	for (const hash& h : proof) {
+		coinbase_merkle_proof.insert(coinbase_merkle_proof.end(), h.h, h.h + HASH_SIZE);
+	}
+
+	// hashing_blob
+
+	uint8_t hashing_blob[128] = {};
+	memcpy(hashing_blob, block.m_hashingBlob.data(), block.m_hashingBlob.size());
+
+	// nonce_offset and blob
+
+	size_t header_size = 0;
+	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&header_size);
+
+	if (header_size <= NONCE_SIZE) {
+		LOGWARN(3, "on_external_block: invalid header_size");
+		return;
+	}
+
+	const uint32_t nonce_offset = static_cast<uint32_t>(header_size - NONCE_SIZE);
+
+	// aux_merkle_proof, aux_merkle_proof_path
+
+	std::vector<hash> aux_merkle_proof;
+	uint32_t aux_merkle_proof_path = 0;
+
+	const hash sidechain_id = block.m_sidechainId;
+	const uint32_t n_aux_chains = static_cast<uint32_t>(block.m_mergeMiningExtra.size() + 1);
+
+	std::vector<hash> hashes(n_aux_chains);
+
+	uint32_t aux_nonce;
+	if (!find_aux_nonce(aux_ids, aux_nonce, 1000)) {
+		LOGWARN(3, "on_external_block: failed to find aux_nonce");
+		return;
+	}
+
+	for (const AuxChainData& aux_data : aux_chains) {
+		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, aux_nonce, n_aux_chains);
+
+		if (!hashes[aux_slot].empty()) {
+			LOGWARN(3, "on_external_block: found an incorrect aux_nonce " << '1');
+			return;
+		}
+
+		hashes[aux_slot] = aux_data.data;
+	}
+
+	const uint32_t aux_slot = get_aux_slot(m_pool->side_chain().consensus_hash(), aux_nonce, n_aux_chains);
+
+	if (!hashes[aux_slot].empty()) {
+		LOGWARN(3, "on_external_block: found an incorrect aux_nonce " << '2');
+		return;
+	}
+
+	hashes[aux_slot] = sidechain_id;
+
+	merkle_hash_full_tree(hashes, tree);
+
+	if (tree.empty() || tree.back().empty() || (tree.back().front() != block.m_merkleRoot)) {
+		LOGWARN(3, "on_external_block: merkle root didn't match");
+		return;
+	}
+
+	if (!get_merkle_proof(tree, chain_params.aux_hash, aux_merkle_proof, aux_merkle_proof_path)) {
+		LOGWARN(3, "on_external_block: get_merkle_proof failed for the aux hash");
+		return;
+	}
+
+	submit_solution(coinbase_merkle_proof, hashing_blob, nonce_offset, block.m_seed, blob, aux_merkle_proof, aux_merkle_proof_path);
+}
+
+void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
 {
 	Block block;
 	{
@@ -171,8 +352,6 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		data.append(reinterpret_cast<const char*>(hashing_blob + nonce_offset + sizeof(uint32_t)), HASH_SIZE);
 
 		// Coinbase transaction's Merkle proof
-		const std::vector<uint8_t> coinbase_merkle_proof = block_tpl->get_coinbase_merkle_proof();
-
 		// Number of hashes in the proof (varint, but an O(logN) proof will never get bigger than 127)
 		data.append(1, static_cast<char>(coinbase_merkle_proof.size() / HASH_SIZE));
 
@@ -254,7 +433,35 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		uv_work_t req;
 		MergeMiningClientTari* client;
 		Block block;
-	} *work = new Work{ {}, this, std::move(block) };
+
+		FORCEINLINE Work(MergeMiningClientTari* c, Block&& b) : req{}, client(c), block(std::move(b)) {}
+
+		void process() const
+		{
+			grpc::ClientContext ctx;
+			SubmitBlockResponse response;
+
+			const grpc::Status status = client->m_TariNode->SubmitBlock(&ctx, block, &response);
+
+			if (!status.ok()) {
+				LOGWARN(4, "SubmitBlock failed: " << status.error_message());
+				if (!status.error_details().empty()) {
+					LOGWARN(4, "SubmitBlock failed: " << status.error_details());
+				}
+			}
+			else {
+				const std::string& h = response.block_hash();
+				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << block.header().height());
+			}
+		}
+	} *work = new Work(this, std::move(block));
+
+	if (!is_main_thread()) {
+		LOGINFO(5, "Running SubmitBlock in the current thread because uv_default_loop can only be used in the main thread");
+		work->process();
+		delete work;
+		return;
+	}
 
 	work->req.data = work;
 
@@ -262,23 +469,7 @@ void MergeMiningClientTari::submit_solution(const BlockTemplate* block_tpl, cons
 		[](uv_work_t* req)
 		{
 			BACKGROUND_JOB_START(MergeMiningClientTari::submit_solution);
-
-			grpc::ClientContext ctx;
-			SubmitBlockResponse response;
-
-			const Work* w = reinterpret_cast<Work*>(req->data);
-			const grpc::Status status = w->client->m_TariNode->SubmitBlock(&ctx, w->block, &response);
-
-			if (!status.ok()) {
-				LOGWARN(5, "SubmitBlock failed: " << status.error_message());
-				if (!status.error_details().empty()) {
-					LOGWARN(5, "SubmitBlock failed: " << status.error_details());
-				}
-			}
-			else {
-				const std::string& h = response.block_hash();
-				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << w->block.header().height());
-			}
+			reinterpret_cast<Work*>(req->data)->process();
 		},
 		[](uv_work_t* req, int /*status*/)
 		{
@@ -345,98 +536,142 @@ void MergeMiningClientTari::run()
 
 	using namespace std::chrono;
 
+	TipInfoResponse prev_tip_info{};
+	auto prev_tip_info_update_time = high_resolution_clock::now();
+
+	auto same_tip = [](const TipInfoResponse& a, const TipInfoResponse& b) -> bool {
+		return
+			(a.metadata().best_block_height() == b.metadata().best_block_height()) &&
+			(a.metadata().best_block_hash() == b.metadata().best_block_hash()) &&
+			(a.metadata().accumulated_difficulty() == b.metadata().accumulated_difficulty()) &&
+			(a.initial_sync_achieved() == b.initial_sync_achieved()) &&
+			(a.base_node_state() == b.base_node_state()) &&
+			(a.failed_checkpoints() == b.failed_checkpoints());
+	};
+
 	for (;;) {
-		const auto t1 = high_resolution_clock::now();
+		const auto start_time = high_resolution_clock::now();
+
+		// Force frequent enough updates (at least every 30 seconds)
+		if (duration_cast<seconds>(start_time - prev_tip_info_update_time).count() >= 30) {
+			prev_tip_info.mutable_metadata()->set_best_block_height(0);
+		}
 
 		MutexLock lock(m_workerLock);
 
-		GetNewBlockTemplateWithCoinbasesRequest request;
-		PowAlgo* algo = new PowAlgo();
-		algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
-		request.clear_algo();
-		request.set_allocated_algo(algo);
-		request.set_max_weight(0);
+		grpc::ClientContext get_tip_info_ctx{};
+		Empty get_tip_info_request{};
+		TipInfoResponse cur_tip_info{};
 
-		NewBlockCoinbase* coinbase = request.add_coinbases();
-		coinbase->set_address(m_auxWallet);
+		const grpc::Status get_tip_info_status = m_TariNode->GetTipInfo(&get_tip_info_ctx, get_tip_info_request, &cur_tip_info);
 
-		// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
-		coinbase->set_value(1);
-
-		coinbase->set_stealth_payment(false);
-		coinbase->set_revealed_value_proof(true);
-		coinbase->clear_coinbase_extra();
-
-		grpc::ClientContext ctx;
-		GetNewBlockResult response;
-
-		const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
-
-		if (!status.ok()) {
-			LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
-			if (!status.error_details().empty()) {
-				LOGWARN(5, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
+		if (!get_tip_info_status.ok()) {
+			LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_message());
+			if (!get_tip_info_status.error_details().empty()) {
+				LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_details());
 			}
 		}
-		else {
-			const std::string& id = response.tari_unique_id();
-			const std::string& mm_hash = response.merge_mining_hash();
+		else if (!same_tip(cur_tip_info, prev_tip_info)) {
+			GetNewBlockTemplateWithCoinbasesRequest request{};
 
-			bool ok = true;
+			PowAlgo* algo = new PowAlgo();
+			algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
 
-			if (id.size() != HASH_SIZE) {
-				LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
-				ok = false;
+			request.clear_algo();
+			request.set_allocated_algo(algo);
+			request.set_max_weight(0);
+
+			NewBlockCoinbase* coinbase = request.add_coinbases();
+			coinbase->set_address(m_auxWallet);
+
+			// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
+			coinbase->set_value(1);
+
+			coinbase->set_stealth_payment(false);
+			coinbase->set_revealed_value_proof(true);
+			coinbase->clear_coinbase_extra();
+
+			grpc::ClientContext ctx{};
+			GetNewBlockResult response{};
+
+			const grpc::Status status = m_TariNode->GetNewBlockTemplateWithCoinbases(&ctx, request, &response);
+
+			if (!status.ok()) {
+				LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_message());
+				if (!status.error_details().empty()) {
+					LOGWARN(4, "GetNewBlockTemplateWithCoinbases failed: " << status.error_details());
+				}
 			}
+			else {
+				prev_tip_info = cur_tip_info;
+				prev_tip_info_update_time = start_time;
 
-			if (mm_hash.size() != HASH_SIZE) {
-				LOGERR(1, "Tari merge mining hash has invalid size (" << mm_hash.size() << ')');
-				ok = false;
-			}
+				const std::string& id = response.tari_unique_id();
+				const std::string& mm_hash = response.merge_mining_hash();
 
-			if (ok) {
-				TariJobParams job_params;
+				bool ok = true;
 
-				job_params.height = response.block().header().height();
-				job_params.diff = response.miner_data().target_difficulty();
-				job_params.reward = response.miner_data().reward();
-				job_params.fees = response.miner_data().total_fees();
+				if (id.size() != HASH_SIZE) {
+					LOGERR(1, "Tari unique_id has invalid size (" << id.size() << ')');
+					ok = false;
+				}
 
-				hash chain_id;
-				{
-					WriteLock lock2(m_chainParamsLock);
+				if (mm_hash.size() != HASH_SIZE) {
+					LOGERR(1, "Tari merge mining hash has invalid size (" << mm_hash.size() << ')');
+					ok = false;
+				}
 
-					if (job_params != m_tariJobParams) {
-						m_tariJobParams = job_params;
+				if (ok) {
+					TariJobParams job_params;
 
-						if (m_chainParams.aux_id.empty()) {
-							LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
-							std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+					job_params.height = response.block().header().height();
+					job_params.diff = response.miner_data().target_difficulty();
+					job_params.reward = response.miner_data().reward();
+					job_params.fees = response.miner_data().total_fees();
+
+					hash chain_id;
+					do {
+						WriteLock lock2(m_chainParamsLock);
+
+						if (job_params != m_tariJobParams) {
+							m_tariJobParams = job_params;
+
+							if (m_chainParams.aux_id.empty()) {
+								LOGINFO(1, m_hostStr << " uses chain_id " << log::LightCyan() << log::hex_buf(id.data(), id.size()));
+								std::copy(id.begin(), id.end(), m_chainParams.aux_id.h);
+							}
+
+							chain_id = m_chainParams.aux_id;
+
+							m_previousAuxHashes[(m_previousAuxHashesIndex++) % NUM_PREVIOUS_HASHES] = *m_chainParams.aux_hash.u64();
+
+							std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
+
+							m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+
+							m_tariBlock = response.block();
+
+							LOGINFO(4, "Tari aux block template: height = " << job_params.height
+								<< ", diff = " << job_params.diff
+								<< ", reward = " << job_params.reward
+								<< ", fees = " << job_params.fees
+								<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
+							);
 						}
+					} while (0);
 
-						chain_id = m_chainParams.aux_id;
-
-						std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
-						m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
-
-						m_tariBlock = response.block();
-
-						LOGINFO(5, "Tari block template: height = " << job_params.height
-							<< ", diff = " << job_params.diff
-							<< ", reward = " << job_params.reward
-							<< ", fees = " << job_params.fees
-							<< ", hash = " << log::hex_buf(mm_hash.data(), mm_hash.size())
-						);
+					if (!chain_id.empty()) {
+						m_pool->update_aux_data(chain_id);
 					}
 				}
-
-				if (!chain_id.empty()) {
-					m_pool->update_aux_data(chain_id);
-				}
 			}
 		}
 
-		const int64_t timeout = std::max<int64_t>(500'000'000 - duration_cast<nanoseconds>(high_resolution_clock::now() - t1).count(), 1'000'000);
+		auto dt = duration_cast<nanoseconds>(high_resolution_clock::now() - start_time).count();
+
+		LOGINFO(6, "Polling loop took " << (static_cast<double>(dt) * 1e-6) << " ms");
+
+		const int64_t timeout = std::max<int64_t>(500'000'000 - dt, 1'000'000);
 
 		if ((m_workerStop.load() != 0) || (uv_cond_timedwait(&m_workerCond, &m_workerLock, timeout) != UV_ETIMEDOUT)) {
 			return;

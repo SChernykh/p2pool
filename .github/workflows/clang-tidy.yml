@@ -2,6 +2,7 @@ name: clang-tidy
 
 on:
   push:
+    branches: ["master"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'

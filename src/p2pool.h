@@ -19,6 +19,7 @@
 
 #include "uv_util.h"
 #include "params.h"
+#include "merge_mining_client.h"
 #include <map>
 
 namespace p2pool {
@@ -86,6 +87,11 @@ public:
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
 
+#ifdef WITH_MERGE_MINING_DONATION
+	void set_aux_job_donation(const std::vector<IMergeMiningClient::ChainParameters>& chain_params);
+	void send_aux_job_donation();
+#endif
+
 	void update_aux_data(const hash& chain_id);
 
 	void submit_block_async(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
@@ -111,6 +117,7 @@ public:
 	bool chainmain_get_by_hash(const hash& id, ChainMain& data) const;
 
 	void api_update_block_found(const ChainMain* data, const PoolBlock* block, bool update_stats_mod = true);
+	void on_external_block(const PoolBlock& block);
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
@@ -250,6 +257,12 @@ private:
 
 	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<IMergeMiningClient*> m_mergeMiningClients;
+
+#ifdef WITH_MERGE_MINING_DONATION
+	mutable uv_rwlock_t m_auxJobDonationLock;
+	std::vector<IMergeMiningClient::ChainParameters> m_auxJobDonation;
+	uint64_t m_auxJobDonationLastUpdated = 0;
+#endif
 
 	mutable uv_rwlock_t m_auxIdLock;
 	std::vector<hash> m_auxId;

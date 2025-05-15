@@ -128,6 +128,11 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_auxChains = b.m_auxChains;
 	m_auxNonce = b.m_auxNonce;
 
+	m_hashingBlob = b.m_hashingBlob;
+
+	m_powHash = b.m_powHash;
+	m_seed = b.m_seed;
+
 	return *this;
 }
 
@@ -321,6 +326,12 @@ void PoolBlock::reset_offchain_data()
 	m_auxChains.shrink_to_fit();
 
 	m_auxNonce = 0;
+
+	m_hashingBlob.clear();
+	m_hashingBlob.shrink_to_fit();
+
+	m_powHash = {};
+	m_seed = {};
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)
@@ -382,6 +393,9 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	blob_size += HASH_SIZE;
 
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
+
+	// cppcheck-suppress danglingLifetime
+	m_hashingBlob.assign(blob, blob + blob_size);
 
 	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash, force_light_mode);
 }

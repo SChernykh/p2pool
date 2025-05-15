@@ -238,6 +238,13 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+#ifdef WITH_MERGE_MINING_DONATION
+		if ((strcmp(argv[i], "--adkf") == 0) && (i + 1 < argc)) {
+			m_authorKeyFile = argv[++i];
+			ok = true;
+		}
+#endif
+
 		if (!ok) {
 			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
