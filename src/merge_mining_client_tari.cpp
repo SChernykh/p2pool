@@ -34,6 +34,8 @@ namespace p2pool {
 
 MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet)
 	: m_chainParams{}
+	, m_previousAuxHashes{}
+	, m_previousAuxHashesIndex(0)
 	, m_auxWallet(wallet)
 	, m_pool(pool)
 	, m_tariJobParams{}
@@ -140,12 +142,22 @@ bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 {
 	// Sanity check
-	if (block.m_transactions.empty() || (block.m_hashingBlob.size() > 128)) {
+	if (block.m_transactions.empty() || block.m_hashingBlob.empty() || (block.m_hashingBlob.size() > 128)) {
+		LOGWARN(3, "on_external_block: sanity check failed - " << block.m_transactions.size() << " transactions, hashing blob size = " << block.m_hashingBlob.size());
 		return;
 	}
 
+	ChainParameters chain_params;
+	uint64_t previous_aux_hashes[NUM_PREVIOUS_HASHES];
+	{
+		ReadLock lock(m_chainParamsLock);
+
+		chain_params = m_chainParams;
+		memcpy(previous_aux_hashes, m_previousAuxHashes, sizeof(m_previousAuxHashes));
+	}
+
 	// Don't continue if our aux chain is not there
-	if (block.m_mergeMiningExtra.find(m_chainParams.aux_id) == block.m_mergeMiningExtra.end()) {
+	if (block.m_mergeMiningExtra.find(chain_params.aux_id) == block.m_mergeMiningExtra.end()) {
 		return;
 	}
 
@@ -165,6 +177,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		const uint8_t* e = v.data() + v.size();
 
 		if (p + HASH_SIZE > e) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '1');
 			return;
 		}
 
@@ -175,20 +188,32 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		difficulty_type diff;
 		p = readVarint(p, e, diff.lo);
 		if (!p) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '2');
 			return;
 		}
 
 		p = readVarint(p, e, diff.hi);
 		if (!p) {
+			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '3');
 			return;
 		}
 
 		// If it's our aux chain, check that it's the same job and that there is enough PoW
-		if (i.first == m_chainParams.aux_id) {
-			if ((data != m_chainParams.aux_hash) || (diff != m_chainParams.aux_diff)) {
-				LOGWARN(3, "External aux job solution found, but it's stale");
+		if (i.first == chain_params.aux_id) {
+			if ((data != chain_params.aux_hash) || (diff != chain_params.aux_diff)) {
+				const uint64_t* a = previous_aux_hashes;
+				const uint64_t* b = previous_aux_hashes + NUM_PREVIOUS_HASHES;
+
+				if (std::find(a, b, *data.u64()) == b) {
+					LOGWARN(4, "External aux job solution found, but it's not our");
+				}
+				else {
+					LOGWARN(3, "External aux job solution found, but it's stale");
+				}
+
 				return;
 			}
+
 			if (!diff.check_pow(block.m_powHash)) {
 				LOGINFO(3, "External aux job solution found, but it doesn't have enough PoW");
 				return;
@@ -201,7 +226,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	aux_ids.emplace_back(m_pool->side_chain().consensus_hash());
 
-	LOGINFO(3, log::LightGreen() << "External aux job solution found. Processing it!");
+	LOGINFO(0, log::LightGreen() << "External aux job solution found. Processing it!");
 
 	// coinbase_merkle_proof
 
@@ -257,10 +282,22 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	for (const AuxChainData& aux_data : aux_chains) {
 		const uint32_t aux_slot = get_aux_slot(aux_data.unique_id, aux_nonce, n_aux_chains);
+
+		if (!hashes[aux_slot].empty()) {
+			LOGWARN(3, "on_external_block: found an incorrect aux_nonce " << '1');
+			return;
+		}
+
 		hashes[aux_slot] = aux_data.data;
 	}
 
 	const uint32_t aux_slot = get_aux_slot(m_pool->side_chain().consensus_hash(), aux_nonce, n_aux_chains);
+
+	if (!hashes[aux_slot].empty()) {
+		LOGWARN(3, "on_external_block: found an incorrect aux_nonce " << '2');
+		return;
+	}
+
 	hashes[aux_slot] = sidechain_id;
 
 	merkle_hash_full_tree(hashes, tree);
@@ -270,7 +307,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		return;
 	}
 
-	if (!get_merkle_proof(tree, m_chainParams.aux_hash, aux_merkle_proof, aux_merkle_proof_path)) {
+	if (!get_merkle_proof(tree, chain_params.aux_hash, aux_merkle_proof, aux_merkle_proof_path)) {
 		LOGWARN(3, "on_external_block: get_merkle_proof failed for the aux hash");
 		return;
 	}
@@ -606,7 +643,10 @@ void MergeMiningClientTari::run()
 
 							chain_id = m_chainParams.aux_id;
 
+							m_previousAuxHashes[(m_previousAuxHashesIndex++) % NUM_PREVIOUS_HASHES] = *m_chainParams.aux_hash.u64();
+
 							std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
+
 							m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
 
 							m_tariBlock = response.block();
