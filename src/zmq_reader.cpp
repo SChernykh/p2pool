@@ -171,12 +171,7 @@ void ZMQReader::run()
 		}
 
 		ON_SCOPE_LEAVE([this]() {
-			try {
-				m_monitor->abort();
-			}
-			catch(...) {
-				LOGERR(1, "m_monitor->abort() failed");
-			}
+			m_monitor->abort();
 			uv_thread_join(&m_monitorThread);
 		});
 

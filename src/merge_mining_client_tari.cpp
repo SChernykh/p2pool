@@ -212,12 +212,11 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 				if (std::find(a, b, *data.u64()) == b) {
 					LOGINFO(4, "External aux job solution found, but it's for another miner");
+					return;
 				}
 				else {
 					LOGINFO(4, "External aux job solution found, but it's stale");
 				}
-
-				return;
 			}
 
 			if (!diff.check_pow(block.m_powHash)) {

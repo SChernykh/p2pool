@@ -69,7 +69,16 @@ template<typename T>
 struct ScopeGuard : public nocopy_nomove
 {
 	explicit FORCEINLINE ScopeGuard(T&& handler) : m_handler(std::move(handler)) {}
-	FORCEINLINE ~ScopeGuard() { m_handler(); }
+
+	FORCEINLINE ~ScopeGuard()
+	{
+		// Because the handler can throw an exception, and we don't want exceptions in a destructor
+		try {
+			m_handler();
+		}
+		catch(...) {
+		}
+	}
 
 	T m_handler;
 };
