@@ -1089,6 +1089,15 @@ void P2PServer::show_peers() const
 			if (client->m_SoftwareVersion) {
 				log::Stream s(buf);
 				s << P2PClient::SoftwareDisplayName(client->m_SoftwareID, client->m_SoftwareVersion);
+
+				// Show protocol version in peer list
+				switch (client->m_protocolVersion) {
+					case PROTOCOL_VERSION_1_0: s << " p1.0"; break;
+					case PROTOCOL_VERSION_1_1: s << " p1.1"; break;
+					case PROTOCOL_VERSION_1_2: s << " p1.2"; break;
+					case PROTOCOL_VERSION_1_3: s << " p1.3"; break;
+					default: s << " p?"; break;
+				}
 			}
 			LOGINFO(0, (client->m_isIncoming ? "I\t" : "O\t")
 				<< log::pad_right(log::Duration(cur_time - client->m_connectedTime), 16) << '\t'
