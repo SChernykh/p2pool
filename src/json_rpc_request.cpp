@@ -111,8 +111,10 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		(void)ssl_fingerprint;
 #endif
 
+		const bool is_v6 = (address.find(':') != std::string::npos);
+
 		log::Stream s(buf);
-		s << protocol << address << ':' << port;
+		s << protocol << (is_v6 ? "[" : "") << address << (is_v6 ? "]:" : ":") << port;
 
 		if (!m_req.empty() && (m_req.front() == '/')) {
 			s << m_req.c_str() << '\0';
