@@ -89,7 +89,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=${{ matrix.config.arch }}
-        make -j$(nproc)
+        make -j$(nproc) p2pool_tests
 
     - name: Run tests
       shell: alpine.sh {0}
@@ -157,7 +157,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
-        make -j$(nproc)
+        make -j$(nproc) p2pool_tests
 
     - name: Run tests
       run: |
@@ -237,7 +237,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
-        make -j$(nproc)
+        make -j$(nproc) p2pool_tests
 
     - name: Run tests
       run: |
@@ -316,7 +316,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_STRIP=/usr/bin/aarch64-linux-gnu-strip -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_LIBS=ON -DARCH_ID=aarch64 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
-        make -j$(nproc)
+        make -j$(nproc) p2pool_tests
 
     - name: Run tests
       run: |
@@ -400,7 +400,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DCMAKE_C_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections" -DSTATIC_LIBS=ON -DOPENSSL_NO_ASM=ON
-        make -j$(nproc)
+        make -j$(nproc) p2pool_tests
 
     - name: Run tests
       run: |
@@ -541,7 +541,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='-flto -target x86_64-apple-macos10.13 -Wno-overriding-t-option' -DCMAKE_CXX_FLAGS='-flto -target x86_64-apple-macos10.13 -Wno-overriding-t-option' -DCMAKE_ASM_FLAGS='-target x86_64-apple-macos10.13' -DSTATIC_LIBS=ON
-        make -j4
+        make -j4 p2pool_tests
 
     - name: Run tests
       run: |
@@ -609,7 +609,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$(brew --prefix llvm@15)/bin/clang" -DCMAKE_CXX_COMPILER="$(brew --prefix llvm@15)/bin/clang++" -DCMAKE_AR="$(brew --prefix llvm@15)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@15)/bin/llvm-ranlib" -DCMAKE_C_FLAGS="-target arm64-apple-macos-11" -DCMAKE_CXX_FLAGS="-target arm64-apple-macos-11" -DSTATIC_LIBS=ON -DWITH_LTO=OFF -DARCH_ID=aarch64
-        make -j3
+        make -j3 p2pool_tests
 
     - name: Run tests
       run: |
