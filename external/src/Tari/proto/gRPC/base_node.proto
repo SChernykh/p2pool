@@ -218,15 +218,17 @@ message NetworkDifficultyResponse {
     uint64 timestamp = 4;
     uint64 pow_algo = 5;
     uint64 sha3x_estimated_hash_rate = 6;
-    uint64 randomx_estimated_hash_rate = 7;
+    uint64 monero_randomx_estimated_hash_rate = 7;
+    uint64 tari_randomx_estimated_hash_rate = 10;
     uint64 num_coinbases = 8;
     repeated  bytes coinbase_extras = 9;
 }
 
 // A generic single value response for a specific height
 message ValueAtHeightResponse {
-    uint64 value= 1;
-    uint64 height = 2;
+    uint64 circulating_supply = 1;
+    uint64 spendable_supply = 2;
+    uint64 height = 3;
 }
 
 // A generic uint value
@@ -382,6 +384,7 @@ message GetNewBlockResult{
     bytes merge_mining_hash =3;
     bytes tari_unique_id =4;
     MinerData miner_data = 5;
+    bytes vm_key = 6;
 }
 
 // This is the message that is returned for a miner after it asks for a new block.
@@ -539,6 +542,20 @@ message GetNetworkStateResponse {
     // estimate sha3x hash rate
     uint64 sha3x_estimated_hash_rate = 6;
     // estimate randomx hash rate
-    uint64 randomx_estimated_hash_rate = 7;
+    uint64 monero_randomx_estimated_hash_rate = 7;
+    uint64 tari_randomx_estimated_hash_rate = 10;
+    // number of connections
+    uint64 num_connections = 8;
+    //liveness results
+    repeated LivenessResult liveness_results = 9;
+}
+
+message LivenessResult{
+    // node id
+    bytes peer_node_id = 1;
+    // time to discover
+    uint64 discover_latency = 2;
+    // Dial latency
+    uint64 ping_latency = 3;
 }
 

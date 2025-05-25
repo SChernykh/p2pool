@@ -332,7 +332,7 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 	}
 
 	ProofOfWork* pow = block.mutable_header()->mutable_pow();
-	pow->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
+	pow->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMXM);
 
 	{
 		std::string data;
@@ -583,7 +583,7 @@ void MergeMiningClientTari::run()
 			GetNewBlockTemplateWithCoinbasesRequest request{};
 
 			PowAlgo* algo = new PowAlgo();
-			algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMX);
+			algo->set_pow_algo(PowAlgo_PowAlgos_POW_ALGOS_RANDOMXM);
 
 			request.clear_algo();
 			request.set_allocated_algo(algo);

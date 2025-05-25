@@ -80,8 +80,9 @@ message ProofOfWork {
 message PowAlgo {
     // The permitted pow algorithms
     enum PowAlgos {
-        POW_ALGOS_RANDOMX = 0;    // Accessible as `grpc::pow_algo::PowAlgos::Randomx`
+        POW_ALGOS_RANDOMXM = 0;    // Accessible as `grpc::pow_algo::PowAlgos::RandomxM`
         POW_ALGOS_SHA3X = 1;      // Accessible as `grpc::pow_algo::PowAlgos::Sha3x`
+        POW_ALGOS_RANDOMXT = 2;    // Accessible as `grpc::pow_algo::PowAlgos::RandomxT`
     }
     // The pow algo to use
     PowAlgos pow_algo = 1;

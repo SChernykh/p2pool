@@ -172,6 +172,9 @@ extern ListAssetRegistrationsResponseDefaultTypeInternal _ListAssetRegistrations
 class ListHeadersRequest;
 struct ListHeadersRequestDefaultTypeInternal;
 extern ListHeadersRequestDefaultTypeInternal _ListHeadersRequest_default_instance_;
+class LivenessResult;
+struct LivenessResultDefaultTypeInternal;
+extern LivenessResultDefaultTypeInternal _LivenessResult_default_instance_;
 class MempoolStatsResponse;
 struct MempoolStatsResponseDefaultTypeInternal;
 extern MempoolStatsResponseDefaultTypeInternal _MempoolStatsResponse_default_instance_;
@@ -583,20 +586,31 @@ class ValueAtHeightResponse final : public ::google::protobuf::Message
 
   // accessors -------------------------------------------------------
   enum : int {
-    kValueFieldNumber = 1,
-    kHeightFieldNumber = 2,
+    kCirculatingSupplyFieldNumber = 1,
+    kSpendableSupplyFieldNumber = 2,
+    kHeightFieldNumber = 3,
   };
-  // uint64 value = 1;
-  void clear_value() ;
-  ::uint64_t value() const;
-  void set_value(::uint64_t value);
+  // uint64 circulating_supply = 1;
+  void clear_circulating_supply() ;
+  ::uint64_t circulating_supply() const;
+  void set_circulating_supply(::uint64_t value);
 
   private:
-  ::uint64_t _internal_value() const;
-  void _internal_set_value(::uint64_t value);
+  ::uint64_t _internal_circulating_supply() const;
+  void _internal_set_circulating_supply(::uint64_t value);
 
   public:
-  // uint64 height = 2;
+  // uint64 spendable_supply = 2;
+  void clear_spendable_supply() ;
+  ::uint64_t spendable_supply() const;
+  void set_spendable_supply(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_spendable_supply() const;
+  void _internal_set_spendable_supply(::uint64_t value);
+
+  public:
+  // uint64 height = 3;
   void clear_height() ;
   ::uint64_t height() const;
   void set_height(::uint64_t value);
@@ -611,7 +625,7 @@ class ValueAtHeightResponse final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 0,
+      2, 3, 0,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -627,7 +641,8 @@ class ValueAtHeightResponse final : public ::google::protobuf::Message
                           ::google::protobuf::Arena* arena);
     inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                           ::google::protobuf::Arena* arena, const Impl_& from);
-    ::uint64_t value_;
+    ::uint64_t circulating_supply_;
+    ::uint64_t spendable_supply_;
     ::uint64_t height_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -2291,8 +2306,9 @@ class NetworkDifficultyResponse final : public ::google::protobuf::Message
     kTimestampFieldNumber = 4,
     kPowAlgoFieldNumber = 5,
     kSha3XEstimatedHashRateFieldNumber = 6,
-    kRandomxEstimatedHashRateFieldNumber = 7,
+    kMoneroRandomxEstimatedHashRateFieldNumber = 7,
     kNumCoinbasesFieldNumber = 8,
+    kTariRandomxEstimatedHashRateFieldNumber = 10,
   };
   // repeated bytes coinbase_extras = 9;
   int coinbase_extras_size() const;
@@ -2382,14 +2398,14 @@ class NetworkDifficultyResponse final : public ::google::protobuf::Message
   void _internal_set_sha3x_estimated_hash_rate(::uint64_t value);
 
   public:
-  // uint64 randomx_estimated_hash_rate = 7;
-  void clear_randomx_estimated_hash_rate() ;
-  ::uint64_t randomx_estimated_hash_rate() const;
-  void set_randomx_estimated_hash_rate(::uint64_t value);
+  // uint64 monero_randomx_estimated_hash_rate = 7;
+  void clear_monero_randomx_estimated_hash_rate() ;
+  ::uint64_t monero_randomx_estimated_hash_rate() const;
+  void set_monero_randomx_estimated_hash_rate(::uint64_t value);
 
   private:
-  ::uint64_t _internal_randomx_estimated_hash_rate() const;
-  void _internal_set_randomx_estimated_hash_rate(::uint64_t value);
+  ::uint64_t _internal_monero_randomx_estimated_hash_rate() const;
+  void _internal_set_monero_randomx_estimated_hash_rate(::uint64_t value);
 
   public:
   // uint64 num_coinbases = 8;
@@ -2402,12 +2418,22 @@ class NetworkDifficultyResponse final : public ::google::protobuf::Message
   void _internal_set_num_coinbases(::uint64_t value);
 
   public:
+  // uint64 tari_randomx_estimated_hash_rate = 10;
+  void clear_tari_randomx_estimated_hash_rate() ;
+  ::uint64_t tari_randomx_estimated_hash_rate() const;
+  void set_tari_randomx_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_tari_randomx_estimated_hash_rate() const;
+  void _internal_set_tari_randomx_estimated_hash_rate(::uint64_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tari.rpc.NetworkDifficultyResponse)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      4, 9, 0,
+      4, 10, 0,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -2430,8 +2456,9 @@ class NetworkDifficultyResponse final : public ::google::protobuf::Message
     ::uint64_t timestamp_;
     ::uint64_t pow_algo_;
     ::uint64_t sha3x_estimated_hash_rate_;
-    ::uint64_t randomx_estimated_hash_rate_;
+    ::uint64_t monero_randomx_estimated_hash_rate_;
     ::uint64_t num_coinbases_;
+    ::uint64_t tari_randomx_estimated_hash_rate_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -2850,6 +2877,203 @@ class MempoolStatsResponse final : public ::google::protobuf::Message
     ::uint64_t unconfirmed_txs_;
     ::uint64_t reorg_txs_;
     ::uint64_t unconfirmed_weight_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_base_5fnode_2eproto;
+};
+// -------------------------------------------------------------------
+
+class LivenessResult final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:tari.rpc.LivenessResult) */ {
+ public:
+  inline LivenessResult() : LivenessResult(nullptr) {}
+  ~LivenessResult() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LivenessResult(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline LivenessResult(const LivenessResult& from) : LivenessResult(nullptr, from) {}
+  inline LivenessResult(LivenessResult&& from) noexcept
+      : LivenessResult(nullptr, std::move(from)) {}
+  inline LivenessResult& operator=(const LivenessResult& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LivenessResult& operator=(LivenessResult&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const LivenessResult& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const LivenessResult* internal_default_instance() {
+    return reinterpret_cast<const LivenessResult*>(
+        &_LivenessResult_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 57;
+  friend void swap(LivenessResult& a, LivenessResult& b) { a.Swap(&b); }
+  inline void Swap(LivenessResult* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LivenessResult* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LivenessResult* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::Message::DefaultConstruct<LivenessResult>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const LivenessResult& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const LivenessResult& from) { LivenessResult::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(
+      ::google::protobuf::MessageLite& to_msg,
+      const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(LivenessResult* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "tari.rpc.LivenessResult"; }
+
+ protected:
+  explicit LivenessResult(::google::protobuf::Arena* arena);
+  LivenessResult(::google::protobuf::Arena* arena, const LivenessResult& from);
+  LivenessResult(::google::protobuf::Arena* arena, LivenessResult&& from) noexcept
+      : LivenessResult(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData()
+      const final;
+
+ public:
+  ::google::protobuf::Metadata GetMetadata() const final;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kPeerNodeIdFieldNumber = 1,
+    kDiscoverLatencyFieldNumber = 2,
+    kPingLatencyFieldNumber = 3,
+  };
+  // bytes peer_node_id = 1;
+  void clear_peer_node_id() ;
+  const std::string& peer_node_id() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_peer_node_id(Arg_&& arg, Args_... args);
+  std::string* mutable_peer_node_id();
+  PROTOBUF_NODISCARD std::string* release_peer_node_id();
+  void set_allocated_peer_node_id(std::string* value);
+
+  private:
+  const std::string& _internal_peer_node_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_peer_node_id(
+      const std::string& value);
+  std::string* _internal_mutable_peer_node_id();
+
+  public:
+  // uint64 discover_latency = 2;
+  void clear_discover_latency() ;
+  ::uint64_t discover_latency() const;
+  void set_discover_latency(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_discover_latency() const;
+  void _internal_set_discover_latency(::uint64_t value);
+
+  public:
+  // uint64 ping_latency = 3;
+  void clear_ping_latency() ;
+  ::uint64_t ping_latency() const;
+  void set_ping_latency(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_ping_latency() const;
+  void _internal_set_ping_latency(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.LivenessResult)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      2, 3, 0,
+      0, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from);
+    ::google::protobuf::internal::ArenaStringPtr peer_node_id_;
+    ::uint64_t discover_latency_;
+    ::uint64_t ping_latency_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -8495,14 +8719,34 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
 
   // accessors -------------------------------------------------------
   enum : int {
+    kLivenessResultsFieldNumber = 9,
     kMetadataFieldNumber = 1,
     kBaseNodeStateFieldNumber = 3,
     kInitialSyncAchievedFieldNumber = 2,
     kFailedCheckpointsFieldNumber = 4,
     kRewardFieldNumber = 5,
     kSha3XEstimatedHashRateFieldNumber = 6,
-    kRandomxEstimatedHashRateFieldNumber = 7,
+    kMoneroRandomxEstimatedHashRateFieldNumber = 7,
+    kNumConnectionsFieldNumber = 8,
+    kTariRandomxEstimatedHashRateFieldNumber = 10,
   };
+  // repeated .tari.rpc.LivenessResult liveness_results = 9;
+  int liveness_results_size() const;
+  private:
+  int _internal_liveness_results_size() const;
+
+  public:
+  void clear_liveness_results() ;
+  ::tari::rpc::LivenessResult* mutable_liveness_results(int index);
+  ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>* mutable_liveness_results();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>& _internal_liveness_results() const;
+  ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>* _internal_mutable_liveness_results();
+  public:
+  const ::tari::rpc::LivenessResult& liveness_results(int index) const;
+  ::tari::rpc::LivenessResult* add_liveness_results();
+  const ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>& liveness_results() const;
   // .tari.rpc.MetaData metadata = 1;
   bool has_metadata() const;
   void clear_metadata() ;
@@ -8568,14 +8812,34 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
   void _internal_set_sha3x_estimated_hash_rate(::uint64_t value);
 
   public:
-  // uint64 randomx_estimated_hash_rate = 7;
-  void clear_randomx_estimated_hash_rate() ;
-  ::uint64_t randomx_estimated_hash_rate() const;
-  void set_randomx_estimated_hash_rate(::uint64_t value);
+  // uint64 monero_randomx_estimated_hash_rate = 7;
+  void clear_monero_randomx_estimated_hash_rate() ;
+  ::uint64_t monero_randomx_estimated_hash_rate() const;
+  void set_monero_randomx_estimated_hash_rate(::uint64_t value);
 
   private:
-  ::uint64_t _internal_randomx_estimated_hash_rate() const;
-  void _internal_set_randomx_estimated_hash_rate(::uint64_t value);
+  ::uint64_t _internal_monero_randomx_estimated_hash_rate() const;
+  void _internal_set_monero_randomx_estimated_hash_rate(::uint64_t value);
+
+  public:
+  // uint64 num_connections = 8;
+  void clear_num_connections() ;
+  ::uint64_t num_connections() const;
+  void set_num_connections(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_num_connections() const;
+  void _internal_set_num_connections(::uint64_t value);
+
+  public:
+  // uint64 tari_randomx_estimated_hash_rate = 10;
+  void clear_tari_randomx_estimated_hash_rate() ;
+  ::uint64_t tari_randomx_estimated_hash_rate() const;
+  void set_tari_randomx_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_tari_randomx_estimated_hash_rate() const;
+  void _internal_set_tari_randomx_estimated_hash_rate(::uint64_t value);
 
   public:
   // @@protoc_insertion_point(class_scope:tari.rpc.GetNetworkStateResponse)
@@ -8583,7 +8847,7 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      3, 7, 1,
+      4, 10, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -8601,13 +8865,16 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
                           ::google::protobuf::Arena* arena, const Impl_& from);
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::tari::rpc::LivenessResult > liveness_results_;
     ::tari::rpc::MetaData* metadata_;
     int base_node_state_;
     bool initial_sync_achieved_;
     bool failed_checkpoints_;
     ::uint64_t reward_;
     ::uint64_t sha3x_estimated_hash_rate_;
-    ::uint64_t randomx_estimated_hash_rate_;
+    ::uint64_t monero_randomx_estimated_hash_rate_;
+    ::uint64_t num_connections_;
+    ::uint64_t tari_randomx_estimated_hash_rate_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -11085,6 +11352,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
     kBlockHashFieldNumber = 1,
     kMergeMiningHashFieldNumber = 3,
     kTariUniqueIdFieldNumber = 4,
+    kVmKeyFieldNumber = 6,
     kBlockFieldNumber = 2,
     kMinerDataFieldNumber = 5,
   };
@@ -11136,6 +11404,22 @@ class GetNewBlockResult final : public ::google::protobuf::Message
   std::string* _internal_mutable_tari_unique_id();
 
   public:
+  // bytes vm_key = 6;
+  void clear_vm_key() ;
+  const std::string& vm_key() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_vm_key(Arg_&& arg, Args_... args);
+  std::string* mutable_vm_key();
+  PROTOBUF_NODISCARD std::string* release_vm_key();
+  void set_allocated_vm_key(std::string* value);
+
+  private:
+  const std::string& _internal_vm_key() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_vm_key(
+      const std::string& value);
+  std::string* _internal_mutable_vm_key();
+
+  public:
   // .tari.rpc.Block block = 2;
   bool has_block() const;
   void clear_block() ;
@@ -11171,7 +11455,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      3, 5, 2,
+      3, 6, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -11192,6 +11476,7 @@ class GetNewBlockResult final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr block_hash_;
     ::google::protobuf::internal::ArenaStringPtr merge_mining_hash_;
     ::google::protobuf::internal::ArenaStringPtr tari_unique_id_;
+    ::google::protobuf::internal::ArenaStringPtr vm_key_;
     ::tari::rpc::Block* block_;
     ::tari::rpc::MinerData* miner_data_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -14188,26 +14473,48 @@ inline void NetworkDifficultyResponse::_internal_set_sha3x_estimated_hash_rate(:
   _impl_.sha3x_estimated_hash_rate_ = value;
 }
 
-// uint64 randomx_estimated_hash_rate = 7;
-inline void NetworkDifficultyResponse::clear_randomx_estimated_hash_rate() {
+// uint64 monero_randomx_estimated_hash_rate = 7;
+inline void NetworkDifficultyResponse::clear_monero_randomx_estimated_hash_rate() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.randomx_estimated_hash_rate_ = ::uint64_t{0u};
+  _impl_.monero_randomx_estimated_hash_rate_ = ::uint64_t{0u};
 }
-inline ::uint64_t NetworkDifficultyResponse::randomx_estimated_hash_rate() const {
-  // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.randomx_estimated_hash_rate)
-  return _internal_randomx_estimated_hash_rate();
+inline ::uint64_t NetworkDifficultyResponse::monero_randomx_estimated_hash_rate() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.monero_randomx_estimated_hash_rate)
+  return _internal_monero_randomx_estimated_hash_rate();
 }
-inline void NetworkDifficultyResponse::set_randomx_estimated_hash_rate(::uint64_t value) {
-  _internal_set_randomx_estimated_hash_rate(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.randomx_estimated_hash_rate)
+inline void NetworkDifficultyResponse::set_monero_randomx_estimated_hash_rate(::uint64_t value) {
+  _internal_set_monero_randomx_estimated_hash_rate(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.monero_randomx_estimated_hash_rate)
 }
-inline ::uint64_t NetworkDifficultyResponse::_internal_randomx_estimated_hash_rate() const {
+inline ::uint64_t NetworkDifficultyResponse::_internal_monero_randomx_estimated_hash_rate() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.randomx_estimated_hash_rate_;
+  return _impl_.monero_randomx_estimated_hash_rate_;
 }
-inline void NetworkDifficultyResponse::_internal_set_randomx_estimated_hash_rate(::uint64_t value) {
+inline void NetworkDifficultyResponse::_internal_set_monero_randomx_estimated_hash_rate(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.randomx_estimated_hash_rate_ = value;
+  _impl_.monero_randomx_estimated_hash_rate_ = value;
+}
+
+// uint64 tari_randomx_estimated_hash_rate = 10;
+inline void NetworkDifficultyResponse::clear_tari_randomx_estimated_hash_rate() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_randomx_estimated_hash_rate_ = ::uint64_t{0u};
+}
+inline ::uint64_t NetworkDifficultyResponse::tari_randomx_estimated_hash_rate() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.tari_randomx_estimated_hash_rate)
+  return _internal_tari_randomx_estimated_hash_rate();
+}
+inline void NetworkDifficultyResponse::set_tari_randomx_estimated_hash_rate(::uint64_t value) {
+  _internal_set_tari_randomx_estimated_hash_rate(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.tari_randomx_estimated_hash_rate)
+}
+inline ::uint64_t NetworkDifficultyResponse::_internal_tari_randomx_estimated_hash_rate() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.tari_randomx_estimated_hash_rate_;
+}
+inline void NetworkDifficultyResponse::_internal_set_tari_randomx_estimated_hash_rate(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_randomx_estimated_hash_rate_ = value;
 }
 
 // uint64 num_coinbases = 8;
@@ -14338,29 +14645,51 @@ NetworkDifficultyResponse::_internal_mutable_coinbase_extras() {
 
 // ValueAtHeightResponse
 
-// uint64 value = 1;
-inline void ValueAtHeightResponse::clear_value() {
+// uint64 circulating_supply = 1;
+inline void ValueAtHeightResponse::clear_circulating_supply() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.value_ = ::uint64_t{0u};
+  _impl_.circulating_supply_ = ::uint64_t{0u};
 }
-inline ::uint64_t ValueAtHeightResponse::value() const {
-  // @@protoc_insertion_point(field_get:tari.rpc.ValueAtHeightResponse.value)
-  return _internal_value();
+inline ::uint64_t ValueAtHeightResponse::circulating_supply() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ValueAtHeightResponse.circulating_supply)
+  return _internal_circulating_supply();
 }
-inline void ValueAtHeightResponse::set_value(::uint64_t value) {
-  _internal_set_value(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.ValueAtHeightResponse.value)
+inline void ValueAtHeightResponse::set_circulating_supply(::uint64_t value) {
+  _internal_set_circulating_supply(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ValueAtHeightResponse.circulating_supply)
 }
-inline ::uint64_t ValueAtHeightResponse::_internal_value() const {
+inline ::uint64_t ValueAtHeightResponse::_internal_circulating_supply() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.value_;
+  return _impl_.circulating_supply_;
 }
-inline void ValueAtHeightResponse::_internal_set_value(::uint64_t value) {
+inline void ValueAtHeightResponse::_internal_set_circulating_supply(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.value_ = value;
+  _impl_.circulating_supply_ = value;
 }
 
-// uint64 height = 2;
+// uint64 spendable_supply = 2;
+inline void ValueAtHeightResponse::clear_spendable_supply() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.spendable_supply_ = ::uint64_t{0u};
+}
+inline ::uint64_t ValueAtHeightResponse::spendable_supply() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.ValueAtHeightResponse.spendable_supply)
+  return _internal_spendable_supply();
+}
+inline void ValueAtHeightResponse::set_spendable_supply(::uint64_t value) {
+  _internal_set_spendable_supply(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.ValueAtHeightResponse.spendable_supply)
+}
+inline ::uint64_t ValueAtHeightResponse::_internal_spendable_supply() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.spendable_supply_;
+}
+inline void ValueAtHeightResponse::_internal_set_spendable_supply(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.spendable_supply_ = value;
+}
+
+// uint64 height = 3;
 inline void ValueAtHeightResponse::clear_height() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   _impl_.height_ = ::uint64_t{0u};
@@ -15971,6 +16300,56 @@ inline void GetNewBlockResult::set_allocated_miner_data(::tari::rpc::MinerData* 
 
   _impl_.miner_data_ = reinterpret_cast<::tari::rpc::MinerData*>(value);
   // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.miner_data)
+}
+
+// bytes vm_key = 6;
+inline void GetNewBlockResult::clear_vm_key() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.vm_key_.ClearToEmpty();
+}
+inline const std::string& GetNewBlockResult::vm_key() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNewBlockResult.vm_key)
+  return _internal_vm_key();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void GetNewBlockResult::set_vm_key(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.vm_key_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNewBlockResult.vm_key)
+}
+inline std::string* GetNewBlockResult::mutable_vm_key() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_vm_key();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNewBlockResult.vm_key)
+  return _s;
+}
+inline const std::string& GetNewBlockResult::_internal_vm_key() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.vm_key_.Get();
+}
+inline void GetNewBlockResult::_internal_set_vm_key(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.vm_key_.Set(value, GetArena());
+}
+inline std::string* GetNewBlockResult::_internal_mutable_vm_key() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _impl_.vm_key_.Mutable( GetArena());
+}
+inline std::string* GetNewBlockResult::release_vm_key() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNewBlockResult.vm_key)
+  return _impl_.vm_key_.Release();
+}
+inline void GetNewBlockResult::set_allocated_vm_key(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.vm_key_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.vm_key_.IsDefault()) {
+          _impl_.vm_key_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNewBlockResult.vm_key)
 }
 
 // -------------------------------------------------------------------
@@ -18368,26 +18747,217 @@ inline void GetNetworkStateResponse::_internal_set_sha3x_estimated_hash_rate(::u
   _impl_.sha3x_estimated_hash_rate_ = value;
 }
 
-// uint64 randomx_estimated_hash_rate = 7;
-inline void GetNetworkStateResponse::clear_randomx_estimated_hash_rate() {
+// uint64 monero_randomx_estimated_hash_rate = 7;
+inline void GetNetworkStateResponse::clear_monero_randomx_estimated_hash_rate() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.randomx_estimated_hash_rate_ = ::uint64_t{0u};
+  _impl_.monero_randomx_estimated_hash_rate_ = ::uint64_t{0u};
 }
-inline ::uint64_t GetNetworkStateResponse::randomx_estimated_hash_rate() const {
-  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.randomx_estimated_hash_rate)
-  return _internal_randomx_estimated_hash_rate();
+inline ::uint64_t GetNetworkStateResponse::monero_randomx_estimated_hash_rate() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.monero_randomx_estimated_hash_rate)
+  return _internal_monero_randomx_estimated_hash_rate();
 }
-inline void GetNetworkStateResponse::set_randomx_estimated_hash_rate(::uint64_t value) {
-  _internal_set_randomx_estimated_hash_rate(value);
-  // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.randomx_estimated_hash_rate)
+inline void GetNetworkStateResponse::set_monero_randomx_estimated_hash_rate(::uint64_t value) {
+  _internal_set_monero_randomx_estimated_hash_rate(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.monero_randomx_estimated_hash_rate)
 }
-inline ::uint64_t GetNetworkStateResponse::_internal_randomx_estimated_hash_rate() const {
+inline ::uint64_t GetNetworkStateResponse::_internal_monero_randomx_estimated_hash_rate() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.randomx_estimated_hash_rate_;
+  return _impl_.monero_randomx_estimated_hash_rate_;
 }
-inline void GetNetworkStateResponse::_internal_set_randomx_estimated_hash_rate(::uint64_t value) {
+inline void GetNetworkStateResponse::_internal_set_monero_randomx_estimated_hash_rate(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.randomx_estimated_hash_rate_ = value;
+  _impl_.monero_randomx_estimated_hash_rate_ = value;
+}
+
+// uint64 tari_randomx_estimated_hash_rate = 10;
+inline void GetNetworkStateResponse::clear_tari_randomx_estimated_hash_rate() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_randomx_estimated_hash_rate_ = ::uint64_t{0u};
+}
+inline ::uint64_t GetNetworkStateResponse::tari_randomx_estimated_hash_rate() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.tari_randomx_estimated_hash_rate)
+  return _internal_tari_randomx_estimated_hash_rate();
+}
+inline void GetNetworkStateResponse::set_tari_randomx_estimated_hash_rate(::uint64_t value) {
+  _internal_set_tari_randomx_estimated_hash_rate(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.tari_randomx_estimated_hash_rate)
+}
+inline ::uint64_t GetNetworkStateResponse::_internal_tari_randomx_estimated_hash_rate() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.tari_randomx_estimated_hash_rate_;
+}
+inline void GetNetworkStateResponse::_internal_set_tari_randomx_estimated_hash_rate(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.tari_randomx_estimated_hash_rate_ = value;
+}
+
+// uint64 num_connections = 8;
+inline void GetNetworkStateResponse::clear_num_connections() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.num_connections_ = ::uint64_t{0u};
+}
+inline ::uint64_t GetNetworkStateResponse::num_connections() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.num_connections)
+  return _internal_num_connections();
+}
+inline void GetNetworkStateResponse::set_num_connections(::uint64_t value) {
+  _internal_set_num_connections(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.num_connections)
+}
+inline ::uint64_t GetNetworkStateResponse::_internal_num_connections() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.num_connections_;
+}
+inline void GetNetworkStateResponse::_internal_set_num_connections(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.num_connections_ = value;
+}
+
+// repeated .tari.rpc.LivenessResult liveness_results = 9;
+inline int GetNetworkStateResponse::_internal_liveness_results_size() const {
+  return _internal_liveness_results().size();
+}
+inline int GetNetworkStateResponse::liveness_results_size() const {
+  return _internal_liveness_results_size();
+}
+inline void GetNetworkStateResponse::clear_liveness_results() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.liveness_results_.Clear();
+}
+inline ::tari::rpc::LivenessResult* GetNetworkStateResponse::mutable_liveness_results(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNetworkStateResponse.liveness_results)
+  return _internal_mutable_liveness_results()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>* GetNetworkStateResponse::mutable_liveness_results()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable_list:tari.rpc.GetNetworkStateResponse.liveness_results)
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _internal_mutable_liveness_results();
+}
+inline const ::tari::rpc::LivenessResult& GetNetworkStateResponse::liveness_results(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.liveness_results)
+  return _internal_liveness_results().Get(index);
+}
+inline ::tari::rpc::LivenessResult* GetNetworkStateResponse::add_liveness_results() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ::tari::rpc::LivenessResult* _add = _internal_mutable_liveness_results()->Add();
+  // @@protoc_insertion_point(field_add:tari.rpc.GetNetworkStateResponse.liveness_results)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>& GetNetworkStateResponse::liveness_results() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:tari.rpc.GetNetworkStateResponse.liveness_results)
+  return _internal_liveness_results();
+}
+inline const ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>&
+GetNetworkStateResponse::_internal_liveness_results() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.liveness_results_;
+}
+inline ::google::protobuf::RepeatedPtrField<::tari::rpc::LivenessResult>*
+GetNetworkStateResponse::_internal_mutable_liveness_results() {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return &_impl_.liveness_results_;
+}
+
+// -------------------------------------------------------------------
+
+// LivenessResult
+
+// bytes peer_node_id = 1;
+inline void LivenessResult::clear_peer_node_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.peer_node_id_.ClearToEmpty();
+}
+inline const std::string& LivenessResult::peer_node_id() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.LivenessResult.peer_node_id)
+  return _internal_peer_node_id();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void LivenessResult::set_peer_node_id(Arg_&& arg,
+                                                     Args_... args) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.peer_node_id_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tari.rpc.LivenessResult.peer_node_id)
+}
+inline std::string* LivenessResult::mutable_peer_node_id() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_peer_node_id();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.LivenessResult.peer_node_id)
+  return _s;
+}
+inline const std::string& LivenessResult::_internal_peer_node_id() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.peer_node_id_.Get();
+}
+inline void LivenessResult::_internal_set_peer_node_id(const std::string& value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.peer_node_id_.Set(value, GetArena());
+}
+inline std::string* LivenessResult::_internal_mutable_peer_node_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  return _impl_.peer_node_id_.Mutable( GetArena());
+}
+inline std::string* LivenessResult::release_peer_node_id() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:tari.rpc.LivenessResult.peer_node_id)
+  return _impl_.peer_node_id_.Release();
+}
+inline void LivenessResult::set_allocated_peer_node_id(std::string* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.peer_node_id_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.peer_node_id_.IsDefault()) {
+          _impl_.peer_node_id_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.LivenessResult.peer_node_id)
+}
+
+// uint64 discover_latency = 2;
+inline void LivenessResult::clear_discover_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.discover_latency_ = ::uint64_t{0u};
+}
+inline ::uint64_t LivenessResult::discover_latency() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.LivenessResult.discover_latency)
+  return _internal_discover_latency();
+}
+inline void LivenessResult::set_discover_latency(::uint64_t value) {
+  _internal_set_discover_latency(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.LivenessResult.discover_latency)
+}
+inline ::uint64_t LivenessResult::_internal_discover_latency() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.discover_latency_;
+}
+inline void LivenessResult::_internal_set_discover_latency(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.discover_latency_ = value;
+}
+
+// uint64 ping_latency = 3;
+inline void LivenessResult::clear_ping_latency() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.ping_latency_ = ::uint64_t{0u};
+}
+inline ::uint64_t LivenessResult::ping_latency() const {
+  // @@protoc_insertion_point(field_get:tari.rpc.LivenessResult.ping_latency)
+  return _internal_ping_latency();
+}
+inline void LivenessResult::set_ping_latency(::uint64_t value) {
+  _internal_set_ping_latency(value);
+  // @@protoc_insertion_point(field_set:tari.rpc.LivenessResult.ping_latency)
+}
+inline ::uint64_t LivenessResult::_internal_ping_latency() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.ping_latency_;
+}
+inline void LivenessResult::_internal_set_ping_latency(::uint64_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.ping_latency_ = value;
 }
 
 #ifdef __GNUC__

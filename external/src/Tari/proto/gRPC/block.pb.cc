@@ -371,22 +371,22 @@ const char descriptor_table_protodef_block_2eproto[] ABSL_ATTRIBUTE_SECTION_VARI
     "tal_script_offset\030\017 \001(\014\022\031\n\021validator_nod"
     "e_mr\030\020 \001(\014\022\033\n\023validator_node_size\030\021 \001(\004\""
     "1\n\013ProofOfWork\022\020\n\010pow_algo\030\001 \001(\004\022\020\n\010pow_"
-    "data\030\004 \001(\014\"o\n\007PowAlgo\022,\n\010pow_algo\030\001 \001(\0162"
-    "\032.tari.rpc.PowAlgo.PowAlgos\"6\n\010PowAlgos\022"
-    "\025\n\021POW_ALGOS_RANDOMX\020\000\022\023\n\017POW_ALGOS_SHA3"
-    "X\020\001\"U\n\005Block\022%\n\006header\030\001 \001(\0132\025.tari.rpc."
-    "BlockHeader\022%\n\004body\030\002 \001(\0132\027.tari.rpc.Agg"
-    "regateBody\"H\n\017HistoricalBlock\022\025\n\rconfirm"
-    "ations\030\001 \001(\004\022\036\n\005block\030\002 \001(\0132\017.tari.rpc.B"
-    "lock\"\252\001\n\026NewBlockHeaderTemplate\022\017\n\007versi"
-    "on\030\001 \001(\r\022\016\n\006height\030\002 \001(\004\022\021\n\tprev_hash\030\003 "
-    "\001(\014\022\033\n\023total_kernel_offset\030\004 \001(\014\022\"\n\003pow\030"
-    "\005 \001(\0132\025.tari.rpc.ProofOfWork\022\033\n\023total_sc"
-    "ript_offset\030\007 \001(\014\"\207\001\n\020NewBlockTemplate\0220"
-    "\n\006header\030\001 \001(\0132 .tari.rpc.NewBlockHeader"
-    "Template\022%\n\004body\030\002 \001(\0132\027.tari.rpc.Aggreg"
-    "ateBody\022\032\n\022is_mempool_in_sync\030\003 \001(\010b\006pro"
-    "to3"
+    "data\030\004 \001(\014\"\210\001\n\007PowAlgo\022,\n\010pow_algo\030\001 \001(\016"
+    "2\032.tari.rpc.PowAlgo.PowAlgos\"O\n\010PowAlgos"
+    "\022\026\n\022POW_ALGOS_RANDOMXM\020\000\022\023\n\017POW_ALGOS_SH"
+    "A3X\020\001\022\026\n\022POW_ALGOS_RANDOMXT\020\002\"U\n\005Block\022%"
+    "\n\006header\030\001 \001(\0132\025.tari.rpc.BlockHeader\022%\n"
+    "\004body\030\002 \001(\0132\027.tari.rpc.AggregateBody\"H\n\017"
+    "HistoricalBlock\022\025\n\rconfirmations\030\001 \001(\004\022\036"
+    "\n\005block\030\002 \001(\0132\017.tari.rpc.Block\"\252\001\n\026NewBl"
+    "ockHeaderTemplate\022\017\n\007version\030\001 \001(\r\022\016\n\006he"
+    "ight\030\002 \001(\004\022\021\n\tprev_hash\030\003 \001(\014\022\033\n\023total_k"
+    "ernel_offset\030\004 \001(\014\022\"\n\003pow\030\005 \001(\0132\025.tari.r"
+    "pc.ProofOfWork\022\033\n\023total_script_offset\030\007 "
+    "\001(\014\"\207\001\n\020NewBlockTemplate\0220\n\006header\030\001 \001(\013"
+    "2 .tari.rpc.NewBlockHeaderTemplate\022%\n\004bo"
+    "dy\030\002 \001(\0132\027.tari.rpc.AggregateBody\022\032\n\022is_"
+    "mempool_in_sync\030\003 \001(\010b\006proto3"
 };
 static const ::_pbi::DescriptorTable* const descriptor_table_block_2eproto_deps[1] =
     {
@@ -396,7 +396,7 @@ static ::absl::once_flag descriptor_table_block_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_block_2eproto = {
     false,
     false,
-    1083,
+    1109,
     descriptor_table_protodef_block_2eproto,
     "block.proto",
     &descriptor_table_block_2eproto_once,
@@ -432,15 +432,16 @@ const ::google::protobuf::EnumDescriptor* PowAlgo_PowAlgos_descriptor() {
   return file_level_enum_descriptors_block_2eproto[0];
 }
 PROTOBUF_CONSTINIT const uint32_t PowAlgo_PowAlgos_internal_data_[] = {
-    131072u, 0u, };
+    196608u, 0u, };
 bool PowAlgo_PowAlgos_IsValid(int value) {
-  return 0 <= value && value <= 1;
+  return 0 <= value && value <= 2;
 }
 #if (__cplusplus < 201703) && \
   (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 
-constexpr PowAlgo_PowAlgos PowAlgo::POW_ALGOS_RANDOMX;
+constexpr PowAlgo_PowAlgos PowAlgo::POW_ALGOS_RANDOMXM;
 constexpr PowAlgo_PowAlgos PowAlgo::POW_ALGOS_SHA3X;
+constexpr PowAlgo_PowAlgos PowAlgo::POW_ALGOS_RANDOMXT;
 constexpr PowAlgo_PowAlgos PowAlgo::PowAlgos_MIN;
 constexpr PowAlgo_PowAlgos PowAlgo::PowAlgos_MAX;
 constexpr int PowAlgo::PowAlgos_ARRAYSIZE;
