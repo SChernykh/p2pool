@@ -91,6 +91,9 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	cArgs.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, 1000);
 	cArgs.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS, 10000);
 
+	cArgs.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, -1);
+	cArgs.SetInt(GRPC_ARG_MAX_SEND_MESSAGE_LENGTH, -1);
+
 	m_TariNode = new BaseNode::Stub(grpc::CreateCustomChannel(buf, grpc::InsecureChannelCredentials(), cArgs));
 
 	uv_mutex_init_checked(&m_workerLock);
