@@ -26,10 +26,10 @@ jobs:
         submodules: recursive
 
     - name: Checkout cppcheck
-      uses: actions/checkout@v4
-      with:
-        repository: danmar/cppcheck
-        path: cppcheck-main
+      run: |
+        git clone https://github.com/danmar/cppcheck cppcheck-main
+        cd cppcheck-main
+        git checkout 6d7dc76052ad36128fae93f994d6a2bf57e93103
 
     - name: Build cppcheck
       run: |
@@ -74,10 +74,10 @@ jobs:
         submodules: recursive
 
     - name: Checkout cppcheck
-      uses: actions/checkout@v4
-      with:
-        repository: danmar/cppcheck
-        path: cppcheck-main
+      run: |
+        git clone https://github.com/danmar/cppcheck cppcheck-main
+        cd cppcheck-main
+        git checkout 6d7dc76052ad36128fae93f994d6a2bf57e93103
 
     - name: Build cppcheck
       run: |
