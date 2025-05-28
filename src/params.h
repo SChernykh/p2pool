@@ -85,6 +85,7 @@ struct Params
 	uint32_t m_maxIncomingPeers = 450;
 	uint32_t m_minerThreads = 0;
 	bool m_mini = false;
+	bool m_nano = false;
 	bool m_autoDiff = true;
 	std::string m_socks5Proxy;
 	bool m_dns = true;

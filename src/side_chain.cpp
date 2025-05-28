@@ -57,6 +57,7 @@ namespace p2pool {
 
 static constexpr uint8_t default_consensus_id[HASH_SIZE] = { 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 };
 static constexpr uint8_t mini_consensus_id[HASH_SIZE] = { 57,130,201,26,149,174,199,250,66,80,189,18,108,216,194,220,136,23,63,24,64,113,221,44,219,86,39,163,53,24,126,196 };
+static constexpr uint8_t nano_consensus_id[HASH_SIZE] = { 171,248,206,148,210,226,114,99,250,145,221,96,13,216,23,63,104,53,129,168,244,80,141,138,157,250,50,54,37,189,5,89 };
 
 NetworkType SideChain::s_networkType = NetworkType::Invalid;
 
@@ -104,6 +105,11 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(1, "generating consensus ID");
 
+	if (m_poolName == "nano") {
+		m_targetBlockTime = 30;
+		m_unclePenalty = 10;
+	}
+
 	char buf[log::Stream::BUF_SIZE + 1];
 	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
@@ -118,6 +124,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	constexpr char default_config[] = "mainnet\0" "default\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
 	constexpr char mini_config[] = "mainnet\0" "mini\0" "\0" "10\0" "100000\0" "2160\0" "20\0";
+	constexpr char nano_config[] = "mainnet\0" "nano\0" "\0" "30\0" "100000\0" "2160\0" "10\0";
 
 	// Hardcoded default consensus ID
 	if ((s.m_pos == sizeof(default_config) - 1) && (memcmp(buf, default_config, sizeof(default_config) - 1) == 0)) {
@@ -126,6 +133,10 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	// Hardcoded mini consensus ID
 	else if ((s.m_pos == sizeof(mini_config) - 1) && (memcmp(buf, mini_config, sizeof(mini_config) - 1) == 0)) {
 		m_consensusId.assign(mini_consensus_id, mini_consensus_id + HASH_SIZE);
+	}
+	// Hardcoded nano consensus ID
+	else if ((s.m_pos == sizeof(nano_config) - 1) && (memcmp(buf, nano_config, sizeof(nano_config) - 1) == 0)) {
+		m_consensusId.assign(nano_consensus_id, nano_consensus_id + HASH_SIZE);
 	}
 	else {
 #ifdef WITH_RANDOMX
@@ -1062,7 +1073,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		"\nMonero node               = " << m_pool->current_host().m_displayName <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
-		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : m_consensusIdDisplayStr.c_str())) <<
+		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : (is_nano() ? "nano" : m_consensusIdDisplayStr.c_str()))) <<
 		"\nSide chain height         = " << tip_height + 1 <<
 		"\nSide chain hashrate       = " << log::Hashrate(pool_hashrate) <<
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
@@ -1183,6 +1194,11 @@ bool SideChain::is_default() const
 bool SideChain::is_mini() const
 {
 	return (memcmp(m_consensusId.data(), mini_consensus_id, HASH_SIZE) == 0);
+}
+
+bool SideChain::is_nano() const
+{
+	return (memcmp(m_consensusId.data(), nano_consensus_id, HASH_SIZE) == 0);
 }
 
 uint64_t SideChain::bottom_height(const PoolBlock* tip) const

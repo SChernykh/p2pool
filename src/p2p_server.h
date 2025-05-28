@@ -34,6 +34,7 @@ static_assert((P2P_BUF_SIZE & (P2P_BUF_SIZE - 1)) == 0, "P2P_BUF_SIZE is not a p
 static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
 static constexpr int DEFAULT_P2P_PORT = 37889;
 static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
+static constexpr int DEFAULT_P2P_PORT_NANO = 37890;
 
 static constexpr uint32_t PROTOCOL_VERSION_1_0 = 0x00010000UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;

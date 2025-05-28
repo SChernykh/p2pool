@@ -47,6 +47,7 @@ LOG_CATEGORY(P2PServer)
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "main.gupax.io", "" };
 static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "mini.gupax.io", "" };
+static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpeers.net", "nano.gupax.io", ""};
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
@@ -606,6 +607,9 @@ void P2PServer::load_peer_list()
 		else if (m_pool->side_chain().is_mini()) {
 			load_from_seed_nodes(seed_nodes_mini, DEFAULT_P2P_PORT_MINI);
 		}
+		else if (m_pool->side_chain().is_nano()) {
+			load_from_seed_nodes(seed_nodes_nano, DEFAULT_P2P_PORT_NANO);
+		}
 	}
 
 	// Finally load peers from p2pool_peers.txt
@@ -698,7 +702,7 @@ void P2PServer::load_monerod_peer_list()
 
 #undef ERR_STR
 
-			const int port = m_pool->side_chain().is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
+			const int port = m_pool->side_chain().is_mini() ? DEFAULT_P2P_PORT_MINI : (m_pool->side_chain().is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
 
 			const SizeType n = white_list.Size();
 

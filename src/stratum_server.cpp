@@ -891,6 +891,26 @@ void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 	if (hashes) {
 		m_cumulativeHashes += hashes;
 		++m_totalStratumShares;
+
+		// P2Pool-nano warning
+#ifndef P2POOL_LOG_DISABLE
+		// Check the hashrate when enough shares is found
+		if (((m_totalStratumShares & 63) == 0) && m_pool->side_chain().is_nano()) {
+			const HashrateData& head = m_hashrateData[m_hashrateDataHead];
+			const HashrateData& tail = m_hashrateData[m_hashrateDataTail_24h];
+
+			const int64_t dt = static_cast<int64_t>(head.m_timestamp - tail.m_timestamp);
+
+			if (dt > 0) {
+				const uint64_t total_hashes = head.m_cumulativeHashes - tail.m_cumulativeHashes;
+				const uint64_t hashrate = total_hashes / dt;
+
+				if (hashrate > 30000) {
+					LOGINFO(0, log::LightRed() << "Your hashrate is " << log::Hashrate(hashrate) << ". Please switch from P2Pool-nano to P2Pool-mini or P2Pool-main. P2Pool-nano is recommended only for small-scale miners.");
+				}
+			}
+		}
+#endif // P2POOL_LOG_DISABLE
 	}
 
 	HashrateData* data = m_hashrateData;

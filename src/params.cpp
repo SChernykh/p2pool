@@ -153,6 +153,11 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+		if (strcmp(argv[i], "--nano") == 0) {
+			m_nano = true;
+			ok = true;
+		}
+
 		if (strcmp(argv[i], "--no-autodiff") == 0) {
 			m_autoDiff = false;
 			ok = true;
@@ -299,6 +304,11 @@ bool Params::valid() const
 		return false;
 	}
 #endif
+
+	if (m_mini && m_nano) {
+		LOGERR(1, "You can't have both --mini and --nano in the command line");
+		return false;
+	}
 
 	return true;
 }

@@ -49,14 +49,14 @@
 
 LOG_CATEGORY(P2Pool)
 
-constexpr int BLOCK_HEADERS_REQUIRED = 720;
-
 constexpr uint64_t SEEDHASH_EPOCH_BLOCKS = 2048;
 constexpr uint64_t SEEDHASH_EPOCH_LAG = 64;
 
 constexpr char FOUND_BLOCKS_FILE[] = "p2pool.blocks";
 
 namespace p2pool {
+
+static uint64_t BLOCK_HEADERS_REQUIRED = 720;
 
 p2pool::p2pool(int argc, char* argv[])
 	: m_stopped(false)
@@ -77,6 +77,11 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 
 	m_params = p;
+
+	// P2Pool-nano requires more Monero blocks for the initial sync
+	if (m_params->m_nano) {
+		BLOCK_HEADERS_REQUIRED = 1440;
+	}
 
 	bkg_jobs_tracker = new BackgroundJobTracker();
 
@@ -175,10 +180,10 @@ p2pool::p2pool(int argc, char* argv[])
 		throw std::exception();
 	}
 
-	m_sideChain = new SideChain(this, type, p->m_mini ? "mini" : nullptr);
+	m_sideChain = new SideChain(this, type, p->m_mini ? "mini" : (p->m_nano ? "nano" : nullptr));
 
 	if (p->m_p2pAddresses.empty()) {
-		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : DEFAULT_P2P_PORT;
+		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : (m_sideChain->is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
 
 		char buf[48] = {};
 		log::Stream s(buf);
@@ -1864,7 +1869,7 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 	// Expects m_mainchainLock to be already locked here
 	// Deletes everything older than 720 blocks, except for the 3 latest RandomX seed heights
 
-	constexpr uint64_t PRUNE_DISTANCE = BLOCK_HEADERS_REQUIRED;
+	const uint64_t PRUNE_DISTANCE = BLOCK_HEADERS_REQUIRED;
 	const uint64_t seed_height = get_seed_height(height);
 	const std::array<uint64_t, 3> seed_heights{ seed_height, seed_height - SEEDHASH_EPOCH_BLOCKS, seed_height - SEEDHASH_EPOCH_BLOCKS * 2 };
 
