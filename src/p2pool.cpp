@@ -1193,7 +1193,34 @@ void p2pool::download_block_headers(uint64_t current_height)
 			});
 	}
 
-	const uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+	uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+
+	// Workaround the restricted RPC limit
+	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 1000;
+
+	while (current_height - start_height > RESTRICTED_BLOCK_HEADER_RANGE + 1) {
+		const uint64_t next_height = start_height + RESTRICTED_BLOCK_HEADER_RANGE;
+
+		s.m_pos = 0;
+		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}\0";
+
+		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+			[this, start_height, next_height, host](const char* data, size_t size, double) {
+				if (parse_block_headers_range(data, size) != next_height - start_height + 1) {
+					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height);
+					PANIC_STOP();
+				}
+			},
+			[this, start_height, next_height](const char* data, size_t size, double) {
+				if (size > 0) {
+					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height << ", error " << log::const_buf(data, size));
+					PANIC_STOP();
+				}
+			}
+		);
+
+		start_height = next_height + 1;
+	}
 
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
