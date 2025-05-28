@@ -1211,7 +1211,7 @@ void p2pool::download_block_headers(uint64_t current_height)
 					PANIC_STOP();
 				}
 			},
-			[this, start_height, next_height](const char* data, size_t size, double) {
+			[start_height, next_height](const char* data, size_t size, double) {
 				if (size > 0) {
 					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height << ", error " << log::const_buf(data, size));
 					PANIC_STOP();

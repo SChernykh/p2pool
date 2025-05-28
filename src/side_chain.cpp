@@ -85,6 +85,11 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(1, log::LightCyan() << "network type  = " << type);
 
+	if (m_poolName == "nano") {
+		m_targetBlockTime = 30;
+		m_unclePenalty = 10;
+	}
+
 	if (m_pool && !load_config(m_pool->params().m_sidechainConfig)) {
 		PANIC_STOP();
 	}
@@ -104,11 +109,6 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	m_difficultyData.reserve(m_chainWindowSize);
 
 	LOGINFO(1, "generating consensus ID");
-
-	if (m_poolName == "nano") {
-		m_targetBlockTime = 30;
-		m_unclePenalty = 10;
-	}
 
 	char buf[log::Stream::BUF_SIZE + 1];
 	// cppcheck-suppress uninitvar
