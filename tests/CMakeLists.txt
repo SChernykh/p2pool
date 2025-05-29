@@ -22,8 +22,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	include(cmake/msvc_libs.cmake)
 endif()
 
-add_subdirectory(../external/src/RandomX RandomX)
-set(LIBS ${LIBS} randomx)
+if (STATIC_LIBS AND WIN32 AND (CMAKE_CXX_COMPILER_ID MATCHES Clang))
+	set(LIBS ${LIBS} "${CMAKE_SOURCE_DIR}/../build/external/src/RandomX/librandomx.a")
+else()
+	add_subdirectory(../external/src/RandomX RandomX)
+	set(LIBS ${LIBS} randomx)
+endif()
+
 add_definitions(-DWITH_RANDOMX)
 
 add_subdirectory(cmake/ssl)
