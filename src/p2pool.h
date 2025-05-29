@@ -112,7 +112,11 @@ public:
 	void update_block_template_async(bool is_alternative_block = false);
 	void update_block_template();
 
-	void download_block_headers(uint64_t current_height);
+	// TODO refactor this bullshit later
+	void download_block_headers1(uint64_t current_height);
+	void download_block_headers2(uint64_t current_height);
+	void download_block_headers3(uint64_t start_height, uint64_t current_height);
+	void download_block_headers4(uint64_t start_height, uint64_t current_height);
 
 	bool chainmain_get_by_hash(const hash& id, ChainMain& data) const;
 

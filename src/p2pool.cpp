@@ -1153,7 +1153,7 @@ void p2pool::update_block_template()
 #endif
 }
 
-void p2pool::download_block_headers(uint64_t current_height)
+void p2pool::download_block_headers1(uint64_t current_height)
 {
 	const uint64_t seed_height = get_seed_height(current_height);
 	const uint64_t prev_seed_height = (seed_height > SEEDHASH_EPOCH_BLOCKS) ? (seed_height - SEEDHASH_EPOCH_BLOCKS) : 0;
@@ -1163,64 +1163,107 @@ void p2pool::download_block_headers(uint64_t current_height)
 
 	const Params::Host& host = current_host();
 
-	// First download 2 RandomX seeds
-	const uint64_t seed_heights[2] = { prev_seed_height, seed_height };
-	for (uint64_t height : seed_heights) {
-		s.m_pos = 0;
-		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << height << "}}\0";
+	s.m_pos = 0;
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}\0";
 
-		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-			[this, prev_seed_height, height](const char* data, size_t size, double)
-			{
-				ChainMain block;
-				if (parse_block_header(data, size, block)) {
-					if (height == prev_seed_height) {
-						// Do it synchronously to make sure stratum and p2p don't start before it's finished
-						m_hasher->set_old_seed(block.id);
-					}
-				}
-				else {
-					LOGERR(1, "fatal error: couldn't download block header for seed height " << height);
-					PANIC_STOP();
-				}
-			},
-			[height](const char* data, size_t size, double)
-			{
-				if (size > 0) {
-					LOGERR(1, "fatal error: couldn't download block header for seed height " << height << ", error " << log::const_buf(data, size));
-					PANIC_STOP();
-				}
-			});
-	}
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
+			ChainMain block;
+			if (parse_block_header(data, size, block)) {
+				// Do it synchronously to make sure stratum and p2p don't start before it's finished
+				m_hasher->set_old_seed(block.id);
+				download_block_headers2(current_height);
+			}
+			else {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << prev_seed_height);
+				download_block_headers1(current_height);
+			}
+		},
+		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
+			if (size > 0) {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << prev_seed_height << ", error " << log::const_buf(data, size));
+				download_block_headers1(current_height);
+			}
+		});
+}
 
-	uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+void p2pool::download_block_headers2(uint64_t current_height)
+{
+	const uint64_t seed_height = get_seed_height(current_height);
 
+	char buf[log::Stream::BUF_SIZE + 1] = {};
+	log::Stream s(buf);
+
+	const Params::Host& host = current_host();
+
+	s.m_pos = 0;
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}\0";
+
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+		[this, seed_height, current_height](const char* data, size_t size, double) {
+			ChainMain block;
+			if (parse_block_header(data, size, block)) {
+				const uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+				download_block_headers3(start_height, current_height);
+			}
+			else {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << seed_height);
+				download_block_headers2(current_height);
+			}
+		},
+		[this, seed_height, current_height](const char* data, size_t size, double) {
+			if (size > 0) {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << seed_height << ", error " << log::const_buf(data, size));
+				download_block_headers2(current_height);
+			}
+		});
+}
+
+void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_height)
+{
 	// Workaround the restricted RPC limit
 	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 1000;
 
-	while (current_height - start_height > RESTRICTED_BLOCK_HEADER_RANGE + 1) {
+	if (current_height - start_height > RESTRICTED_BLOCK_HEADER_RANGE + 1) {
+		char buf[log::Stream::BUF_SIZE + 1] = {};
+		log::Stream s(buf);
+
+		const Params::Host& host = current_host();
+
 		const uint64_t next_height = start_height + RESTRICTED_BLOCK_HEADER_RANGE;
 
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}\0";
 
 		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-			[this, start_height, next_height, host](const char* data, size_t size, double) {
-				if (parse_block_headers_range(data, size) != next_height - start_height + 1) {
+			[this, start_height, next_height, host, current_height](const char* data, size_t size, double) {
+				if (parse_block_headers_range(data, size) == next_height - start_height + 1) {
+					download_block_headers3(next_height + 1, current_height);
+				}
+				else {
 					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height);
-					PANIC_STOP();
+					download_block_headers3(start_height, current_height);
 				}
 			},
-			[start_height, next_height](const char* data, size_t size, double) {
+			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
 				if (size > 0) {
 					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height << ", error " << log::const_buf(data, size));
-					PANIC_STOP();
+					download_block_headers3(start_height, current_height);
 				}
 			}
 		);
-
-		start_height = next_height + 1;
 	}
+	else {
+		download_block_headers4(start_height, current_height);
+	}
+}
+
+void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_height)
+{
+	char buf[log::Stream::BUF_SIZE + 1] = {};
+	log::Stream s(buf);
+
+	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
@@ -1283,14 +1326,14 @@ void p2pool::download_block_headers(uint64_t current_height)
 			}
 			else {
 				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1);
-				download_block_headers(current_height);
+				download_block_headers4(start_height, current_height);
 			}
 		},
 		[this, start_height, current_height](const char* data, size_t size, double)
 		{
 			if (size > 0) {
 				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
-				download_block_headers(current_height);
+				download_block_headers4(start_height, current_height);
 			}
 		});
 }
@@ -1642,7 +1685,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 
 	handle_miner_data(minerData);
 	if (m_serversStarted.load() == 0) {
-		download_block_headers(minerData.height);
+		download_block_headers1(minerData.height);
 	}
 }
 
