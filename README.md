@@ -75,14 +75,13 @@ First you need to find a pool share. This share will stay in [PPLNS](https://en.
 ## Monero version support
 
 - The latest Monero network upgrade happened on August 13th, 2022 (block 2,688,888).
-- The latest P2Pool network upgrade happened on March 18th, 2023 at 21:00 UTC.
-- Next P2Pool network upgrade will happen on October 12th, 2024 at 20:00 UTC.
+- The latest P2Pool network upgrade happened on October 12th, 2024 at 20:00 UTC.
 
 In order to continue mining on P2Pool, you must update both Monero and P2Pool software to the latest available versions as soon as they are released.
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
-|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.3.4 is recommended|v4.0 or newer
+|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.4.0 is recommended|v4.0 or newer
 
 ## How to mine on P2Pool
 
