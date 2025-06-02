@@ -28,10 +28,17 @@ class IMergeMiningClient
 public:
 	struct ChainParameters
 	{
+		ChainParameters() : last_updated(0) {}
+
+		enum {
+			EXPIRE_TIME = 1800,
+		};
+
 		hash aux_id;
 		hash aux_hash;
 		std::vector<uint8_t> aux_blob;
 		difficulty_type aux_diff;
+		uint64_t last_updated;
 	};
 
 public:

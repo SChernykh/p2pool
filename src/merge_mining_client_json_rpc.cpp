@@ -281,6 +281,7 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* dat
 	m_chainParams.aux_hash = h;
 	m_chainParams.aux_diff.lo = result["aux_diff"].GetUint64();
 	m_chainParams.aux_diff.hi = 0;
+	m_chainParams.last_updated = seconds_since_epoch();
 
 	changed = true;
 
@@ -334,9 +335,16 @@ void MergeMiningClientJSON_RPC::print_status() const
 
 bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const
 {
+	const uint64_t t = seconds_since_epoch();
+
 	ReadLock lock(m_lock);
 
 	if (m_chainParams.aux_id.empty() || m_chainParams.aux_diff.empty()) {
+		return false;
+	}
+
+	if (t >= m_chainParams.last_updated + ChainParameters::EXPIRE_TIME) {
+		LOGWARN(4, m_host << ':' << m_port << " merge mining data is outdated (" << (t - m_chainParams.last_updated) << " seconds old)");
 		return false;
 	}
 

@@ -132,9 +132,16 @@ MergeMiningClientTari::~MergeMiningClientTari()
 
 bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 {
+	const uint64_t t = seconds_since_epoch();
+
 	ReadLock lock(m_chainParamsLock);
 
 	if (m_chainParams.aux_id.empty() || m_chainParams.aux_diff.empty()) {
+		return false;
+	}
+
+	if (t >= m_chainParams.last_updated + ChainParameters::EXPIRE_TIME) {
+		LOGWARN(4, m_hostStr << " merge mining data is outdated (" << (t - m_chainParams.last_updated) << " seconds old)");
 		return false;
 	}
 
@@ -659,6 +666,7 @@ void MergeMiningClientTari::run()
 							std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
 
 							m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
+							m_chainParams.last_updated = seconds_since_epoch();
 
 							m_tariBlock = response.block();
 
