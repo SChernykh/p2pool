@@ -123,6 +123,8 @@ public:
 	void api_update_block_found(const ChainMain* data, const PoolBlock* block, bool update_stats_mod = true);
 	void on_external_block(const PoolBlock& block);
 
+	void api_update_aux_data();
+
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
 #ifdef WITH_RANDOMX

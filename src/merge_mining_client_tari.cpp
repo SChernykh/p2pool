@@ -34,6 +34,7 @@ namespace p2pool {
 
 MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet)
 	: m_chainParams{}
+	, m_chainParamsTimestamp(0)
 	, m_previousAuxHashes{}
 	, m_previousAuxHashesIndex(0)
 	, m_auxWallet(wallet)
@@ -540,6 +541,22 @@ void MergeMiningClientTari::print_status() const
 	);
 }
 
+void MergeMiningClientTari::api_status(log::Stream& s) const
+{
+	ReadLock lock(m_chainParamsLock);
+
+	s << '{'
+		<< "\"api\":\"Tari gRPC\","
+		<< "\"host\":\"" << m_hostStr << "\","
+		<< "\"wallet\":\"" << m_auxWallet << "\","
+		<< "\"height\":" << m_tariJobParams.height << ","
+		<< "\"difficulty\":" << m_tariJobParams.diff << ","
+		<< "\"reward\":" << m_tariJobParams.reward << ","
+		<< "\"fees\":" << m_tariJobParams.fees << ","
+		<< "\"timestamp\":" << m_chainParamsTimestamp
+		<< '}';
+}
+
 void MergeMiningClientTari::run_wrapper(void* arg)
 {
 	reinterpret_cast<MergeMiningClientTari*>(arg)->run();
@@ -667,6 +684,8 @@ void MergeMiningClientTari::run()
 
 							m_chainParams.aux_diff = static_cast<difficulty_type>(response.miner_data().target_difficulty());
 							m_chainParams.last_updated = seconds_since_epoch();
+
+							m_chainParamsTimestamp = time(nullptr);
 
 							m_tariBlock = response.block();
 

@@ -31,6 +31,7 @@ namespace p2pool {
 MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet)
 	: m_host(host)
 	, m_port(80)
+	, m_chainParamsTimestamp(0)
 	, m_auxWallet(wallet)
 	, m_ping(0.0)
 	, m_pool(pool)
@@ -283,6 +284,8 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* dat
 	m_chainParams.aux_diff.hi = 0;
 	m_chainParams.last_updated = seconds_since_epoch();
 
+	m_chainParamsTimestamp = time(nullptr);
+
 	changed = true;
 
 	return true;
@@ -331,6 +334,19 @@ void MergeMiningClientJSON_RPC::print_status() const
 		"\nWallet     = " << m_auxWallet <<
 		"\nDifficulty = " << m_chainParams.aux_diff
 	);
+}
+
+void MergeMiningClientJSON_RPC::api_status(log::Stream& s) const
+{
+	ReadLock lock(m_lock);
+
+	s << '{'
+		<< "\"api\":\"JSON RPC\","
+		<< "\"host\":\"" << m_host << ':' << m_port << "\","
+		<< "\"wallet\":\"" << m_auxWallet << "\","
+		<< "\"difficulty\":" << m_chainParams.aux_diff << ","
+		<< "\"timestamp\":" << m_chainParamsTimestamp
+		<< '}';
 }
 
 bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const

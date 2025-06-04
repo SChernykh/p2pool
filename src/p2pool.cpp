@@ -716,6 +716,8 @@ void p2pool::update_aux_data(const hash& chain_id)
 #if defined(WITH_MERGE_MINING_DONATION) && defined(WITH_TLS)
 		send_aux_job_donation();
 #endif
+
+		api_update_aux_data();
 	}
 }
 
@@ -2022,6 +2024,30 @@ void p2pool::on_external_block(const PoolBlock& block)
 	for (IMergeMiningClient* c : m_mergeMiningClients) {
 		c->on_external_block(block);
 	}
+}
+
+void p2pool::api_update_aux_data()
+{
+	if (!m_api || m_stopped) {
+		return;
+	}
+
+	m_api->set(p2pool_api::Category::LOCAL, "merge_mining",
+		[this](log::Stream& s)
+		{
+			s << "{\"chains\":[";
+			{
+				ReadLock lock(m_mergeMiningClientsLock);
+
+				for (size_t i = 0, n = m_mergeMiningClients.size(); i < n; ++i) {
+					if (i > 0) {
+						s << ',';
+					}
+					m_mergeMiningClients[i]->api_status(s);
+				}
+			}
+			s << "]}";
+		});
 }
 
 bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)

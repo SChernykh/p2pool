@@ -35,6 +35,7 @@ public:
 	void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
 
 	void print_status() const override;
+	void api_status(log::Stream&) const override;
 
 private:
 	static void loop(void* data);
@@ -55,6 +56,8 @@ private:
 
 	mutable uv_rwlock_t m_lock;
 	ChainParameters m_chainParams;
+
+	uint64_t m_chainParamsTimestamp;
 
 	std::string m_auxWallet;
 
