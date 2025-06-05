@@ -48,8 +48,10 @@ struct TrackedAllocation
 	FORCEINLINE bool operator<(const TrackedAllocation& rhs) { return memcmp(stack_trace, rhs.stack_trace, sizeof(stack_trace)) < 0; }
 	FORCEINLINE bool operator==(const TrackedAllocation& rhs) { return memcmp(stack_trace, rhs.stack_trace, sizeof(stack_trace)) == 0; }
 
-	void print(HANDLE h) const
+	void print(HANDLE h, bool& is_grpc) const
 	{
+		is_grpc = false;
+
 		char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)] = {};
 		PSYMBOL_INFO pSymbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
 
@@ -66,13 +68,21 @@ struct TrackedAllocation
 			if (SymFromAddr(h, address, &t1, pSymbol) && SymGetLineFromAddr64(h, address, &t2, &line)) {
 				const char* s = line.FileName;
 				const char* file_name = nullptr;
+
 				while (*s) {
 					if ((*s == '\\') || (*s == '/')) {
 						file_name = s + 1;
 					}
 					++s;
 				}
-				printf("%-25s %s (line %lu)\n", file_name ? file_name : line.FileName, pSymbol->Name, line.LineNumber);
+
+				s = pSymbol->Name;
+
+				printf("%-25s %s (line %lu)\n", file_name ? file_name : line.FileName, s, line.LineNumber);
+
+				if (!is_grpc && ((strstr(s, "grpc::") == s) || (strstr(s, "grpc_core::") == s) || (strstr(s, "grpc_init") == s))) {
+					is_grpc = true;
+				}
 			}
 		}
 		printf("\n");
@@ -130,7 +140,8 @@ void show_top_10_allocations()
 
 		for (TrackedAllocation* p = buf; (p < buf + 10) && (p < end); ++p) {
 			printf("%I64u bytes allocated at:\n", p->allocated_size);
-			p->print(h);
+			bool is_grpc;
+			p->print(h, is_grpc);
 		}
 	}
 
@@ -314,21 +325,36 @@ bool memory_tracking_stop()
 	const HANDLE h = GetCurrentProcess();
 
 	uint64_t total_leaks = 0;
+	uint64_t grpc_leaks = 0;
 
 	for (uint32_t i = 0; i < N; ++i) {
 		const TrackedAllocation& t = allocations[i];
 		if (t.allocated_size) {
-			total_leaks += t.allocated_size;
-
 			printf("Memory leak detected, %I64u bytes allocated at %p by thread %u:\n", t.allocated_size, t.p, t.thread_id);
-			t.print(h);
+
+			bool is_grpc;
+			t.print(h, is_grpc);
+
+			if (is_grpc) {
+				printf("^^^ grpc leak ^^^\n\n");
+				grpc_leaks += t.allocated_size;
+			}
+			else {
+				printf("^^^ non-grpc leak ^^^\n\n");
+				total_leaks += t.allocated_size;
+			}
 		}
 	}
 
 	if (total_leaks > 0) {
 		printf("%I64u bytes leaked\n\n", total_leaks);
 	}
-	else {
+
+	if (grpc_leaks > 0) {
+		printf("%I64u bytes leaked by gRPC\n\n", grpc_leaks);
+	}
+
+	if ((total_leaks == 0) && (grpc_leaks == 0)) {
 		printf("No memory leaks detected\n\n");
 	}
 

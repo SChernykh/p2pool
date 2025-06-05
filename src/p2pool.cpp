@@ -669,7 +669,7 @@ void p2pool::update_aux_data(const hash& chain_id)
 			aux_id.emplace_back(c.aux_id);
 		}
 	}
-	else {
+	else if (mm_donation_params_last_updated) {
 		LOGINFO(5, "update_aux_data: merge mining donation data is stale, not using it");
 	}
 #endif

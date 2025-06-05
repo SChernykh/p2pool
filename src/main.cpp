@@ -21,6 +21,22 @@
 #include "stratum_server.h"
 #include "p2p_server.h"
 #include <curl/curl.h>
+
+#ifdef WITH_GRPC
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4574)
+#endif
+
+#include <grpc/grpc.h>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+#endif // WITH_GRPC
+
 #include <filesystem>
 
 #ifdef WITH_RANDOMX
@@ -251,6 +267,10 @@ int main(int argc, char* argv[])
 		return result;
 	}
 
+#ifdef WITH_GRPC
+	grpc_init();
+#endif
+
 	try {
 		p2pool::p2pool pool(argc, argv);
 		result = pool.run();
@@ -258,6 +278,10 @@ int main(int argc, char* argv[])
 	catch (...) {
 		result = 1;
 	}
+
+#ifdef WITH_GRPC
+	grpc_shutdown();
+#endif
 
 	curl_global_cleanup();
 
