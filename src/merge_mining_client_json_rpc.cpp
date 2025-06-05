@@ -342,6 +342,7 @@ void MergeMiningClientJSON_RPC::api_status(log::Stream& s) const
 
 	s << '{'
 		<< "\"api\":\"JSON RPC\","
+		<< "\"id\":\"" << m_chainParams.aux_id << "\","
 		<< "\"host\":\"" << m_host << ':' << m_port << "\","
 		<< "\"wallet\":\"" << m_auxWallet << "\","
 		<< "\"difficulty\":" << m_chainParams.aux_diff << ","

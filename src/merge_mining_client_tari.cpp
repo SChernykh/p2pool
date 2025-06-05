@@ -547,6 +547,7 @@ void MergeMiningClientTari::api_status(log::Stream& s) const
 
 	s << '{'
 		<< "\"api\":\"Tari gRPC\","
+		<< "\"id\":\"" << m_chainParams.aux_id << "\","
 		<< "\"host\":\"" << m_hostStr << "\","
 		<< "\"wallet\":\"" << m_auxWallet << "\","
 		<< "\"height\":" << m_tariJobParams.height << ","
