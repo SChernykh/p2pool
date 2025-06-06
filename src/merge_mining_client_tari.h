@@ -99,6 +99,7 @@ private:
 
 	const std::string m_hostStr;
 
+	grpc::ChannelArguments m_channelArgs;
 	tari::rpc::BaseNode::Stub* m_TariNode;
 
 	struct TariClient : public TCPServer::Client
@@ -130,6 +131,24 @@ private:
 
 	static void run_wrapper(void* arg);
 	void run();
+
+	uv_mutex_t m_pushBlockLock;
+	uv_cond_t m_pushBlockCond;
+	std::atomic<uint32_t> m_pushBlockStop;
+	tari::rpc::Block m_blockToPush;
+
+	struct PushBlockThreadData
+	{
+		uv_thread_t m_worker;
+
+		MergeMiningClientTari* m_client;
+		const std::string m_node;
+	};
+
+	std::vector<PushBlockThreadData*> m_pushBlockThreads;
+
+	static void push_block_thread(void* arg);
+	void push_blocks_to(const std::string& node_address);
 };
 
 } // namespace p2pool
