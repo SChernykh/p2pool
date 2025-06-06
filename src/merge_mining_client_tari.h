@@ -142,7 +142,7 @@ private:
 		uv_thread_t m_worker;
 
 		MergeMiningClientTari* m_client;
-		const std::string m_node;
+		std::string m_node;
 	};
 
 	std::vector<PushBlockThreadData*> m_pushBlockThreads;

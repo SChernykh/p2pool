@@ -113,11 +113,11 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 
 	if (f.is_open()) {
 		while (f.good()) {
-			std::string s;
-			std::getline(f, s);
+			std::string node;
+			std::getline(f, node);
 
-			if (!s.empty()) {
-				PushBlockThreadData* data = new PushBlockThreadData{ {}, this, std::move(s) };			
+			if (!node.empty()) {
+				PushBlockThreadData* data = new PushBlockThreadData{ {}, this, std::move(node) };
 
 				err = uv_thread_create(&data->m_worker, push_block_thread, data);
 				if (err) {
@@ -950,7 +950,7 @@ void MergeMiningClientTari::push_block_thread(void* arg)
 {
 	set_thread_name("Push Tari block");
 
-	const PushBlockThreadData* data = reinterpret_cast<const PushBlockThreadData*>(arg);
+	PushBlockThreadData* data = reinterpret_cast<PushBlockThreadData*>(arg);
 
 	LOGINFO(1, "push block thread ready for " << data->m_node);
 
@@ -1014,8 +1014,8 @@ void MergeMiningClientTari::push_blocks_to(const std::string& node_address)
 			}
 		}
 		else {
-			const std::string& h = response.block_hash();
-			LOGINFO(0, log::LightGreen() << "Pushed Tari block " << log::hex_buf(h.data(), h.size()) << " to " << node_address);
+			const std::string& h1 = response.block_hash();
+			LOGINFO(0, log::LightGreen() << "Pushed Tari block " << log::hex_buf(h1.data(), h1.size()) << " to " << node_address);
 		}
 	}
 }
