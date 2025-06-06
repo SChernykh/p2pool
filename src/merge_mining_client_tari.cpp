@@ -472,6 +472,10 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 				const std::string& h = response.block_hash();
 				LOGINFO(0, log::LightGreen() << "Mined Tari block " << log::hex_buf(h.data(), h.size()) << " at height " << block.header().height());
 			}
+
+			// We've just submitted a new block. Signal the polling thread to stop waiting and get a new block template.
+			MutexLock lock(client->m_workerLock);
+			uv_cond_signal(&client->m_workerCond);
 		}
 	} *work = new Work(this, std::move(block));
 

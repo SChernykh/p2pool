@@ -322,6 +322,8 @@ void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*co
 			if (size > 0) {
 				LOGERR(3, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
 			}
+			// Get new mining job
+			on_timer();
 		}, &m_loop);
 }
 
@@ -369,7 +371,7 @@ bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const
 	return true;
 }
 
-bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* data, size_t size)
+bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* data, size_t size) const
 {
 	auto err = [this](const char* msg) {
 		LOGWARN(3, "merge_mining_submit_solution to " << m_host << ':' << m_port << " failed: " << msg);
@@ -418,10 +420,6 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* d
 	}
 
 	LOGINFO(0, log::LightGreen() << "merge_mining_submit_solution to " << m_host << ':' << m_port << ": " << status);
-
-	// Get new mining job
-	on_timer();
-
 	return true;
 }
 

@@ -49,7 +49,7 @@ private:
 	void merge_mining_get_aux_block(uint64_t height, const hash& prev_id, const std::string& wallet);
 	bool parse_merge_mining_get_aux_block(const char* data, size_t size, bool& changed);
 
-	bool parse_merge_mining_submit_solution(const char* data, size_t size);
+	bool parse_merge_mining_submit_solution(const char* data, size_t size) const;
 
 	std::string m_host;
 	uint32_t m_port;
