@@ -21,7 +21,7 @@ jobs:
         config:
           - {arch: x86_64, branch: latest-stable, flags: "-ffunction-sections"}
           - {arch: aarch64, branch: latest-stable, flags: "-ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
-          - {arch: riscv64, branch: edge, flags: "-ffunction-sections"}
+          - {arch: riscv64, branch: edge, flags: "-ffunction-sections -ffat-lto-objects"}
 
     steps:
     - name: Setup Alpine Linux
