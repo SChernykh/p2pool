@@ -14,14 +14,14 @@ jobs:
   build-alpine-static:
 
     timeout-minutes: 240
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
         config:
           - {arch: x86_64, branch: latest-stable, flags: "-ffunction-sections"}
           - {arch: aarch64, branch: latest-stable, flags: "-ffunction-sections -mfix-cortex-a53-835769 -mfix-cortex-a53-843419"}
-          - {arch: riscv64, branch: edge, flags: "-ffunction-sections -ffat-lto-objects"}
+          - {arch: riscv64, branch: latest-stable, flags: "-ffunction-sections"}
 
     steps:
     - name: Setup Alpine Linux
