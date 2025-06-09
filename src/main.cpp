@@ -124,6 +124,8 @@ void p2pool_version()
 
 int p2pool_test()
 {
+	printf("Self-test started\n");
+
 #ifdef WITH_RANDOMX
 	const char myKey[] = "test key 000";
 	const char myInput[] = "This is a test";
@@ -138,7 +140,10 @@ int p2pool_test()
 			return 1;
 		}
 	}
+	printf("RandomX cache allocated\n");
+
 	randomx_init_cache(myCache, myKey, sizeof(myKey) - 1);
+	printf("RandomX cache initialized\n");
 
 	randomx_dataset* myDataset = randomx_alloc_dataset(flags | RANDOMX_FLAG_LARGE_PAGES);
 	if (!myDataset) {
@@ -148,6 +153,7 @@ int p2pool_test()
 			return 1;
 		}
 	}
+	printf("RandomX dataset allocated\n");
 
 	{
 		const uint32_t numThreads = std::max(std::thread::hardware_concurrency(), 1U);
@@ -168,6 +174,7 @@ int p2pool_test()
 			t.join();
 		}
 	}
+	printf("RandomX dataset initialized\n");
 
 	randomx_release_cache(myCache);
 
@@ -179,12 +186,15 @@ int p2pool_test()
 			return 1;
 		}
 	}
+	printf("RandomX VM created\n");
 
 	memset(hash, 0, sizeof(hash));
 	memcpy(hash, myInput, sizeof(myInput));
 
-	for (size_t i = 0; i < 100; ++i) {
+	for (int i = 0; i < 100; ++i) {
+		printf("RandomX: calculating hash %d...", i);
 		randomx_calculate_hash(myMachine, &hash, sizeof(hash), hash);
+		printf("done\n");
 	}
 
 	char buf[RANDOMX_HASH_SIZE * 2 + 1] = {};
