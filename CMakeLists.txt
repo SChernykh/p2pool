@@ -435,6 +435,10 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS ${STATIC_LIBS} ssl crypto)
 	endif()
 
+	if ((CMAKE_CXX_COMPILER_ID MATCHES GNU) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9))
+		set(STATIC_LIBS ${STATIC_LIBS} stdc++fs)
+	endif()
+
 	target_link_libraries(${CMAKE_PROJECT_NAME}
 		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"
 		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv.a"
@@ -446,6 +450,10 @@ else()
 		set(LIBS ${LIBS} Tari_gRPC grpc grpc++ libprotobuf)
 	elseif(WITH_TLS)
 		set(LIBS ${LIBS} ssl crypto)
+	endif()
+
+	if ((CMAKE_CXX_COMPILER_ID MATCHES GNU) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9))
+		set(LIBS ${LIBS} stdc++fs)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
