@@ -62,6 +62,7 @@ void p2pool_usage()
 		"--stratum             Comma-separated list of IP:port for stratum server to listen on\n"
 		"--p2p                 Comma-separated list of IP:port for p2p server to listen on\n"
 		"--addpeers            Comma-separated list of IP:port of other p2pool nodes to connect to\n"
+		"--stratum-ban-time N  Number of seconds to ban misbehaving stratum client, default is %u\n"
 		"--light-mode          Don't allocate RandomX dataset, saves 2GB of RAM\n"
 		"--loglevel            Verbosity of the log, integer number between 0 and %d\n"
 		"--data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory\n"
@@ -102,6 +103,7 @@ void p2pool_usage()
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
 		p2pool::VERSION,
+		static_cast<uint32_t>(p2pool::DEFAULT_STRATUM_BAN_TIME),
 		p2pool::log::MAX_GLOBAL_LOG_LEVEL,
 		p2pool::DEFAULT_P2P_PORT,
 		p2pool::DEFAULT_P2P_PORT_MINI,
