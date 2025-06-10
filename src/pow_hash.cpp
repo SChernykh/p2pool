@@ -84,7 +84,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 
 
 	memory_allocated = (memory_allocated + (1 << 20) - 1) >> 20;
-	LOGINFO(1, "allocated " << memory_allocated << " MB");
+	LOGINFO(1, "allocated " << memory_allocated << " MiB");
 }
 
 RandomX_Hasher::~RandomX_Hasher()
