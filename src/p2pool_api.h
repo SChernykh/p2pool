@@ -41,7 +41,7 @@ public:
 	void set(Category category, const char* filename, T&& callback) { dump_to_file_async_internal(category, filename, Callback<void, log::Stream&>::Derived<T>(std::move(callback))); }
 
 private:
-	void create_dir(const std::string& path);
+	void create_dir(const std::string& path, bool is_restricted);
 
 	static void on_dump_to_file(uv_async_t* async) { reinterpret_cast<p2pool_api*>(async->data)->dump_to_file(); }
 

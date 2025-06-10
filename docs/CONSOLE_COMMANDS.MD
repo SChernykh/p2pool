@@ -18,3 +18,30 @@ start_mining **T**|start mining (**T** is the number of threads to use, must be 
 stop_mining|stop mining
 exit|terminate p2pool
 version|show p2pool version
+
+### Non-interactive console access
+
+It's possible to send console commands via a local TCP connection. For this, you need to enable the API: `--data-api api --local-api`.
+
+A sample Python script that sends console commands to P2Pool via TCP:
+
+```
+import sys
+import socket
+import json
+
+with open('api/local/console', 'r') as file:
+    data = json.load(file)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('127.0.0.1', data['tcp_port']))
+
+command = data['cookie'];
+command += sys.argv[1];
+command += '\n';
+
+s.sendall(command.encode('utf-8'))
+s.close()
+```
+
+Run it in P2Pool's directory: `python3 ./p2pool_cmd.py status`

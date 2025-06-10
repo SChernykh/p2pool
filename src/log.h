@@ -435,6 +435,28 @@ template<> struct log::Stream::Entry<Duration>
 	}
 };
 
+struct EscapedString
+{
+	explicit FORCEINLINE EscapedString(const std::string& data, const char* characters_to_escape = "\"\\", char escape_character = '\\')
+	{
+		m_data.reserve(data.length() * 2);
+
+		for (const char c : data) {
+			if (strchr(characters_to_escape, c)) {
+				m_data.append(1, escape_character);
+			}
+			m_data.append(1, c);
+		}
+	}
+
+	std::string m_data;
+};
+
+template<> struct log::Stream::Entry<EscapedString>
+{
+	static FORCEINLINE void put(const EscapedString& value, Stream* wrapper) { *wrapper << value.m_data; }
+};
+
 template<typename T>
 struct PadRight
 {

@@ -84,8 +84,10 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		}
 	}
 
-	std::random_device rd;
-	std::mt19937_64 rng(rd());
+	std::mt19937_64 rng(RandomDeviceSeed::instance);
+
+	// Diffuse the initial state in case it has low quality
+	rng.discard(10000);
 
 	for (int i = 0; i < 10; ++i) {
 		if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
@@ -96,6 +98,13 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 	if (m_listenPort < 0) {
 		LOGERR(1, "failed to listen on TCP port");
 		throw std::exception();
+	}
+
+	// 20 random characters in the range [32, 126] should be enough for 128 bits of entropy
+	m_cookie.resize(20);
+
+	for (char& c : m_cookie) {
+		c = static_cast<char>(rng() % (127 - 32) + 32);
 	}
 
 	if (m_pool->api() && m_pool->params().m_localStats) {
@@ -114,7 +123,7 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 					s << static_cast<int>(stdin_type);
 				}
 
-				s << "\",\"tcp_port\":" << m_listenPort << '}';
+				s << "\",\"tcp_port\":" << m_listenPort << ",\"cookie\":\"" << log::EscapedString(m_cookie) << "\"}";
 			});
 	}
 
@@ -349,7 +358,7 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 	ConsoleCommands* pThis = static_cast<ConsoleCommands*>(stream->data);
 
 	if (nread > 0) {
-		pThis->process_input(pThis->m_command, buf->base, static_cast<uint32_t>(nread));
+		pThis->process_input(pThis->m_command, buf->base, static_cast<uint32_t>(nread), false);
 	}
 	else if (nread < 0) {
 		LOGWARN(4, "read error " << uv_err_name(static_cast<int>(nread)));
@@ -359,7 +368,7 @@ void ConsoleCommands::stdinReadCallback(uv_stream_t* stream, ssize_t nread, cons
 }
 
 
-void ConsoleCommands::process_input(std::string& command, const char* data, uint32_t size)
+void ConsoleCommands::process_input(std::string& command, const char* data, uint32_t size, bool check_cookie)
 {
 	command.append(data, size);
 
@@ -370,31 +379,40 @@ void ConsoleCommands::process_input(std::string& command, const char* data, uint
 		}
 		command[k] = '\0';
 
-		cmd* c = cmds;
-		for (; c->name.len; ++c) {
-			if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
-				const char* args = (c->name.len + 1 <= k) ? (command.c_str() + c->name.len + 1) : "";
+		if (check_cookie && ((k <= m_cookie.length()) || (memcmp(command.data(), m_cookie.data(), m_cookie.length()) != 0))) {
+			LOGWARN(4, "cookie check failed, skipping command " << command);
+		}
+		else {
+			if (check_cookie) {
+				command.erase(0, m_cookie.length());
+			}
 
-				// Skip spaces
-				while ((args[0] == ' ') || (args[0] == '\t')) {
-					++args;
-				}
+			cmd* c = cmds;
+			for (; c->name.len; ++c) {
+				if (!strncmp(command.c_str(), c->name.str, c->name.len)) {
+					const char* args = (c->name.len + 1 <= k) ? (command.c_str() + c->name.len + 1) : "";
 
-				// Check if an argument is required
-				if (strlen(c->arg) && !strlen(args)) {
-					LOGWARN(0, c->name.str << " requires arguments");
-					do_help(nullptr, nullptr);
+					// Skip spaces
+					while ((args[0] == ' ') || (args[0] == '\t')) {
+						++args;
+					}
+
+					// Check if an argument is required
+					if (strlen(c->arg) && !strlen(args)) {
+						LOGWARN(0, c->name.str << " requires arguments");
+						do_help(nullptr, nullptr);
+						break;
+					}
+
+					c->func(m_pool, args);
 					break;
 				}
-
-				c->func(m_pool, args);
-				break;
 			}
-		}
 
-		if (!c->name.len) {
-			LOGWARN(0, "Unknown command " << command.c_str());
-			do_help(nullptr, nullptr);
+			if (!c->name.len) {
+				LOGWARN(0, "Unknown command " << command.c_str());
+				do_help(nullptr, nullptr);
+			}
 		}
 
 		k = command.find_first_not_of("\r\n", k + 1);

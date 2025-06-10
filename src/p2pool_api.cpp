@@ -64,11 +64,11 @@ p2pool_api::p2pool_api(const std::string& api_path, const bool local_stats)
 	m_poolPath = m_apiPath + "pool/";
 	m_localPath = m_apiPath + "local/";
 
-	create_dir(m_networkPath);
-	create_dir(m_poolPath);
+	create_dir(m_networkPath, false);
+	create_dir(m_poolPath, false);
 
 	if (local_stats) {
-		create_dir(m_localPath);
+		create_dir(m_localPath, true);
 	}
 }
 
@@ -77,14 +77,16 @@ p2pool_api::~p2pool_api()
 	uv_mutex_destroy(&m_dumpDataLock);
 }
 
-void p2pool_api::create_dir(const std::string& path)
+void p2pool_api::create_dir(const std::string& path, bool is_restricted)
 {
+	(void) is_restricted;
+	
 #ifdef _MSC_VER
 	int result = _mkdir(path.c_str());
 #else
 	int result = mkdir(path.c_str()
 #ifndef _WIN32
-		, 0775
+		, is_restricted ? 0750 : 0775
 #endif
 	);
 #endif
@@ -169,7 +171,10 @@ void p2pool_api::dump_to_file()
 #endif
 			;
 
-		const int result = uv_fs_open(uv_default_loop_checked(), &work->req, work->tmp_name.c_str(), flags, 0644, on_fs_open);
+		// LOCAL category has restricted access
+		const int mode = (work->tmp_name.find(m_localPath) == 0) ? 0640 : 0644;
+
+		const int result = uv_fs_open(uv_default_loop_checked(), &work->req, work->tmp_name.c_str(), flags, mode, on_fs_open);
 		if (result < 0) {
 			LOGWARN(4, "failed to open " << work->tmp_name << ", error " << uv_err_name(result));
 			delete work;
