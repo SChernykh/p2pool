@@ -84,30 +84,30 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		}
 	}
 
-	std::mt19937_64 rng(RandomDeviceSeed::instance);
-
-	// Diffuse the initial state in case it has low quality
-	rng.discard(10000);
-
-	for (int i = 0; i < 10; ++i) {
-		if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
-			break;
-		}
-	}
-
-	if (m_listenPort < 0) {
-		LOGERR(1, "failed to listen on TCP port");
-		throw std::exception();
-	}
-
-	// 20 random characters in the range [32, 126] should be enough for 128 bits of entropy
-	m_cookie.resize(20);
-
-	for (char& c : m_cookie) {
-		c = static_cast<char>(rng() % (127 - 32) + 32);
-	}
-
 	if (m_pool->api() && m_pool->params().m_localStats) {
+		std::mt19937_64 rng(RandomDeviceSeed::instance);
+
+		// Diffuse the initial state in case it has low quality
+		rng.discard(10000);
+
+		for (int i = 0; i < 10; ++i) {
+			if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
+				break;
+			}
+		}
+
+		if (m_listenPort < 0) {
+			LOGERR(1, "failed to listen on TCP port");
+			throw std::exception();
+		}
+
+		// 20 random characters in the range [32, 126] should be enough for 128 bits of entropy
+		m_cookie.resize(20);
+
+		for (char& c : m_cookie) {
+			c = static_cast<char>(rng() % (127 - 32) + 32);
+		}
+
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "console",
 			[stdin_type, this](log::Stream& s)
 			{
