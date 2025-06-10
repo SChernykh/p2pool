@@ -518,10 +518,10 @@ jobs:
       matrix:
         config:
           - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "OFF"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "OFF"}
 
     steps:
     - name: Checkout repository
