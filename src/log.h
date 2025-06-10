@@ -344,7 +344,7 @@ template<> struct log::Stream::Entry<Hashrate>
 
 		const double x = static_cast<double>(value.m_data);
 
-		static constexpr const char* units[] = { "H/s", "KH/s", "MH/s", "GH/s", "TH/s", "PH/s", "EH/s" };
+		static constexpr const char* units[] = { "H/s", "kH/s", "MH/s", "GH/s", "TH/s", "PH/s", "EH/s" };
 
 		int n;
 		char buf[32];
