@@ -8,6 +8,7 @@
 --stratum             Comma-separated list of IP:port for stratum server to listen on
 --p2p                 Comma-separated list of IP:port for p2p server to listen on
 --addpeers            Comma-separated list of IP:port of other p2pool nodes to connect to
+--stratum-ban-time N  Number of seconds to ban misbehaving stratum client, default is 600
 --light-mode          Don't allocate RandomX dataset, saves 2GB of RAM
 --loglevel            Verbosity of the log, integer number between 0 and 6
 --data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory

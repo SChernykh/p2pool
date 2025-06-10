@@ -205,6 +205,8 @@ private:
 	uint32_t m_totalFailedSidechainShares;
 	uint64_t m_totalStratumShares;
 
+	uint64_t m_banTime;
+
 	std::atomic<uint64_t> m_apiLastUpdateTime;
 
 	std::deque<SubmittedShare*> m_pendingShareChecks;

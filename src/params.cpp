@@ -26,6 +26,9 @@ void p2pool_usage();
 
 namespace p2pool {
 
+static constexpr uint64_t MIN_STRATUM_BAN_TIME = UINT64_C(1);
+static constexpr uint64_t MAX_STRATUM_BAN_TIME = (UINT64_C(1) << 34) - 1;
+
 Params::Params(int argc, char* const argv[])
 {
 	for (int i = 1; i < argc; ++i) {
@@ -76,6 +79,11 @@ Params::Params(int argc, char* const argv[])
 
 		if ((strcmp(argv[i], "--stratum") == 0) && (i + 1 < argc)) {
 			m_stratumAddresses = argv[++i];
+			ok = true;
+		}
+
+		if ((strcmp(argv[i], "--stratum-ban-time") == 0) && (i + 1 < argc)) {
+			m_stratumBanTime = strtoull(argv[++i], nullptr, 10);
 			ok = true;
 		}
 
@@ -283,6 +291,14 @@ Params::Params(int argc, char* const argv[])
 		s << "[::]:" << stratum_port << ",0.0.0.0:" << stratum_port;
 
 		m_stratumAddresses = buf;
+	}
+
+	if(m_stratumBanTime < MIN_STRATUM_BAN_TIME) {
+		LOGWARN(1, "Value for --stratum-ban-time is too low, adjusting to " << MIN_STRATUM_BAN_TIME);
+		m_stratumBanTime = MIN_STRATUM_BAN_TIME;
+	} else if(m_stratumBanTime > MAX_STRATUM_BAN_TIME) {
+		LOGWARN(1, "Value for --stratum-ban-time is too high, adjusting to " << MAX_STRATUM_BAN_TIME);
+		m_stratumBanTime = MAX_STRATUM_BAN_TIME;
 	}
 }
 

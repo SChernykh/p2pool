@@ -21,6 +21,8 @@
 
 namespace p2pool {
 
+static constexpr uint64_t DEFAULT_STRATUM_BAN_TIME = 600;
+
 struct Params
 {
 	Params(int argc, char* const argv[]);
@@ -74,6 +76,7 @@ struct Params
 	std::string m_p2pPeerList;
 	std::string m_sidechainConfig;
 	std::string m_apiPath;
+	uint64_t m_stratumBanTime = DEFAULT_STRATUM_BAN_TIME;
 	bool m_localStats = false;
 	bool m_blockCache = true;
 #ifdef WITH_RANDOMX
