@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <clocale>
 
+#if defined(_WIN32) && !defined(S_ISREG)
+#define S_ISREG(M) (((M) & _S_IFMT) == _S_IFREG)
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif
@@ -118,6 +122,9 @@ public:
 		: m_writePos(0)
 		, m_readPos(0)
 		, m_stopped(false)
+		, m_needReopen(false)
+		, m_logFileDevice(0)
+		, m_logFileINode(0)
 	{
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
@@ -128,9 +135,8 @@ public:
 		std::setlocale(LC_ALL, "en_001");
 
 		m_logFilePath = DATA_DIR + log_file_name;
-		m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
 
-		if (!m_logFile.is_open()) {
+		if (!reopen()) {
 			fprintf(stderr, "failed to open %s: error %d\n", m_logFilePath.c_str(), errno);
 		}
 
@@ -219,6 +225,12 @@ public:
 
 	const std::string& log_file_path() const { return m_logFilePath; }
 
+	FORCEINLINE void schedule_reopen()
+	{
+		m_needReopen = true;
+		uv_cond_signal(&m_cond);
+	}
+
 private:
 	static void init_uv_threadpool()
 	{
@@ -245,6 +257,28 @@ private:
 		}
 	}
 
+	bool reopen()
+	{
+		m_logFile.close();
+		m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
+		bool ok = m_logFile.is_open();
+		if(ok) {
+			struct stat st;
+			if(stat(m_logFilePath.c_str(), &st) == 0) {
+				m_logFileDevice = st.st_dev;
+				m_logFileINode = st.st_ino;
+			} else {
+				// How?
+				m_logFileDevice = 0;
+				m_logFileINode = 0;
+			}
+		} else {
+			m_logFileDevice = 0;
+			m_logFileINode = 0;
+		}
+		return ok;
+	}
+
 private:
 	static void run_wrapper(void* arg) { reinterpret_cast<Worker*>(arg)->run(); }
 
@@ -263,6 +297,14 @@ private:
 				uv_cond_wait(&m_cond, &m_mutex);
 			}
 			uv_mutex_unlock(&m_mutex);
+
+			bool expected = true;
+			if (m_needReopen.compare_exchange_strong(expected, false)) {
+				// Reopen the log file on request (logrotate support)
+				if(reopen()) {
+					LOGINFO(0, "reopened " << m_logFilePath);
+				}
+			}
 
 			for (uint32_t writePos = m_writePos.load(); m_readPos != writePos; writePos = m_writePos.load()) {
 				// We have at least one log slot pending, possibly more than one
@@ -327,11 +369,18 @@ private:
 			if (m_logFile.is_open()) {
 				m_logFile.flush();
 
-				// Reopen the log file if it's been moved (logrotate support)
+				// Automatically reopen the file if either it
+				// no longer exists or it is now a different
+				// regular file; this detects manual moving or
+				// recreating of the file
 				struct stat buf;
-				if (stat(m_logFilePath.c_str(), &buf) != 0) {
-					m_logFile.close();
-					m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
+				if (stat(m_logFilePath.c_str(), &buf) == 0) {
+					if(m_logFileDevice && m_logFileINode && S_ISREG(buf.st_mode) &&
+					   (buf.st_dev != m_logFileDevice || buf.st_ino != m_logFileINode)) {
+						reopen();
+					}
+				} else if(errno == ENOENT) {
+					reopen();
 				}
 			}
 
@@ -376,6 +425,10 @@ private:
 	uv_thread_t m_worker;
 
 	bool m_stopped;
+	std::atomic<bool> m_needReopen;
+
+	dev_t m_logFileDevice;
+	ino_t m_logFileINode;
 
 	std::ofstream m_logFile;
 	std::string m_logFilePath;
@@ -445,7 +498,7 @@ void reopen()
 {
 	// This will trigger the worker thread which will then reopen log file if it's been moved
 #ifndef P2POOL_LOG_DISABLE
-	LOGINFO(0, "reopening " << worker->log_file_path());
+	worker->schedule_reopen();
 #endif
 }
 
