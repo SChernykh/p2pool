@@ -380,7 +380,7 @@ void ConsoleCommands::process_input(std::string& command, const char* data, uint
 		command[k] = '\0';
 
 		if (check_cookie && ((k <= m_cookie.length()) || (memcmp(command.data(), m_cookie.data(), m_cookie.length()) != 0))) {
-			LOGWARN(4, "cookie check failed, skipping command " << command);
+			LOGWARN(4, "cookie check failed, skipping command " << log::MaskNonASCII(command));
 		}
 		else {
 			if (check_cookie) {
@@ -410,7 +410,7 @@ void ConsoleCommands::process_input(std::string& command, const char* data, uint
 			}
 
 			if (!c->name.len) {
-				LOGWARN(0, "Unknown command " << command.c_str());
+				LOGWARN(0, "Unknown command " << log::MaskNonASCII(command));
 				do_help(nullptr, nullptr);
 			}
 		}

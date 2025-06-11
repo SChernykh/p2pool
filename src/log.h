@@ -449,12 +449,37 @@ struct EscapedString
 		}
 	}
 
+	FORCEINLINE operator const std::string&() const { return m_data; }
+
+private:
 	std::string m_data;
 };
 
 template<> struct log::Stream::Entry<EscapedString>
 {
-	static FORCEINLINE void put(const EscapedString& value, Stream* wrapper) { *wrapper << value.m_data; }
+	static FORCEINLINE void put(const EscapedString& value, Stream* wrapper) { *wrapper << value; }
+};
+
+struct MaskNonASCII
+{
+	explicit FORCEINLINE MaskNonASCII(const std::string& data, char mask_character = '?') : m_data(data)
+	{
+		for (char& c : m_data) {
+			if ((c < 32) || (c >= 127)) {
+				c = mask_character;
+			}
+		}
+	}
+
+	FORCEINLINE operator const std::string&() const { return m_data; }
+
+private:
+	std::string m_data;
+};
+
+template<> struct log::Stream::Entry<MaskNonASCII>
+{
+	static FORCEINLINE void put(const MaskNonASCII& value, Stream* wrapper) { *wrapper << value; }
 };
 
 template<typename T>
