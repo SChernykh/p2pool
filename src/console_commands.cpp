@@ -385,6 +385,7 @@ void ConsoleCommands::process_input(std::string& command, const char* data, uint
 		else {
 			if (check_cookie) {
 				command.erase(0, m_cookie.length());
+				k -= m_cookie.length();
 			}
 
 			cmd* c = cmds;
