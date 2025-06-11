@@ -1148,7 +1148,7 @@ bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 	switch (m_socks5ProxyState) {
 	case Socks5ProxyState::MethodSelectionSent:
 		if (m_numRead >= 2) {
-			if ((m_readBuf[0] != 5) && (m_readBuf[1] != 0)) {
+			if ((m_readBuf[0] != 5) || (m_readBuf[1] != 0)) {
 				LOGWARN(5, "SOCKS5 proxy returned an invalid METHOD selection message");
 				return false;
 			}
@@ -1192,7 +1192,7 @@ bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 	case Socks5ProxyState::ConnectRequestSent:
 		if (m_numRead >= 4) {
 			const uint8_t* p = reinterpret_cast<uint8_t*>(m_readBuf);
-			if ((p[0] != 5) && (p[1] != 0) && p[2] != 0) {
+			if ((p[0] != 5) || (p[1] != 0) || p[2] != 0) {
 				LOGWARN(5, "SOCKS5 proxy returned an invalid reply to CONNECT");
 				return false;
 			}
