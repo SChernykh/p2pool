@@ -256,22 +256,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang)
 			find_library(CURL_LIBRARY NAMES curl)
 		endif()
 	endif()
-	find_library(SODIUM_LIBRARY sodium)
-endif()
-
-find_library(PGM_LIBRARY pgm)
-find_library(NORM_LIBRARY norm)
-
-if (PGM_LIBRARY)
-	set(LIBS ${LIBS} ${PGM_LIBRARY})
-endif()
-
-if (NORM_LIBRARY)
-	set(LIBS ${LIBS} ${NORM_LIBRARY})
-endif()
-
-if (SODIUM_LIBRARY)
-	set(LIBS ${LIBS} ${SODIUM_LIBRARY})
 endif()
 
 if(APPLE)

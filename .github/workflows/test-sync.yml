@@ -180,7 +180,7 @@ jobs:
       run: |
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt update
-        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
 
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -227,7 +227,7 @@ jobs:
       run: |
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt update
-        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
 
     - name: Checkout repository
       uses: actions/checkout@v4
