@@ -451,13 +451,12 @@ struct EscapedString
 
 	FORCEINLINE operator const std::string&() const { return m_data; }
 
-private:
 	std::string m_data;
 };
 
 template<> struct log::Stream::Entry<EscapedString>
 {
-	static FORCEINLINE void put(const EscapedString& value, Stream* wrapper) { *wrapper << value; }
+	static FORCEINLINE void put(const EscapedString& value, Stream* wrapper) { *wrapper << value.m_data; }
 };
 
 struct MaskNonASCII
@@ -473,13 +472,12 @@ struct MaskNonASCII
 
 	FORCEINLINE operator const std::string&() const { return m_data; }
 
-private:
 	std::string m_data;
 };
 
 template<> struct log::Stream::Entry<MaskNonASCII>
 {
-	static FORCEINLINE void put(const MaskNonASCII& value, Stream* wrapper) { *wrapper << value; }
+	static FORCEINLINE void put(const MaskNonASCII& value, Stream* wrapper) { *wrapper << value.m_data; }
 };
 
 template<typename T>
