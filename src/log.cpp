@@ -123,8 +123,6 @@ public:
 		, m_readPos(0)
 		, m_stopped(false)
 		, m_needReopen(false)
-		, m_logFileDevice(0)
-		, m_logFileINode(0)
 	{
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
@@ -135,10 +133,6 @@ public:
 		std::setlocale(LC_ALL, "en_001");
 
 		m_logFilePath = DATA_DIR + log_file_name;
-
-		if (!reopen()) {
-			fprintf(stderr, "failed to open %s: error %d\n", m_logFilePath.c_str(), errno);
-		}
 
 		m_buf.resize(BUF_SIZE);
 
@@ -257,26 +251,26 @@ private:
 		}
 	}
 
-	bool reopen()
+	bool reopen(struct stat& st)
 	{
-		m_logFile.close();
-		m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
-		bool ok = m_logFile.is_open();
-		if(ok) {
-			struct stat st;
-			if(stat(m_logFilePath.c_str(), &st) == 0) {
-				m_logFileDevice = st.st_dev;
-				m_logFileINode = st.st_ino;
-			} else {
-				// How?
-				m_logFileDevice = 0;
-				m_logFileINode = 0;
-			}
-		} else {
-			m_logFileDevice = 0;
-			m_logFileINode = 0;
+		st = {};
+
+		if (m_logFile.is_open()) {
+			m_logFile.close();
 		}
-		return ok;
+
+		m_logFile.open(m_logFilePath, std::ios::app | std::ios::binary);
+
+		if (!m_logFile.is_open()) {
+			return false;
+		}
+
+		if (stat(m_logFilePath.c_str(), &st) != 0) {
+			st = {};
+			return false;
+		}
+
+		return true;
 	}
 
 private:
@@ -285,7 +279,13 @@ private:
 	NOINLINE void run()
 	{
 		set_thread_name("Logger");
-		
+
+		struct stat log_file_st;
+
+		if (!reopen(log_file_st)) {
+			fprintf(stderr, "failed to open %s: error %d\n", m_logFilePath.c_str(), errno);
+		}
+
 		do {
 			uv_mutex_lock(&m_mutex);
 			if (m_readPos == m_writePos.load()) {
@@ -301,7 +301,7 @@ private:
 			bool expected = true;
 			if (m_needReopen.compare_exchange_strong(expected, false)) {
 				// Reopen the log file on request (logrotate support)
-				if(reopen()) {
+				if(reopen(log_file_st)) {
 					LOGINFO(0, "reopened " << m_logFilePath);
 				}
 			}
@@ -375,12 +375,12 @@ private:
 				// recreating of the file
 				struct stat buf;
 				if (stat(m_logFilePath.c_str(), &buf) == 0) {
-					if(m_logFileDevice && m_logFileINode && S_ISREG(buf.st_mode) &&
-					   (buf.st_dev != m_logFileDevice || buf.st_ino != m_logFileINode)) {
-						reopen();
+					if(log_file_st.st_dev && log_file_st.st_ino && S_ISREG(buf.st_mode) &&
+					   (buf.st_dev != log_file_st.st_dev || buf.st_ino != log_file_st.st_ino)) {
+						reopen(log_file_st);
 					}
 				} else if(errno == ENOENT) {
-					reopen();
+					reopen(log_file_st);
 				}
 			}
 
@@ -426,9 +426,6 @@ private:
 
 	bool m_stopped;
 	std::atomic<bool> m_needReopen;
-
-	dev_t m_logFileDevice;
-	ino_t m_logFileINode;
 
 	std::ofstream m_logFile;
 	std::string m_logFilePath;
