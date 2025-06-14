@@ -203,6 +203,7 @@ private:
 	double m_cumulativeFoundSharesDiff;
 	uint32_t m_totalFoundSidechainShares;
 	uint32_t m_totalFailedSidechainShares;
+	time_t m_lastSidechainShareFoundTime;
 	uint64_t m_totalStratumShares;
 
 	uint64_t m_banTime;
