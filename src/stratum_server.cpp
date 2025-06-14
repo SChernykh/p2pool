@@ -57,6 +57,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_cumulativeFoundSharesDiff(0.0)
 	, m_totalFoundSidechainShares(0)
 	, m_totalFailedSidechainShares(0)
+	, m_lastSidechainShareFoundTime(0)
 	, m_totalStratumShares(0)
 	, m_apiLastUpdateTime(0)
 {
@@ -601,6 +602,7 @@ void StratumServer::reset_share_counters()
 	m_cumulativeHashesAtLastShare = m_cumulativeHashes;
 	m_totalFoundSidechainShares = 0;
 	m_totalFailedSidechainShares = 0;
+	m_lastSidechainShareFoundTime = 0;
 }
 
 bool StratumServer::http_enabled() const
@@ -1005,6 +1007,8 @@ void StratumServer::on_share_found(uv_work_t* req)
 		share->m_score = GOOD_SHARE_POINTS;
 
 		const double diff = sidechain_difficulty.to_double();
+		time_t prev_time;
+		const time_t cur_time = time(nullptr);
 		{
 			WriteLock lock(server->m_hashrateDataLock);
 
@@ -1014,6 +1018,9 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 			server->m_cumulativeFoundSharesDiff += diff;
 			++server->m_totalFoundSidechainShares;
+
+			prev_time = server->m_lastSidechainShareFoundTime;
+			server->m_lastSidechainShareFoundTime = cur_time;
 		}
 
 		if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
@@ -1022,6 +1029,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 			if (server->m_totalFoundSidechainShares > 0) {
 				--server->m_totalFoundSidechainShares;
 				++server->m_totalFailedSidechainShares;
+				server->m_lastSidechainShareFoundTime = prev_time;
 			}
 		}
 	}
@@ -1494,6 +1502,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	uint64_t hashes_since_last_share;
 	double average_effort;
 	uint32_t shares_found, shares_failed;
+	time_t last_share_found_time;
 	uint64_t total_stratum_shares;
 
 	{
@@ -1525,6 +1534,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 
 		shares_found = m_totalFoundSidechainShares;
 		shares_failed = m_totalFailedSidechainShares;
+		last_share_found_time = m_lastSidechainShareFoundTime;
 		total_stratum_shares = m_totalStratumShares;
 	}
 
@@ -1546,6 +1556,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"hashrate_24h\":" << hashrate_24h
 				<< ",\"total_hashes\":" << total_hashes
 				<< ",\"total_stratum_shares\":" << total_stratum_shares
+				<< ",\"last_share_found_time\":" << last_share_found_time
 				<< ",\"shares_found\":" << shares_found
 				<< ",\"shares_failed\":" << shares_failed
 				<< ",\"average_effort\":" << average_effort
