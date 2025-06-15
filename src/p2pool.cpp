@@ -2028,7 +2028,7 @@ void p2pool::on_external_block(const PoolBlock& block)
 
 void p2pool::api_update_aux_data()
 {
-	if (!m_api || m_stopped) {
+	if (!m_api || !m_params->m_localStats || m_stopped) {
 		return;
 	}
 
