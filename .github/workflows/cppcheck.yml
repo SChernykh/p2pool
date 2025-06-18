@@ -28,8 +28,8 @@ jobs:
     - name: Checkout cppcheck
       run: |
         git clone https://github.com/danmar/cppcheck cppcheck-main
-        cd cppcheck-main
-        git checkout 6d7dc76052ad36128fae93f994d6a2bf57e93103
+        git clone https://github.com/danmar/simplecpp simplecpp
+        cp -rf simplecpp cppcheck-main/externals
 
     - name: Build cppcheck
       run: |
@@ -76,8 +76,8 @@ jobs:
     - name: Checkout cppcheck
       run: |
         git clone https://github.com/danmar/cppcheck cppcheck-main
-        cd cppcheck-main
-        git checkout 6d7dc76052ad36128fae93f994d6a2bf57e93103
+        git clone https://github.com/danmar/simplecpp simplecpp
+        Copy-Item -Path "simplecpp" -Destination "cppcheck-main/externals" -Recurse -Force
 
     - name: Build cppcheck
       run: |
