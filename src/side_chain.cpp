@@ -1444,9 +1444,24 @@ void SideChain::verify_loop(PoolBlock* block)
 					continue;
 				}
 
-				const std::vector<PoolBlock*>& next_blocks = it->second;
-				if (!next_blocks.empty()) {
-					blocks_to_verify.insert(blocks_to_verify.end(), next_blocks.begin(), next_blocks.end());
+				for (PoolBlock* b : it->second) {
+					if ((i == 1) && (b->m_parent == block->m_sidechainId)) {
+						// Update depth if needed
+						if (b->m_depth + 1 < block->m_depth) {
+							b->m_depth = block->m_depth - 1;
+						}
+						blocks_to_verify.push_back(b);
+					}
+					else for (const hash& h : b->m_uncles) {
+						if (h == block->m_sidechainId) {
+							// Update depth if needed
+							if (b->m_depth + i < block->m_depth) {
+								b->m_depth = block->m_depth - i;
+							}
+							blocks_to_verify.push_back(b);
+							break;
+						}
+					}
 				}
 			}
 		}
