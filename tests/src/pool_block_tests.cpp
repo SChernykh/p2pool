@@ -117,9 +117,11 @@ TEST(pool_block, verify)
 		uint64_t m_txinGenHeight;
 		uint64_t m_sidechainHeight;
 		bool m_shuffle;
-	} tests[2] = {
+	} tests[4] = {
+		{ "default", "sidechain_dump.dat", 3258121, 9443762, false },
 		{ "default", "sidechain_dump.dat", 3258121, 9443762, true },
 		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, false },
+		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, true },
 	};
 
 	for (const STest& t : tests)
