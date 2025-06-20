@@ -93,6 +93,15 @@ TEST(merkle, tree)
 
 	auto check_full_tree = [&hashes, &root]() {
 		std::vector<std::vector<hash>> tree;
+
+		{
+			hash h;
+			std::vector<hash> proof;
+			uint32_t path;
+
+			ASSERT_FALSE(get_merkle_proof(tree, h, proof, path));
+		}
+
 		merkle_hash_full_tree(hashes, tree);
 
 		ASSERT_GE(tree.size(), 1);
@@ -127,12 +136,15 @@ TEST(merkle, tree)
 			}
 		}
 
+		const hash empty_hash;
+
 		for (size_t i = 0, n = hashes.size(); i < n; ++i) {
 			const hash& h = hashes[i];
 			std::vector<hash> proof;
 			uint32_t path;
 
 			ASSERT_TRUE(get_merkle_proof(tree, h, proof, path));
+			ASSERT_FALSE(get_merkle_proof(tree, empty_hash, proof, path));
 
 			uint32_t path_monero;
 			ASSERT_TRUE(tree_path(n, i, &path_monero));
@@ -140,6 +152,18 @@ TEST(merkle, tree)
 
 			ASSERT_TRUE(verify_merkle_proof(h, proof, i, n, root));
 			ASSERT_TRUE(verify_merkle_proof(h, proof, path, root));
+
+			ASSERT_FALSE(verify_merkle_proof(h, proof, n, n, root));
+			ASSERT_FALSE(verify_merkle_proof(empty_hash, proof, i, n, root));
+			ASSERT_FALSE(verify_merkle_proof(empty_hash, proof, path, root));
+
+			while (!proof.empty()) {
+				proof.pop_back();
+
+				ASSERT_FALSE(verify_merkle_proof(h, proof, i, n, root));
+				ASSERT_FALSE(verify_merkle_proof(h, proof, path, root));
+			}
+
 			ASSERT_EQ(get_position_from_path(n, path), i);
 		}
 	};

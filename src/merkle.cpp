@@ -181,12 +181,12 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 
 root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count)
 {
-	if (count == 1) {
-		return root_hash(h);
-	}
-
 	if (index >= count) {
 		return root_hash();
+	}
+
+	if (count == 1) {
+		return root_hash(h);
 	}
 
 	hash tmp[2];
