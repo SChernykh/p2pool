@@ -27,8 +27,22 @@ TEST(crypto, derivation)
 {
 	init_crypto_cache();
 
-	// Run the tests twice to check how crypto cache works
-	for (int i = 0; i < 2; ++i) {
+	hash pub, sec;
+	generate_keys(pub, sec);
+	ASSERT_TRUE(check_keys(pub, sec));
+
+	sec.h[HASH_SIZE - 1] = 0xff;
+	ASSERT_FALSE(check_keys(pub, sec));
+
+	// Run the tests several times to check how crypto cache works
+	for (int i = 0; i < 4; ++i) {
+		if (i == 2) {
+			clear_crypto_cache(seconds_since_epoch() - 1);
+		}
+		else if (i == 3) {
+			clear_crypto_cache(seconds_since_epoch() + 1);
+		}
+
 		std::ifstream f("crypto_tests.txt");
 		ASSERT_EQ(f.good() && f.is_open(), true);
 		do {
@@ -44,6 +58,9 @@ TEST(crypto, derivation)
 				}
 				uint8_t view_tag;
 				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, 0, derivation, view_tag), result);
+				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, 1, derivation, view_tag), result);
+				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, 2, derivation, view_tag), result);
+				ASSERT_EQ(p2pool::generate_key_derivation(key1, key2, 3, derivation, view_tag), result);
 				if (result) {
 					ASSERT_EQ(derivation, expected_derivation);
 				}
@@ -89,6 +106,7 @@ TEST(crypto, derivation)
 		} while (!f.eof());
 	}
 
+	clear_crypto_cache(0);
 	destroy_crypto_cache();
 }
 
