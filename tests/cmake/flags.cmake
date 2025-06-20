@@ -1,10 +1,14 @@
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	set(GENERAL_FLAGS "-pthread")
 	set(WARNING_FLAGS "-Wall -Wextra")
-	set(OPTIMIZATION_FLAGS "-O3 -ffast-math -s")
 
-	if (WITH_LTO)
-		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto=auto -fuse-linker-plugin")
+	if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+		set(OPTIMIZATION_FLAGS "-O0 -g3 -ftrapv")
+	else()
+		set(OPTIMIZATION_FLAGS "-O3 -ffast-math -s")
+		if (WITH_LTO)
+			set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto=auto -fuse-linker-plugin")
+		endif()
 	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")

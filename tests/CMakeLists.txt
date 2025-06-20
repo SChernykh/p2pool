@@ -213,3 +213,4 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMA
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/block.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump.dat.gz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump_mini.dat.gz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump_nano.dat.gz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
