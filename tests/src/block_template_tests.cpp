@@ -111,6 +111,38 @@ TEST(block_template, update)
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("f00e196216d160a4fcbf468f748205039d276d62edfa6c6fd4c81dbd1f62d9b7"));
 
+	// Test 3: small but not empty mempool, and aux chains
+
+	std::vector<TxMempoolData> transactions;
+
+	for (uint64_t i = 0; i < 10; ++i) {
+		TxMempoolData tx;
+		*reinterpret_cast<uint64_t*>(tx.id.h) = i;
+		tx.fee = 30000000;
+		tx.weight = 1500;
+		transactions.push_back(tx);
+	}
+	mempool.swap(transactions);
+
+	data.aux_chains.emplace_back(H("01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990"), H("d9de1cfba7cdbd47f12f77addcb39b24c1ae7a16c35372bf28d6aee5d7579ee6"), difficulty_type(1000000));
+
+	tpl.update(data, mempool, &wallet);
+
+	ASSERT_EQ(b->m_sidechainId, H("c32abac2cad40e263a94f5f43f90e0a7d7d4b151305b79951dbc8c88c3180613"));
+	ASSERT_EQ(b->m_transactions.size(), 11);
+
+	tpl.get_hashing_blobs(0, 10000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+
+	ASSERT_EQ(height, 2762973);
+	ASSERT_EQ(diff, 300346053753ULL);
+	ASSERT_EQ(sidechain_diff, sidechain.difficulty());
+	ASSERT_EQ(seed_hash, data.seed_hash);
+	ASSERT_EQ(nonce_offset, 39U);
+	ASSERT_EQ(template_id, 3U);
+
+	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
+	ASSERT_EQ(blobs_hash, H("17cd4d517a1a52ea919924c84261815e32a29decd0b194ad43ee814adb78eb9a"));
+
 	destroy_crypto_cache();
 }
 

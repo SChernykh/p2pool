@@ -32,7 +32,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DDEV_DEBUG=ON -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc) p2pool_tests
 
     - name: Run tests

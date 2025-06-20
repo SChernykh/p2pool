@@ -77,6 +77,15 @@ TEST(wallet, input_output)
 		s << w.view_public_key();
 		ASSERT_EQ(memcmp(buf, viewkey, HASH_SIZE * 2), 0);
 
+		// Test Wallet copy
+		Wallet w1(w);
+
+		ASSERT_EQ(w1.prefix(),           w.prefix());
+		ASSERT_EQ(w1.spend_public_key(), w.spend_public_key());
+		ASSERT_EQ(w1.view_public_key(),  w.view_public_key());
+		ASSERT_EQ(w1.checksum(),         w.checksum());
+		ASSERT_EQ(w1.type(),             w.type());
+
 		// Test Wallet::assign()
 		Wallet w2(nullptr);
 		w2.assign(w.spend_public_key(), w.view_public_key(), w.type());
