@@ -5,6 +5,7 @@ include(cmake/standard.cmake)
 
 option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
+option(WITH_COVERAGE "Generate code coverage data" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 

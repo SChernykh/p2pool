@@ -1,0 +1,63 @@
+name: Code coverage
+
+on:
+  push:
+    branches: ["master", "test"]
+    paths-ignore:
+      - 'docker-compose/**'
+      - 'docs/**'
+      - 'README.md'
+
+  pull_request:
+
+jobs:
+  coverage:
+
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev lcov
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Build tests
+      run: |
+        cd tests
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        make -j$(nproc) p2pool_tests
+
+    - name: Run tests
+      run: |
+        cd tests/build
+        gunzip *.gz
+        ./p2pool_tests
+
+    - name: Run gcov
+      run: |
+        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
+        gcov-14 *.gcda
+
+    - name: Run lcov
+      run: |
+        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
+        lcov --gcov-tool gcov-14 --directory . --capture --output-file coverage.info
+
+    - name: Run genhtml
+      run: |
+        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
+        genhtml --demangle-cpp -o coverage coverage.info
+
+    - name: Archive coverage data
+      uses: actions/upload-artifact@v4
+      with:
+        name: p2pool-coverage
+        path: tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src/coverage
