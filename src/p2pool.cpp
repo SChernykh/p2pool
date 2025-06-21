@@ -390,7 +390,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 void p2pool::handle_miner_data(MinerData& data)
 {
 #if TEST_MEMPOOL_PICKING_ALGORITHM
-	if (m_mempool->m_transactions.size() < data.tx_backlog.size()) {
+	if (m_mempool->size() < data.tx_backlog.size()) {
 		m_mempool->swap(data.tx_backlog);
 	}
 #else

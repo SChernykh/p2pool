@@ -741,7 +741,7 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 	constexpr uint64_t FEE_COEFF = 1000;
 
 	const uint64_t n = m_mempoolTxs.size();
-	const uint64_t max_weight = data.median_weight + (data.median_weight / 32) - miner_tx_weight;
+	const uint64_t max_weight = data.median_weight + (data.median_weight / 8) - miner_tx_weight;
 
 	m_knapsack.resize((n + 1) * max_weight);
 	memset(m_knapsack.data(), 0, max_weight * sizeof(uint32_t));

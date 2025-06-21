@@ -50,6 +50,12 @@ public:
 		}
 	}
 
+	void clear()
+	{
+		WriteLock lock(m_lock);
+		m_transactions.clear();
+	}
+
 private:
 	mutable uv_rwlock_t m_lock;
 	unordered_map<hash, TxMempoolData> m_transactions;
