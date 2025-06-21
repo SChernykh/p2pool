@@ -129,14 +129,15 @@ TEST(pool_block, verify)
 		const char* m_fileName;
 		uint64_t m_txinGenHeight;
 		uint64_t m_sidechainHeight;
+		uint32_t m_expectedSharesNextBlock;
 		bool m_shuffle;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3258121, 9443762, false },
-		{ "default", "sidechain_dump.dat", 3258121, 9443762, true },
-		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, false },
-		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, true },
-		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, false },
-		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, true },
+		{ "default", "sidechain_dump.dat", 3258121, 9443762, 30, false },
+		{ "default", "sidechain_dump.dat", 3258121, 9443762, 30, true },
+		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, 593, false },
+		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, 593, true },
+		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, 131, false },
+		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, 131, true },
 	};
 
 	for (const STest& t : tests)
@@ -203,6 +204,16 @@ TEST(pool_block, verify)
 
 		ASSERT_EQ(tip->m_txinGenHeight, t.m_txinGenHeight);
 		ASSERT_EQ(tip->m_sidechainHeight, t.m_sidechainHeight);
+
+		PoolBlock block;
+		block.m_minerWallet.decode("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
+
+		std::vector<MinerShare> shares;
+
+		sidechain.fill_sidechain_data(block, shares);
+
+		ASSERT_EQ(block.m_sidechainHeight, t.m_sidechainHeight + 1);
+		ASSERT_EQ(shares.size(), t.m_expectedSharesNextBlock);
 	}
 
 	destroy_crypto_cache();

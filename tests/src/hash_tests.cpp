@@ -70,9 +70,19 @@ TEST(hash, input_output)
 		std::stringstream ss;
 		ss << h;
 		ASSERT_EQ(ss.str(), s);
+
 		hash h2;
 		ss >> h2;
 		ASSERT_EQ(h2, h);
+
+		hash h3;
+		ASSERT_TRUE(from_hex(s, strlen(s), h3));
+		ASSERT_EQ(h3, h);
+
+		std::vector<uint8_t> v;
+		ASSERT_TRUE(from_hex(s, strlen(s), v));
+		ASSERT_EQ(v.size(), HASH_SIZE);
+		ASSERT_EQ(memcmp(v.data(), h.h, HASH_SIZE), 0);
 	};
 
 	hash h;
@@ -90,6 +100,13 @@ TEST(hash, input_output)
 		h.h[i] = 0xff - i;
 	}
 	check(h, "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0");
+
+	ASSERT_FALSE(from_hex("123", 3, h));
+	ASSERT_FALSE(from_hex("000000000000000000000000000000000000000000000000000000000000000z", HASH_SIZE * 2, h));
+
+	std::vector<uint8_t> v;
+	ASSERT_FALSE(from_hex("123", 3, v));
+	ASSERT_FALSE(from_hex("000000000000000000000000000000000000000000000000000000000000000z", HASH_SIZE * 2, v));
 }
 
 TEST(hash, json_parser)

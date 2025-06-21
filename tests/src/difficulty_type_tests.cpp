@@ -416,12 +416,18 @@ TEST(difficulty_type, div128)
 
 TEST(difficulty_type, compare)
 {
-	const difficulty_type diff[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
+	const difficulty_type diff[9] = {
+		{ 0, 0 }, { 1, 0 }, { 2, 0 },
+		{ 0, 1 }, { 1, 1 }, { 2, 1 },
+		{ 0, 2 }, { 1, 2 }, { 2, 2 },
+	};
 
-	for (int i = 0; i <= 3; ++i) {
-		for (int j = 0; j <= 3; ++j) {
+	for (int i = 0; i < 9; ++i) {
+		for (int j = 0; j < 9; ++j) {
+			ASSERT_EQ(diff[i] >  diff[j], i >  j);
 			ASSERT_EQ(diff[i] <  diff[j], i <  j);
 			ASSERT_EQ(diff[i] >= diff[j], i >= j);
+			ASSERT_EQ(diff[i] <= diff[j], i <= j);
 			ASSERT_EQ(diff[i] == diff[j], i == j);
 			ASSERT_EQ(diff[i] != diff[j], i != j);
 		}
@@ -451,6 +457,15 @@ TEST(difficulty_type, input_output)
 	test_value(7766279631452241921ull, 5, "100000000000000000001");
 	test_value(14083847773837265618ull, 6692605942ull, "123456789012345678901234567890");
 	test_value(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), "340282366920938463463374607431768211455");
+
+	std::stringstream ss;
+	difficulty_type diff;
+
+	ss << "340599339356 test";
+	ss >> diff;
+
+	ASSERT_EQ(diff.lo, 340599339356ull);
+	ASSERT_EQ(diff.hi, 0ull);
 }
 
 TEST(difficulty_type, json_parser)
