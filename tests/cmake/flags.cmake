@@ -52,10 +52,19 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	endif()
 
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
-	set(OPTIMIZATION_FLAGS "-O3 -ffast-math -funroll-loops -fmerge-all-constants")
 
-	if (WITH_LTO)
-		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto")
+	if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+		set(OPTIMIZATION_FLAGS "-O0 -g3")
+	else()
+		set(OPTIMIZATION_FLAGS "-O3 -ffast-math -funroll-loops -fmerge-all-constants")
+
+		if (WITH_LTO)
+			set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -flto")
+		endif()
+	endif()
+
+	if (WITH_COVERAGE)
+		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
 	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GENERAL_FLAGS} ${WARNING_FLAGS} ${OPTIMIZATION_FLAGS}")

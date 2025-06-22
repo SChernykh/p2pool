@@ -2,7 +2,7 @@ name: Code coverage
 
 on:
   push:
-    branches: ["master", "test"]
+    branches: ["master"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'
@@ -22,6 +22,12 @@ jobs:
         sudo apt update
         sudo apt install -y cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev lcov
 
+    - name: Install clang
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 20 all
+
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
@@ -32,28 +38,28 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DDEV_DEBUG=ON -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DDEV_DEBUG=ON -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc) p2pool_tests
 
     - name: Run tests
       run: |
         cd tests/build
         gunzip *.gz
-        ./p2pool_tests
+        LLVM_PROFILE_FILE="p2pool_tests.profraw" ./p2pool_tests
 
-    - name: Run gcov
+    - name: Merge profile data
       run: |
-        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
-        gcov-14 *.gcda
+        cd tests/build
+        llvm-profdata-20 merge -sparse ./p2pool_tests.profraw -o ./p2pool_tests.profdata
 
-    - name: Run lcov
+    - name: Export profile data
       run: |
-        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
-        lcov --gcov-tool gcov-14 --directory . --capture --output-file coverage.info
+        cd tests/build
+        llvm-cov-20 export ./p2pool_tests -format=lcov -instr-profile=./p2pool_tests.profdata > coverage.info
 
     - name: Run genhtml
       run: |
-        cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
+        cd tests/build
         genhtml --demangle-cpp -o coverage coverage.info
 
     - name: Checkout GitHub Pages repository
@@ -66,7 +72,7 @@ jobs:
     - name: Copy coverage report to GitHub Pages repo
       run: |
         rm -rf gh-pages/p2pool-coverage
-        cp -r tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src/coverage gh-pages/p2pool-coverage
+        cp -r tests/build/coverage gh-pages/p2pool-coverage
 
     - name: Commit and push coverage report
       run: |
@@ -81,4 +87,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: p2pool-coverage
-        path: tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src/coverage
+        path: tests/build/coverage

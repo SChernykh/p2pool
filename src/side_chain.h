@@ -29,7 +29,6 @@ class P2PServer;
 
 struct MinerShare
 {
-	FORCEINLINE MinerShare() : m_weight(), m_wallet(nullptr) {}
 	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
 
 	FORCEINLINE bool operator==(const MinerShare& s) const { return *m_wallet == *s.m_wallet; }
