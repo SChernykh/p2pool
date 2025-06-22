@@ -175,6 +175,8 @@ template<> FORCEINLINE bool out_of_range<uint64_t>(uint64_t) { return false; }
 template<typename T>
 const uint8_t* readVarint(const uint8_t* data, const uint8_t* data_end, T& b)
 {
+	static_assert(std::is_unsigned_v<T>, "readVarint works only with unsigned types");
+
 	uint64_t result = 0;
 	int k = 0;
 

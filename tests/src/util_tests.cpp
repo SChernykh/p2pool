@@ -80,6 +80,16 @@ TEST(util, varint)
 	// Invalid value 2
 	uint8_t buf2[1] = { 0x80 };
 	ASSERT_EQ(readVarint(buf2, buf2 + 1, check), nullptr);
+
+	// Invalid value 3
+	uint8_t buf3[16];
+	memset(buf3, 128, sizeof(buf3));
+	ASSERT_EQ(readVarint(buf3, buf3 + sizeof(buf3), check), nullptr);
+
+	// Invalid value 4
+	uint32_t check2;
+	uint8_t buf4[] = {255, 255, 255, 255, 127};
+	ASSERT_EQ(readVarint(buf4, buf4 + sizeof(buf4), check2), nullptr);
 }
 
 TEST(util, bsr)

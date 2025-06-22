@@ -28,6 +28,7 @@ using namespace p2pool;
 int main(int argc, char** argv)
 {
 	set_main_thread();
+	p2pool_usage();
 
 	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
 

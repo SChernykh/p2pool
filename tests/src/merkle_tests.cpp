@@ -168,6 +168,17 @@ TEST(merkle, tree)
 		}
 	};
 
+	// 0 leaves
+	uint32_t path_monero;
+	ASSERT_FALSE(tree_path(0, 0, &path_monero));
+
+	merkle_hash(std::vector<hash>(), root);
+	ASSERT_TRUE(root.empty());
+
+	std::vector<std::vector<hash>> tree;
+	merkle_hash_full_tree(std::vector<hash>(), tree);
+	ASSERT_TRUE(tree.empty());
+
 	// 1 leaf
 	merkle_hash(hashes, root);
 	ASSERT_EQ(root, input[0]);

@@ -26,6 +26,12 @@ namespace p2pool {
 void merkle_hash(const std::vector<hash>& hashes, root_hash& root)
 {
 	const size_t count = hashes.size();
+
+	if (count == 0) {
+		root.clear();
+		return;
+	}
+
 	const uint8_t* h = hashes[0].h;
 
 	if (count == 1) {
@@ -62,9 +68,14 @@ void merkle_hash(const std::vector<hash>& hashes, root_hash& root)
 void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vector<hash>>& tree)
 {
 	const size_t count = hashes.size();
-	const uint8_t* h = hashes[0].h;
 
 	tree.clear();
+
+	if (count == 0) {
+		return;
+	}
+
+	const uint8_t* h = hashes[0].h;
 
 	if (count == 1) {
 		tree.push_back(hashes);
