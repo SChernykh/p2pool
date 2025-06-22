@@ -26,6 +26,13 @@
 
 namespace p2pool {
 
+static hash H(const char* s)
+{
+	hash result;
+	from_hex(s, strlen(s), result);
+	return result;
+};
+
 TEST(block_template, update)
 {
 	init_crypto_cache();
@@ -33,15 +40,6 @@ TEST(block_template, update)
 	SideChain sidechain(nullptr, NetworkType::Mainnet);
 	BlockTemplate tpl(&sidechain, nullptr);
 	tpl.rng().seed(123);
-
-	auto H = [](const char* s)
-	{
-		std::stringstream ss;
-		ss << s;
-		hash result;
-		ss >> result;
-		return result;
-	};
 
 	MinerData data;
 	data.major_version = 16;
@@ -180,6 +178,75 @@ TEST(block_template, update)
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("4f62562aa84400eb085f58447d8daa45257369f1ec046b2150212329c9e86ae4"));
+
+	destroy_crypto_cache();
+}
+
+TEST(block_template, submit_sidechain_block)
+{
+	init_crypto_cache();
+
+	SideChain sidechain(nullptr, NetworkType::Mainnet, "unit_test");
+
+	ASSERT_EQ(sidechain.consensus_hash(), H("81d45b62c10afa4fdda7cebb02dd5ad82c43b577eb3fb0857824427c55fd8a8d"));
+
+	BlockTemplate tpl(&sidechain, nullptr);
+	tpl.rng().seed(123);
+
+	BlockTemplate tpl2(&sidechain, nullptr);
+	tpl2.rng().seed(456);
+
+	BlockTemplate tpl3(&sidechain, nullptr);
+	tpl3.rng().seed(789);
+
+	MinerData data;
+	data.major_version = 16;
+	data.height = 2762973;
+	data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+	data.seed_hash = H("33d0fb381466f04d6a1919ced3b698f54a28add3da5a6479b096c67df7a4974c");
+	data.difficulty = { 300346053753ULL, 0 };
+	data.median_weight = 300000;
+	data.already_generated_coins = 18204981557254756780ULL;
+	data.median_timestamp = (1ULL << 35) - (sidechain.chain_window_size() * 2 + 10) * sidechain.block_time() - 3600;
+
+	Mempool mempool;
+	Wallet wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
+
+	std::mt19937_64 rng(101112);
+
+	for (uint64_t i = 0, i2 = 0, i3 = 0; i < sidechain.chain_window_size() * 3; ++i) {
+		tpl.update(data, mempool, &wallet);
+
+		if ((rng() % 31) == 0) {
+			tpl2.update(data, mempool, &wallet);
+
+			if ((rng() % 11) == 0) {
+				tpl3.update(data, mempool, &wallet);
+				++i3;
+				ASSERT_TRUE(tpl3.submit_sidechain_block(i3, 0, 0));
+			}
+
+			++i2;
+			ASSERT_TRUE(tpl2.submit_sidechain_block(i2, 0, 0));
+		}
+
+		ASSERT_TRUE(tpl.submit_sidechain_block(i + 1, 0, 0));
+		data.median_timestamp += sidechain.block_time();
+	}
+
+	ASSERT_EQ(sidechain.difficulty(), 219467);
+	ASSERT_EQ(sidechain.blocksById().size(), 4487);
+
+	const PoolBlock* tip = sidechain.chainTip();
+
+	ASSERT_TRUE(tip != nullptr);
+	ASSERT_TRUE(tip->m_verified);
+	ASSERT_FALSE(tip->m_invalid);
+
+	ASSERT_EQ(tip->m_txinGenHeight, data.height);
+	ASSERT_EQ(tip->m_sidechainHeight, sidechain.chain_window_size() * 3 - 1);
+
+	ASSERT_EQ(tip->m_sidechainId, H("12d57571a28d62d2b6dca3a647500d23ac22864138b22a133f237b459a0862da"));
 
 	destroy_crypto_cache();
 }
