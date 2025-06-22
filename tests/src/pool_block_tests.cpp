@@ -69,6 +69,7 @@ TEST(pool_block, deserialize)
 	size_t header_size, miner_tx_size;
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = b.serialize_mainchain_data(&header_size, &miner_tx_size, &outputs_offset, &outputs_blob_size);
+	const std::vector<uint8_t> sidechain_data = b.serialize_sidechain_data();
 
 	ASSERT_EQ(mainchain_data.size(), 1829U);
 	ASSERT_EQ(header_size, 43U);
@@ -115,6 +116,12 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(s.str(), "0906c001cc0900098fe1b62593f8ba52bd1ae2a0806096aa361a9f1702000000");
 
 	ASSERT_EQ(b.m_difficulty.check_pow(pow_hash), true);
+
+	// Test self-assignment
+	b = b;
+
+	ASSERT_EQ(b.serialize_mainchain_data(), mainchain_data);
+	ASSERT_EQ(b.serialize_sidechain_data(), sidechain_data);
 
 	destroy_crypto_cache();
 }

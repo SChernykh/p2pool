@@ -389,8 +389,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		root_hash tmp_root;
 		merkle_hash(m_transactions, tmp_root);
 		memcpy(blob + blob_size, tmp_root.h, HASH_SIZE);
+		blob_size += HASH_SIZE;
 	}
-	blob_size += HASH_SIZE;
 
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
 
