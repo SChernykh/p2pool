@@ -56,6 +56,27 @@ jobs:
         cd tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src
         genhtml --demangle-cpp -o coverage coverage.info
 
+    - name: Checkout GitHub Pages repository
+      uses: actions/checkout@v4
+      with:
+        repository: SChernykh/SChernykh.github.io
+        token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+        path: gh-pages
+
+    - name: Copy coverage report to GitHub Pages repo
+      run: |
+        rm -rf gh-pages/p2pool-coverage
+        cp -r tests/build/CMakeFiles/p2pool_tests.dir/home/runner/work/p2pool/p2pool/src/coverage gh-pages/p2pool-coverage
+
+    - name: Commit and push coverage report
+      run: |
+        cd gh-pages
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add p2pool-coverage
+        git commit -m "Update p2pool coverage report"
+        git push
+
     - name: Archive coverage data
       uses: actions/upload-artifact@v4
       with:
