@@ -90,6 +90,14 @@ TEST(util, varint)
 	uint32_t check2;
 	uint8_t buf4[] = {255, 255, 255, 255, 127};
 	ASSERT_EQ(readVarint(buf4, buf4 + sizeof(buf4), check2), nullptr);
+
+	// Invalid value 5
+	uint8_t buf5[] = {128, 0};
+	ASSERT_EQ(readVarint(buf5, buf5 + sizeof(buf5), check), nullptr);
+
+	// Invalid value 6 (2^64)
+	uint8_t buf6[] = {128, 128, 128, 128, 128, 128, 128, 128, 128, 2};
+	ASSERT_EQ(readVarint(buf6, buf6 + sizeof(buf6), check), nullptr);
 }
 
 TEST(util, bsr)
