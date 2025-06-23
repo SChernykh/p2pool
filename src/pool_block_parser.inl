@@ -115,6 +115,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				uint64_t reward;
 				READ_VARINT(reward);
+
+				// TxOutput max value check
+				if (reward >= (1ULL << 56)) {
+					return __LINE__;
+				}
+
 				t.m_reward = reward;
 				total_reward += reward;
 
