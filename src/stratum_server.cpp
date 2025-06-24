@@ -113,6 +113,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	const uint32_t num_connections = m_numConnections;
 	if (num_connections == 0) {
 		LOGINFO(4, "no clients connected");
+		update_hashrate_data(0, seconds_since_epoch());
 		api_update_local_stats(seconds_since_epoch());
 		return;
 	}
@@ -186,6 +187,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 		}
 	}
 
+	update_hashrate_data(0, seconds_since_epoch());
 	api_update_local_stats(seconds_since_epoch());
 }
 
