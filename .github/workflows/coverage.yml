@@ -84,6 +84,7 @@ jobs:
         git push
 
     - name: Archive coverage data
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool-coverage
