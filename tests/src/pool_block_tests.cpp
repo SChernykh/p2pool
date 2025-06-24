@@ -20,6 +20,7 @@
 #include "pool_block.h"
 #include "pow_hash.h"
 #include "side_chain.h"
+#include "p2p_server.h"
 #include "gtest/gtest.h"
 #include <fstream>
 
@@ -221,6 +222,39 @@ TEST(pool_block, verify)
 
 		ASSERT_EQ(block.m_sidechainHeight, t.m_sidechainHeight + 1);
 		ASSERT_EQ(shares.size(), t.m_expectedSharesNextBlock);
+
+		const PoolBlock* parent = sidechain.find_block(tip->m_parent);
+		ASSERT_TRUE(parent != nullptr);
+
+		// Check pruned and compact broadcast blobs
+
+		auto tip_full_blob = tip->serialize_mainchain_data();
+		auto v2 = tip->serialize_sidechain_data();
+		tip_full_blob.insert(tip_full_blob.end(), v2.begin(), v2.end());
+
+		P2PServer::Broadcast broadcast(*tip, parent);
+
+		{
+			PoolBlock block2;
+			ASSERT_EQ(block2.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), sidechain, nullptr, false), 0);
+
+			auto v1 = block2.serialize_mainchain_data();
+			v2 = block2.serialize_sidechain_data();
+			v1.insert(v1.end(), v2.begin(), v2.end());
+
+			ASSERT_EQ(v1, tip_full_blob);
+		}
+
+		if (!broadcast.compact_blob.empty()) {
+			PoolBlock block3;
+			ASSERT_EQ(block3.deserialize(broadcast.compact_blob.data(), broadcast.compact_blob.size(), sidechain, nullptr, true), 0);
+
+			auto v1 = block3.serialize_mainchain_data();
+			v2 = block3.serialize_sidechain_data();
+			v1.insert(v1.end(), v2.begin(), v2.end());
+
+			ASSERT_EQ(v1, tip_full_blob);
+		}
 	}
 
 	destroy_crypto_cache();

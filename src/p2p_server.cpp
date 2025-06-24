@@ -806,26 +806,9 @@ void P2PServer::Peer::normalize()
 	}
 }
 
-void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
+P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 {
-	// Don't broadcast blocks when shutting down
-	if (m_finished.load()) {
-		return;
-	}
-
-	MinerData miner_data = m_pool->miner_data();
-
-	if (block.m_txinGenHeight + 2 < miner_data.height) {
-		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
-		return;
-	}
-
-	if (block.m_txinGenHeight > miner_data.height + 2) {
-		LOGWARN(3, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
-		return;
-	}
-
-	Broadcast* data = new Broadcast{};
+	Broadcast* data = this;
 
 	data->id = block.m_sidechainId;
 	data->received_timestamp = block.m_receivedTimestamp;
@@ -895,6 +878,28 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->ancestor_hashes.reserve(block.m_uncles.size() + 1);
 	data->ancestor_hashes = block.m_uncles;
 	data->ancestor_hashes.push_back(block.m_parent);
+}
+
+void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
+{
+	// Don't broadcast blocks when shutting down
+	if (m_finished.load()) {
+		return;
+	}
+
+	MinerData miner_data = m_pool->miner_data();
+
+	if (block.m_txinGenHeight + 2 < miner_data.height) {
+		LOGWARN(3, "Trying to broadcast a stale block " << block.m_sidechainId << " (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
+		return;
+	}
+
+	if (block.m_txinGenHeight > miner_data.height + 2) {
+		LOGWARN(3, "Trying to broadcast a block " << block.m_sidechainId << " ahead on mainchain (mainchain height " << block.m_txinGenHeight << ", current height is " << miner_data.height << ')');
+		return;
+	}
+
+	Broadcast* data = new Broadcast(block, parent);
 
 	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " << data->compact_blob.size() << '/' << data->pruned_blob.size() << '/' << data->blob.size() << " bytes (compact/pruned/full)");
 

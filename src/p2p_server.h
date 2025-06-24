@@ -168,6 +168,19 @@ public:
 		};
 	};
 
+	struct Broadcast
+	{
+		Broadcast(const PoolBlock& block, const PoolBlock* parent);
+
+		hash id;
+		uint64_t received_timestamp;
+
+		std::vector<uint8_t> blob;
+		std::vector<uint8_t> pruned_blob;
+		std::vector<uint8_t> compact_blob;
+		std::vector<hash> ancestor_hashes;
+	};
+
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);
 	[[nodiscard]] uint64_t get_random64();
 	[[nodiscard]] uint64_t get_peerId() const { return m_peerId; }
@@ -261,17 +274,6 @@ private:
 	std::vector<Peer> m_peerList;
 	std::vector<Peer> m_peerListMonero;
 	std::atomic<uint64_t> m_peerListLastSaved;
-
-	struct Broadcast
-	{
-		hash id;
-		uint64_t received_timestamp;
-
-		std::vector<uint8_t> blob;
-		std::vector<uint8_t> pruned_blob;
-		std::vector<uint8_t> compact_blob;
-		std::vector<hash> ancestor_hashes;
-	};
 
 	uv_mutex_t m_broadcastLock;
 	uv_async_t m_broadcastAsync;
