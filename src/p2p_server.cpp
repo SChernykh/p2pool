@@ -807,11 +807,10 @@ void P2PServer::Peer::normalize()
 }
 
 P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
+	: id(block.m_sidechainId)
+	, received_timestamp(block.m_receivedTimestamp)
 {
 	Broadcast* data = this;
-
-	id = block.m_sidechainId;
-	received_timestamp = block.m_receivedTimestamp;
 
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
