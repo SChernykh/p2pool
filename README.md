@@ -87,7 +87,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 ### General Considerations
 
-- In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the official Monero binaries, start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
+- In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the [official Monero binaries](https://www.getmonero.org/downloads/), start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
 - You have to use a primary wallet address (the one starting with `4`) for mining. Subaddresses and integrated addresses are not supported, just like with monerod solo mining.
 - You can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
@@ -112,16 +112,16 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 Merge mining is available in P2Pool since the fork that happened on October 12th, 2024. Version 4.0 or newer is required to use it.
 
-- Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api)
-  - [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
-  - [DarkFi](https://dark.fi/) is going to support it, but it's [not ready yet](https://github.com/darkrenaissance/darkfi/issues/244)
-  ```
-  p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
-  ```
+Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api):
+- [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
+- [DarkFi](https://dark.fi/) is going to support it, but it's [not ready yet](https://github.com/darkrenaissance/darkfi/issues/244)
+```
+p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
+```
 
-### Tari merge mining
+Blockchains that support merge mining already: [Tari](https://www.tari.com/)
 
-[Tari](https://www.tari.com/) uses their own gRPC API and requires a different command line:
+Tari uses their own gRPC API and requires a different command line:
 ```
 ./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine tari://TARI_NODE_IP:18102 TARI_WALLET_ADDRESS
 ```
@@ -135,7 +135,7 @@ Merge mining is available on Tari's mainnet:
 - Download [Tari suite](https://github.com/tari-project/tari/releases/latest) for your OS
 - Run Minotari node and wait until in synchronizes
 - Run Minotari console wallet to create a Tari wallet
-- Copy the interactive wallet address from the "Receive" tab of the wallet
+- Copy the "Tari Address one-sided" from the "Receive" tab of the wallet
 - Paste it into the P2Pool command line above
 - Everything is ready now to start merge mining Monero and Tari!
 
