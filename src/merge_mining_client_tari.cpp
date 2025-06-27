@@ -274,6 +274,8 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 				}
 				else {
 					LOGINFO(4, "External aux job solution found, but it's stale");
+					chain_params.aux_hash = data;
+					chain_params.aux_diff = diff;
 				}
 			}
 
