@@ -32,7 +32,7 @@
 #endif
 
 #ifdef _WIN32
-#include <WinDNS.h>
+#include <windns.h>
 #elif defined(HAVE_RES_QUERY)
 #include <sys/types.h>
 #include <netinet/in.h>

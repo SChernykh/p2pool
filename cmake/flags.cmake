@@ -113,7 +113,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wno-nan-infinity-disabled -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 
 	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20))
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-error=cpp")
@@ -150,4 +150,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	set(CMAKE_CXX_FLAGS_RELEASE "")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL "")
+
+	if (STATIC_BINARY)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	endif()
 endif()
