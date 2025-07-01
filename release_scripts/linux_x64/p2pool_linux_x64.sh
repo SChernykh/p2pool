@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 export TZ=UTC0
 
@@ -40,6 +41,9 @@ mv p2pool $1
 mv ../LICENSE $1
 mv ../README.md $1
 
-tar cvf $1.tar --sort=name --owner=0 --group=0 --mtime="$CURRENT_DATE $CURRENT_TIME" $1
+chmod -R 0644 $1
+chmod 0755 $1/p2pool
+
+tar cvf $1.tar --format=pax --sort=name --owner=0 --group=0 --mtime="$CURRENT_DATE $CURRENT_TIME" $1
 touch -t $TOUCH_DATE $1.tar
 7z a -mx=9 -tgzip -stl $1.tar.gz $1.tar

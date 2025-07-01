@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 export TZ=UTC0
 
@@ -41,6 +42,9 @@ mkdir $1
 mv p2pool.exe $1
 mv ../LICENSE $1
 mv ../README.md $1
+
+chmod -R 0644 $1
+chmod 0755 $1/p2pool.exe
 
 touch -t $TOUCH_DATE $1
 touch -t $TOUCH_DATE $1/*
