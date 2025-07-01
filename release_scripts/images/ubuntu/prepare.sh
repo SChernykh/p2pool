@@ -169,7 +169,7 @@ cd /root
 
 GLIBC_FILE=glibc-$GLIBC_VERSION.tar.xz
 
-curl -L -O https://gnuftp.uib.no/glibc/$GLIBC_FILE
+curl -L -O https://ftpmirror.gnu.org/glibc/$GLIBC_FILE
 
 GLIBC_FILE_SHA256="$(sha256sum $GLIBC_FILE | awk '{ print $1 }')"
 
