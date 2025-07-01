@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # Software versions to install
 
@@ -308,10 +309,16 @@ make install-gcc
 
 echo "Install mingw-w64 CRT"
 
+# Need to do it two times for some reason - first time without pthreads, or it will fail to link.
+cd /root/mingw-w64-v$MINGW_VERSION
+CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32
+make -j$(nproc)
+make -j$(nproc) install
+
 cd /root/mingw-w64-v$MINGW_VERSION
 CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --with-libraries=winpthreads
-make
-make install
+make -j$(nproc)
+make -j$(nproc) install
 
 echo "Finish installing GCC for x86_64-w64-mingw32"
 
@@ -328,7 +335,6 @@ CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --hos
 make -j$(nproc) install-bootstrap-headers=yes install-headers
 make -j$(nproc) csu/subdir_lib
 
-mkdir /usr/local/x86_64-pc-linux-gnu/lib
 install csu/crt1.o csu/crti.o csu/crtn.o /usr/local/x86_64-pc-linux-gnu/lib
 
 gcc -nostdlib -nostartfiles -shared -x c /dev/null -o /usr/local/x86_64-pc-linux-gnu/lib/libc.so
