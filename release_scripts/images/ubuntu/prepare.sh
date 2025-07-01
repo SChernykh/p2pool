@@ -2,6 +2,7 @@
 
 # Software versions to install
 
+_7ZIP_VERSION=2409
 BINUTILS_VERSION=2_44
 CLANG_VERSION=20.1.7
 CMAKE_VERSION=4.0.3
@@ -11,6 +12,7 @@ LINUX_HEADERS_VERSION=6.15.4
 MAKE_VERSION=4.4.1
 MINGW_VERSION=12.0.0
 
+_7ZIP_SHA256="914c7e20ad5ef8e4d3cf08620ff8894b28fe11b7eb99809d6930870fbe48a281"
 CMAKE_SHA256="585ae9e013107bc8e7c7c9ce872cbdcbdff569e675b07ef57aacfb88c886faac"
 GLIBC_SHA256="a5a26b22f545d6b7d7b3dd828e11e428f24f4fac43c934fb071b6a7d0828e901"
 HEADERS_SHA256="0eafd627b602f58d73917d00e4fc3196ba18cba67df6995a42aa74744d8efa16"
@@ -21,7 +23,25 @@ echo "Install prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl p7zip bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext git gcc g++ make
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext git gcc g++ make
+
+echo "Install 7-zip"
+
+cd /root
+
+_7ZIP_FILE=7z$_7ZIP_VERSION-linux-x64.tar.xz
+
+curl -L -O https://7-zip.org/a/$_7ZIP_FILE
+
+_7ZIP_FILE_SHA256="$(sha256sum $_7ZIP_FILE | awk '{ print $1 }')"
+
+if [ $_7ZIP_FILE_SHA256 != $_7ZIP_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $_7ZIP_FILE - expected $_7ZIP_SHA256, got $_7ZIP_FILE_SHA256"
+    exit 1
+fi
+
+tar xf $_7ZIP_FILE
+cp -f 7zz /usr/local/bin/7z
 
 echo "Install GCC"
 
