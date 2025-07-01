@@ -94,7 +94,7 @@ cd /root
 MAKE_NAME=make-$MAKE_VERSION
 MAKE_FILE=$MAKE_NAME.tar.gz
 
-curl -L -O https://ftp.gnu.org/gnu/make/$MAKE_FILE
+curl -L -O https://ftpmirror.gnu.org/make/$MAKE_FILE
 
 MAKE_FILE_SHA256="$(sha256sum $MAKE_FILE | awk '{ print $1 }')"
 
@@ -317,7 +317,7 @@ cd /root/glibc_build_x86_64
 make -j$(nproc)
 make install
 
-echo "Delete system glibc files to force our glibc"
+echo "Deleting system glibc files to force our glibc"
 
 rm /usr/lib/x86_64-linux-gnu/crt1.o
 rm /usr/lib/x86_64-linux-gnu/crti.o
