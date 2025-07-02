@@ -202,7 +202,7 @@ fi
 tar xf $GLIBC_FILE
 
 mkdir glibc_build_aarch64 && cd glibc_build_aarch64
-CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --prefix=/usr/local/aarch64-linux-gnu --with-headers=/usr/local/aarch64-linux-gnu/include --disable-multilib --disable-sanity-checks libc_cv_forced_unwind=yes
+CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --prefix=/usr/local/aarch64-linux-gnu --with-headers=/usr/local/aarch64-linux-gnu/include --disable-multilib --disable-sanity-checks libc_cv_forced_unwind=yes --enable-static-nss
 make -j$(nproc) install-bootstrap-headers=yes install-headers
 make -j$(nproc) csu/subdir_lib
 install csu/crt1.o csu/crti.o csu/crtn.o /usr/local/aarch64-linux-gnu/lib
@@ -252,7 +252,7 @@ echo "Install glibc for riscv64-linux-gnu"
 cd /root
 
 mkdir glibc_build_riscv64 && cd glibc_build_riscv64
-CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=riscv64-linux-gnu --target=riscv64-linux-gnu --prefix=/usr/local/riscv64-linux-gnu --with-headers=/usr/local/riscv64-linux-gnu/include --disable-multilib --disable-sanity-checks libc_cv_forced_unwind=yes
+CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=riscv64-linux-gnu --target=riscv64-linux-gnu --prefix=/usr/local/riscv64-linux-gnu --with-headers=/usr/local/riscv64-linux-gnu/include --disable-multilib --disable-sanity-checks libc_cv_forced_unwind=yes --enable-static-nss
 make -j$(nproc) install-bootstrap-headers=yes install-headers
 make -j$(nproc) csu/subdir_lib
 install csu/crt1.o csu/crti.o csu/crtn.o /usr/local/riscv64-linux-gnu/lib
@@ -331,7 +331,7 @@ echo "Install glibc for x86_64-pc-linux-gnu"
 cd /root
 
 mkdir glibc_build_x86_64 && cd glibc_build_x86_64
-CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --target=x86_64-pc-linux-gnu --prefix=/usr/local/x86_64-pc-linux-gnu --disable-multilib
+CFLAGS='-O2' ../glibc-$GLIBC_VERSION/configure --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --target=x86_64-pc-linux-gnu --prefix=/usr/local/x86_64-pc-linux-gnu --disable-multilib --enable-static-nss
 make -j$(nproc) install-bootstrap-headers=yes install-headers
 make -j$(nproc) csu/subdir_lib
 
@@ -339,7 +339,6 @@ install csu/crt1.o csu/crti.o csu/crtn.o /usr/local/x86_64-pc-linux-gnu/lib
 
 gcc -nostdlib -nostartfiles -shared -x c /dev/null -o /usr/local/x86_64-pc-linux-gnu/lib/libc.so
 
-cd /root/glibc_build_x86_64
 make -j$(nproc)
 make install
 
