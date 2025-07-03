@@ -108,6 +108,12 @@ extern "C" void __asan_unpoison_memory_region(void const volatile* addr, size_t 
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size)
 #endif 
 
+#ifdef HAVE_NSS_MODULE_DISABLE_LOADING
+extern "C" void __nss_module_disable_loading();
+#else
+#define __nss_module_disable_loading()
+#endif
+
 namespace p2pool {
 
 constexpr size_t HASH_SIZE = 32;

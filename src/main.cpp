@@ -265,6 +265,8 @@ int main(int argc, char* argv[])
 	SymInitialize(GetCurrentProcess(), NULL, TRUE);
 #endif
 
+	__nss_module_disable_loading();
+
 	memory_tracking_start();
 
 	// Create default loop here

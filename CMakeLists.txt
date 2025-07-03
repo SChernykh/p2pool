@@ -191,6 +191,18 @@ endif()
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${HEADERS})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})
 
+include(CheckFunctionExists)
+
+if (STATIC_BINARY)
+	add_definitions(-DCURL_STATICLIB)
+
+	check_function_exists(__nss_module_disable_loading HAVE_NSS_MODULE_DISABLE_LOADING)
+
+	if (HAVE_NSS_MODULE_DISABLE_LOADING)
+		add_definitions(-DHAVE_NSS_MODULE_DISABLE_LOADING)
+	endif()
+endif()
+
 if (NOT ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS))
 	include(FindCURL)
 endif()
@@ -265,13 +277,13 @@ if(APPLE)
 	set(LIBS ${LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 endif()
 
-add_definitions(/DZMQ_STATIC)
+add_definitions(-DZMQ_STATIC)
 
 include(CheckIncludeFile)
 
 check_include_file(asm/hwcap.h HAVE_HWCAP)
 if(HAVE_HWCAP)
-	add_definitions(/DHAVE_HWCAP)
+	add_definitions(-DHAVE_HWCAP)
 endif()
 
 include(CheckCXXSourceCompiles)
@@ -348,32 +360,32 @@ int main()
 set(CMAKE_REQUIRED_LIBRARIES)
 
 if (HAVE_BUILTIN_CLZLL)
-	add_definitions(/DHAVE_BUILTIN_CLZLL)
+	add_definitions(-DHAVE_BUILTIN_CLZLL)
 endif()
 
 if (HAVE_BITSCANREVERSE64)
-	add_definitions(/DHAVE_BITSCANREVERSE64)
+	add_definitions(-DHAVE_BITSCANREVERSE64)
 endif()
 
 if (HAVE_SCHED)
-	add_definitions(/DHAVE_SCHED)
+	add_definitions(-DHAVE_SCHED)
 endif()
 
 if (HAVE_RES_QUERY)
-	add_definitions(/DHAVE_RES_QUERY)
+	add_definitions(-DHAVE_RES_QUERY)
 	if (HAVE_RESOLV_LIB)
 		set(LIBS ${LIBS} resolv)
 	endif()
 endif()
 
 if (HAVE_PTHREAD_SETNAME_NP)
-	add_definitions(/DHAVE_PTHREAD_SETNAME_NP)
+	add_definitions(-DHAVE_PTHREAD_SETNAME_NP)
 endif()
 
 add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
 
 if (WIN32 AND (CMAKE_BUILD_TYPE STREQUAL "Release"))
-	add_definitions(/DNDEBUG)
+	add_definitions(-DNDEBUG)
 endif()
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
