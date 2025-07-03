@@ -24,8 +24,12 @@ ln p2pool.tar linux_aarch64/p2pool.tar
 ln p2pool.tar linux_riscv64/p2pool.tar
 ln p2pool.tar linux_x64/p2pool.tar
 ln p2pool.tar windows_x64/p2pool.tar
+ln p2pool.tar macos_aarch64/p2pool.tar
+ln p2pool.tar macos_x64/p2pool.tar
 
 gnome-terminal --tab -- linux_aarch64/build.sh $1
 gnome-terminal --tab -- linux_riscv64/build.sh $1
 gnome-terminal --tab -- linux_x64/build.sh $1
 gnome-terminal --tab -- windows_x64/build.sh $1
+gnome-terminal --tab -- macos_aarch64/build.sh $1
+gnome-terminal --tab -- macos_x64/build.sh $1

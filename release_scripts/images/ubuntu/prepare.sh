@@ -10,6 +10,7 @@ CMAKE_VERSION=4.0.3
 GCC_VERSION=15.1.0
 GLIBC_VERSION=2.41
 LINUX_HEADERS_VERSION=6.15.4
+MACOSX_SDK_VERSION=15.5
 MAKE_VERSION=4.4.1
 MINGW_VERSION=12.0.0
 
@@ -17,6 +18,7 @@ _7ZIP_SHA256="914c7e20ad5ef8e4d3cf08620ff8894b28fe11b7eb99809d6930870fbe48a281"
 CMAKE_SHA256="585ae9e013107bc8e7c7c9ce872cbdcbdff569e675b07ef57aacfb88c886faac"
 GLIBC_SHA256="a5a26b22f545d6b7d7b3dd828e11e428f24f4fac43c934fb071b6a7d0828e901"
 HEADERS_SHA256="0eafd627b602f58d73917d00e4fc3196ba18cba67df6995a42aa74744d8efa16"
+MACOSX_SDK_SHA256="c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 
 echo "Install prerequisites"
@@ -24,7 +26,7 @@ echo "Install prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext git gcc g++ make
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext patch git gcc g++ make
 
 echo "Install 7-zip"
 
@@ -341,6 +343,35 @@ gcc -nostdlib -nostartfiles -shared -x c /dev/null -o /usr/local/x86_64-pc-linux
 
 make -j$(nproc)
 make install
+
+echo "Get osxcross"
+
+cd /root
+
+git clone --branch 2.0-llvm-based https://github.com/tpoechtrager/osxcross
+cd osxcross
+git checkout cb444e230e815c06202bef1c30eca5d353235a05
+
+echo "Get MacOSX $MACOSX_SDK_VERSION SDK"
+
+cd /root/osxcross/tarballs
+
+MACOSX_SDK_FILE=MacOSX$MACOSX_SDK_VERSION.sdk.tar.xz
+
+curl -L -O https://github.com/joseluisq/macosx-sdks/releases/download/$MACOSX_SDK_VERSION/$MACOSX_SDK_FILE
+
+MACOSX_SDK_FILE_SHA256="$(sha256sum $MACOSX_SDK_FILE | awk '{ print $1 }')"
+
+if [ $MACOSX_SDK_FILE_SHA256 != $MACOSX_SDK_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $MACOSX_SDK_FILE - expected $MACOSX_SDK_SHA256, got $MACOSX_SDK_FILE_SHA256"
+    exit 1
+fi
+
+echo "Build MacOSX cross compilers"
+
+cd /root/osxcross
+TARGET_DIR=/usr/local OSX_VERSION_MIN=10.15 UNATTENDED=1 ./build.sh
+./build_compiler_rt.sh
 
 echo "Deleting system glibc files to force our glibc"
 
