@@ -7,6 +7,7 @@ _7ZIP_VERSION=2409
 BINUTILS_VERSION=2_44
 CLANG_VERSION=20.1.7
 CMAKE_VERSION=4.0.3
+FREEBSD_VERSION=12.4
 GCC_VERSION=15.1.0
 GLIBC_VERSION=2.41
 LINUX_HEADERS_VERSION=6.15.4
@@ -16,6 +17,8 @@ MINGW_VERSION=12.0.0
 
 _7ZIP_SHA256="914c7e20ad5ef8e4d3cf08620ff8894b28fe11b7eb99809d6930870fbe48a281"
 CMAKE_SHA256="585ae9e013107bc8e7c7c9ce872cbdcbdff569e675b07ef57aacfb88c886faac"
+FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
+FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
 GLIBC_SHA256="a5a26b22f545d6b7d7b3dd828e11e428f24f4fac43c934fb071b6a7d0828e901"
 HEADERS_SHA256="0eafd627b602f58d73917d00e4fc3196ba18cba67df6995a42aa74744d8efa16"
 MACOSX_SDK_SHA256="c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd"
@@ -297,7 +300,7 @@ git clone --depth=1 --branch v$MINGW_VERSION https://git.code.sf.net/p/mingw-w64
 rm -rf mingw-w64-v$MINGW_VERSION/.git
 
 cd mingw-w64-v$MINGW_VERSION/mingw-w64-headers
-CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32
+CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --with-default-msvcrt=msvcrt --with-default-win32-winnt=0x0600
 make install
 
 echo "Install GCC for x86_64-w64-mingw32"
@@ -313,12 +316,12 @@ echo "Install mingw-w64 CRT"
 
 # Need to do it two times for some reason - first time without pthreads, or it will fail to link.
 cd /root/mingw-w64-v$MINGW_VERSION
-CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32
+CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --with-default-msvcrt=msvcrt --with-default-win32-winnt=0x0600
 make -j$(nproc)
 make -j$(nproc) install
 
 cd /root/mingw-w64-v$MINGW_VERSION
-CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --with-libraries=winpthreads
+CFLAGS='-O2' ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --with-default-msvcrt=msvcrt --with-default-win32-winnt=0x0600 --with-libraries=winpthreads
 make -j$(nproc)
 make -j$(nproc) install
 
@@ -372,6 +375,41 @@ echo "Build MacOSX cross compilers"
 cd /root/osxcross
 TARGET_DIR=/usr/local OSX_VERSION_MIN=10.15 UNATTENDED=1 ./build.sh
 ./build_compiler_rt.sh
+
+echo "Install FreeBSD $FREEBSD_VERSION SDK"
+
+cd /usr/local
+
+FREEBSD_FILE=base.txz
+
+mkdir cross-freebsd-x86_64 && mkdir cross-freebsd-aarch64
+curl -L -Z -o cross-freebsd-x86_64/$FREEBSD_FILE -o cross-freebsd-aarch64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE https://archive.freebsd.org/old-releases/arm64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE
+
+cd /usr/local/cross-freebsd-x86_64
+
+FREEBSD_X86_64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
+
+if [ $FREEBSD_X86_64_FILE_SHA256 != $FREEBSD_X86_64_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_X86_64_SHA256, got $FREEBSD_X86_64_FILE_SHA256"
+    exit 1
+fi
+
+tar -xf $FREEBSD_FILE ./lib/ ./usr/lib/ ./usr/include/
+rm $FREEBSD_FILE
+#find /usr/local/cross-freebsd-x86_64/usr/lib -xtype l|xargs ls -l|grep ' /lib/'|awk '{print "ln -sf /usr/local/cross-freebsd-x86_64"$11 " " $9}'|/bin/sh
+
+cd /usr/local/cross-freebsd-aarch64
+
+FREEBSD_AARCH64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
+
+if [ $FREEBSD_AARCH64_FILE_SHA256 != $FREEBSD_AARCH64_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_AARCH64_SHA256, got $FREEBSD_AARCH64_FILE_SHA256"
+    exit 1
+fi
+
+tar -xf $FREEBSD_FILE ./lib/ ./usr/lib/ ./usr/include/
+rm $FREEBSD_FILE
+#find /usr/local/cross-freebsd-aarch64/usr/lib -xtype l|xargs ls -l|grep ' /lib/'|awk '{print "ln -sf /usr/local/cross-freebsd-aarch64"$11 " " $9}'|/bin/sh
 
 echo "Deleting system glibc files to force our glibc"
 
