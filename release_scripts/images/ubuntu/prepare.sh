@@ -14,6 +14,7 @@ LINUX_HEADERS_VERSION=6.15.4
 MACOSX_SDK_VERSION=15.5
 MAKE_VERSION=4.4.1
 MINGW_VERSION=12.0.0
+XZ_VERSION=5.8.1
 
 _7ZIP_SHA256="914c7e20ad5ef8e4d3cf08620ff8894b28fe11b7eb99809d6930870fbe48a281"
 CMAKE_SHA256="585ae9e013107bc8e7c7c9ce872cbdcbdff569e675b07ef57aacfb88c886faac"
@@ -410,6 +411,21 @@ fi
 tar -xf $FREEBSD_FILE ./lib/ ./usr/lib/ ./usr/include/
 rm $FREEBSD_FILE
 #find /usr/local/cross-freebsd-aarch64/usr/lib -xtype l|xargs ls -l|grep ' /lib/'|awk '{print "ln -sf /usr/local/cross-freebsd-aarch64"$11 " " $9}'|/bin/sh
+
+echo "Install xz"
+
+apt-get remove -yq xz-utils
+
+cd /root
+
+git clone --depth=1 --branch v$XZ_VERSION https://github.com/tukaani-project/xz
+cd xz
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
+make -j$(nproc)
+
+cp -f lzma* /usr/bin
+cp -f xz* /usr/bin
 
 echo "Deleting system glibc files to force our glibc"
 

@@ -37,3 +37,4 @@ gnome-terminal --tab -- linux_x64/build.sh $1
 gnome-terminal --tab -- windows_x64/build.sh $1
 gnome-terminal --tab -- macos_aarch64/build.sh $1
 gnome-terminal --tab -- macos_x64/build.sh $1
+gnome-terminal --tab -- source/build.sh $1
