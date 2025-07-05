@@ -439,4 +439,9 @@ echo "Deleting temporary files"
 cd /root
 rm -rf *
 
+echo "Cloning the repository"
+
+cd /
+git clone --recursive --jobs $(nproc) https://github.com/SChernykh/p2pool
+
 echo "All done"

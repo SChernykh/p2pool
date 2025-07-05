@@ -17,18 +17,6 @@ if [ $? -ne 0 ]; then
 	images/ubuntu/build.sh
 fi
 
-rm -f p2pool.tar
-tar -f p2pool.tar -c ../cmake -c ../external -c ../patches -c ../src -c ../CMakeLists.txt -c ../LICENSE -c ../README.md
-
-ln p2pool.tar freebsd_aarch64/p2pool.tar
-ln p2pool.tar freebsd_x64/p2pool.tar
-ln p2pool.tar linux_aarch64/p2pool.tar
-ln p2pool.tar linux_riscv64/p2pool.tar
-ln p2pool.tar linux_x64/p2pool.tar
-ln p2pool.tar windows_x64/p2pool.tar
-ln p2pool.tar macos_aarch64/p2pool.tar
-ln p2pool.tar macos_x64/p2pool.tar
-
 gnome-terminal --tab -- freebsd_aarch64/build.sh $1
 gnome-terminal --tab -- freebsd_x64/build.sh $1
 gnome-terminal --tab -- linux_aarch64/build.sh $1

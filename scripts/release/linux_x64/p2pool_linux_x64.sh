@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+cd /p2pool
+git fetch --jobs=$(nproc)
+git checkout $3
+git submodule update --recursive --jobs $(nproc)
+
 export TZ=UTC0
 
 CURRENT_DATE=$(date -u -d @$2 +"%Y-%m-%d")
