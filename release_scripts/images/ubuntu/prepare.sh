@@ -433,3 +433,10 @@ rm /usr/lib/x86_64-linux-gnu/crt1.o
 rm /usr/lib/x86_64-linux-gnu/crti.o
 rm /usr/lib/x86_64-linux-gnu/crtn.o
 rm /usr/lib/x86_64-linux-gnu/libc.a
+
+echo "Deleting temporary files"
+
+cd /root
+rm -rf *
+
+echo "All done"

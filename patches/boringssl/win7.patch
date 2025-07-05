@@ -14,7 +14,7 @@ index a44774d23..09cf10942 100644
  // See: https://learn.microsoft.com/en-us/windows/win32/seccng/processprng
  typedef BOOL (WINAPI *ProcessPrngFunction)(PBYTE pbData, SIZE_T cbData);
  static ProcessPrngFunction g_processprng_fn = NULL;
-+static HCRYPTPROV g_hCryptProv = NULL;
++static HCRYPTPROV g_hCryptProv = 0;
 +
 +static BOOL WINAPI wrapper_CryptGenRandom(PBYTE pbData, SIZE_T cbData)
 +{

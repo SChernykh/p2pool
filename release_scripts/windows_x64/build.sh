@@ -3,7 +3,7 @@
 # Example usage: ./build.sh v4.8.1
 
 cd "$(dirname "$0")"
-[ ! -f "p2pool.tar" ] && tar -f p2pool.tar -c ../../cmake -c ../../external -c ../../src -c ../../CMakeLists.txt -c ../../LICENSE -c ../../README.md
+[ ! -f "p2pool.tar" ] && tar -f p2pool.tar -c ../../cmake -c ../../external -c ../../patches -c ../../src -c ../../CMakeLists.txt -c ../../LICENSE -c ../../README.md
 
 docker build --build-arg P2POOL_VERSION=$1 --build-arg BUILD_TIMESTAMP="$(git show --no-patch --format=%ct $1)" -t p2pool_windows_x64_build .
 
