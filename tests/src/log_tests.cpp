@@ -83,11 +83,10 @@ void check_number(T value)
 	log::Stream s(buf);
 	s << log::BasedValue<T, hex ? 16 : 10>(value) << '\0';
 
-	char buf2[N];
-	memset(buf2, -1, N);
-	snprintf(buf2, N, hex ? "%llx" : (std::is_signed<T>::value ? "%lld" : "%llu"), value);
+	std::stringstream s2;
+	s2 << (hex ? std::hex : std::dec) << value;
 
-	ASSERT_EQ(memcmp(buf, buf2, N), 0);
+	ASSERT_EQ(strcmp(buf, s2.str().c_str()), 0);
 }
 
 TEST(log, numbers)
