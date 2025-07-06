@@ -1,12 +1,6 @@
 #!/bin/sh
 
-# Example usage:
-#
-# git clone --recursive https://github.com/SChernykh/p2pool
-# cd p2pool
-# git checkout v4.9
-# release_scripts/build_all.sh v4.9
-#
+# Example usage: release_scripts/build_all.sh v4.8.1
 
 cd "$(dirname "$0")"
 
