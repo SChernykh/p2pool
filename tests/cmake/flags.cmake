@@ -51,7 +51,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		set(GENERAL_FLAGS "-pthread")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal")
+	set(WARNING_FLAGS "-Wall -Wextra -Wno-undefined-internal -Wno-nan-infinity-disabled -Wno-unknown-warning-option")
 
 	if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 		set(OPTIMIZATION_FLAGS "-O0 -g3")

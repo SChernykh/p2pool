@@ -6,7 +6,7 @@ echo "Installing prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex git gcc g++ cmake make libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex lsb-release wget software-properties-common gnupg git gcc g++ cmake make libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
 
 echo "Installing GCC 8.5.0"
 
@@ -119,6 +119,18 @@ mkdir build && cd build
 ../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-15
 make -j$(nproc)
 make install
+
+echo "Installing clang"
+
+cd /root
+
+curl -L -O https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+
+for i in 17 18 19 20;
+do
+	./llvm.sh $i
+done
 
 echo "Cloning the repository"
 

@@ -15,3 +15,8 @@ for i in 8 9 10 11 12 13 14 15;
 do
 	gcc/build.sh $1 $i
 done
+
+for i in 17 18 19 20;
+do
+	clang/build.sh $1 $i
+done
