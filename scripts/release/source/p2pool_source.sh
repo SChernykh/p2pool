@@ -8,9 +8,10 @@ git submodule update --recursive --jobs $(nproc)
 
 export TZ=UTC0
 
-CURRENT_DATE=$(date -u -d @$2 +"%Y-%m-%d")
-CURRENT_TIME=$(date -u -d @$2 +"%H:%M:%S")
-TOUCH_DATE=$(date -u -d @$2 +"%Y%m%d%H%M.%S")
+BUILD_TIMESTAMP=$(git show --no-patch --format=%ct $1)
+CURRENT_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y-%m-%d")
+CURRENT_TIME=$(date -u -d @$BUILD_TIMESTAMP +"%H:%M:%S")
+TOUCH_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y%m%d%H%M.%S")
 
 cd /
 

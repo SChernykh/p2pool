@@ -3,14 +3,15 @@ set -e
 
 cd /p2pool
 git fetch --jobs=$(nproc)
-git checkout $3
+git checkout $2
 git submodule update --recursive --jobs $(nproc)
 
 export TZ=UTC0
 
-CURRENT_DATE=$(date -u -d @$2 +"%Y-%m-%d")
-CURRENT_TIME=$(date -u -d @$2 +"%H:%M:%S")
-TOUCH_DATE=$(date -u -d @$2 +"%Y%m%d%H%M.%S")
+BUILD_TIMESTAMP=$(git show --no-patch --format=%ct $2)
+CURRENT_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y-%m-%d")
+CURRENT_TIME=$(date -u -d @$BUILD_TIMESTAMP +"%H:%M:%S")
+TOUCH_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y%m%d%H%M.%S")
 
 flags_size="-ffunction-sections -fdata-sections -Wl,-s -Wl,--gc-sections"
 flags_datetime="-D__DATE__=\"\\\"$CURRENT_DATE\\\"\" -D__TIME__=\"\\\"$CURRENT_TIME\\\"\" -Wno-builtin-macro-redefined"
