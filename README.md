@@ -32,6 +32,7 @@ These are 3rd-party pages. If they are down, it doesn't mean there is a problem 
   - [GNU/Linux](#gnulinux)
   - [Windows](#windows)
 - [Build instructions](#build-instructions)
+- [Reproducible builds](#reproducible-builds)
 - [Donations](#donations)
 
 ## Pool mining vs Solo mining vs P2Pool mining
@@ -356,6 +357,29 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)
 ```
+
+## Reproducible builds
+
+Starting from v4.9, P2Pool uses [reproducible builds](https://en.wikipedia.org/wiki/Reproducible_builds) to create the release binaries. This allows verification that no vulnerabilities or backdoors have been introduced during the compilation process, and that the compiled binaries correspond to the source code.
+
+It removes the need for trust that the author or maintainer of the code is not malicious/compromised, and that the build server is not compromised.
+
+Anyone can run the same build script on the same source code, and get the same release binaries in the end, confirming their authenticity.
+
+Prerequisites: Ubuntu with Docker and Git installed.
+
+Example of building v4.9 release binaries:
+
+```
+git clone --branch v4.9 --recursive https://github.com/SChernykh/p2pool
+p2pool/scripts/release/build_all.sh v4.9
+```
+The binaries will be created in `p2pool/scripts/release` folder. First time you run it, it will take up to several hours to first build the Docker image with all the necessary tools in it. Wait until all builds are finished and then run
+```
+cd p2pool/scripts/release
+./gen_sums.sh
+```
+to generate the hash sums and compare them with the official release's hash sums.
 
 ## Donations
 
