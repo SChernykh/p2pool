@@ -381,12 +381,13 @@ void show_top_10_allocations();
 void minidump_and_crash(size_t delay);
 #endif
 
+std::string p2pool_version();
+
 } // namespace p2pool
 
 void memory_tracking_start();
 bool memory_tracking_stop();
 void p2pool_usage();
-void p2pool_version();
 int p2pool_test();
 
 namespace robin_hood {

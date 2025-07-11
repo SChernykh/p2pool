@@ -119,11 +119,6 @@ void p2pool_usage()
 	);
 }
 
-void p2pool_version()
-{
-	printf("P2Pool %s\n", p2pool::VERSION);
-}
-
 int p2pool_test()
 {
 	printf("Self-test started\n");
@@ -232,7 +227,7 @@ int main(int argc, char* argv[])
 		}
 
 		if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "/version") || !strcmp(argv[i], "-v") || !strcmp(argv[i], "/v")) {
-			p2pool_version();
+			puts(p2pool::p2pool_version().c_str());
 			return 0;
 		}
 

@@ -40,6 +40,19 @@
 #include <resolv.h>
 #endif
 
+#include <curl/curl.h>
+#include <zmq.h>
+
+#ifdef HAVE_GLIBC
+#include <gnu/libc-version.h>
+#endif
+
+#ifdef WITH_GRPC
+#include <grpc/include/grpcpp/version_info.h>
+#endif
+
+#include <rapidjson/rapidjson.h>
+
 LOG_CATEGORY(Util)
 
 namespace p2pool {
@@ -59,6 +72,36 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 	" with MSVC/" STR2(_MSC_VER)
 #endif
 " on " __DATE__ ")";
+
+std::string p2pool_version()
+{
+	const curl_version_info_data* curl_version = curl_version_info(CURLVERSION_NOW);
+
+	int zmq_major, zmq_minor, zmq_patch;
+	zmq_version(&zmq_major, &zmq_minor, &zmq_patch);
+
+	char buf[384] = {};
+	log::Stream s(buf);
+
+	s << "P2Pool " << VERSION << '\n'
+		<< "\nDependencies:\n"
+#ifdef HAVE_GLIBC
+		<< " - glibc " << gnu_get_libc_version() << '-' << gnu_get_libc_release() << '\n'
+#endif
+#ifdef WITH_GRPC
+		<< " - grpc " << GRPC_CPP_VERSION_STRING << '\n'
+#endif
+		<< " - libcurl " << (curl_version ? curl_version->version : "unknown") << '\n'
+		<< " - libuv " << uv_version_string() << '\n'
+		<< " - libzmq " << zmq_major << '.' << zmq_minor << '.' << zmq_patch << '\n'
+#ifdef WITH_UPNP
+		<< " - miniupnpc " << MINIUPNPC_VERSION << '\n'
+#endif
+		<< " - rapidjson " << RAPIDJSON_VERSION_STRING << '\n'
+	;
+
+	return std::string(buf, s.m_pos);
+}
 
 const uint8_t ED25519_MASTER_PUBLIC_KEY[32] = {51,175,37,73,203,241,188,115,195,255,123,53,218,120,90,74,186,240,82,178,67,139,124,91,180,106,188,181,187,51,236,10};
 

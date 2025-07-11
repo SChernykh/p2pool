@@ -330,7 +330,7 @@ static void do_exit(p2pool *m_pool, const char * /* args */)
 // cppcheck-suppress constParameterCallback
 static void do_version(p2pool* m_pool, const char* /* args */)
 {
-	LOGINFO(0, log::LightCyan() << VERSION);
+	LOGINFO(0, log::LightCyan() << p2pool_version());
 
 	const P2PServer* p2p = m_pool->p2p_server();
 	if (p2p) {

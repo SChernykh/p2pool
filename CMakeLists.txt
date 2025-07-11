@@ -382,6 +382,12 @@ if (HAVE_PTHREAD_SETNAME_NP)
 	add_definitions(-DHAVE_PTHREAD_SETNAME_NP)
 endif()
 
+check_c_source_compiles("#include <gnu/libc-version.h>\nint main() { return (gnu_get_libc_version() && gnu_get_libc_release()) ? 0 : 1; }" HAVE_GLIBC)
+
+if (HAVE_GLIBC)
+	add_definitions(-DHAVE_GLIBC)
+endif()
+
 add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
 
 if (WIN32 AND (CMAKE_BUILD_TYPE STREQUAL "Release"))
