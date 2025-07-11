@@ -75,7 +75,7 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 
 std::string p2pool_version()
 {
-	const curl_version_info_data* curl_version = curl_version_info(CURLVERSION_NOW);
+	const curl_version_info_data* curl_version_data = curl_version_info(CURLVERSION_NOW);
 
 	int zmq_major, zmq_minor, zmq_patch;
 	zmq_version(&zmq_major, &zmq_minor, &zmq_patch);
@@ -91,7 +91,7 @@ std::string p2pool_version()
 #ifdef WITH_GRPC
 		<< " - grpc " << GRPC_CPP_VERSION_STRING << '\n'
 #endif
-		<< " - libcurl " << (curl_version ? curl_version->version : "unknown") << '\n'
+		<< " - libcurl " << (curl_version_data ? curl_version_data->version : "unknown") << '\n'
 		<< " - libuv " << uv_version_string() << '\n'
 		<< " - libzmq " << zmq_major << '.' << zmq_minor << '.' << zmq_patch << '\n'
 #ifdef WITH_UPNP
