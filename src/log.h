@@ -168,6 +168,11 @@ template<> struct Stream::Entry<const char*>
 	static FORCEINLINE void put(const char* data, Stream* wrapper) { wrapper->writeBuf(data, strlen(data)); }
 };
 
+template<> struct Stream::Entry<const char* const>
+{
+	static FORCEINLINE void put(const char* const data, Stream* wrapper) { wrapper->writeBuf(data, strlen(data)); }
+};
+
 template<> struct Stream::Entry<char*>
 {
 	// cppcheck-suppress constParameterPointer
