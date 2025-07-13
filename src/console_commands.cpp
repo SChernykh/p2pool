@@ -203,9 +203,14 @@ static void do_help(p2pool * /* m_pool */, const char * /* args */)
 
 static void do_status(p2pool *m_pool, const char * /* args */)
 {
-	m_pool->side_chain().print_status();
-	if (m_pool->stratum_server()) {
-		m_pool->stratum_server()->print_status();
+	const SideChain& c = m_pool->side_chain();
+
+	c.print_status();
+
+	StratumServer* stratum = m_pool->stratum_server();
+
+	if (stratum) {
+		stratum->print_status();
 	}
 
 	P2PServer* p2p = m_pool->p2p_server();
@@ -223,6 +228,72 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 
 	if (p2p) {
 		p2p->check_for_updates(true);
+	}
+
+	int node_health = 10;
+	std::vector<const char*> comments;
+
+	if (!stratum) {
+		node_health = 0;
+		comments.push_back("Stratum server not loaded");
+	}
+
+	if (!p2p) {
+		node_health = 0;
+		comments.push_back("P2P server not loaded");
+	}
+	else if (p2p->num_connections() == 0) {
+		node_health = 0;
+		comments.push_back("No p2p connections");
+	}
+	else if (p2p->num_incoming_connections() == 0) {
+		node_health -= 1;
+		comments.push_back("No incoming p2p connections");
+	}
+
+	const PoolBlock* tip = c.chainTip();
+
+	if (!tip) {
+		node_health = 0;
+		comments.push_back("Sidechain not loaded");
+	}
+	else if (!c.precalcFinished()) {
+		node_health -= 1;
+		comments.push_back("Sidechain just synced, it needs a few minutes to confirm that everything is ok");
+	}
+
+	const MinerData data = m_pool->miner_data();
+
+	if (tip && (data.height < tip->m_txinGenHeight)) {
+		node_health -= 5;
+		comments.push_back("Your Monero node is lagging");
+	}
+
+	if (stratum && (stratum->num_connections() == 0)) {
+		node_health -= 1;
+		comments.push_back("No stratum connections");
+	}
+
+	char buf[64] = {};
+
+	log::Stream s(buf);
+
+	if (node_health >= 8) {
+		s << log::LightGreen();
+	}
+	else if (node_health >= 5) {
+		s << log::LightYellow();
+	}
+	else {
+		s << log::LightRed();
+	}
+
+	s << "Node health: " << std::max(node_health, 0) << "/10";
+
+	LOGINFO(0, log::const_buf(buf, s.m_pos));
+
+	for (const char* comment : comments) {
+		LOGINFO(0, log::LightYellow() << comment);
 	}
 }
 

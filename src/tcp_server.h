@@ -140,6 +140,9 @@ public:
 	template<typename T>
 	[[nodiscard]] FORCEINLINE bool send(Client* client, T&& callback, bool raw = false) { return send_internal(client, Callback<size_t, uint8_t*, size_t>::Derived<T>(std::move(callback)), raw); }
 
+	[[nodiscard]] FORCEINLINE uint32_t num_connections() const { return m_numConnections.load(); }
+	[[nodiscard]] FORCEINLINE uint32_t num_incoming_connections() const { return m_numIncomingConnections.load(); }
+
 private:
 	static void on_new_connection(uv_stream_t* server, int status);
 	static void on_connection_close(uv_handle_t* handle);
