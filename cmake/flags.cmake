@@ -24,7 +24,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 	endif()
 
 	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15))
-		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-error=cpp")
+		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-cpp")
 	endif()
 
 	if (DISABLE_WARNINGS)
@@ -116,7 +116,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wno-unknown-warning-option -Wno-nan-infinity-disabled -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 
 	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20))
-		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-error=cpp")
+		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-cpp")
 	endif()
 
 	if (DISABLE_WARNINGS)

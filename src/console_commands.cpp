@@ -274,23 +274,17 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 		comments.push_back("No stratum connections");
 	}
 
-	char buf[64] = {};
+	auto health_color = [](int health) {
+		if (health >= 8) {
+			return log::LightGreen::value;
+		}
+		if (health >= 5) {
+			return log::LightYellow::value;
+		}
+		return log::LightRed::value;
+	};
 
-	log::Stream s(buf);
-
-	if (node_health >= 8) {
-		s << log::LightGreen();
-	}
-	else if (node_health >= 5) {
-		s << log::LightYellow();
-	}
-	else {
-		s << log::LightRed();
-	}
-
-	s << "Node health: " << std::max(node_health, 0) << "/10";
-
-	LOGINFO(0, log::const_buf(buf, s.m_pos));
+	LOGINFO(0, health_color(node_health) << "Node health: " << std::max(node_health, 0) << "/10");
 
 	for (const char* comment : comments) {
 		LOGINFO(0, log::LightYellow() << comment);

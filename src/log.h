@@ -130,7 +130,7 @@ struct Writer : public Stream
 };
 
 #define COLOR_ENTRY(x, s) \
-struct x{}; \
+struct x{ static constexpr const char value[] = s; }; \
 template<> struct Stream::Entry<x> { static FORCEINLINE void put(x&&, Stream* wrapper) { wrapper->writeBuf(s, sizeof(s) - 1); } };
 
 COLOR_ENTRY(NoColor,      "\x1b[0m")
@@ -527,11 +527,19 @@ template<> struct log::Stream::Entry<raw_ip> { static NOINLINE void put(const ra
 template<> struct log::Stream::Entry<Wallet> { static NOINLINE void put(const Wallet& w, Stream* wrapper); };
 
 namespace {
-	template<log::Severity severity> void apply_severity(log::Stream&);
-
-	template<> FORCEINLINE void apply_severity<log::Severity::Info>(log::Stream& s) { s << log::NoColor(); }
-	template<> FORCEINLINE void apply_severity<log::Severity::Warning>(log::Stream& s) { s << log::Yellow(); }
-	template<> FORCEINLINE void apply_severity<log::Severity::Error>(log::Stream& s) { s << log::Red(); }
+	template<log::Severity severity>
+	FORCEINLINE void apply_severity(log::Stream& s)
+	{
+		if constexpr (severity == log::Severity::Info) {
+			s << log::NoColor::value;
+		}
+		else if constexpr (severity == log::Severity::Warning) {
+			s << log::Yellow::value;
+		}
+		else if constexpr (severity == log::Severity::Error) {
+			s << log::Red::value;
+		}
+	}
 }
 
 #define CONCAT(a, b) CONCAT2(a, b)
