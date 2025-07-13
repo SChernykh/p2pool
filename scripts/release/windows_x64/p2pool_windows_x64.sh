@@ -57,4 +57,4 @@ chmod 0755 $1/p2pool.exe
 
 touch -t $TOUCH_DATE $1
 touch -t $TOUCH_DATE $1/*
-7z a -mx=9 -tzip -stl $1.zip $1
+7z a -tzip -mx9 -mfb256 -stl $1.zip $1
