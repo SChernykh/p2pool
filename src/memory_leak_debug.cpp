@@ -80,8 +80,11 @@ struct TrackedAllocation
 
 				printf("%-25s %s (line %lu)\n", file_name ? file_name : line.FileName, s, line.LineNumber);
 
-				if (!is_grpc && ((strstr(s, "grpc::") == s) || (strstr(s, "grpc_core::") == s) || (strstr(s, "grpc_init") == s))) {
-					is_grpc = true;
+				if (!is_grpc) {
+					is_grpc = (strstr(s, "grpc::") == s) ||
+						(strstr(s, "grpc_core::") == s) ||
+						(strstr(s, "grpc_event_engine::") == s) ||
+						(strstr(s, "grpc_init") == s);
 				}
 			}
 		}
