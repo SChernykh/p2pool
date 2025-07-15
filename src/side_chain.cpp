@@ -2065,7 +2065,15 @@ void SideChain::update_depths(PoolBlock* block)
 		blocks_to_update.pop_back();
 
 		// Verify this block and possibly other blocks on top of it when we're sure it will get verified
-		if (!block->m_verified && ((block->m_depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH) || (block->m_sidechainHeight == 0))) {
+		//
+		// Block at exactly "N = (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH" can have an uncle at "N + UNCLE_BLOCK_DEPTH"
+		// This uncle has a parent at "N + UNCLE_BLOCK_DEPTH + 1"
+		//
+		// So a block at "N = (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH" can be safely validated if there is a block
+		// at depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH * 2
+		//
+
+		if (!block->m_verified && ((block->m_depth > (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH * 2) || (block->m_sidechainHeight == 0))) {
 			verify_loop(block);
 		}
 
@@ -2135,7 +2143,7 @@ void SideChain::update_depths(PoolBlock* block)
 void SideChain::prune_old_blocks()
 {
 	// Leave 2 minutes worth of spare blocks in addition to 2xPPLNS window for lagging nodes which need to sync
-	const uint64_t prune_distance = m_chainWindowSize * 2 + MONERO_BLOCK_TIME / m_targetBlockTime;
+	const uint64_t prune_distance = (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH * 2 + MONERO_BLOCK_TIME / m_targetBlockTime;
 
 	// Remove old blocks from alternative unconnected chains after long enough time
 	const uint64_t cur_time = seconds_since_epoch();
