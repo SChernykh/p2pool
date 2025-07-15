@@ -20,7 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev lcov
+        sudo apt install -y cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev lcov xz-utils
 
     - name: Install clang
       run: |
@@ -44,7 +44,7 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        gunzip *.gz
+        unxz *.xz
         LLVM_PROFILE_FILE="p2pool_tests.profraw" ./p2pool_tests
 
     - name: Merge profile data

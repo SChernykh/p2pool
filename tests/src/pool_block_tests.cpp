@@ -140,26 +140,20 @@ TEST(pool_block, verify)
 		uint32_t m_expectedSharesNextBlock;
 		bool m_shuffle;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3258121, 9443762, 30, false },
-		{ "default", "sidechain_dump.dat", 3258121, 9443762, 30, true },
-		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, 593, false },
-		{ "mini", "sidechain_dump_mini.dat", 3258121, 8912067, 593, true },
-		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, 131, false },
-		{ "nano", "sidechain_dump_nano.dat", 3438036, 116651, 131, true },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true },
 	};
 
 	for (const STest& t : tests)
 	{
 		SideChain sidechain(nullptr, NetworkType::Mainnet, t.m_poolName);
 
-		if (strcmp(t.m_poolName, "nano") == 0) {
-			// Difficulty of block 3436544
-			sidechain.m_testMainChainDiff = difficulty_type(568969201978ULL, 0ULL);
-		}
-		else {
-			// Difficulty of block 3256320
-			sidechain.m_testMainChainDiff = difficulty_type(374140388237ULL, 0ULL);
-		}
+		// Difficulty of block 3454976
+		sidechain.m_testMainChainDiff = difficulty_type(625461936742ULL, 0ULL);
 
 		std::ifstream f(t.m_fileName, std::ios::binary | std::ios::ate);
 		ASSERT_EQ(f.good() && f.is_open(), true);

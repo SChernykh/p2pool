@@ -238,7 +238,7 @@ TEST(block_template, submit_sidechain_block)
 	}
 
 	ASSERT_EQ(sidechain.difficulty(), 219467);
-	ASSERT_EQ(sidechain.blocksById().size(), 4487);
+	ASSERT_EQ(sidechain.blocksById().size(), 4491);
 	ASSERT_TRUE(sidechain.precalcFinished());
 
 	const PoolBlock* tip = sidechain.chainTip();
