@@ -51,7 +51,10 @@ private:
 	};
 
 	uint64_t m_previousAuxHashes[NUM_PREVIOUS_HASHES];
+	tari::rpc::Block m_previousTariBlocks[NUM_PREVIOUS_HASHES];
 	uint32_t m_previousAuxHashesIndex;
+
+	std::atomic<uint32_t> m_previousAuxHashesFoundIndex;
 
 	tari::rpc::Block m_tariBlock;
 

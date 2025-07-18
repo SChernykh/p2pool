@@ -38,6 +38,7 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	, m_chainParamsTimestamp(0)
 	, m_previousAuxHashes{}
 	, m_previousAuxHashesIndex(0)
+	, m_previousAuxHashesFoundIndex(std::numeric_limits<uint32_t>::max())
 	, m_auxWallet(wallet)
 	, m_pool(pool)
 	, m_tariJobParams{}
@@ -265,10 +266,18 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		// If it's our aux chain, check that it's the same job and that there is enough PoW
 		if (i.first == chain_params.aux_id) {
 			if ((data != chain_params.aux_hash) || (diff != chain_params.aux_diff)) {
-				const uint64_t* a = previous_aux_hashes;
-				const uint64_t* b = previous_aux_hashes + NUM_PREVIOUS_HASHES;
+				uint32_t index = std::numeric_limits<uint32_t>::max();
 
-				if (std::find(a, b, *data.u64()) == b) {
+				for (uint32_t k = 0; k < NUM_PREVIOUS_HASHES; ++k) {
+					if (previous_aux_hashes[k] == *data.u64()) {
+						index = k;
+						break;
+					}
+				}
+
+				m_previousAuxHashesFoundIndex = index;
+
+				if (index == std::numeric_limits<uint32_t>::max()) {
 					LOGINFO(4, "External aux job solution found, but it's for another miner");
 					return;
 				}
@@ -388,7 +397,9 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 	Block block;
 	{
 		ReadLock lock(m_chainParamsLock);
-		block = m_tariBlock;
+
+		const uint32_t index = m_previousAuxHashesFoundIndex.exchange(std::numeric_limits<uint32_t>::max());
+		block = (index < NUM_PREVIOUS_HASHES) ? m_previousTariBlocks[index] : m_tariBlock;
 	}
 
 	ProofOfWork* pow = block.mutable_header()->mutable_pow();
@@ -744,7 +755,10 @@ void MergeMiningClientTari::run()
 
 							chain_id = m_chainParams.aux_id;
 
-							m_previousAuxHashes[(m_previousAuxHashesIndex++) % NUM_PREVIOUS_HASHES] = *m_chainParams.aux_hash.u64();
+							const uint32_t index = (m_previousAuxHashesIndex++) % NUM_PREVIOUS_HASHES;
+
+							m_previousAuxHashes[index] = *m_chainParams.aux_hash.u64();
+							m_previousTariBlocks[index] = std::move(m_tariBlock);
 
 							std::copy(mm_hash.begin(), mm_hash.end(), m_chainParams.aux_hash.h);
 
