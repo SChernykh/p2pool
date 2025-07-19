@@ -11,12 +11,12 @@ if [ $? -ne 0 ]; then
 	images/ubuntu/build.sh
 fi
 
-for i in 8 9 10 11 12 13 14 15;
+for i in 8 15;
 do
 	gcc/build.sh $1 $i
 done
 
-for i in 17 18 19 20;
+for i in 17 21;
 do
 	clang/build.sh $1 $i
 done

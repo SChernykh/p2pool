@@ -127,7 +127,7 @@ cd /root
 curl -L -O https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
 
-for i in 17 18 19 20;
+for i in 17 18 19 20 21;
 do
 	./llvm.sh $i
 done
