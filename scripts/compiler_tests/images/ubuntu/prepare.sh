@@ -6,7 +6,7 @@ echo "Installing prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex lsb-release wget software-properties-common gnupg git gcc g++ cmake make libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex lsb-release wget software-properties-common gnupg xz-utils git gcc g++ cmake make libuv1-dev libzmq3-dev libsodium-dev libpgm-dev libnorm-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
 
 echo "Installing GCC 8.5.0"
 

@@ -16,6 +16,6 @@ cd ../tests
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $COMPILER 1>> /p2pool/output.log 2>&1
 make -j$(nproc) p2pool_tests 1>> /p2pool/output.log 2>&1
-gunzip *.gz
+unxz *.xz
 
 ./p2pool_tests 1>> /p2pool/output.log 2>&1
