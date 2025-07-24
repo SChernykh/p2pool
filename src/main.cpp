@@ -38,6 +38,7 @@
 #endif // WITH_GRPC
 
 #include <filesystem>
+#include <fstream>
 
 #ifdef WITH_RANDOMX
 #include "randomx.h"
@@ -220,6 +221,9 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	bool is_mini = false;
+	bool is_nano = false;
+
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h")) {
 			p2pool_usage();
@@ -237,23 +241,50 @@ int main(int argc, char* argv[])
 
 		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
 			std::string path = argv[++i];
-
-			if (!path.empty() && (path.back() != '/')
-#ifdef _WIN32
-				&& (path.back() != '\\')
-#endif
-				) {
-				path.append(1, '/');
-			}
-
 			p2pool::DATA_DIR = std::move(path);
+			p2pool::fixup_path(p2pool::DATA_DIR);
+		}
 
-			// Try to create it if it doesn't exist
-			if (!p2pool::DATA_DIR.empty()) {
-				std::error_code err;
-				std::filesystem::create_directories(p2pool::DATA_DIR, err);
+		if (!strcmp(argv[i], "--mini")) is_mini = true;
+		if (!strcmp(argv[i], "--nano")) is_nano = true;
+	}
+
+	// If the data directory is not set, check if P2Pool has write access to the current directory
+	// If it doesn't, switch to user's home directory
+	if (p2pool::DATA_DIR.empty()) {
+		std::ofstream f("p2pool.tmp");
+		if (f && f.put(' ')) {
+			f.close();
+			std::remove("p2pool.tmp");
+		}
+		else {
+			char buf[1024];
+			size_t size = sizeof(buf);
+
+			if (uv_os_homedir(buf, &size) == 0) {
+				p2pool::DATA_DIR.assign(buf, size);
+				p2pool::fixup_path(p2pool::DATA_DIR);
+
+				p2pool::DATA_DIR += ".p2pool/";
+
+				if (is_mini) {
+					p2pool::DATA_DIR += "mini/";
+				}
+				else if (is_nano) {
+					p2pool::DATA_DIR += "nano/";
+				}
 			}
 		}
+	}
+
+	if (!p2pool::DATA_DIR.empty()) {
+		printf("Using \"%s\" for P2Pool files\n", p2pool::DATA_DIR.c_str());
+	}
+
+	// Try to create it if it doesn't exist
+	if (!p2pool::DATA_DIR.empty()) {
+		std::error_code err;
+		std::filesystem::create_directories(p2pool::DATA_DIR, err);
 	}
 
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)

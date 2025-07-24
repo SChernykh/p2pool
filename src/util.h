@@ -383,6 +383,8 @@ void minidump_and_crash(size_t delay);
 
 std::string p2pool_version();
 
+void fixup_path(std::string& path);
+
 } // namespace p2pool
 
 void memory_tracking_start();

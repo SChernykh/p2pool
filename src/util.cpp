@@ -103,6 +103,17 @@ std::string p2pool_version()
 	return std::string(buf, s.m_pos);
 }
 
+void fixup_path(std::string& path)
+{
+	if (!path.empty() && (path.back() != '/')
+#ifdef _WIN32
+		&& (path.back() != '\\')
+#endif
+		) {
+		path.append(1, '/');
+	}
+}
+
 const uint8_t ED25519_MASTER_PUBLIC_KEY[32] = {51,175,37,73,203,241,188,115,195,255,123,53,218,120,90,74,186,240,82,178,67,139,124,91,180,106,188,181,187,51,236,10};
 
 std::string DATA_DIR;
