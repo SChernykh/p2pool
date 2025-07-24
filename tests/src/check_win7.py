@@ -296,6 +296,9 @@ allowedAPIs = {
 	"CryptGenRandom",
 	"HeapQueryInformation",
 	"AreFileApisANSI",
+	"GetUserProfileDirectoryW",
+	"GetUserNameW",
+	"GetEnvironmentVariableW",
 }
 
 f = open(sys.argv[1], 'r')
