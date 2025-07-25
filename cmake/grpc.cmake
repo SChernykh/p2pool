@@ -1,8 +1,10 @@
 set(protobuf_INSTALL OFF CACHE BOOL "Install protobuf binaries and files")
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "Build protobuf tests")
 set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "Build libprotoc and protoc compiler")
+set(protobuf_BUILD_LIBUPB OFF CACHE BOOL "Build libupb")
 set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "Build protobuf Shared Libraries")
 set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries")
+set(protobuf_WITH_ZLIB OFF CACHE BOOL "Build with zlib support")
 
 set(utf8_range_ENABLE_TESTS OFF CACHE BOOL "Build test suite")
 set(utf8_range_ENABLE_INSTALL OFF CACHE BOOL "Configure installation")
