@@ -299,6 +299,8 @@ allowedAPIs = {
 	"GetUserProfileDirectoryW",
 	"GetUserNameW",
 	"GetEnvironmentVariableW",
+	"RtlCaptureStackBackTrace",
+	"GetDynamicTimeZoneInformation",
 }
 
 f = open(sys.argv[1], 'r')

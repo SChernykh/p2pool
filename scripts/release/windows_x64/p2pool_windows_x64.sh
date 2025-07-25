@@ -18,7 +18,7 @@ flags_datetime="-D__DATE__=\"\\\"$CURRENT_DATE\\\"\" -D__TIME__=\"\\\"$CURRENT_T
 
 flags_libs="--target=x86_64-pc-windows-gnu -Os -flto -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -w $flags_size $flags_datetime"
 
-flags_p2pool="--target=x86_64-pc-windows-gnu -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -femulated-tls -Wno-unused-command-line-argument $flags_size $flags_datetime"
+flags_p2pool="--target=x86_64-pc-windows-gnu -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -femulated-tls -Wno-unused-command-line-argument -Wno-unknown-attributes $flags_size $flags_datetime"
 flags_cxx_headers="-isystem /usr/local/x86_64-w64-mingw32/include/c++ -isystem /usr/local/x86_64-w64-mingw32/include/c++/15.1.0 -isystem /usr/local/x86_64-w64-mingw32/include"
 
 cd /p2pool

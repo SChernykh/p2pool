@@ -1,0 +1,35 @@
+diff --git a/src/google/protobuf/generated_message_tctable_lite.cc b/src/google/protobuf/generated_message_tctable_lite.cc
+index 5758c1602..e425d6715 100644
+--- a/src/google/protobuf/generated_message_tctable_lite.cc
++++ b/src/google/protobuf/generated_message_tctable_lite.cc
+@@ -406,7 +406,7 @@ PROTOBUF_ALWAYS_INLINE const char* TcParser::MiniParse(PROTOBUF_TC_PARAM_DECL) {
+   if (entry == nullptr) {
+     if (export_called_function) *test_out = {table->fallback, tag};
+     data.data = tag;
+-    PROTOBUF_MUSTTAIL return table->fallback(PROTOBUF_TC_PARAM_PASS);
++    return table->fallback(PROTOBUF_TC_PARAM_PASS);
+   }
+ 
+   // The handler may need the tag and the entry to resolve fallback logic. Both
+@@ -468,7 +468,7 @@ PROTOBUF_ALWAYS_INLINE const char* TcParser::MiniParse(PROTOBUF_TC_PARAM_DECL) {
+   TailCallParseFunc parse_fn = kMiniParseTable[field_type];
+   if (export_called_function) *test_out = {parse_fn, tag, entry};
+ 
+-  PROTOBUF_MUSTTAIL return parse_fn(PROTOBUF_TC_PARAM_PASS);
++  return parse_fn(PROTOBUF_TC_PARAM_PASS);
+ }
+ 
+ PROTOBUF_NOINLINE const char* TcParser::MiniParse(
+diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
+index edd6d5122..da894d384 100644
+--- a/src/google/protobuf/port_def.inc
++++ b/src/google/protobuf/port_def.inc
+@@ -506,7 +506,7 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
+ #error PROTOBUF_ATTRIBUTE_WEAK was previously defined
+ #endif
+ #if ABSL_HAVE_ATTRIBUTE(weak) && !defined(__APPLE__) && \
+-    (!defined(_WIN32) || __clang_major__ < 9) && !defined(__MINGW32__)
++    (!defined(_WIN32) || (defined(__clang_major__) && (__clang_major__ < 9))) && !defined(__MINGW32__)
+ #define PROTOBUF_ATTRIBUTE_WEAK __attribute__((weak))
+ #define PROTOBUF_HAVE_ATTRIBUTE_WEAK 1
+ #else

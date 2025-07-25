@@ -9,4 +9,6 @@
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) __asan_unpoison_memory_region((addr), (size))
 #endif
 
+#define __asan_address_is_poisoned(addr) false
+
 #endif // P2POOL_EXTERNAL_SRC_COMMON_SANITIZER_ASAN_INTERFACE_H
