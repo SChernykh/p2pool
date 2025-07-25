@@ -46,7 +46,7 @@ service BaseNode {
     // Returns Block Fees
     rpc GetBlockFees (BlockGroupRequest) returns (BlockGroupResponse);
     // Get Version
-    rpc GetVersion(Empty) returns (StringValue);
+    rpc GetVersion(Empty) returns (BaseNodeGetVersionResponse);
     // Check for new updates
     rpc CheckForUpdates(Empty) returns (SoftwareUpdate);
     // Get coins in circulation
@@ -95,11 +95,17 @@ service BaseNode {
     rpc GetMempoolStats(Empty) returns (MempoolStatsResponse);
     // Get VNs
     rpc GetActiveValidatorNodes(GetActiveValidatorNodesRequest) returns (stream GetActiveValidatorNodesResponse);
+    rpc GetValidatorNodeChanges(GetValidatorNodeChangesRequest) returns (GetValidatorNodeChangesResponse);
     rpc GetShardKey(GetShardKeyRequest) returns (GetShardKeyResponse);
     // Get templates
     rpc GetTemplateRegistrations(GetTemplateRegistrationsRequest) returns (stream GetTemplateRegistrationResponse);
     rpc GetSideChainUtxos(GetSideChainUtxosRequest) returns (stream GetSideChainUtxosResponse);
     rpc GetNetworkState(GetNetworkStateRequest) returns (GetNetworkStateResponse);
+    // PayRef (Payment Reference) lookup for block explorers and external services
+    rpc SearchPaymentReferences(SearchPaymentReferencesRequest) returns (stream PaymentReferenceResponse);
+    // PayRef (Payment Reference) lookup for block explorers and external services via output hash
+    rpc SearchPaymentReferencesViaOutputHash(FetchMatchingUtxosRequest) returns (stream PaymentReferenceResponse);
+
 }
 
 message GetAssetMetadataRequest {
@@ -174,6 +180,42 @@ enum BaseNodeState{
     SYNC_FAILED = 6;
 }
 
+message ReadinessStatus {
+   enum State {
+      NOT_READY = 0;
+      STARTING_UP = 1;
+
+      // Database phase (10-19)
+      DATABASE_INITIALIZING = 10;
+
+      // Recovery phase (20-29)
+      RECOVERING_PREPARING = 20;
+      RECOVERING_REBUILDING = 21;
+      RECOVERING_REBUILDING_DATABASE = 22;
+
+      // Context building phase (30-39)
+      BUILDING_CONTEXT_BLOCKCHAIN = 32;
+      BUILDING_CONTEXT_BOOTSTRAP = 34;
+
+      READY = 100;
+   }
+
+   oneof status {
+       State state = 1;
+       MigrationProgress migration = 2;
+   }
+   uint64 timestamp = 6;
+
+}
+
+message MigrationProgress {
+   uint64 current_block = 1;
+   uint64 total_blocks = 2;
+   double progress_percentage = 3;
+   uint64 current_db_version = 4;
+   uint64 target_db_version = 5;
+}
+
 /// return type of GetNewBlockTemplate
 message NewBlockTemplateResponse {
     NewBlockTemplate new_block_template = 1;
@@ -226,9 +268,24 @@ message NetworkDifficultyResponse {
 
 // A generic single value response for a specific height
 message ValueAtHeightResponse {
+    // This is the total circulating token supply up to date ('mined_rewards + spendable_pre_mine').
     uint64 circulating_supply = 1;
-    uint64 spendable_supply = 2;
+    // uint64 spendable_supply = 2;      // No longer used
+    // This is the block height the values are valid for.
     uint64 height = 3;
+    // This is the total mined rewards up to date, including time locked coinbase rewards that is not spendable.
+    uint64 mined_rewards = 4;
+    // This is the total spendable minded rewards up to date, which excludes all coinbase rewards that is
+    // still time locked.
+    uint64 spendable_rewards = 5;
+    // This is the total spendable pre-mine tokens released up to date, i.e. not time-locked anymore.
+    uint64 spendable_pre_mine = 6;
+    // This is the total spendable token supply up to date ('spendable_rewards + spendable_pre_mine').
+    uint64 total_spendable = 7;
+    // This is the total pre-mine tokens in the genesis block, time-locked and not time-locked.
+    uint64 total_pre_mine = 8;
+    // This is the total pre-mine tokens that are still time-locked up to date (`total_pre_mine - spendable_pre_mine`).
+    uint64 time_locked_pre_mine = 9;
 }
 
 // A generic uint value
@@ -236,9 +293,9 @@ message IntegerValue {
     uint64 value = 1;
 }
 
-// A generic String value
-message StringValue {
-    string value = 1;
+message BaseNodeGetVersionResponse {
+  string version = 1;
+  uint32 network = 2;
 }
 
 /// GetBlockSize / GetBlockFees Request
@@ -481,48 +538,76 @@ message MempoolStatsResponse {
 }
 
 message GetActiveValidatorNodesRequest {
-    uint64 height = 1;
+  uint64 height = 1;
+  bytes sidechain_id = 2;
 }
 
 message GetActiveValidatorNodesResponse {
-    bytes shard_key = 1;
-    bytes public_key = 2;
+  bytes shard_key = 1;
+  bytes public_key = 2;
+  bytes sidechain_id = 3;
+}
+
+message GetValidatorNodeChangesRequest {
+  uint64 epoch = 1;
+  bytes sidechain_id = 2;
+}
+
+message ValidatorNodeChange {
+  oneof change {
+    ValidatorNodeChangeAdd add = 1;
+    ValidatorNodeChangeRemove remove = 2;
+  }
+}
+
+message ValidatorNodeChangeAdd {
+  uint64 activation_epoch = 1;
+  ValidatorNodeRegistration registration = 2;
+  uint64 minimum_value_promise = 3;
+  bytes shard_key = 4;
+}
+
+message ValidatorNodeChangeRemove {
+  bytes public_key = 1;
+}
+
+message GetValidatorNodeChangesResponse {
+  repeated ValidatorNodeChange changes = 1;
 }
 
 message GetShardKeyRequest {
-    uint64 height = 1;
-    bytes public_key = 2;
+  uint64 epoch = 1;
+  bytes public_key = 2;
 }
 
 message GetShardKeyResponse {
-    bytes shard_key = 1;
-    bool found = 2;
+  bytes shard_key = 1;
 }
 
 message GetTemplateRegistrationsRequest {
-    bytes start_hash = 1;
-    uint64 count = 2;
+  bytes start_hash = 1;
+  uint64 count = 2;
 }
 
 message GetTemplateRegistrationResponse {
-    bytes utxo_hash = 1;
-    TemplateRegistration registration = 2;
+  bytes utxo_hash = 1;
+  TemplateRegistration registration = 2;
 }
 
 message BlockInfo {
-    uint64 height = 1;
-    bytes hash = 2;
-    bytes next_block_hash = 3;
+  uint64 height = 1;
+  bytes hash = 2;
+  bytes next_block_hash = 3;
 }
 
 message GetSideChainUtxosRequest {
-    bytes start_hash = 1;
-    uint64 count = 2;
+  bytes start_hash = 1;
+  uint64 count = 2;
 }
 
 message GetSideChainUtxosResponse {
-    BlockInfo block_info = 1;
-    repeated TransactionOutput outputs = 2;
+  BlockInfo block_info = 1;
+  repeated TransactionOutput outputs = 2;
 }
 
 message GetNetworkStateRequest {
@@ -548,6 +633,8 @@ message GetNetworkStateResponse {
     uint64 num_connections = 8;
     //liveness results
     repeated LivenessResult liveness_results = 9;
+    // readiness status
+    ReadinessStatus readiness_status = 11;
 }
 
 message LivenessResult{
@@ -559,3 +646,39 @@ message LivenessResult{
     uint64 ping_latency = 3;
 }
 
+// PayRef (Payment Reference) search and lookup messages
+
+// Request to search for outputs by payment reference
+message SearchPaymentReferencesRequest {
+    // Payment reference as hex string (64 characters)
+    repeated string payment_reference_hex = 1;
+    repeated bytes payment_reference_bytes = 2;
+    // Optional: include spent outputs in results
+    bool include_spent = 3;
+}
+
+// Response containing payment reference match
+message PaymentReferenceResponse {
+    // The payment reference that was found
+    string payment_reference_hex = 1;
+    // Block height where the output was mined
+    uint64 block_height = 2;
+    // Block hash where the output was mined
+    bytes block_hash = 3;
+    // Timestamp when the output was mined
+    uint64 mined_timestamp = 4;
+    // Output commitment (32 bytes)
+    bytes commitment = 5;
+    // Whether this output has been spent
+    bool is_spent = 6;
+    // Height where output was spent - will be 0 for unspent outputs as it is not applicable
+    uint64 spent_height = 7;
+    // Block hash where output was spent - will be empty for unspent outputs
+    bytes spent_block_hash = 8;
+    // Minimum value promise
+    uint64 min_value_promise = 9;
+    // Timestamp when the output was spent - will be 0 for unspent outputs as it is not applicable
+    uint64 spent_timestamp = 10;
+    // Output hash of the output
+    bytes output_hash = 11;
+}

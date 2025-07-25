@@ -115,6 +115,10 @@ message TransactionOutput {
     bytes encrypted_data = 10;
     // The minimum value of the commitment that is proven by the range proof (in MicroMinotari)
     uint64 minimum_value_promise = 11;
+    // Payment reference (PayRef) - 32-byte Blake2b hash of (block_hash || output_hash)
+    // This provides a unique, deterministic reference for the output that can be used
+    // for payment verification without revealing wallet ownership
+    bytes payment_reference = 12;
 }
 
 // Options for UTXOs

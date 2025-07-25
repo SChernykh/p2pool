@@ -26,43 +26,59 @@ package tari.rpc;
 import "types.proto";
 
 message SideChainFeature {
-    oneof side_chain_feature {
-        ValidatorNodeRegistration validator_node_registration = 1;
-        TemplateRegistration template_registration = 2;
-        ConfidentialOutputData confidential_output = 3;
-    }
+  oneof feature {
+    ValidatorNodeRegistration validator_node_registration = 1;
+    TemplateRegistration template_registration = 2;
+    ConfidentialOutputData confidential_output = 3;
+    EvictionProof eviction_proof = 4;
+    ValidatorNodeExit validator_node_exit = 5;
+  }
+  SideChainId sidechain_id = 6;
+}
+
+message SideChainId {
+  bytes public_key = 1;
+  Signature knowledge_proof = 2;
 }
 
 message ValidatorNodeRegistration {
-    bytes public_key = 1;
-    Signature signature = 2;
+  bytes public_key = 1;
+  Signature signature = 2;
+  bytes claim_public_key = 3;
+  uint64 max_epoch = 4;
+}
+
+message ValidatorNodeExit {
+  bytes public_key = 1;
+  Signature signature = 2;
+  uint64 max_epoch = 3;
 }
 
 message TemplateRegistration {
-    bytes author_public_key = 1;
-    Signature author_signature = 2;
-    string template_name = 3;
-    uint32 template_version = 4;
-    TemplateType template_type = 5;
-    BuildInfo build_info = 6;
-    bytes binary_sha = 7;
-    string binary_url = 8;
+  bytes author_public_key = 1;
+  Signature author_signature = 2;
+  string template_name = 3;
+  uint32 template_version = 4;
+  TemplateType template_type = 5;
+  BuildInfo build_info = 6;
+  bytes binary_sha = 7;
+  string binary_url = 8;
 }
 
 message ConfidentialOutputData {
-    bytes claim_public_key = 1;
+  bytes claim_public_key = 1;
 }
 
 message TemplateType {
-    oneof template_type {
-        WasmInfo wasm = 1;
-        FlowInfo flow = 2;
-        ManifestInfo manifest = 3;
-    }
+  oneof template_type {
+    WasmInfo wasm = 1;
+    FlowInfo flow = 2;
+    ManifestInfo manifest = 3;
+  }
 }
 
 message WasmInfo {
-    uint32 abi_version = 1;
+  uint32 abi_version = 1;
 }
 
 message FlowInfo {
@@ -72,6 +88,85 @@ message ManifestInfo {
 }
 
 message BuildInfo {
-    string repo_url = 1;
-    bytes commit_hash = 2;
+  string repo_url = 1;
+  bytes commit_hash = 2;
 }
+
+
+message EvictionProof {
+  CommitProof proof = 1;
+}
+
+message CommitProof {
+  oneof version {
+    CommitProofV1 v1 = 1;
+  }
+}
+
+message CommitProofV1 {
+  bytes command = 1;
+  SidechainBlockCommitProof commit_proof = 2;
+  bytes encoded_inclusion_proof = 3;
+}
+
+message SidechainBlockCommitProof {
+  SidechainBlockHeader header = 1;
+  repeated CommitProofElement proof_elements = 2;
+}
+
+message CommitProofElement {
+  oneof proof_element {
+    QuorumCertificate quorum_certificate = 1;
+    DummyChain dummy_chain = 2;
+  }
+}
+
+message DummyChain {
+  repeated ChainLink chain_links = 1;
+}
+
+message ChainLink {
+  bytes header_hash = 1;
+  bytes parent_id = 2;
+}
+
+message SidechainBlockHeader {
+  uint32 network = 1;
+  bytes parent_id = 2;
+  bytes justify_id = 3;
+  uint64 height = 4;
+  uint64 epoch = 5;
+  ShardGroup shard_group = 6;
+  bytes proposed_by = 7;
+  bytes state_merkle_root = 8;
+  bytes command_merkle_root = 9;
+  Signature signature = 11;
+  bytes metadata_hash = 10;
+}
+
+message ShardGroup {
+  uint32 start = 1;
+  uint32 end_inclusive = 2;
+}
+
+message EvictAtom {
+  bytes public_key = 1;
+}
+
+message QuorumCertificate {
+  bytes header_hash = 1;
+  bytes parent_id = 2;
+  repeated ValidatorSignature signatures = 3;
+  QuorumDecision decision = 4;
+}
+
+enum QuorumDecision {
+  Accept = 0;
+  Reject = 1;
+}
+
+message ValidatorSignature {
+  bytes public_key = 1;
+  Signature signature = 2;
+}
+
