@@ -287,6 +287,9 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 					chain_params.aux_diff = diff;
 				}
 			}
+			else {
+				m_previousAuxHashesFoundIndex = std::numeric_limits<uint32_t>::max();
+			}
 
 			if (!diff.check_pow(block.m_powHash)) {
 				LOGINFO(4, "External aux job solution found, but it doesn't have enough PoW (block diff = " << block.m_difficulty << ", Tari diff = " << diff << ')');
