@@ -4,7 +4,7 @@
 
 cd "$(dirname "$0")"
 
-docker build --build-arg P2POOL_VERSION=$1 -t p2pool_ubuntu_riscv64_build_$1 .
+docker build --cpuset-cpus $2 --build-arg P2POOL_VERSION=$1 -t p2pool_ubuntu_riscv64_build_$1 .
 
 docker create --name p2pool_ubuntu_riscv64_build_$1_container p2pool_ubuntu_riscv64_build_$1:latest
 docker cp p2pool_ubuntu_riscv64_build_$1_container:/p2pool/build/p2pool-$1-linux-riscv64.tar.gz ../p2pool-$1-linux-riscv64.tar.gz

@@ -18,10 +18,22 @@
 #include "common.h"
 #include "util.h"
 #include "pool_block.h"
+#include "json_rpc_request.h"
+#include "merge_mining_client.h"
 
 #include "gtest/gtest.h"
 
 void p2pool_usage() {}
+
+namespace p2pool {
+
+IMergeMiningClient* IMergeMiningClient::create(p2pool*, const std::string&, const std::string&) noexcept { return nullptr; }
+
+namespace JSONRPCRequest {
+	void Call(const std::string&, int, const std::string&, const std::string&, const std::string&, bool, const std::string&, CallbackBase*, CallbackBase*, uv_loop_t*) {}
+}
+
+}
 
 using namespace p2pool;
 
