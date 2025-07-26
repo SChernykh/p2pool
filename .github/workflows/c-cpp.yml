@@ -13,7 +13,7 @@ on:
 jobs:
   build-alpine-static:
 
-    timeout-minutes: 240
+    timeout-minutes: 60
     runs-on: ubuntu-latest
 
     strategy:
@@ -71,7 +71,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM="3.5" -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DSTATIC_BINARY=ON -DARCH_ID=${{ matrix.config.arch }}
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM="3.5" -DCMAKE_C_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }} -Wl,-s -Wl,--gc-sections' -DWITH_GRPC=OFF -DSTATIC_BINARY=ON -DARCH_ID=${{ matrix.config.arch }}
         make -j$(nproc) p2pool
 
     - name: Run RandomX tests
