@@ -36,11 +36,6 @@ else()
 endif()
 
 add_definitions(-DWITH_RANDOMX)
-
-add_subdirectory(cmake/ssl)
-include_directories(../external/src/grpc/third_party/boringssl-with-bazel/src/include)
-add_definitions(-DWITH_TLS)
-
 add_definitions(-DWITH_MERGE_MINING_DONATION)
 
 add_definitions(-DP2POOL_UNIT_TESTS)
@@ -72,13 +67,10 @@ set(SOURCES
 	../src/block_template.cpp
 	../src/console_commands.cpp
 	../src/crypto.cpp
-	../src/json_rpc_request.cpp
 	../src/keccak.cpp
 	../src/log.cpp
 	../src/memory_leak_debug.cpp
 	../src/mempool.cpp
-	../src/merge_mining_client.cpp
-	../src/merge_mining_client_json_rpc.cpp
 	../src/merkle.cpp
 	../src/miner.cpp
 	../src/p2p_server.cpp
@@ -90,7 +82,6 @@ set(SOURCES
 	../src/side_chain.cpp
 	../src/stratum_server.cpp
 	../src/tcp_server.cpp
-	../src/tls.cpp
 	../src/util.cpp
 	../src/wallet.cpp
 	../src/zmq_reader.cpp
@@ -101,16 +92,6 @@ if (AMD64)
 	if (CMAKE_C_COMPILER_ID MATCHES GNU OR CMAKE_C_COMPILER_ID MATCHES Clang)
 		set_source_files_properties(../src/keccak_bmi.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -mbmi")
 	endif()
-endif()
-
-if (NOT ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS))
-	include(FindCURL)
-endif()
-
-if (CURL_INCLUDE_DIRS)
-	include_directories(${CURL_INCLUDE_DIRS})
-else()
-	include_directories(../external/src/curl/include)
 endif()
 
 if ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS)
@@ -140,7 +121,6 @@ if (WIN32)
 	if ((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR (CMAKE_CXX_COMPILER_ID MATCHES Clang))
 		set(LIBS ${LIBS} bcrypt)
 	endif()
-	add_definitions(-DCURL_STATICLIB)
 elseif (NOT APPLE)
 	set(LIBS ${LIBS} pthread)
 endif()
@@ -150,24 +130,13 @@ if (STATIC_LIBS)
 	set(ZMQ_LIBRARY_DEBUG "${CMAKE_SOURCE_DIR}/../external/src/libzmq/build/lib/libzmq.a")
 	set(UV_LIBRARY_DEBUG "${CMAKE_SOURCE_DIR}/../external/src/libuv/build/libuv.a")
 	set(UV_LIBRARY "${CMAKE_SOURCE_DIR}/../external/src/libuv/build/libuv.a")
-	set(CURL_LIBRARY_DEBUG "${CMAKE_SOURCE_DIR}/../external/src/curl/lib/.libs/libcurl.a")
-	set(CURL_LIBRARY "${CMAKE_SOURCE_DIR}/../external/src/curl/lib/.libs/libcurl.a")
 else()
 	if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-		find_library(CURL_LIBRARY_DEBUG NAMES libcurl-d PATHS "../external/lib/libcurl_tls/Debug")
-		find_library(CURL_LIBRARY NAMES libcurl PATHS "../external/lib/libcurl_tls/Release")
 	elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		find_library(ZMQ_LIBRARY_DEBUG NAMES zmq libzmq.a)
 		find_library(ZMQ_LIBRARY NAMES zmq libzmq.a)
 		find_library(UV_LIBRARY_DEBUG NAMES uv libuv.a)
 		find_library(UV_LIBRARY NAMES uv libuv.a)
-		if (WIN32)
-			find_library(CURL_LIBRARY_DEBUG NAMES libcurl.a PATHS "../external/src/curl/lib/.libs" NO_DEFAULT_PATH)
-			find_library(CURL_LIBRARY NAMES libcurl.a PATHS "../external/src/curl/lib/.libs" NO_DEFAULT_PATH)
-		else()
-			find_library(CURL_LIBRARY_DEBUG NAMES curl)
-			find_library(CURL_LIBRARY NAMES curl)
-		endif()
 		find_library(SODIUM_LIBRARY sodium)
 	endif()
 
@@ -194,8 +163,6 @@ if(APPLE)
 	set(LIBS ${LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 endif()
 
-set(LIBS ${LIBS} ssl crypto)
-
 add_definitions(/DZMQ_STATIC /DP2POOL_LOG_DISABLE)
 
 include(CheckCXXSourceCompiles)
@@ -214,7 +181,7 @@ endif()
 add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
-target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
+target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/crypto_tests.txt" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/block.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump.dat.xz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)

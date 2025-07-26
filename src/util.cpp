@@ -40,7 +40,10 @@
 #include <resolv.h>
 #endif
 
+#ifndef P2POOL_UNIT_TESTS
 #include <curl/curl.h>
+#endif
+
 #include <zmq.h>
 
 #ifdef HAVE_GLIBC
@@ -75,7 +78,9 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 
 std::string p2pool_version()
 {
+#ifndef P2POOL_UNIT_TESTS
 	const curl_version_info_data* curl_version_data = curl_version_info(CURLVERSION_NOW);
+#endif
 
 	int zmq_major, zmq_minor, zmq_patch;
 	zmq_version(&zmq_major, &zmq_minor, &zmq_patch);
@@ -91,7 +96,9 @@ std::string p2pool_version()
 #ifdef WITH_GRPC
 		<< " - grpc " << GRPC_CPP_VERSION_STRING << '\n'
 #endif
+#ifndef P2POOL_UNIT_TESTS
 		<< " - libcurl " << (curl_version_data ? curl_version_data->version : "unknown") << '\n'
+#endif
 		<< " - libuv " << uv_version_string() << '\n'
 		<< " - libzmq " << zmq_major << '.' << zmq_minor << '.' << zmq_patch << '\n'
 #ifdef WITH_UPNP

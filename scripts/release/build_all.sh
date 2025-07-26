@@ -11,12 +11,16 @@ if [ $? -ne 0 ]; then
 	images/ubuntu/build.sh
 fi
 
-gnome-terminal --tab -- freebsd_aarch64/build.sh $1
-gnome-terminal --tab -- freebsd_x64/build.sh $1
-gnome-terminal --tab -- linux_aarch64/build.sh $1
-gnome-terminal --tab -- linux_riscv64/build.sh $1
-gnome-terminal --tab -- linux_x64/build.sh $1
-gnome-terminal --tab -- windows_x64/build.sh $1
-gnome-terminal --tab -- macos_aarch64/build.sh $1
-gnome-terminal --tab -- macos_x64/build.sh $1
-gnome-terminal --tab -- source/build.sh $1
+N=$(($(nproc)-1))
+N1=$(($N/2))
+N2=$(($N1+1))
+
+gnome-terminal --tab -- freebsd_aarch64/build.sh $1 0-$N1
+gnome-terminal --tab -- freebsd_x64/build.sh $1 $N2-$N
+gnome-terminal --tab -- linux_aarch64/build.sh $1 0-$N1
+gnome-terminal --tab -- linux_riscv64/build.sh $1 $N2-$N
+gnome-terminal --tab -- linux_x64/build.sh $1 0-$N1
+gnome-terminal --tab -- windows_x64/build.sh $1 $N2-$N
+gnome-terminal --tab -- macos_aarch64/build.sh $1 0-$N1
+gnome-terminal --tab -- macos_x64/build.sh $1 $N2-$N
+gnome-terminal --tab -- source/build.sh $1 0-$N1

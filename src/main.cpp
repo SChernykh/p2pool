@@ -20,7 +20,10 @@
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+
+#ifndef P2POOL_UNIT_TESTS
 #include <curl/curl.h>
+#endif
 
 #ifdef WITH_GRPC
 
@@ -302,10 +305,12 @@ int main(int argc, char* argv[])
 
 	p2pool::init_crypto_cache();
 
+#ifndef P2POOL_UNIT_TESTS
 	int result = static_cast<int>(curl_global_init_mem(CURL_GLOBAL_ALL, p2pool::malloc_hook, p2pool::free_hook, p2pool::realloc_hook, p2pool::strdup_hook, p2pool::calloc_hook));
 	if (result != CURLE_OK) {
 		return result;
 	}
+#endif
 
 #ifdef WITH_GRPC
 	grpc_init();
@@ -323,7 +328,9 @@ int main(int argc, char* argv[])
 	grpc_shutdown();
 #endif
 
+#ifndef P2POOL_UNIT_TESTS
 	curl_global_cleanup();
+#endif
 
 	p2pool::destroy_crypto_cache();
 
