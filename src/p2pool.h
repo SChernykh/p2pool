@@ -77,7 +77,7 @@ public:
 	StratumServer* stratum_server() const { return m_stratumServer; }
 	P2PServer* p2p_server() const { return m_p2pServer; }
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	void print_miner_status();
 #endif
 
@@ -127,7 +127,7 @@ public:
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	void start_mining(uint32_t threads);
 	void stop_mining();
 #endif
@@ -226,12 +226,14 @@ private:
 
 	std::atomic<bool> m_startupFinished{ false };
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	uv_mutex_t m_minerLock;
 	Miner* m_miner = nullptr;
 #endif
 
+#ifndef P2POOL_UNIT_TESTS
 	ConsoleCommands* m_consoleCommands;
+#endif
 
 	struct SubmitBlockData
 	{
@@ -258,8 +260,10 @@ private:
 	uint64_t m_startTime;
 	uv_async_t m_reconnectToHostAsync;
 
+#ifndef P2POOL_UNIT_TESTS
 	mutable uv_rwlock_t m_ZMQReaderLock;
 	ZMQReader* m_ZMQReader = nullptr;
+#endif
 
 	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<IMergeMiningClient*> m_mergeMiningClients;

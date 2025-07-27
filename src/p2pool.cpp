@@ -17,7 +17,9 @@
 
 #include "common.h"
 #include "p2pool.h"
+#ifndef P2POOL_UNIT_TESTS
 #include "zmq_reader.h"
+#endif
 #include "mempool.h"
 #include "json_rpc_request.h"
 #include "rapidjson_wrapper.h"
@@ -27,11 +29,13 @@
 #include "side_chain.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 #include "miner.h"
 #endif
 #include "params.h"
+#ifndef P2POOL_UNIT_TESTS
 #include "console_commands.h"
+#endif
 #include "crypto.h"
 #include "p2pool_api.h"
 #include "pool_block.h"
@@ -156,7 +160,9 @@ p2pool::p2pool(int argc, char* argv[])
 
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
+#ifndef P2POOL_UNIT_TESTS
 	uv_rwlock_init_checked(&m_ZMQReaderLock);
+#endif
 	uv_rwlock_init_checked(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -166,7 +172,7 @@ p2pool::p2pool(int argc, char* argv[])
 	uv_rwlock_init_checked(&m_auxIdLock);
 	uv_mutex_init_checked(&m_foundBlocksLock);
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	uv_mutex_init_checked(&m_minerLock);
 #endif
 
@@ -208,6 +214,7 @@ p2pool::p2pool(int argc, char* argv[])
 	m_blockTemplate = new BlockTemplate(m_sideChain, m_hasher);
 	m_mempool = new Mempool();
 
+#ifndef P2POOL_UNIT_TESTS
 	try {
 		m_consoleCommands = new ConsoleCommands(this);
 	}
@@ -215,6 +222,7 @@ p2pool::p2pool(int argc, char* argv[])
 		LOGERR(1, "Couldn't start console commands handler");
 		m_consoleCommands = nullptr;
 	}
+#endif
 }
 
 p2pool::~p2pool()
@@ -237,7 +245,9 @@ p2pool::~p2pool()
 
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
+#ifndef P2POOL_UNIT_TESTS
 	uv_rwlock_destroy(&m_ZMQReaderLock);
+#endif
 	uv_rwlock_destroy(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -247,7 +257,7 @@ p2pool::~p2pool()
 	uv_rwlock_destroy(&m_auxIdLock);
 	uv_mutex_destroy(&m_foundBlocksLock);
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	uv_mutex_destroy(&m_minerLock);
 #endif
 
@@ -340,7 +350,7 @@ bool p2pool::get_seed(uint64_t height, hash& seed) const
 	return true;
 }
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 void p2pool::print_miner_status()
 {
 	MutexLock lock(m_minerLock);
@@ -965,7 +975,9 @@ void p2pool::on_stop(uv_async_t* async)
 {
 	p2pool* pool = reinterpret_cast<p2pool*>(async->data);
 
+#ifndef P2POOL_UNIT_TESTS
 	delete pool->m_consoleCommands;
+#endif
 
 	if (pool->m_api) {
 		pool->m_api->on_stop();
@@ -1144,7 +1156,7 @@ void p2pool::update_block_template()
 	stratum_on_block();
 	api_update_pool_stats();
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	if (m_isAlternativeBlock.exchange(false)) {
 		MutexLock lock(m_minerLock);
 
@@ -1278,11 +1290,10 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 				if (m_serversStarted.exchange(1) == 0) {
 					m_p2pServer = new P2PServer(this);
 					m_stratumServer = new StratumServer(this);
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 					if (m_params->m_minerThreads) {
 						start_mining(m_params->m_minerThreads);
 					}
-#endif
 					{
 						WriteLock lock(m_ZMQReaderLock);
 
@@ -1295,6 +1306,7 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 							PANIC_STOP();
 						}
 					}
+#endif
 
 					api_update_network_stats();
 					get_miner_data();
@@ -1393,7 +1405,7 @@ void p2pool::update_median_timestamp()
 
 void p2pool::stratum_on_block()
 {
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	{
 		MutexLock lock(m_minerLock);
 
@@ -2063,7 +2075,7 @@ bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
 	return true;
 }
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 void p2pool::start_mining(uint32_t threads)
 {
 	stop_mining();
@@ -2168,8 +2180,12 @@ void p2pool::stop()
 
 bool p2pool::zmq_running() const
 {
+#ifdef P2POOL_UNIT_TESTS
+	return true;
+#else
 	ReadLock lock(m_ZMQReaderLock);
 	return m_ZMQReader && m_ZMQReader->is_running();
+#endif
 }
 
 const Params::Host& p2pool::switch_host()
@@ -2190,6 +2206,7 @@ void p2pool::reconnect_to_host()
 		return;
 	}
 
+#ifndef P2POOL_UNIT_TESTS
 	const Params::Host& new_host = switch_host();
 
 	WriteLock lock(m_ZMQReaderLock);
@@ -2209,6 +2226,7 @@ void p2pool::reconnect_to_host()
 	if (m_ZMQReader) {
 		get_miner_data(false);
 	}
+#endif
 }
 
 int p2pool::run()
@@ -2245,10 +2263,12 @@ int p2pool::run()
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
 
+#ifndef P2POOL_UNIT_TESTS
 		WriteLock lock(m_ZMQReaderLock);
 
 		delete m_ZMQReader;
 		m_ZMQReader = nullptr;
+#endif
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "exception " << e.what());
@@ -2259,7 +2279,7 @@ int p2pool::run()
 
 	bkg_jobs_tracker->wait();
 
-#ifdef WITH_RANDOMX
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	{
 		MutexLock lock(m_minerLock);
 

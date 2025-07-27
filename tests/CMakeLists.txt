@@ -65,14 +65,12 @@ set(SOURCES
 	../external/src/hardforks/hardforks.cpp
 	../src/block_cache.cpp
 	../src/block_template.cpp
-	../src/console_commands.cpp
 	../src/crypto.cpp
 	../src/keccak.cpp
 	../src/log.cpp
 	../src/memory_leak_debug.cpp
 	../src/mempool.cpp
 	../src/merkle.cpp
-	../src/miner.cpp
 	../src/p2p_server.cpp
 	../src/p2pool.cpp
 	../src/p2pool_api.cpp
@@ -84,7 +82,6 @@ set(SOURCES
 	../src/tcp_server.cpp
 	../src/util.cpp
 	../src/wallet.cpp
-	../src/zmq_reader.cpp
 )
 
 if (AMD64)
