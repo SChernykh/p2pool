@@ -15,6 +15,7 @@ MACOSX_SDK_VERSION=15.5
 MAKE_VERSION=4.4.1
 MINGW_VERSION=13.0.0
 XZ_VERSION=5.8.1
+TAR_VERSION=1.35
 
 _7ZIP_SHA256="914c7e20ad5ef8e4d3cf08620ff8894b28fe11b7eb99809d6930870fbe48a281"
 CMAKE_SHA256="585ae9e013107bc8e7c7c9ce872cbdcbdff569e675b07ef57aacfb88c886faac"
@@ -24,6 +25,7 @@ GLIBC_SHA256="a5a26b22f545d6b7d7b3dd828e11e428f24f4fac43c934fb071b6a7d0828e901"
 HEADERS_SHA256="0eafd627b602f58d73917d00e4fc3196ba18cba67df6995a42aa74744d8efa16"
 MACOSX_SDK_SHA256="c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
+TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
 
 echo "Install prerequisites"
 
@@ -426,6 +428,27 @@ make -j$(nproc)
 
 cp -f lzma* /usr/bin
 cp -f xz* /usr/bin
+
+echo "Install tar"
+
+cd /root
+
+TAR_FILE=tar-$TAR_VERSION.tar.xz
+
+curl -L -O https://ftpmirror.gnu.org/tar/$TAR_FILE
+
+TAR_FILE_SHA256="$(sha256sum $TAR_FILE | awk '{ print $1 }')"
+
+if [ $TAR_FILE_SHA256 != $TAR_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $TAR_FILE - expected $TAR_SHA256, got $TAR_FILE_SHA256"
+    exit 1
+fi
+
+tar xvf $TAR_FILE
+cd tar-$TAR_VERSION
+FORCE_UNSAFE_CONFIGURE=1 ./configure
+make -j$(nproc)
+make install
 
 echo "Deleting system glibc files to force our glibc"
 

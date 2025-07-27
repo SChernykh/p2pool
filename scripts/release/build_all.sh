@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Example usage: release_scripts/build_all.sh v4.8.1
+# Example usage: release_scripts/build_all.sh v4.9
 
 cd "$(dirname "$0")"
 
