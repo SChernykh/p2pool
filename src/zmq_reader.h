@@ -22,7 +22,7 @@
 
 namespace p2pool {
 
-class ZMQReader {
+class ZMQReader : public nocopy_nomove {
 public:
 	ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler);
 	~ZMQReader();

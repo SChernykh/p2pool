@@ -25,7 +25,7 @@ LOG_CATEGORY(JSONRPCRequest)
 namespace p2pool {
 namespace JSONRPCRequest {
 
-struct CurlContext
+struct CurlContext : public nocopy_nomove
 {
 	CurlContext(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 	~CurlContext();
