@@ -113,14 +113,17 @@ private:
 		static Client* allocate() { return new TariClient(); }
 		virtual size_t size() const override { return sizeof(TariClient); }
 
-		void reset() override;
+		void reset() override { break_pairing(); }
 		[[nodiscard]] bool on_connect() override;
 		[[nodiscard]] bool on_read(const char* data, uint32_t size) override;
+		void on_disconnected() override { break_pairing(); }
 
 		alignas(8) char m_buf[BUF_SIZE];
 		std::vector<uint8_t> m_pendingData;
 
 		bool is_paired() const { return m_pairedClient && (m_pairedClient->m_resetCounter == m_pairedClientSavedResetCounter); }
+
+		void break_pairing();
 
 		TariClient* m_pairedClient;
 		uint32_t m_pairedClientSavedResetCounter;

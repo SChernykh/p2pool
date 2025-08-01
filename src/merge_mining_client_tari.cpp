@@ -891,13 +891,13 @@ MergeMiningClientTari::TariClient::TariClient()
 	m_buf[0] = '\0';
 }
 
-void MergeMiningClientTari::TariClient::reset()
+void MergeMiningClientTari::TariClient::break_pairing()
 {
 	if (is_paired()) {
 		m_pairedClient->m_pairedClient = nullptr;
 		m_pairedClient->close();
-		m_pairedClient = nullptr;
 	}
+	m_pairedClient = nullptr;
 	m_pairedClientSavedResetCounter = std::numeric_limits<uint32_t>::max();
 }
 
