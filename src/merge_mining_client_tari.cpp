@@ -895,6 +895,7 @@ void MergeMiningClientTari::TariClient::break_pairing()
 {
 	if (is_paired()) {
 		m_pairedClient->m_pairedClient = nullptr;
+		m_pairedClient->m_pairedClientSavedResetCounter = std::numeric_limits<uint32_t>::max();
 		m_pairedClient->close();
 	}
 	m_pairedClient = nullptr;

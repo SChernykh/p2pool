@@ -766,6 +766,7 @@ void TCPServer::on_connect(uv_connect_t* req, int status)
 			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
 		}
 		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
+		client->on_connect_failed(status);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return;
 	}

@@ -116,6 +116,7 @@ private:
 		void reset() override { break_pairing(); }
 		[[nodiscard]] bool on_connect() override;
 		[[nodiscard]] bool on_read(const char* data, uint32_t size) override;
+		void on_connect_failed(int /*err*/) override { break_pairing(); }
 		void on_disconnected() override { break_pairing(); }
 
 		alignas(8) char m_buf[BUF_SIZE];
