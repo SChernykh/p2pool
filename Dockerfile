@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM debian:12-slim
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
@@ -25,7 +25,7 @@ RUN git submodule update --init --recursive && \
 
 # ---
 
-FROM ubuntu:20.04
+FROM debian:12-slim
 COPY --from=0 /usr/src/p2pool/build/p2pool /
 
 RUN set -e && \
