@@ -1,7 +1,7 @@
 # Multistage docker build, requires docker 17.05
 
 # builder stage
-FROM ubuntu:20.04 as builder
+FROM ubuntu:22.04 as builder
 ARG MONERO_GIT_TAG="latest"
 
 RUN set -e && \
@@ -32,7 +32,7 @@ RUN git clone --recursive https://github.com/monero-project/monero && \
 # ---
 
 # runtime stage
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 COPY --from=0 /src/monero/build/*/release/bin /usr/local/bin/
 
