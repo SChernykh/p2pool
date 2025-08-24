@@ -7,6 +7,7 @@ ARG MONERO_GIT_TAG="latest"
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
+        autoconf \
         automake \
         autotools-dev \
         bsdmainutils \
@@ -15,19 +16,24 @@ RUN set -e && \
         ccache \
         cmake \
         curl \
+        doxygen \
         git \
-        libtool \
+        graphviz \
+        libtool libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libexpat1-dev \
+        qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev \
+        libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev \
         pkg-config \
+        python3 \
         gperf
 
 
 WORKDIR /src
-RUN git clone --recursive https://github.com/monero-project/monero && \
+RUN git clone --recursive --branch release-v0.18 https://github.com/monero-project/monero && \
     cd monero && \
     if [ "x$MONERO_GIT_TAG" = "xlatest" ]; then MONERO_GIT_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)); fi && \
     git checkout $MONERO_GIT_TAG && \
     git submodule sync && git submodule update --init --force --recursive && \
-    make -j$(nproc) depends target=$(contrib/depends/config.guess)
+    make -j$(nproc)
 
 # ---
 
