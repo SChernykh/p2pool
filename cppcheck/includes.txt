@@ -4,7 +4,7 @@
 ../external/src/cryptonote/
 ../external/src/libuv/
 ../external/src/cppzmq/
-../external/src/libzmq/
+../external/src/libzmq/include/
 ../external/src/miniupnp/miniupnpc/include/
 ../external/src/randomx/src/
 ../external/src/rapidjson/include/
