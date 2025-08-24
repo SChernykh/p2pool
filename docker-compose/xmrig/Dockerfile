@@ -27,8 +27,8 @@ COPY --from=0 /usr/src/xmrig/build/xmrig /
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
-    libssl1.1 \
-    libcrypto++6 \
+    libssl3 \
+    libcrypto++8 \
     libhwloc15 \
       && \
     apt-get clean
