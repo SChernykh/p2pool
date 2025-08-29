@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>P2Pool - Decentralized Monero mining pool</title>
+<title>P2Pool nano - Decentralized Monero mining pool</title>
 <link rel="shortcut icon" type="image/png" href="favicon-32x32.png"/>
 <meta name="viewport" content="width=device-width, initial-scale=0.5">
 <style>
@@ -120,15 +120,18 @@ async function load_data() {
 		n = pool_blocks[i].height;
 		height.innerHTML = '<a href="/explorer/block/' + pool_blocks[i].hash + '" target="_blank">' + n + '</a>';
 
+		let value = 0.0;
+
 		if ((i + 1 < pool_blocks.length) && (pool_blocks[i + 1].totalHashes > 0)) {
-			let value = (pool_blocks[i].totalHashes - pool_blocks[i + 1].totalHashes) * 100.0 / pool_blocks[i].difficulty;
-			total_effort += value;
-			++num_blocks_with_effort;
-			set_effort(effort, value);
+			value = (pool_blocks[i].totalHashes - pool_blocks[i + 1].totalHashes) * 100.0 / pool_blocks[i].difficulty;
 		}
 		else {
-			effort.innerHTML = "N/A";
+			value = pool_blocks[i].totalHashes * 100.0 / pool_blocks[i].difficulty;
 		}
+
+		total_effort += value;
+		++num_blocks_with_effort;
+		set_effort(effort, value);
 
 		age.innerHTML = elapsedTimeStr(pool_blocks[i].ts, ts, 1);
 	}
@@ -193,7 +196,7 @@ function toggle_menu(name) {
 </script>
 </head>
 <body onload="load_data();setInterval(load_data, 2000);toggle_menu(window.location.hash.substr(1));">
-<div style="font-size:3rem;text-align:center;">P2Pool</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool</div>
+<div style="font-size:3rem;text-align:center;">P2Pool nano</div><div style="font-size:1.1rem;text-align:center;">Decentralized Monero mining pool</div>
 <div style="font-size:1rem;text-align:center;">Latest release: <span id="latest_release"><a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">P2Pool</a></span></div>
 <br>
 <table id="main_menu" style="width:100%;margin-left:auto;margin-right:auto;table-layout:fixed;text-align:center;-ms-touch-action:none;touch-action:none;"><tr>
@@ -218,7 +221,7 @@ function toggle_menu(name) {
 <tr><td>Min payout</td><td><span id="min_payout">0.00027 XMR</span></td><td></td></tr>
 <tr><td>Payout scheme</td><td><a href="https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares" target="_blank">PPLNS</a></td><td></td></tr>
 <tr><td>&nbsp;</td><td></td><td></td></tr>
-<tr><td>Statistics</td><td><a href="https://p2pool.observer/" target="_blank">P2Pool observer</a></td><td></td></tr>
+<tr><td>Statistics</td><td><a href="https://nano.p2pool.observer/" target="_blank">P2Pool observer</a></td><td></td></tr>
 </table>
 <table id="menu_blocks" class="menu_page">
 <tr><td style="padding-right:5rem;">Height</td><td style="padding-right:5rem;">Effort</td><td>Age</td></tr>
@@ -256,8 +259,8 @@ It's highly recommended to create a new wallet for mining because wallet address
 <details><summary>Setup P2Pool node</summary>
 <ul>
 <li>Download the latest P2Pool <a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">release</a>
-<li>[Optional] Open port <span>37889</span> (P2Pool port) or <span>37888</span> (P2Pool mini port) in your firewall to ensure better connectivity
-<li>Run <span>./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS</span>
+<li>[Optional] Open port <span>37889</span> (P2Pool port) or <span>37890</span> (P2Pool nano port) in your firewall to ensure better connectivity
+<li>Run <span>./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS --nano</span>
 <li>It should take no more than 5-10 minutes to synchronize
 </ul></details>
 
@@ -273,7 +276,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <details><summary>Checking your progress</summary>
 <ul>
 <li>You can enter your wallet address at <a href="https://p2pool.observer/" target="_blank">P2Pool Observer</a>
-<li>P2Pool Observer for P2Pool mini can be found <a href="https://mini.p2pool.observer/" target="_blank">here</a>
+<li>P2Pool Observer for P2Pool nano can be found <a href="https://nano.p2pool.observer/" target="_blank">here</a>
 <li>You will find your wallet's statistics there only after you've mined at least 1 P2Pool share
 </ul>
 </details>
@@ -296,11 +299,11 @@ P2Pool is a decentralized community, there is no dedicated support. You can reac
 <li><span style="font-size:2rem;color:#e09000;">Does P2Pool work with pruned Monero node?</span>
 <ul><li>Yes, you can use pruned Monero node to mine on P2Pool</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">Does P2Pool require incoming connections to work properly?</span>
-<ul><li>P2Pool (and Monero) can work with only outgoing connections, but it's recommended to open ports 18080 (Monero) and 37889/37888 (P2Pool/P2Pool mini) for better connectivity with the rest of the network.</ul><br>
+<ul><li>P2Pool (and Monero) can work with only outgoing connections, but it's recommended to open ports 18080 (Monero) and 37889/37888/37890 (P2Pool/P2Pool mini/P2Pool nano) for better connectivity with the rest of the network.</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I have been mining for several hours and still got no rewards?</span>
-<ul><li>P2Pool doesn't work exactly like regular pools - there's no "pending balance" here. You need to find a pool share first and then wait for P2Pool to find a Monero block. You'll get a payout to your XMR wallet as soon as a block is found and you have shares in PPLNS window. It can take several days to a week to find a share if your hashrate is low. Type "status" command in P2Pool console or visit <a href="https://p2pool.observer/" target="_blank">P2Pool observer</a> to check your progress.</ul><br>
+<ul><li>P2Pool doesn't work exactly like regular pools - there's no "pending balance" here. You need to find a pool share first and then wait for P2Pool to find a Monero block. You'll get a payout to your XMR wallet as soon as a block is found and you have shares in PPLNS window. It can take several days to a week to find a share if your hashrate is low. Type "status" command in P2Pool console or visit <a href="https://nano.p2pool.observer/" target="_blank">P2Pool observer</a> to check your progress.</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I am mining but I can't find any shares</span>
-<ul><li>First check for any warnings and errors in P2Pool console and logs. If everything works fine, you can check the <a href="https://p2pool.observer/calculate-share-time" target="_blank">average share time calculator</a> to get an idea how often you should find a share with your hashrate. If this time is more than 1 day, it's recommended to switch to P2Pool mini by adding <span style="color:#808080;">--mini</span> to P2Pool command line.</ul><br>
+<ul><li>First check for any warnings and errors in P2Pool console and logs. If everything works fine, you can check the <a href="https://p2pool.observer/calculate-share-time" target="_blank">average share time calculator</a> to get an idea how often you should find a share with your hashrate. If this time is more than 1 day, it's recommended to switch to P2Pool mini or P2Pool nano by adding <span style="color:#808080;">--mini</span> or <span style="color:#808080;">--nano</span> to P2Pool command line.</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I get an error "monerod RPC ... is incompatible, update to RPC >= v3.8"</span>
 <ul><li>Use monerod v0.18.0.0 or newer</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I get warnings "peer ... is ahead on mainchain (height ..., your height ...). Is your monerod stuck or lagging?"</span>
@@ -309,7 +312,7 @@ P2Pool is a decentralized community, there is no dedicated support. You can reac
 </td></tr></table>
 <br><br>
 <div style="position:fixed;width:100%;bottom:0;background-color:#383838;font-size:1rem;text-align:center;color:#b0b0b0;">
-<a href="api/" target="_blank">Pool API</a>&nbsp;|&nbsp;<a href="https://github.com/SChernykh/p2pool" target="_blank">Source</a>&nbsp;|&nbsp;<a href="http://yucmgsbw7nknw7oi3bkuwudvc657g2xcqahhbjyewazusyytapqo4xid.onion/" target="_blank">Onion URL</a><br>
+<a href="api/" target="_blank">Pool API</a>&nbsp;|&nbsp;<a href="https://github.com/SChernykh/p2pool" target="_blank">Source</a>&nbsp;|&nbsp;<a href="http://yucmgsbw7nknw7oi3bkuwudvc657g2xcqahhbjyewazusyytapqo4xid.onion/nano/" target="_blank">Onion URL</a><br>
 Donate to support the project:<br><span style="font-size:0.9rem;color:#b0b0b0;">44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg</span><br>
 &nbsp;
 </div>

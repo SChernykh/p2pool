@@ -94,7 +94,7 @@ services:
     restart: unless-stopped
     command: >-
       --zmq-pub tcp://0.0.0.0:18083
-      --disable-dns-checkpoints
+      --enforce-dns-checkpointing
       --enable-dns-blocklist
       --out-peers 16
       --in-peers 32

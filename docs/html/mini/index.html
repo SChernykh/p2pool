@@ -248,7 +248,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <ul>
 <li>Download the latest Monero <a href="https://www.getmonero.org/downloads/" target="_blank">release</a>
 <li>[Optional] Open port <span>18080</span> (Monero p2p port) in your firewall to ensure better connectivity
-<li>Run <span>./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist</span>
+<li>Run <span>./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist</span>
 <li>If your network connection's upload bandwidth is less than 10 Mbit, use <span>--out-peers 8 --in-peers 16</span> instead.
 <li>Wait until it's fully synchronized. If you didn't run Monero node before, it can take up to several days to synchronize (5-6 hours on a modern PC with fast SSD and fast Internet connection). You can add <span>--prune-blockchain</span> argument to the command line to run a pruned node (3-4 times less disk usage)
 </ul></details>
@@ -304,7 +304,7 @@ P2Pool is a decentralized community, there is no dedicated support. You can reac
 <li><span style="font-size:2rem;color:#e09000;">I get an error "monerod RPC ... is incompatible, update to RPC >= v3.8"</span>
 <ul><li>Use monerod v0.18.0.0 or newer</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I get warnings "peer ... is ahead on mainchain (height ..., your height ...). Is your monerod stuck or lagging?"</span>
-<ul><li>Make sure you add these arguments to monerod command line: <span style="color:#808080;">--zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist</span></ul><br>
+<ul><li>Make sure you add these arguments to monerod command line: <span style="color:#808080;">--zmq-pub tcp://127.0.0.1:18083 --enforce-dns-checkpointing --enable-dns-blocklist</span></ul><br>
 </ul>
 </td></tr></table>
 <br><br>

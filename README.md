@@ -154,7 +154,7 @@ sudo sysctl vm.nr_hugepages=3072
 4. Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your local firewall to ensure better connectivity. 
 5. Start `monerod` with the following command/options: 
 ```
-./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
 ``` 
 **Note:**
 The `--zmq-pub` option is required for P2Pool to work properly.
@@ -163,7 +163,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 
 `--add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
 
-`--disable-dns-checkpoints` is needed to avoid periodical lags when DNS is updated (it's not needed when mining)
+`--enforce-dns-checkpointing` is needed to combat the selfish mining attempts by malicious actors
 
 `--enable-dns-blocklist` is needed to ban known bad nodes
 
@@ -222,7 +222,7 @@ nocreate
 
 8. Start `monerod` with the following command/options: 
 ```
-.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+.\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
 ```
 **Note:**
 The `--zmq-pub` option is required for P2Pool to work properly.
@@ -231,7 +231,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 
 `--add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080` is needed to have guaranteed good working nodes in your connected peers.
 
-`--disable-dns-checkpoints` is needed to avoid periodical lags when DNS is updated (it's not needed when mining)
+`--enforce-dns-checkpointing` is needed to combat the selfish mining attempts by malicious actors
 
 `--enable-dns-blocklist` is needed to ban known bad nodes
 
@@ -253,7 +253,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 13. *(Optional but highly recommended)* You can create a Quickstart by creating a batch (.bat) file with the following contents and placing it in your P2Pool directory along with `xmrig.exe`.
 ```
 @ECHO OFF
-start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --disable-dns-checkpoints --enable-dns-blocklist
+start cmd /k %~dp0\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
 ECHO Wait until the Monero daemon shows fully synced before continuing. This can take some time. Type 'status' in other window to check progress.
 PAUSE
 start cmd /k %~dp0\p2pool.exe --wallet YOUR_WALLET_ADDRESS --mini
