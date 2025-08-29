@@ -47,6 +47,11 @@ RUN set -e && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
       ca-certificates \
       netcat \
+      libboost-chrono-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libboost-thread-dev \
+      libzmq5 \
+      libreadline8 \
+      libhidapi-libusb0 \
+      libunbound8 \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt
