@@ -40,7 +40,7 @@ RUN git clone --recursive --branch release-v0.18 https://github.com/monero-proje
 # runtime stage
 FROM ubuntu:22.04
 
-COPY --from=0 /src/monero/build/*/release/bin /usr/local/bin/
+COPY --from=0 /src/monero/build/Linux/*/release/bin /usr/local/bin/
 
 RUN set -e && \
     apt-get update -q -y --no-install-recommends && \
