@@ -106,11 +106,11 @@ mkdir build && cd build
 make -j$(nproc)
 make install
 
-echo "Installing GCC 15.1.0"
+echo "Installing GCC 15.2.0"
 
 cd /root
 
-git clone --depth 1 --branch releases/gcc-15.1.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-15
+git clone --depth 1 --branch releases/gcc-15.2.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-15
 
 cd gcc-15
 contrib/download_prerequisites
