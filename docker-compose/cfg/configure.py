@@ -611,7 +611,7 @@ class MoneroConfigForm(ConfigFormBase):
         self.sync_pruned_blocks = self.add(
             npyscreen.Checkbox,
             name="Sync Pruned Blocks",
-            value=False,
+            value=True,
             begin_entry_at=self.name_size,
             relx=self.indent,
         )

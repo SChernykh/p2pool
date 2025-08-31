@@ -21,7 +21,7 @@
     "limit_data_rates": false,
     "rate_limit_up": "2048",
     "rate_limit_down": "8192",
-    "sync_pruned_blocks": false,
+    "sync_pruned_blocks": true,
     "fast_sync": true,
     "monero_options": "",
     "public_monero_node": "",

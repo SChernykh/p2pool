@@ -111,6 +111,8 @@ services:
 
       --prune-blockchain
 
+      --sync-pruned-blocks
+
 
 
 

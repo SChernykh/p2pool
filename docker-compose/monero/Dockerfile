@@ -4,8 +4,9 @@
 FROM ubuntu:22.04 as builder
 ARG MONERO_GIT_TAG="latest"
 
-RUN set -e && \
-    apt-get update -q -y --no-install-recommends && \
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+
+RUN apt-get update -q -y --no-install-recommends && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
         autoconf \
         automake \
@@ -26,13 +27,17 @@ RUN set -e && \
         python3 \
         gperf
 
-
 WORKDIR /src
+
 RUN git clone --recursive --branch release-v0.18 https://github.com/monero-project/monero && \
     cd monero && \
     if [ "x$MONERO_GIT_TAG" = "xlatest" ]; then MONERO_GIT_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)); fi && \
     git checkout $MONERO_GIT_TAG && \
     git submodule sync && git submodule update --init --force --recursive && \
+    curl -L -O https://p2pool.io/checkpoints/checkpoints.dat && \
+    curl -L -O https://p2pool.io/checkpoints/checkpoints.patch && \
+    git apply checkpoints.patch && \
+    cp -f checkpoints.dat src/blocks && \
     make -j$(nproc)
 
 # ---
@@ -42,8 +47,9 @@ FROM ubuntu:22.04
 
 COPY --from=0 /src/monero/build/Linux/*/release/bin /usr/local/bin/
 
-RUN set -e && \
-    apt-get update -q -y --no-install-recommends && \
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+
+RUN apt-get update -q -y --no-install-recommends && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -q -y --no-install-recommends \
       ca-certificates \
       netcat \
