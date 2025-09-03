@@ -166,6 +166,14 @@ struct alignas(uint64_t) hash
 
 	FORCEINLINE hash() : h{} {}
 
+	constexpr hash(std::initializer_list<uint8_t> l) : h{} {
+		auto it = l.begin();
+
+		for (size_t i = 0; (i < HASH_SIZE) && (it != l.end()); ++i, ++it) {
+			h[i] = *it;
+		}
+	}
+
 	FORCEINLINE bool operator<(const hash& other) const
 	{
 		const uint64_t* a = u64();
@@ -495,6 +503,14 @@ struct raw_ip
 };
 
 static_assert(sizeof(raw_ip) == 16, "struct raw_ip has invalid size");
+
+struct MoneroBlockBroadcastHeader
+{
+	uint32_t header_size;
+	uint32_t miner_tx_size;
+};
+
+static_assert(sizeof(MoneroBlockBroadcastHeader) == sizeof(uint32_t) * 2, "struct MoneroBlockBroadcastHeader has invalid size");
 
 void* malloc_hook(size_t n) noexcept;
 void* realloc_hook(void* ptr, size_t size) noexcept;

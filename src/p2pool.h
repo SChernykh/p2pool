@@ -86,6 +86,7 @@ public:
 	virtual void handle_tx(TxMempoolData& tx) override;
 	virtual void handle_miner_data(MinerData& data) override;
 	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
+	virtual void handle_monero_block_broadcast(std::vector<uint8_t>&& blob) override;
 
 #ifdef WITH_MERGE_MINING_DONATION
 	void set_aux_job_donation(const std::vector<IMergeMiningClient::ChainParameters>& chain_params);

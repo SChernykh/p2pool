@@ -599,6 +599,10 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	m_zmqLastActive = seconds_since_epoch();
 }
 
+void p2pool::handle_monero_block_broadcast(std::vector<uint8_t>&& blob)
+{
+	m_p2pServer->broadcast_monero_block_async(std::move(blob));
+}
 
 #ifdef WITH_MERGE_MINING_DONATION
 void p2pool::set_aux_job_donation(const std::vector<IMergeMiningClient::ChainParameters>& chain_params)
@@ -1041,6 +1045,9 @@ void p2pool::submit_block() const
 	const uint32_t nonce = submit_data.nonce;
 	const uint32_t extra_nonce = submit_data.extra_nonce;
 
+	std::vector<uint8_t> blob;
+	blob.reserve(submit_data.blob.size());
+
 	for (size_t i = 0; i < submit_data.blob.size(); ++i) {
 		uint8_t b;
 		if (nonce_offset && nonce_offset <= i && i < nonce_offset + sizeof(submit_data.nonce)) {
@@ -1057,10 +1064,15 @@ void p2pool::submit_block() const
 		else {
 			b = submit_data.blob[i];
 		}
+
 		request.append(1, "0123456789abcdef"[b >> 4]);
 		request.append(1, "0123456789abcdef"[b & 15]);
+
+		blob.push_back(b);
 	}
 	request.append("\"]}");
+
+	m_p2pServer->store_monero_block_broadcast(blob.data(), blob.size());
 
 	const Params::Host& host = current_host();
 

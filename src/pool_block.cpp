@@ -343,13 +343,8 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 	alignas(8) uint8_t hashes[HASH_SIZE * 3];
 
-	uint64_t* second_hash = reinterpret_cast<uint64_t*>(hashes + HASH_SIZE);
-
 	// Second hash is keccak of base rct data (it doesn't exist for the coinbase transaction, so it's a hash of a single 0x00 byte)
-	second_hash[0] = 0x14281e7a9e7836bcull;
-	second_hash[1] = 0x7d818f8229424636ull;
-	second_hash[2] = 0x9165d677b4f71266ull;
-	second_hash[3] = 0x8ac9bc64e0a996ffull;
+	memcpy(hashes + HASH_SIZE, keccak_0x00.h, HASH_SIZE);
 
 	// Third hash is null because there is no rct data in the coinbase transaction
 	memset(hashes + HASH_SIZE * 2, 0, HASH_SIZE);

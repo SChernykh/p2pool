@@ -20,6 +20,8 @@
 #include "p2pool.h"
 #include "params.h"
 #include "keccak.h"
+#include "merkle.h"
+#include "pow_hash.h"
 #include "side_chain.h"
 #include "pool_block.h"
 #include "block_cache.h"
@@ -79,6 +81,7 @@ P2PServer::P2PServer(p2pool* pool)
 	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE);
 
 	m_auxJobMessages.reserve(1024);
+	m_MoneroBlockBroadcasts.reserve(1024);
 
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
@@ -130,6 +133,16 @@ P2PServer::P2PServer(p2pool* pool)
 	m_AuxJobBroadcastAsync.data = this;
 #endif
 
+	uv_mutex_init_checked(&m_MoneroBlockBroadcastsLock);
+	uv_mutex_init_checked(&m_BroadcastMoneroBlockLock);
+
+	err = uv_async_init(&m_loop, &m_BroadcastMoneroBlockAsync, on_monero_block_broadcast);
+	if (err) {
+		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
+		PANIC_STOP();
+	}
+	m_BroadcastMoneroBlockAsync.data = this;
+
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
 		LOGERR(1, "failed to create timer, error " << uv_err_name(err));
@@ -170,6 +183,9 @@ P2PServer::~P2PServer()
 #ifdef WITH_MERGE_MINING_DONATION
 	uv_mutex_destroy(&m_AuxJobBroadcastLock);
 #endif
+
+	uv_mutex_destroy(&m_MoneroBlockBroadcastsLock);
+	uv_mutex_destroy(&m_BroadcastMoneroBlockLock);
 
 	delete m_block;
 	delete m_cache;
@@ -1178,6 +1194,7 @@ void P2PServer::on_timer()
 	check_for_updates();
 	api_update_local_stats();
 	clean_aux_job_messages();
+	clean_monero_block_broadcasts();
 }
 
 void P2PServer::flush_cache()
@@ -1427,6 +1444,11 @@ void P2PServer::on_shutdown()
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_AuxJobBroadcastAsync), nullptr);
 	}
 #endif
+
+	{
+		MutexLock lock(m_BroadcastMoneroBlockLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_BroadcastMoneroBlockAsync), nullptr);
+	}
 }
 
 void P2PServer::api_update_local_stats()
@@ -1586,6 +1608,113 @@ void P2PServer::clean_aux_job_messages()
 			++it;
 		}
 	}
+}
+
+void P2PServer::clean_monero_block_broadcasts()
+{
+	if ((m_timerCounter & 255) != 0) {
+		return;
+	}
+
+	MutexLock lock(m_MoneroBlockBroadcastsLock);
+
+	if (m_MoneroBlockBroadcasts.empty()) {
+		return;
+	}
+
+	const uint64_t cur_time = seconds_since_epoch();
+
+	for (auto it = m_MoneroBlockBroadcasts.begin(); it != m_MoneroBlockBroadcasts.end();) {
+		if (cur_time > it->second + MONERO_BROADCAST_TIMEOUT) {
+			it = m_MoneroBlockBroadcasts.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+void P2PServer::broadcast_monero_block_async(std::vector<uint8_t>&& blob)
+{
+	MutexLock lock(m_BroadcastMoneroBlockLock);
+
+	m_MoneroBlockToBroadcast = std::move(blob);
+
+	const int err = uv_async_send(&m_BroadcastMoneroBlockAsync);
+	if (err) {
+		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	}
+}
+
+void P2PServer::broadcast_monero_block_handler()
+{
+	std::vector<uint8_t> blob;
+	{
+		MutexLock lock(m_BroadcastMoneroBlockLock);
+		blob = std::move(m_MoneroBlockToBroadcast);
+	}
+
+	if (blob.empty()) {
+		return;
+	}
+
+	broadcast_monero_block(blob.data(), static_cast<uint32_t>(blob.size()), nullptr, false);
+}
+
+void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, const P2PClient* source, bool duplicate_check_done)
+{
+	check_event_loop_thread(__func__);
+
+	if (data_size < sizeof(MoneroBlockBroadcastHeader)) {
+		LOGWARN(3, "broadcast_monero_block: data_size is too small: " << data_size);
+		return;
+	}
+
+	if (!duplicate_check_done && !store_monero_block_broadcast(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader))) {
+		LOGINFO(6, "broadcast_monero_block: skipping duplicate broadcast");
+		return;
+	}
+
+	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
+		if ((source && (client == source)) || !client->is_good() || (client->m_protocolVersion < PROTOCOL_VERSION_1_4)) {
+			continue;
+		}
+
+		const bool result = send(client, [client, data, data_size](uint8_t* buf, size_t buf_size) -> size_t {
+			LOGINFO(6, "sending MONERO_BLOCK_BROADCAST to " << static_cast<char*>(client->m_addrString));
+
+			if (buf_size < 1 + sizeof(uint32_t) + data_size) {
+				return 0;
+			}
+
+			uint8_t* p = buf;
+
+			*(p++) = static_cast<uint8_t>(MessageId::MONERO_BLOCK_BROADCAST);
+
+			memcpy(p, &data_size, sizeof(uint32_t));
+			p += sizeof(uint32_t);
+
+			memcpy(p, data, data_size);
+			p += data_size;
+
+			return p - buf;
+		});
+
+		if (!result) {
+			LOGWARN(5, "failed to send MONERO_BLOCK_BROADCAST to " << static_cast<char*>(client->m_addrString) << ", disconnecting");
+			client->close();
+		}
+	}
+}
+
+bool P2PServer::store_monero_block_broadcast(const uint8_t* data, uint32_t data_size)
+{
+	hash digest;
+	sha256(data, data_size, digest.h);
+
+	// Every message can be received from multiple peers, so broadcast it only once
+	MutexLock lock(m_MoneroBlockBroadcastsLock);
+	return m_MoneroBlockBroadcasts.emplace(*digest.u64(), seconds_since_epoch()).second;
 }
 
 P2PServer::P2PClient::~P2PClient()
@@ -1894,6 +2023,23 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 					bytes_read = 1 + sizeof(uint32_t) + msg_size;
 
 					if (!on_aux_job_donation(buf + 1 + sizeof(uint32_t), msg_size)) {
+						ban(DEFAULT_BAN_TIME);
+						server->remove_peer_from_list(this);
+						return false;
+					}
+				}
+			}
+			break;
+
+		case MessageId::MONERO_BLOCK_BROADCAST:
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent MONERO_BLOCK_BROADCAST");
+
+			if (bytes_left >= 1 + sizeof(uint32_t)) {
+				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+				if (bytes_left >= 1 + sizeof(uint32_t) + msg_size) {
+					bytes_read = 1 + sizeof(uint32_t) + msg_size;
+
+					if (!on_monero_block_broadcast(buf + 1 + sizeof(uint32_t), msg_size)) {
 						ban(DEFAULT_BAN_TIME);
 						server->remove_peer_from_list(this);
 						return false;
@@ -2819,6 +2965,154 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 #endif
 
 	server->broadcast_aux_job_donation(buf, size, data_timestamp, this, true);
+	return true;
+}
+
+bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size)
+{
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	if (size < sizeof(MoneroBlockBroadcastHeader)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST size: " << size);
+		return false;
+	}
+
+	const uint8_t* buf0 = buf;
+	uint32_t size0 = size;
+
+	MoneroBlockBroadcastHeader data;
+	memcpy(&data, buf, sizeof(data));
+
+	buf += sizeof(data);
+	size -= sizeof(data);
+
+	if ((data.header_size < 43) || (data.header_size > 128) || (data.miner_tx_size < 64) || (data.header_size + data.miner_tx_size + 1 > size)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST header: " << data.header_size << ", " << data.miner_tx_size << ", " << size);
+		return false;
+	}
+
+	uint32_t num_transactions;
+	const uint8_t* tx_hashes = readVarint(buf + data.header_size + data.miner_tx_size, buf + size, num_transactions);
+	if (!tx_hashes) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: tx_hashes not found");
+		return false;
+	}
+
+	if ((num_transactions >= MAX_BLOCK_SIZE / HASH_SIZE) || (num_transactions * HASH_SIZE != size - static_cast<uint32_t>(tx_hashes - buf))) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: invalid number of transactions " << num_transactions);
+		return false;
+	}
+
+	if (buf[data.header_size] != TX_VERSION) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: TX_VERSION byte not found");
+		return false;
+	}
+
+	uint64_t unlock_height;
+	if (!readVarint(buf + data.header_size + 1, buf + data.header_size + data.miner_tx_size, unlock_height)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: unlock_height not found");
+		return false;
+	}
+
+	p2pool* pool = server->m_pool;
+
+	// Ignore blocks which already unlocked
+	const uint64_t cur_height = pool->miner_data().height;
+
+	if (unlock_height < cur_height) {
+		LOGINFO(5, "Outdated MONERO_BLOCK_BROADCAST: unlock_height = " << unlock_height << ", current height = " << cur_height << " - ignored");
+		return true;
+	}
+
+	// Ignore repeated old messages
+	if (!server->store_monero_block_broadcast(buf, size)) {
+		LOGINFO(6, "Repeated MONERO_BLOCK_BROADCAST - ignored");
+		return true;
+	}
+
+	const uint64_t height = unlock_height - MINER_REWARD_UNLOCK_TIME;
+
+	difficulty_type diff;
+	if (!pool->get_difficulty_at_height(height, diff)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: couldn't get difficulty at height " << height);
+		return false;
+	}
+
+	// Use 90% of this height's difficulty to account for possible altchain deviations
+	diff -= diff / 10;
+
+	hash seed;
+	if (!pool->get_seed(height, seed)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: couldn't get seed for height " << height);
+		return false;
+	}
+
+	hash hashes[3] = { {}, keccak_0x00, {} };
+
+	// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
+	keccak(buf + data.header_size, static_cast<int>(data.miner_tx_size) - 1, hashes[0].h);
+
+	std::vector<hash> transactions(num_transactions + 1);
+	keccak(reinterpret_cast<uint8_t*>(hashes), sizeof(hashes), transactions[0].h);
+
+	if (num_transactions > 0) {
+		memcpy(transactions.data() + 1, tx_hashes, num_transactions * HASH_SIZE);
+	}
+
+	root_hash root;
+	merkle_hash(transactions, root);
+
+	std::vector<uint8_t> blob;
+	blob.reserve(data.header_size + HASH_SIZE + 2);
+	
+	blob.insert(blob.end(), buf, buf + data.header_size);
+	blob.insert(blob.end(), root.h, root.h + HASH_SIZE);
+	writeVarint(num_transactions + 1, blob);
+
+	hash pow_hash;
+	if (!pool->hasher()->calculate(blob.data(), blob.size(), height, seed, pow_hash, false)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash");
+		return false;
+	}
+
+	if (!diff.check_pow(pow_hash)) {
+		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: diff check failed, PoW hash = " << pow_hash);
+		return false;
+	}
+
+	server->broadcast_monero_block(buf0, size0, this, true);
+
+	std::string request;
+	request.reserve(size * 2 + 128);
+
+	request.append("{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"");
+
+	for (size_t i = 0; i < size; ++i) {
+		request.append(1, "0123456789abcdef"[buf[i] >> 4]);
+		request.append(1, "0123456789abcdef"[buf[i] & 15]);
+	}
+
+	request.append("\"]}");
+
+	const Params::Host& host = pool->current_host();
+
+	JSONRPCRequest::call(
+		host.m_address,
+		host.m_rpcPort,
+		request,
+		host.m_rpcLogin,
+		server->m_socks5Proxy,
+		host.m_rpcSSL,
+		host.m_rpcSSL_Fingerprint,
+		JSONRPCRequest::dummy_callback,
+		[](const char* data, size_t size, double)
+		{
+			if (size > 0) {
+				LOGERR(0, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
+			}
+		}
+	);
+
 	return true;
 }
 

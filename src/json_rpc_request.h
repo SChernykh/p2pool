@@ -20,7 +20,9 @@
 namespace p2pool {
 namespace JSONRPCRequest {
 
-typedef Callback<void, const char*, size_t, double>::Base CallbackBase;
+typedef Callback<void, const char* /*msg*/, size_t /*msg_size*/, double /*tcp_ping*/>::Base CallbackBase;
+
+FORCEINLINE static constexpr void dummy_callback(const char* /*msg*/, size_t /*msg_size*/, double /*tcp_ping*/) {}
 
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop);
 
