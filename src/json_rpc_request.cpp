@@ -481,7 +481,7 @@ void CurlContext::shutdown()
 void Call(const std::string& address, int port, const std::string& req, const std::string& auth, const std::string& proxy, bool ssl, const std::string& ssl_fingerprint, CallbackBase* cb, CallbackBase* close_cb, uv_loop_t* loop)
 {
 	if (!loop) {
-		loop = uv_default_loop();
+		loop = uv_default_loop_checked();
 	}
 
 	const bool result = CallOnLoop(loop,

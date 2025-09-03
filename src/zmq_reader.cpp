@@ -323,7 +323,7 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 
 	MoneroBlockBroadcastHeader data;
 
-	data.header_size = blob.size();
+	data.header_size = static_cast<uint32_t>(blob.size());
 
 	blob.insert(blob.end(), version);
 
@@ -393,7 +393,7 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 
 	blob.push_back(0);
 
-	data.miner_tx_size = blob.size() - data.header_size;
+	data.miner_tx_size = static_cast<uint32_t>(blob.size()) - data.header_size;
 
 	auto arr2 = tx_hashes->value.GetArray();
 

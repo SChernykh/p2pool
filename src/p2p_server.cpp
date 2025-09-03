@@ -1120,6 +1120,7 @@ void P2PServer::show_peers() const
 					case PROTOCOL_VERSION_1_1: s << " p1.1"; break;
 					case PROTOCOL_VERSION_1_2: s << " p1.2"; break;
 					case PROTOCOL_VERSION_1_3: s << " p1.3"; break;
+					case PROTOCOL_VERSION_1_4: s << " p1.4"; break;
 					default: s << " p?"; break;
 				}
 			}
@@ -2032,7 +2033,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			break;
 
 		case MessageId::MONERO_BLOCK_BROADCAST:
-			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent MONERO_BLOCK_BROADCAST");
+			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent MONERO_BLOCK_BROADCAST (" << bytes_left << " bytes in the buffer)");
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
@@ -2968,7 +2969,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	return true;
 }
 
-bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size)
+bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size) const
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
@@ -2986,13 +2987,15 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	buf += sizeof(data);
 	size -= sizeof(data);
 
-	if ((data.header_size < 43) || (data.header_size > 128) || (data.miner_tx_size < 64) || (data.header_size + data.miner_tx_size + 1 > size)) {
+	const uint64_t header_and_miner_tx_size = static_cast<uint64_t>(data.header_size) + data.miner_tx_size;
+
+	if ((data.header_size < 43) || (data.header_size > 128) || (data.miner_tx_size < 64) || (header_and_miner_tx_size >= size)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST header: " << data.header_size << ", " << data.miner_tx_size << ", " << size);
 		return false;
 	}
 
 	uint32_t num_transactions;
-	const uint8_t* tx_hashes = readVarint(buf + data.header_size + data.miner_tx_size, buf + size, num_transactions);
+	const uint8_t* tx_hashes = readVarint(buf + header_and_miner_tx_size, buf + size, num_transactions);
 	if (!tx_hashes) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: tx_hashes not found");
 		return false;
@@ -3009,7 +3012,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	}
 
 	uint64_t unlock_height;
-	if (!readVarint(buf + data.header_size + 1, buf + data.header_size + data.miner_tx_size, unlock_height)) {
+	if (!readVarint(buf + data.header_size + 1, buf + header_and_miner_tx_size, unlock_height)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: unlock_height not found");
 		return false;
 	}
@@ -3017,7 +3020,8 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	p2pool* pool = server->m_pool;
 
 	// Ignore blocks which already unlocked
-	const uint64_t cur_height = pool->miner_data().height;
+	const MinerData miner_data = pool->miner_data();
+	const uint64_t cur_height = miner_data.height;
 
 	if (unlock_height < cur_height) {
 		LOGINFO(5, "Outdated MONERO_BLOCK_BROADCAST: unlock_height = " << unlock_height << ", current height = " << cur_height << " - ignored");
@@ -3031,11 +3035,12 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	}
 
 	const uint64_t height = unlock_height - MINER_REWARD_UNLOCK_TIME;
+	LOGINFO(6, "on_monero_block_broadcast: height = " << height);
 
 	difficulty_type diff;
 	if (!pool->get_difficulty_at_height(height, diff)) {
-		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: couldn't get difficulty at height " << height);
-		return false;
+		LOGWARN(3, "MONERO_BLOCK_BROADCAST: couldn't get difficulty at height " << height);
+		diff = miner_data.difficulty;
 	}
 
 	// Use 90% of this height's difficulty to account for possible altchain deviations
@@ -3043,8 +3048,8 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 	hash seed;
 	if (!pool->get_seed(height, seed)) {
-		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: couldn't get seed for height " << height);
-		return false;
+		LOGWARN(3, "MONERO_BLOCK_BROADCAST: couldn't get seed for height " << height);
+		return true;
 	}
 
 	hash hashes[3] = { {}, keccak_0x00, {} };
@@ -3108,9 +3113,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		[](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGERR(0, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
+				LOGERR(3, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
 			}
-		}
+		},
+		&server->m_loop
 	);
 
 	return true;

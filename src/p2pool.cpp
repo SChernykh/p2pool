@@ -1072,7 +1072,7 @@ void p2pool::submit_block() const
 	}
 	request.append("\"]}");
 
-	m_p2pServer->store_monero_block_broadcast(blob.data(), blob.size());
+	m_p2pServer->store_monero_block_broadcast(blob.data(), static_cast<uint32_t>(blob.size()));
 
 	const Params::Host& host = current_host();
 
