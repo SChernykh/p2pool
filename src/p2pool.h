@@ -151,6 +151,7 @@ private:
 	static void on_update_block_template(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->update_block_template(); }
 	static void on_stop(uv_async_t*);
 	static void on_reconnect_to_host(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->reconnect_to_host(); }
+	static void on_get_missing_heights(uv_async_t* async) { reinterpret_cast<p2pool*>(async->data)->get_missing_heights(); }
 
 	void submit_block() const;
 	void submit_aux_block() const;
@@ -260,6 +261,13 @@ private:
 	std::atomic<uint64_t> m_zmqLastActive;
 	uint64_t m_startTime;
 	uv_async_t m_reconnectToHostAsync;
+
+	uv_async_t m_getMissingHeightsAsync;
+
+	mutable uv_mutex_t m_missingHeightsLock;
+	mutable std::vector<uint64_t> m_missingHeights;
+
+	void get_missing_heights();
 
 #ifndef P2POOL_UNIT_TESTS
 	mutable uv_rwlock_t m_ZMQReaderLock;
