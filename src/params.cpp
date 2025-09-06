@@ -258,6 +258,11 @@ Params::Params(int argc, char* const argv[])
 		}
 #endif
 
+		if (strcmp(argv[i], "--full-validation") == 0) {
+			m_enableFullValidation = true;
+			ok = true;
+		}
+
 		if (!ok) {
 			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
