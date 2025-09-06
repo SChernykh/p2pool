@@ -258,7 +258,7 @@ Params::Params(int argc, char* const argv[])
 		}
 #endif
 
-		if ((strcmp(argv[i], "--full-validation") == 0)) {
+		if (strcmp(argv[i], "--full-validation") == 0) {
 			m_enableFullValidation = true;
 			ok = true;
 		}

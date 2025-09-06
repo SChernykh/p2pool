@@ -481,7 +481,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		update_auto_diff(client, share.m_timestamp, share.m_hashes);
 
 		// If this share is below sidechain difficulty, process it in this thread because it'll be quick
-		if (!share.m_highEnoughDifficulty && m_enableFullValidation==false) {
+		if (!share.m_highEnoughDifficulty && !m_enableFullValidation) {
 			on_share_found(&share.m_req);
 			on_after_share_found(&share.m_req, 0);
 			return true;
@@ -1025,16 +1025,13 @@ void StratumServer::on_share_found(uv_work_t* req)
 			prev_time = server->m_lastSidechainShareFoundTime;
 			server->m_lastSidechainShareFoundTime = cur_time;
 		}
-		if (share->m_highEnoughDifficulty)
-		{
-			if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
-				WriteLock lock(server->m_hashrateDataLock);
+		if (share->m_highEnoughDifficulty && !pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
+			WriteLock lock(server->m_hashrateDataLock);
 
-				if (server->m_totalFoundSidechainShares > 0) {
-					--server->m_totalFoundSidechainShares;
-					++server->m_totalFailedSidechainShares;
-					server->m_lastSidechainShareFoundTime = prev_time;
-				}
+			if (server->m_totalFoundSidechainShares > 0) {
+				--server->m_totalFoundSidechainShares;
+				++server->m_totalFailedSidechainShares;
+				server->m_lastSidechainShareFoundTime = prev_time;
 			}
 		}
 	}
