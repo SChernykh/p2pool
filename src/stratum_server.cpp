@@ -47,6 +47,7 @@ StratumServer::StratumServer(p2pool* pool)
 	: TCPServer(DEFAULT_BACKLOG, StratumClient::allocate, std::string())
 	, m_pool(pool)
 	, m_autoDiff(pool->params().m_autoDiff)
+	, m_enableFullValidation(pool->params().m_enableFullValidation)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_cumulativeHashes(0)
 	, m_cumulativeHashesAtLastShare(0)
@@ -480,7 +481,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		update_auto_diff(client, share.m_timestamp, share.m_hashes);
 
 		// If this share is below sidechain difficulty, process it in this thread because it'll be quick
-		if (!share.m_highEnoughDifficulty) {
+		if (!share.m_highEnoughDifficulty && !m_enableFullValidation) {
 			on_share_found(&share.m_req);
 			on_after_share_found(&share.m_req, 0);
 			return true;
@@ -951,7 +952,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		return;
 	}
 
-	if (share->m_highEnoughDifficulty) {
+	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
 		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
@@ -960,7 +961,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 	const uint64_t target = share->m_target;
 	const uint64_t hashes = share->m_hashes;
 
-	if (share->m_highEnoughDifficulty) {
+	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
 		if (pool->stopped()) {
 			LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
 		}
@@ -1024,8 +1025,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 			prev_time = server->m_lastSidechainShareFoundTime;
 			server->m_lastSidechainShareFoundTime = cur_time;
 		}
-
-		if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
+		if (share->m_highEnoughDifficulty && !pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
 			WriteLock lock(server->m_hashrateDataLock);
 
 			if (server->m_totalFoundSidechainShares > 0) {
