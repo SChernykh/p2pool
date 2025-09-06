@@ -116,6 +116,7 @@ struct Params
 		uint8_t priv_key[64];
 	};
 #endif
+	bool m_enableFullValidation = false;
 };
 
 } // namespace p2pool

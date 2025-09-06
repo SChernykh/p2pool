@@ -115,7 +115,7 @@ private:
 
 	p2pool* m_pool;
 	bool m_autoDiff;
-
+	bool m_enableFullValidation;
 	struct BlobsData
 	{
 		uint32_t m_extraNonceStart;
