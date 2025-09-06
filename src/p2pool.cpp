@@ -643,9 +643,9 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra)
 	m_zmqLastActive = seconds_since_epoch();
 }
 
-void p2pool::handle_monero_block_broadcast(std::vector<uint8_t>&& blob)
+void p2pool::handle_monero_block_broadcast(std::vector<std::vector<uint8_t>>&& blobs)
 {
-	m_p2pServer->broadcast_monero_block_async(std::move(blob));
+	m_p2pServer->broadcast_monero_block_async(std::move(blobs));
 }
 
 #ifdef WITH_MERGE_MINING_DONATION

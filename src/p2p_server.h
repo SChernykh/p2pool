@@ -216,7 +216,7 @@ public:
 
 	void broadcast_aux_job_donation(const uint8_t* data, uint32_t data_size, uint64_t timestamp, const P2PClient* source, bool duplicate_check_done);
 
-	void broadcast_monero_block_async(std::vector<uint8_t>&& blob);
+	void broadcast_monero_block_async(std::vector<std::vector<uint8_t>>&& blobs);
 	void broadcast_monero_block_handler();
 	void broadcast_monero_block(const uint8_t* data, uint32_t data_size, const P2PClient* source, bool duplicate_check_done);
 
@@ -347,10 +347,10 @@ private:
 	void broadcast_aux_job_donation_handler();
 #endif
 
-	uv_mutex_t m_BroadcastMoneroBlockLock;
-	std::vector<uint8_t> m_MoneroBlockToBroadcast;
+	uv_mutex_t m_MoneroBlocksToBroadcastLock;
+	std::vector<std::vector<uint8_t>> m_MoneroBlocksToBroadcast;
 
-	uv_async_t m_BroadcastMoneroBlockAsync;
+	uv_async_t m_MoneroBlocksToBroadcastAsync;
 
 	static void on_monero_block_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->broadcast_monero_block_handler(); }
 

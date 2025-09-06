@@ -253,9 +253,11 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	return true;
 }
 
-static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler* handler)
+static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 {
-#define X(type, name) type name; if (!parseValue(*value, #name, name)) return;
+	std::vector<uint8_t> empty_blob;
+
+#define X(type, name) type name; if (!parseValue(*value, #name, name)) return empty_blob;
 
 	X(uint8_t, major_version);
 	X(uint8_t, minor_version);
@@ -268,40 +270,40 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 	auto miner_tx = value->FindMember("miner_tx");
 
 	if ((miner_tx == value->MemberEnd()) || !miner_tx->value.IsObject()) {
-		LOGWARN(3, "broadcast_monero_block: miner_tx not found or is not an object");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: miner_tx not found or is not an object");
+		return empty_blob;
 	}
 
 	uint8_t version;
 	if (!parseValue(miner_tx->value, "version", version)) {
-		LOGWARN(3, "broadcast_monero_block: version not found");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: version not found");
+		return empty_blob;
 	}
 
 	uint64_t unlock_height;
 	if (!parseValue(miner_tx->value, "unlock_time", unlock_height)) {
-		LOGWARN(3, "broadcast_monero_block: unlock_time not found");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: unlock_time not found");
+		return empty_blob;
 	}
 
 	std::string extra;
 	if (!parseValue(miner_tx->value, "extra", extra)) {
-		LOGWARN(3, "broadcast_monero_block: extra not found");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: extra not found");
+		return empty_blob;
 	}
 
 	auto outputs = miner_tx->value.FindMember("outputs");
 
 	if ((outputs == miner_tx->value.MemberEnd()) || !outputs->value.IsArray()) {
-		LOGWARN(3, "broadcast_monero_block: outputs not found or is not an array");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: outputs not found or is not an array");
+		return empty_blob;
 	}
 
 	auto tx_hashes = value->FindMember("tx_hashes");
 
 	if ((tx_hashes == value->MemberEnd()) || !tx_hashes->value.IsArray()) {
-		LOGWARN(3, "broadcast_monero_block: tx_hashes not found or is not an array");
-		return;
+		LOGWARN(3, "construct_monero_block_blob: tx_hashes not found or is not an array");
+		return empty_blob;
 	}
 
 	std::vector<uint8_t> blob;
@@ -314,8 +316,8 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 
 	hash h;
 	if (!from_hex(prev_id.c_str(), prev_id.length(), h)) {
-		LOGWARN(3, "broadcast_monero_block: invalid prev_id " << prev_id);
-		return;
+		LOGWARN(3, "construct_monero_block_blob: invalid prev_id " << prev_id);
+		return empty_blob;
 	}
 
 	blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
@@ -341,42 +343,42 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 	for (rapidjson::Value* i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
-			LOGWARN(3, "broadcast_monero_block: amount not found or is not UInt64");
-			return;
+			LOGWARN(3, "construct_monero_block_blob: amount not found or is not UInt64");
+			return empty_blob;
 		}
 
 		auto to_tagged_key = i->FindMember("to_tagged_key");
 		if ((to_tagged_key == i->MemberEnd()) || !to_tagged_key->value.IsObject()) {
-			LOGWARN(3, "broadcast_monero_block: to_tagged_key not found or is not an object");
-			return;
+			LOGWARN(3, "construct_monero_block_blob: to_tagged_key not found or is not an object");
+			return empty_blob;
 		}
 
 		auto key = to_tagged_key->value.FindMember("key");
 		if ((key == to_tagged_key->value.MemberEnd()) || !key->value.IsString()) {
-			LOGWARN(3, "broadcast_monero_block: key not found or is not a string");
-			return;
+			LOGWARN(3, "construct_monero_block_blob: key not found or is not a string");
+			return empty_blob;
 		}
 
 		auto view_tag = to_tagged_key->value.FindMember("view_tag");
 		if ((view_tag == to_tagged_key->value.MemberEnd()) || !view_tag->value.IsString()) {
-			LOGWARN(3, "broadcast_monero_block: view_tag not found or is not a string");
-			return;
+			LOGWARN(3, "construct_monero_block_blob: view_tag not found or is not a string");
+			return empty_blob;
 		}
 
 		writeVarint(amount->value.GetUint64(), blob);
 		blob.push_back(TXOUT_TO_TAGGED_KEY);
 
 		if (!from_hex(key->value.GetString(), key->value.GetStringLength(), h)) {
-			LOGWARN(3, "broadcast_monero_block: invalid key " << key->value.GetString());
-			return;
+			LOGWARN(3, "construct_monero_block_blob: invalid key " << key->value.GetString());
+			return empty_blob;
 		}
 
 		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
 
 		std::vector<uint8_t> t;
 		if (!from_hex(view_tag->value.GetString(), view_tag->value.GetStringLength(), t) || (t.size() != 1)) {
-			LOGWARN(3, "broadcast_monero_block: invalid view_tag " << view_tag->value.GetString());
-			return;
+			LOGWARN(3, "construct_monero_block_blob: invalid view_tag " << view_tag->value.GetString());
+			return empty_blob;
 		}
 
 		blob.push_back(t[0]);
@@ -384,8 +386,8 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 
 	std::vector<uint8_t> t;
 	if (!from_hex(extra.c_str(), extra.length(), t) || t.empty()) {
-		LOGWARN(3, "broadcast_monero_block: invalid extra " << extra);
-		return;
+		LOGWARN(3, "construct_monero_block_blob: invalid extra " << extra);
+		return empty_blob;
 	}
 
 	writeVarint(t.size(), blob);
@@ -401,8 +403,8 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 
 	for (rapidjson::Value* i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString() || !from_hex(i->GetString(), i->GetStringLength(), h)) {
-			LOGWARN(3, "broadcast_monero_block: invalid tx_hash " << i->GetString());
-			return;
+			LOGWARN(3, "construct_monero_block_blob: invalid tx_hash " << i->GetString());
+			return empty_blob;
 		}
 		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
 	}
@@ -410,7 +412,7 @@ static void broadcast_monero_block(rapidjson::Value* value, MinerCallbackHandler
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(&data);
 	blob.insert(blob.begin(), p, p + sizeof(data));
 
-	handler->handle_monero_block_broadcast(std::move(blob));
+	return blob;
 }
 
 void ZMQReader::parse(char* data, size_t size)
@@ -509,8 +511,12 @@ void ZMQReader::parse(char* data, size_t size)
 		}
 
 		auto arr = doc.GetArray();
+
+		std::vector<std::vector<uint8_t>> blobs;
+		blobs.reserve(arr.Size());
+
 		for (Value* i = arr.begin(); i != arr.end(); ++i) {
-			broadcast_monero_block(i, m_handler);
+			blobs.emplace_back(construct_monero_block_blob(i));
 
 			if (!PARSE(*i, m_chainmainData, timestamp)) {
 				LOGWARN(1, "json-full-chain_main timestamp failed to parse, skipping it");
@@ -573,6 +579,8 @@ void ZMQReader::parse(char* data, size_t size)
 
 			m_handler->handle_chain_main(m_chainmainData, extra_it->value.GetString());
 		}
+
+		m_handler->handle_monero_block_broadcast(std::move(blobs));
 	}
 }
 

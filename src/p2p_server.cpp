@@ -134,14 +134,14 @@ P2PServer::P2PServer(p2pool* pool)
 #endif
 
 	uv_mutex_init_checked(&m_MoneroBlockBroadcastsLock);
-	uv_mutex_init_checked(&m_BroadcastMoneroBlockLock);
+	uv_mutex_init_checked(&m_MoneroBlocksToBroadcastLock);
 
-	err = uv_async_init(&m_loop, &m_BroadcastMoneroBlockAsync, on_monero_block_broadcast);
+	err = uv_async_init(&m_loop, &m_MoneroBlocksToBroadcastAsync, on_monero_block_broadcast);
 	if (err) {
 		LOGERR(1, "uv_async_init failed, error " << uv_err_name(err));
 		PANIC_STOP();
 	}
-	m_BroadcastMoneroBlockAsync.data = this;
+	m_MoneroBlocksToBroadcastAsync.data = this;
 
 	err = uv_timer_init(&m_loop, &m_timer);
 	if (err) {
@@ -185,7 +185,7 @@ P2PServer::~P2PServer()
 #endif
 
 	uv_mutex_destroy(&m_MoneroBlockBroadcastsLock);
-	uv_mutex_destroy(&m_BroadcastMoneroBlockLock);
+	uv_mutex_destroy(&m_MoneroBlocksToBroadcastLock);
 
 	delete m_block;
 	delete m_cache;
@@ -1447,8 +1447,8 @@ void P2PServer::on_shutdown()
 #endif
 
 	{
-		MutexLock lock(m_BroadcastMoneroBlockLock);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_BroadcastMoneroBlockAsync), nullptr);
+		MutexLock lock(m_MoneroBlocksToBroadcastLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_MoneroBlocksToBroadcastAsync), nullptr);
 	}
 }
 
@@ -1635,13 +1635,13 @@ void P2PServer::clean_monero_block_broadcasts()
 	}
 }
 
-void P2PServer::broadcast_monero_block_async(std::vector<uint8_t>&& blob)
+void P2PServer::broadcast_monero_block_async(std::vector<std::vector<uint8_t>>&& blobs)
 {
-	MutexLock lock(m_BroadcastMoneroBlockLock);
+	MutexLock lock(m_MoneroBlocksToBroadcastLock);
 
-	m_MoneroBlockToBroadcast = std::move(blob);
+	m_MoneroBlocksToBroadcast = std::move(blobs);
 
-	const int err = uv_async_send(&m_BroadcastMoneroBlockAsync);
+	const int err = uv_async_send(&m_MoneroBlocksToBroadcastAsync);
 	if (err) {
 		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
 	}
@@ -1649,17 +1649,17 @@ void P2PServer::broadcast_monero_block_async(std::vector<uint8_t>&& blob)
 
 void P2PServer::broadcast_monero_block_handler()
 {
-	std::vector<uint8_t> blob;
+	std::vector<std::vector<uint8_t>> blobs;
 	{
-		MutexLock lock(m_BroadcastMoneroBlockLock);
-		blob = std::move(m_MoneroBlockToBroadcast);
+		MutexLock lock(m_MoneroBlocksToBroadcastLock);
+		blobs = std::move(m_MoneroBlocksToBroadcast);
 	}
 
-	if (blob.empty()) {
-		return;
+	for (const std::vector<uint8_t>& blob : blobs) {
+		if (!blob.empty()) {
+			broadcast_monero_block(blob.data(), static_cast<uint32_t>(blob.size()), nullptr, false);
+		}
 	}
-
-	broadcast_monero_block(blob.data(), static_cast<uint32_t>(blob.size()), nullptr, false);
 }
 
 void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, const P2PClient* source, bool duplicate_check_done)
