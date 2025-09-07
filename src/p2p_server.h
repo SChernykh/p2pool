@@ -352,9 +352,12 @@ private:
 
 	uv_async_t m_MoneroBlocksToBroadcastAsync;
 
+	std::deque<std::string> m_MoneroBlocksToSubmit;
+
 	static void on_monero_block_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->broadcast_monero_block_handler(); }
 
 	void clean_monero_block_broadcasts();
+	void submit_monero_blocks();
 };
 
 } // namespace p2pool

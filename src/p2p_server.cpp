@@ -1635,6 +1635,42 @@ void P2PServer::clean_monero_block_broadcasts()
 	}
 }
 
+void P2PServer::submit_monero_blocks()
+{
+	if (m_MoneroBlocksToSubmit.empty()) {
+		return;
+	}
+
+	LOGINFO(6, "submit_monero_blocks: started, queue size = " << m_MoneroBlocksToSubmit.size());
+
+	const Params::Host& host = m_pool->current_host();
+
+	JSONRPCRequest::call(
+		host.m_address,
+		host.m_rpcPort,
+		m_MoneroBlocksToSubmit.front(),
+		host.m_rpcLogin,
+		m_socks5Proxy,
+		host.m_rpcSSL,
+		host.m_rpcSSL_Fingerprint,
+		JSONRPCRequest::dummy_callback,
+		[this](const char* data, size_t size, double)
+		{
+			if (size > 0) {
+				LOGERR(3, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
+			}
+
+			if (!m_MoneroBlocksToSubmit.empty()) {
+				m_MoneroBlocksToSubmit.pop_front();
+			}
+			LOGINFO(6, "submit_monero_blocks: finished, queue size = " << m_MoneroBlocksToSubmit.size());
+
+			submit_monero_blocks();
+		},
+		&m_loop
+	);
+}
+
 void P2PServer::broadcast_monero_block_async(std::vector<std::vector<uint8_t>>&& blobs)
 {
 	MutexLock lock(m_MoneroBlocksToBroadcastLock);
@@ -3099,25 +3135,13 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 	request.append("\"]}");
 
-	const Params::Host& host = pool->current_host();
+	server->m_MoneroBlocksToSubmit.emplace_back(std::move(request));
 
-	JSONRPCRequest::call(
-		host.m_address,
-		host.m_rpcPort,
-		request,
-		host.m_rpcLogin,
-		server->m_socks5Proxy,
-		host.m_rpcSSL,
-		host.m_rpcSSL_Fingerprint,
-		JSONRPCRequest::dummy_callback,
-		[](const char* data, size_t size, double)
-		{
-			if (size > 0) {
-				LOGERR(3, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
-			}
-		},
-		&server->m_loop
-	);
+	// Kick the JSON RPC request loop only when the first request arrives
+	// The other requests will be queued and submit_monero_blocks() will process them one by one
+	if (server->m_MoneroBlocksToSubmit.size() == 1) {
+		server->submit_monero_blocks();
+	}
 
 	return true;
 }
