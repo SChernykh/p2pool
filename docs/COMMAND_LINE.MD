@@ -39,6 +39,7 @@
 --rpc-ssl             Enable SSL on RPC connections to the Monero node
 --rpc-ssl-fingerprint base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)
 --no-stratum-http     Disable HTTP on Stratum ports
+--full-validation     Enables full share validation / increases CPU usage
 ```
 
 ### Example command line
@@ -116,3 +117,11 @@ openssl x509 -in rpc_ssl.crt -pubkey -noout -inform pem | openssl pkey -pubin -o
 ```
 
 By default, `rpc_ssl.crt` can be found in Monero data directory: `/home/username/.bitmonero/rpc_ssl.crt` on Linux and `C:\ProgramData\bitmonero\rpc_ssl.crt` on Windows.
+
+
+### Full validation
+
+`--full-validation` is a boolean flag and will set the value to true; by default it is false to reduce CPU usage
+
+Enable this if untrusted sources can submit shares to your p2pool server and you want to verify the validity of the shares PoW.  Increases CPU usage.
+This option is for shared mining services, and not neccessary in local setups.
