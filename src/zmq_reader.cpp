@@ -407,7 +407,11 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 	writeVarint(arr2.Size(), blob);
 
 	for (rapidjson::Value* i = arr2.begin(); i != arr2.end(); ++i) {
-		if (!i->IsString() || !from_hex(i->GetString(), i->GetStringLength(), h)) {
+		if (!i->IsString()) {
+			LOGWARN(3, "construct_monero_block_blob: tx_hash is not a string");
+			return empty_blob;
+		}
+		if (!from_hex(i->GetString(), i->GetStringLength(), h)) {
 			LOGWARN(3, "construct_monero_block_blob: invalid tx_hash " << i->GetString());
 			return empty_blob;
 		}
