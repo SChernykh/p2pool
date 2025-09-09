@@ -338,6 +338,11 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 
 	auto arr = outputs->value.GetArray();
 
+	if (arr.Empty()) {
+		LOGWARN(3, "construct_monero_block_blob: outputs array is empty");
+		return empty_blob;
+	}
+
 	writeVarint(arr.Size(), blob);
 
 	for (rapidjson::Value* i = arr.begin(); i != arr.end(); ++i) {
@@ -385,7 +390,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 	}
 
 	std::vector<uint8_t> t;
-	if (!from_hex(extra.c_str(), extra.length(), t) || t.empty()) {
+	if (!from_hex(extra.c_str(), extra.length(), t) || (t.size() < HASH_SIZE + 1)) {
 		LOGWARN(3, "construct_monero_block_blob: invalid extra " << extra);
 		return empty_blob;
 	}
