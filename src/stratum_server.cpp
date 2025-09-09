@@ -1009,29 +1009,32 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 		share->m_score = GOOD_SHARE_POINTS;
 
-		const double diff = sidechain_difficulty.to_double();
-		time_t prev_time;
-		const time_t cur_time = time(nullptr);
-		{
-			WriteLock lock(server->m_hashrateDataLock);
+		if (share->m_highEnoughDifficulty) {
+			const double diff = sidechain_difficulty.to_double();
+			time_t prev_time;
+			const time_t cur_time = time(nullptr);
+			{
+				WriteLock lock(server->m_hashrateDataLock);
 
-			const uint64_t n = server->m_cumulativeHashes + hashes;
-			share->m_effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
-			server->m_cumulativeHashesAtLastShare = n;
+				const uint64_t n = server->m_cumulativeHashes + hashes;
+				share->m_effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
+				server->m_cumulativeHashesAtLastShare = n;
 
-			server->m_cumulativeFoundSharesDiff += diff;
-			++server->m_totalFoundSidechainShares;
+				server->m_cumulativeFoundSharesDiff += diff;
+				++server->m_totalFoundSidechainShares;
 
-			prev_time = server->m_lastSidechainShareFoundTime;
-			server->m_lastSidechainShareFoundTime = cur_time;
-		}
-		if (share->m_highEnoughDifficulty && !pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
-			WriteLock lock(server->m_hashrateDataLock);
+				prev_time = server->m_lastSidechainShareFoundTime;
+				server->m_lastSidechainShareFoundTime = cur_time;
+			}
 
-			if (server->m_totalFoundSidechainShares > 0) {
-				--server->m_totalFoundSidechainShares;
-				++server->m_totalFailedSidechainShares;
-				server->m_lastSidechainShareFoundTime = prev_time;
+			if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
+				WriteLock lock(server->m_hashrateDataLock);
+
+				if (server->m_totalFoundSidechainShares > 0) {
+					--server->m_totalFoundSidechainShares;
+					++server->m_totalFailedSidechainShares;
+					server->m_lastSidechainShareFoundTime = prev_time;
+				}
 			}
 		}
 	}
