@@ -345,7 +345,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 
 	writeVarint(arr.Size(), blob);
 
-	for (rapidjson::Value* i = arr.begin(); i != arr.end(); ++i) {
+	for (auto i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
 			LOGWARN(3, "construct_monero_block_blob: amount not found or is not UInt64");
@@ -406,7 +406,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 
 	writeVarint(arr2.Size(), blob);
 
-	for (rapidjson::Value* i = arr2.begin(); i != arr2.end(); ++i) {
+	for (auto i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString()) {
 			LOGWARN(3, "construct_monero_block_blob: tx_hash is not a string");
 			return empty_blob;
@@ -515,7 +515,7 @@ void ZMQReader::parse(char* data, size_t size)
 	}
 	else if (strcmp(data, "json-full-chain_main") == 0) {
 		if (!doc.IsArray()) {
-			LOGWARN(1, "json-full-chain_main is not an object, skipping it");
+			LOGWARN(1, "json-full-chain_main is not an array, skipping it");
 			return;
 		}
 
@@ -524,7 +524,7 @@ void ZMQReader::parse(char* data, size_t size)
 		std::vector<std::vector<uint8_t>> blobs;
 		blobs.reserve(arr.Size());
 
-		for (Value* i = arr.begin(); i != arr.end(); ++i) {
+		for (auto i = arr.begin(); i != arr.end(); ++i) {
 			blobs.emplace_back(construct_monero_block_blob(i));
 
 			if (!PARSE(*i, m_chainmainData, timestamp)) {
