@@ -1078,6 +1078,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 			const char* reason = (k < array_size(reason_list)) ? reason_list[k] : "unknown";
 			LOGWARN(0, "INVALID SHARE: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(share->m_clientAddrString) << (*s ? ", user " : "") << s << ", reason: " << reason);
 		}
+	}
+
+	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 
