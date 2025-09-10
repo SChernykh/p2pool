@@ -262,8 +262,9 @@ message NetworkDifficultyResponse {
     uint64 sha3x_estimated_hash_rate = 6;
     uint64 monero_randomx_estimated_hash_rate = 7;
     uint64 tari_randomx_estimated_hash_rate = 10;
+    UDecimalValue cuckaroo_estimated_hash_rate = 11;
     uint64 num_coinbases = 8;
-    repeated  bytes coinbase_extras = 9;
+    repeated bytes coinbase_extras = 9;
 }
 
 // A generic single value response for a specific height
@@ -626,9 +627,12 @@ message GetNetworkStateResponse {
     uint64 reward = 5;
     // estimate sha3x hash rate
     uint64 sha3x_estimated_hash_rate = 6;
-    // estimate randomx hash rate
+    // estimate monero randomx hash rate
     uint64 monero_randomx_estimated_hash_rate = 7;
+    // estimate tari randomx hash rate
     uint64 tari_randomx_estimated_hash_rate = 10;
+    // estimate cuckaroo hash rate
+    UDecimalValue cuckaroo_estimated_hash_rate = 12;
     // number of connections
     uint64 num_connections = 8;
     //liveness results

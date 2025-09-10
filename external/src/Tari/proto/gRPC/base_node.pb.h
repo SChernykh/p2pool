@@ -3195,317 +3195,6 @@ class NewBlockCoinbase final : public ::google::protobuf::Message
 extern const ::google::protobuf::internal::ClassDataFull NewBlockCoinbase_class_data_;
 // -------------------------------------------------------------------
 
-class NetworkDifficultyResponse final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:tari.rpc.NetworkDifficultyResponse) */ {
- public:
-  inline NetworkDifficultyResponse() : NetworkDifficultyResponse(nullptr) {}
-  ~NetworkDifficultyResponse() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(NetworkDifficultyResponse* PROTOBUF_NONNULL msg, std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(NetworkDifficultyResponse));
-  }
-#endif
-
-  template <typename = void>
-  explicit PROTOBUF_CONSTEXPR NetworkDifficultyResponse(::google::protobuf::internal::ConstantInitialized);
-
-  inline NetworkDifficultyResponse(const NetworkDifficultyResponse& from) : NetworkDifficultyResponse(nullptr, from) {}
-  inline NetworkDifficultyResponse(NetworkDifficultyResponse&& from) noexcept
-      : NetworkDifficultyResponse(nullptr, ::std::move(from)) {}
-  inline NetworkDifficultyResponse& operator=(const NetworkDifficultyResponse& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline NetworkDifficultyResponse& operator=(NetworkDifficultyResponse&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  static const NetworkDifficultyResponse& default_instance() {
-    return *reinterpret_cast<const NetworkDifficultyResponse*>(
-        &_NetworkDifficultyResponse_default_instance_);
-  }
-  static constexpr int kIndexInFileMessages = 16;
-  friend void swap(NetworkDifficultyResponse& a, NetworkDifficultyResponse& b) { a.Swap(&b); }
-  inline void Swap(NetworkDifficultyResponse* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(NetworkDifficultyResponse* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  NetworkDifficultyResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return ::google::protobuf::Message::DefaultConstruct<NetworkDifficultyResponse>(arena);
-  }
-  using ::google::protobuf::Message::CopyFrom;
-  void CopyFrom(const NetworkDifficultyResponse& from);
-  using ::google::protobuf::Message::MergeFrom;
-  void MergeFrom(const NetworkDifficultyResponse& from) { NetworkDifficultyResponse::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  ::size_t ByteSizeLong() const final;
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(NetworkDifficultyResponse* PROTOBUF_NONNULL other);
- private:
-  template <typename T>
-  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
-  static ::absl::string_view FullMessageName() { return "tari.rpc.NetworkDifficultyResponse"; }
-
- protected:
-  explicit NetworkDifficultyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  NetworkDifficultyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NetworkDifficultyResponse& from);
-  NetworkDifficultyResponse(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NetworkDifficultyResponse&& from) noexcept
-      : NetworkDifficultyResponse(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_();
-
-  ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kCoinbaseExtrasFieldNumber = 9,
-    kDifficultyFieldNumber = 1,
-    kEstimatedHashRateFieldNumber = 2,
-    kHeightFieldNumber = 3,
-    kTimestampFieldNumber = 4,
-    kPowAlgoFieldNumber = 5,
-    kSha3XEstimatedHashRateFieldNumber = 6,
-    kMoneroRandomxEstimatedHashRateFieldNumber = 7,
-    kNumCoinbasesFieldNumber = 8,
-    kTariRandomxEstimatedHashRateFieldNumber = 10,
-  };
-  // repeated bytes coinbase_extras = 9;
-  int coinbase_extras_size() const;
-  private:
-  int _internal_coinbase_extras_size() const;
-
-  public:
-  void clear_coinbase_extras() ;
-  const ::std::string& coinbase_extras(int index) const;
-  ::std::string* PROTOBUF_NONNULL mutable_coinbase_extras(int index);
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_coinbase_extras(int index, Arg_&& value, Args_... args);
-  ::std::string* PROTOBUF_NONNULL add_coinbase_extras();
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void add_coinbase_extras(Arg_&& value, Args_... args);
-  const ::google::protobuf::RepeatedPtrField<::std::string>& coinbase_extras() const;
-  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL mutable_coinbase_extras();
-
-  private:
-  const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_coinbase_extras() const;
-  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_coinbase_extras();
-
-  public:
-  // uint64 difficulty = 1;
-  void clear_difficulty() ;
-  ::uint64_t difficulty() const;
-  void set_difficulty(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_difficulty() const;
-  void _internal_set_difficulty(::uint64_t value);
-
-  public:
-  // uint64 estimated_hash_rate = 2;
-  void clear_estimated_hash_rate() ;
-  ::uint64_t estimated_hash_rate() const;
-  void set_estimated_hash_rate(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_estimated_hash_rate() const;
-  void _internal_set_estimated_hash_rate(::uint64_t value);
-
-  public:
-  // uint64 height = 3;
-  void clear_height() ;
-  ::uint64_t height() const;
-  void set_height(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_height() const;
-  void _internal_set_height(::uint64_t value);
-
-  public:
-  // uint64 timestamp = 4;
-  void clear_timestamp() ;
-  ::uint64_t timestamp() const;
-  void set_timestamp(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_timestamp() const;
-  void _internal_set_timestamp(::uint64_t value);
-
-  public:
-  // uint64 pow_algo = 5;
-  void clear_pow_algo() ;
-  ::uint64_t pow_algo() const;
-  void set_pow_algo(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_pow_algo() const;
-  void _internal_set_pow_algo(::uint64_t value);
-
-  public:
-  // uint64 sha3x_estimated_hash_rate = 6;
-  void clear_sha3x_estimated_hash_rate() ;
-  ::uint64_t sha3x_estimated_hash_rate() const;
-  void set_sha3x_estimated_hash_rate(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_sha3x_estimated_hash_rate() const;
-  void _internal_set_sha3x_estimated_hash_rate(::uint64_t value);
-
-  public:
-  // uint64 monero_randomx_estimated_hash_rate = 7;
-  void clear_monero_randomx_estimated_hash_rate() ;
-  ::uint64_t monero_randomx_estimated_hash_rate() const;
-  void set_monero_randomx_estimated_hash_rate(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_monero_randomx_estimated_hash_rate() const;
-  void _internal_set_monero_randomx_estimated_hash_rate(::uint64_t value);
-
-  public:
-  // uint64 num_coinbases = 8;
-  void clear_num_coinbases() ;
-  ::uint64_t num_coinbases() const;
-  void set_num_coinbases(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_num_coinbases() const;
-  void _internal_set_num_coinbases(::uint64_t value);
-
-  public:
-  // uint64 tari_randomx_estimated_hash_rate = 10;
-  void clear_tari_randomx_estimated_hash_rate() ;
-  ::uint64_t tari_randomx_estimated_hash_rate() const;
-  void set_tari_randomx_estimated_hash_rate(::uint64_t value);
-
-  private:
-  ::uint64_t _internal_tari_randomx_estimated_hash_rate() const;
-  void _internal_set_tari_randomx_estimated_hash_rate(::uint64_t value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:tari.rpc.NetworkDifficultyResponse)
- private:
-  class _Internal;
-  friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 10,
-                                   0, 0,
-                                   2>
-      _table_;
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const NetworkDifficultyResponse& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::RepeatedPtrField<::std::string> coinbase_extras_;
-    ::uint64_t difficulty_;
-    ::uint64_t estimated_hash_rate_;
-    ::uint64_t height_;
-    ::uint64_t timestamp_;
-    ::uint64_t pow_algo_;
-    ::uint64_t sha3x_estimated_hash_rate_;
-    ::uint64_t monero_randomx_estimated_hash_rate_;
-    ::uint64_t num_coinbases_;
-    ::uint64_t tari_randomx_estimated_hash_rate_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_base_5fnode_2eproto;
-};
-
-extern const ::google::protobuf::internal::ClassDataFull NetworkDifficultyResponse_class_data_;
-// -------------------------------------------------------------------
-
 class MigrationProgress final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:tari.rpc.MigrationProgress) */ {
  public:
@@ -10851,6 +10540,334 @@ class NewBlockTemplateRequest final : public ::google::protobuf::Message
 extern const ::google::protobuf::internal::ClassDataFull NewBlockTemplateRequest_class_data_;
 // -------------------------------------------------------------------
 
+class NetworkDifficultyResponse final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:tari.rpc.NetworkDifficultyResponse) */ {
+ public:
+  inline NetworkDifficultyResponse() : NetworkDifficultyResponse(nullptr) {}
+  ~NetworkDifficultyResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(NetworkDifficultyResponse* PROTOBUF_NONNULL msg, std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(NetworkDifficultyResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR NetworkDifficultyResponse(::google::protobuf::internal::ConstantInitialized);
+
+  inline NetworkDifficultyResponse(const NetworkDifficultyResponse& from) : NetworkDifficultyResponse(nullptr, from) {}
+  inline NetworkDifficultyResponse(NetworkDifficultyResponse&& from) noexcept
+      : NetworkDifficultyResponse(nullptr, ::std::move(from)) {}
+  inline NetworkDifficultyResponse& operator=(const NetworkDifficultyResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NetworkDifficultyResponse& operator=(NetworkDifficultyResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const NetworkDifficultyResponse& default_instance() {
+    return *reinterpret_cast<const NetworkDifficultyResponse*>(
+        &_NetworkDifficultyResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 16;
+  friend void swap(NetworkDifficultyResponse& a, NetworkDifficultyResponse& b) { a.Swap(&b); }
+  inline void Swap(NetworkDifficultyResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NetworkDifficultyResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NetworkDifficultyResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<NetworkDifficultyResponse>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const NetworkDifficultyResponse& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const NetworkDifficultyResponse& from) { NetworkDifficultyResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(NetworkDifficultyResponse* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "tari.rpc.NetworkDifficultyResponse"; }
+
+ protected:
+  explicit NetworkDifficultyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  NetworkDifficultyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NetworkDifficultyResponse& from);
+  NetworkDifficultyResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NetworkDifficultyResponse&& from) noexcept
+      : NetworkDifficultyResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kCoinbaseExtrasFieldNumber = 9,
+    kCuckarooEstimatedHashRateFieldNumber = 11,
+    kDifficultyFieldNumber = 1,
+    kEstimatedHashRateFieldNumber = 2,
+    kHeightFieldNumber = 3,
+    kTimestampFieldNumber = 4,
+    kPowAlgoFieldNumber = 5,
+    kSha3XEstimatedHashRateFieldNumber = 6,
+    kMoneroRandomxEstimatedHashRateFieldNumber = 7,
+    kNumCoinbasesFieldNumber = 8,
+    kTariRandomxEstimatedHashRateFieldNumber = 10,
+  };
+  // repeated bytes coinbase_extras = 9;
+  int coinbase_extras_size() const;
+  private:
+  int _internal_coinbase_extras_size() const;
+
+  public:
+  void clear_coinbase_extras() ;
+  const ::std::string& coinbase_extras(int index) const;
+  ::std::string* PROTOBUF_NONNULL mutable_coinbase_extras(int index);
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_coinbase_extras(int index, Arg_&& value, Args_... args);
+  ::std::string* PROTOBUF_NONNULL add_coinbase_extras();
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void add_coinbase_extras(Arg_&& value, Args_... args);
+  const ::google::protobuf::RepeatedPtrField<::std::string>& coinbase_extras() const;
+  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL mutable_coinbase_extras();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_coinbase_extras() const;
+  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_coinbase_extras();
+
+  public:
+  // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
+  bool has_cuckaroo_estimated_hash_rate() const;
+  void clear_cuckaroo_estimated_hash_rate() ;
+  const ::tari::rpc::UDecimalValue& cuckaroo_estimated_hash_rate() const;
+  [[nodiscard]] ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE release_cuckaroo_estimated_hash_rate();
+  ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL mutable_cuckaroo_estimated_hash_rate();
+  void set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value);
+  ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE unsafe_arena_release_cuckaroo_estimated_hash_rate();
+
+  private:
+  const ::tari::rpc::UDecimalValue& _internal_cuckaroo_estimated_hash_rate() const;
+  ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL _internal_mutable_cuckaroo_estimated_hash_rate();
+
+  public:
+  // uint64 difficulty = 1;
+  void clear_difficulty() ;
+  ::uint64_t difficulty() const;
+  void set_difficulty(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_difficulty() const;
+  void _internal_set_difficulty(::uint64_t value);
+
+  public:
+  // uint64 estimated_hash_rate = 2;
+  void clear_estimated_hash_rate() ;
+  ::uint64_t estimated_hash_rate() const;
+  void set_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_estimated_hash_rate() const;
+  void _internal_set_estimated_hash_rate(::uint64_t value);
+
+  public:
+  // uint64 height = 3;
+  void clear_height() ;
+  ::uint64_t height() const;
+  void set_height(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_height() const;
+  void _internal_set_height(::uint64_t value);
+
+  public:
+  // uint64 timestamp = 4;
+  void clear_timestamp() ;
+  ::uint64_t timestamp() const;
+  void set_timestamp(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_timestamp() const;
+  void _internal_set_timestamp(::uint64_t value);
+
+  public:
+  // uint64 pow_algo = 5;
+  void clear_pow_algo() ;
+  ::uint64_t pow_algo() const;
+  void set_pow_algo(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_pow_algo() const;
+  void _internal_set_pow_algo(::uint64_t value);
+
+  public:
+  // uint64 sha3x_estimated_hash_rate = 6;
+  void clear_sha3x_estimated_hash_rate() ;
+  ::uint64_t sha3x_estimated_hash_rate() const;
+  void set_sha3x_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_sha3x_estimated_hash_rate() const;
+  void _internal_set_sha3x_estimated_hash_rate(::uint64_t value);
+
+  public:
+  // uint64 monero_randomx_estimated_hash_rate = 7;
+  void clear_monero_randomx_estimated_hash_rate() ;
+  ::uint64_t monero_randomx_estimated_hash_rate() const;
+  void set_monero_randomx_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_monero_randomx_estimated_hash_rate() const;
+  void _internal_set_monero_randomx_estimated_hash_rate(::uint64_t value);
+
+  public:
+  // uint64 num_coinbases = 8;
+  void clear_num_coinbases() ;
+  ::uint64_t num_coinbases() const;
+  void set_num_coinbases(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_num_coinbases() const;
+  void _internal_set_num_coinbases(::uint64_t value);
+
+  public:
+  // uint64 tari_randomx_estimated_hash_rate = 10;
+  void clear_tari_randomx_estimated_hash_rate() ;
+  ::uint64_t tari_randomx_estimated_hash_rate() const;
+  void set_tari_randomx_estimated_hash_rate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_tari_randomx_estimated_hash_rate() const;
+  void _internal_set_tari_randomx_estimated_hash_rate(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tari.rpc.NetworkDifficultyResponse)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<4, 11,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const NetworkDifficultyResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField<::std::string> coinbase_extras_;
+    ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE cuckaroo_estimated_hash_rate_;
+    ::uint64_t difficulty_;
+    ::uint64_t estimated_hash_rate_;
+    ::uint64_t height_;
+    ::uint64_t timestamp_;
+    ::uint64_t pow_algo_;
+    ::uint64_t sha3x_estimated_hash_rate_;
+    ::uint64_t monero_randomx_estimated_hash_rate_;
+    ::uint64_t num_coinbases_;
+    ::uint64_t tari_randomx_estimated_hash_rate_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_base_5fnode_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull NetworkDifficultyResponse_class_data_;
+// -------------------------------------------------------------------
+
 class MinerData final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:tari.rpc.MinerData) */ {
  public:
@@ -11693,6 +11710,7 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
     kLivenessResultsFieldNumber = 9,
     kMetadataFieldNumber = 1,
     kReadinessStatusFieldNumber = 11,
+    kCuckarooEstimatedHashRateFieldNumber = 12,
     kBaseNodeStateFieldNumber = 3,
     kInitialSyncAchievedFieldNumber = 2,
     kFailedCheckpointsFieldNumber = 4,
@@ -11747,6 +11765,21 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
   private:
   const ::tari::rpc::ReadinessStatus& _internal_readiness_status() const;
   ::tari::rpc::ReadinessStatus* PROTOBUF_NONNULL _internal_mutable_readiness_status();
+
+  public:
+  // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
+  bool has_cuckaroo_estimated_hash_rate() const;
+  void clear_cuckaroo_estimated_hash_rate() ;
+  const ::tari::rpc::UDecimalValue& cuckaroo_estimated_hash_rate() const;
+  [[nodiscard]] ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE release_cuckaroo_estimated_hash_rate();
+  ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL mutable_cuckaroo_estimated_hash_rate();
+  void set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value);
+  ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE unsafe_arena_release_cuckaroo_estimated_hash_rate();
+
+  private:
+  const ::tari::rpc::UDecimalValue& _internal_cuckaroo_estimated_hash_rate() const;
+  ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL _internal_mutable_cuckaroo_estimated_hash_rate();
 
   public:
   // .tari.rpc.BaseNodeState base_node_state = 3;
@@ -11833,8 +11866,8 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 11,
-                                   3, 0,
+  static const ::google::protobuf::internal::TcParseTable<4, 12,
+                                   4, 0,
                                    2>
       _table_;
 
@@ -11858,6 +11891,7 @@ class GetNetworkStateResponse final : public ::google::protobuf::Message
     ::google::protobuf::RepeatedPtrField< ::tari::rpc::LivenessResult > liveness_results_;
     ::tari::rpc::MetaData* PROTOBUF_NULLABLE metadata_;
     ::tari::rpc::ReadinessStatus* PROTOBUF_NULLABLE readiness_status_;
+    ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE cuckaroo_estimated_hash_rate_;
     int base_node_state_;
     bool initial_sync_achieved_;
     bool failed_checkpoints_;
@@ -18688,7 +18722,7 @@ inline void NewBlockCoinbase::set_allocated_coinbase_extra(::std::string* PROTOB
 inline void NetworkDifficultyResponse::clear_difficulty() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.difficulty_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000001u;
+  _impl_._has_bits_[0] &= ~0x00000002u;
 }
 inline ::uint64_t NetworkDifficultyResponse::difficulty() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.difficulty)
@@ -18696,7 +18730,7 @@ inline ::uint64_t NetworkDifficultyResponse::difficulty() const {
 }
 inline void NetworkDifficultyResponse::set_difficulty(::uint64_t value) {
   _internal_set_difficulty(value);
-  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_._has_bits_[0] |= 0x00000002u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.difficulty)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_difficulty() const {
@@ -18712,7 +18746,7 @@ inline void NetworkDifficultyResponse::_internal_set_difficulty(::uint64_t value
 inline void NetworkDifficultyResponse::clear_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000002u;
+  _impl_._has_bits_[0] &= ~0x00000004u;
 }
 inline ::uint64_t NetworkDifficultyResponse::estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.estimated_hash_rate)
@@ -18720,7 +18754,7 @@ inline ::uint64_t NetworkDifficultyResponse::estimated_hash_rate() const {
 }
 inline void NetworkDifficultyResponse::set_estimated_hash_rate(::uint64_t value) {
   _internal_set_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000002u;
+  _impl_._has_bits_[0] |= 0x00000004u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.estimated_hash_rate)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_estimated_hash_rate() const {
@@ -18736,7 +18770,7 @@ inline void NetworkDifficultyResponse::_internal_set_estimated_hash_rate(::uint6
 inline void NetworkDifficultyResponse::clear_height() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.height_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000004u;
+  _impl_._has_bits_[0] &= ~0x00000008u;
 }
 inline ::uint64_t NetworkDifficultyResponse::height() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.height)
@@ -18744,7 +18778,7 @@ inline ::uint64_t NetworkDifficultyResponse::height() const {
 }
 inline void NetworkDifficultyResponse::set_height(::uint64_t value) {
   _internal_set_height(value);
-  _impl_._has_bits_[0] |= 0x00000004u;
+  _impl_._has_bits_[0] |= 0x00000008u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.height)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_height() const {
@@ -18760,7 +18794,7 @@ inline void NetworkDifficultyResponse::_internal_set_height(::uint64_t value) {
 inline void NetworkDifficultyResponse::clear_timestamp() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.timestamp_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000008u;
+  _impl_._has_bits_[0] &= ~0x00000010u;
 }
 inline ::uint64_t NetworkDifficultyResponse::timestamp() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.timestamp)
@@ -18768,7 +18802,7 @@ inline ::uint64_t NetworkDifficultyResponse::timestamp() const {
 }
 inline void NetworkDifficultyResponse::set_timestamp(::uint64_t value) {
   _internal_set_timestamp(value);
-  _impl_._has_bits_[0] |= 0x00000008u;
+  _impl_._has_bits_[0] |= 0x00000010u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.timestamp)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_timestamp() const {
@@ -18784,7 +18818,7 @@ inline void NetworkDifficultyResponse::_internal_set_timestamp(::uint64_t value)
 inline void NetworkDifficultyResponse::clear_pow_algo() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.pow_algo_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000010u;
+  _impl_._has_bits_[0] &= ~0x00000020u;
 }
 inline ::uint64_t NetworkDifficultyResponse::pow_algo() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.pow_algo)
@@ -18792,7 +18826,7 @@ inline ::uint64_t NetworkDifficultyResponse::pow_algo() const {
 }
 inline void NetworkDifficultyResponse::set_pow_algo(::uint64_t value) {
   _internal_set_pow_algo(value);
-  _impl_._has_bits_[0] |= 0x00000010u;
+  _impl_._has_bits_[0] |= 0x00000020u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.pow_algo)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_pow_algo() const {
@@ -18808,7 +18842,7 @@ inline void NetworkDifficultyResponse::_internal_set_pow_algo(::uint64_t value) 
 inline void NetworkDifficultyResponse::clear_sha3x_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sha3x_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000020u;
+  _impl_._has_bits_[0] &= ~0x00000040u;
 }
 inline ::uint64_t NetworkDifficultyResponse::sha3x_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.sha3x_estimated_hash_rate)
@@ -18816,7 +18850,7 @@ inline ::uint64_t NetworkDifficultyResponse::sha3x_estimated_hash_rate() const {
 }
 inline void NetworkDifficultyResponse::set_sha3x_estimated_hash_rate(::uint64_t value) {
   _internal_set_sha3x_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000020u;
+  _impl_._has_bits_[0] |= 0x00000040u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.sha3x_estimated_hash_rate)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_sha3x_estimated_hash_rate() const {
@@ -18832,7 +18866,7 @@ inline void NetworkDifficultyResponse::_internal_set_sha3x_estimated_hash_rate(:
 inline void NetworkDifficultyResponse::clear_monero_randomx_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.monero_randomx_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000040u;
+  _impl_._has_bits_[0] &= ~0x00000080u;
 }
 inline ::uint64_t NetworkDifficultyResponse::monero_randomx_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.monero_randomx_estimated_hash_rate)
@@ -18840,7 +18874,7 @@ inline ::uint64_t NetworkDifficultyResponse::monero_randomx_estimated_hash_rate(
 }
 inline void NetworkDifficultyResponse::set_monero_randomx_estimated_hash_rate(::uint64_t value) {
   _internal_set_monero_randomx_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000040u;
+  _impl_._has_bits_[0] |= 0x00000080u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.monero_randomx_estimated_hash_rate)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_monero_randomx_estimated_hash_rate() const {
@@ -18856,7 +18890,7 @@ inline void NetworkDifficultyResponse::_internal_set_monero_randomx_estimated_ha
 inline void NetworkDifficultyResponse::clear_tari_randomx_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tari_randomx_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000100u;
+  _impl_._has_bits_[0] &= ~0x00000200u;
 }
 inline ::uint64_t NetworkDifficultyResponse::tari_randomx_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.tari_randomx_estimated_hash_rate)
@@ -18864,7 +18898,7 @@ inline ::uint64_t NetworkDifficultyResponse::tari_randomx_estimated_hash_rate() 
 }
 inline void NetworkDifficultyResponse::set_tari_randomx_estimated_hash_rate(::uint64_t value) {
   _internal_set_tari_randomx_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000100u;
+  _impl_._has_bits_[0] |= 0x00000200u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.tari_randomx_estimated_hash_rate)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_tari_randomx_estimated_hash_rate() const {
@@ -18876,11 +18910,104 @@ inline void NetworkDifficultyResponse::_internal_set_tari_randomx_estimated_hash
   _impl_.tari_randomx_estimated_hash_rate_ = value;
 }
 
+// .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
+inline bool NetworkDifficultyResponse::has_cuckaroo_estimated_hash_rate() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+  return value;
+}
+inline const ::tari::rpc::UDecimalValue& NetworkDifficultyResponse::_internal_cuckaroo_estimated_hash_rate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::tari::rpc::UDecimalValue* p = _impl_.cuckaroo_estimated_hash_rate_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::UDecimalValue&>(::tari::rpc::_UDecimalValue_default_instance_);
+}
+inline const ::tari::rpc::UDecimalValue& NetworkDifficultyResponse::cuckaroo_estimated_hash_rate() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.cuckaroo_estimated_hash_rate)
+  return _internal_cuckaroo_estimated_hash_rate();
+}
+inline void NetworkDifficultyResponse::unsafe_arena_set_allocated_cuckaroo_estimated_hash_rate(
+    ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.cuckaroo_estimated_hash_rate_);
+  }
+  _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.NetworkDifficultyResponse.cuckaroo_estimated_hash_rate)
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE NetworkDifficultyResponse::release_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::UDecimalValue* released = _impl_.cuckaroo_estimated_hash_rate_;
+  _impl_.cuckaroo_estimated_hash_rate_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE NetworkDifficultyResponse::unsafe_arena_release_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tari.rpc.NetworkDifficultyResponse.cuckaroo_estimated_hash_rate)
+
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  ::tari::rpc::UDecimalValue* temp = _impl_.cuckaroo_estimated_hash_rate_;
+  _impl_.cuckaroo_estimated_hash_rate_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL NetworkDifficultyResponse::_internal_mutable_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.cuckaroo_estimated_hash_rate_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::tari::rpc::UDecimalValue>(GetArena());
+    _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(p);
+  }
+  return _impl_.cuckaroo_estimated_hash_rate_;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL NetworkDifficultyResponse::mutable_cuckaroo_estimated_hash_rate()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000001u;
+  ::tari::rpc::UDecimalValue* _msg = _internal_mutable_cuckaroo_estimated_hash_rate();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.NetworkDifficultyResponse.cuckaroo_estimated_hash_rate)
+  return _msg;
+}
+inline void NetworkDifficultyResponse::set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.cuckaroo_estimated_hash_rate_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::Message*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+
+  _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.NetworkDifficultyResponse.cuckaroo_estimated_hash_rate)
+}
+
 // uint64 num_coinbases = 8;
 inline void NetworkDifficultyResponse::clear_num_coinbases() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.num_coinbases_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000080u;
+  _impl_._has_bits_[0] &= ~0x00000100u;
 }
 inline ::uint64_t NetworkDifficultyResponse::num_coinbases() const {
   // @@protoc_insertion_point(field_get:tari.rpc.NetworkDifficultyResponse.num_coinbases)
@@ -18888,7 +19015,7 @@ inline ::uint64_t NetworkDifficultyResponse::num_coinbases() const {
 }
 inline void NetworkDifficultyResponse::set_num_coinbases(::uint64_t value) {
   _internal_set_num_coinbases(value);
-  _impl_._has_bits_[0] |= 0x00000080u;
+  _impl_._has_bits_[0] |= 0x00000100u;
   // @@protoc_insertion_point(field_set:tari.rpc.NetworkDifficultyResponse.num_coinbases)
 }
 inline ::uint64_t NetworkDifficultyResponse::_internal_num_coinbases() const {
@@ -24180,7 +24307,7 @@ inline void GetNetworkStateResponse::set_allocated_metadata(::tari::rpc::MetaDat
 inline void GetNetworkStateResponse::clear_initial_sync_achieved() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.initial_sync_achieved_ = false;
-  _impl_._has_bits_[0] &= ~0x00000008u;
+  _impl_._has_bits_[0] &= ~0x00000010u;
 }
 inline bool GetNetworkStateResponse::initial_sync_achieved() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.initial_sync_achieved)
@@ -24188,7 +24315,7 @@ inline bool GetNetworkStateResponse::initial_sync_achieved() const {
 }
 inline void GetNetworkStateResponse::set_initial_sync_achieved(bool value) {
   _internal_set_initial_sync_achieved(value);
-  _impl_._has_bits_[0] |= 0x00000008u;
+  _impl_._has_bits_[0] |= 0x00000010u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.initial_sync_achieved)
 }
 inline bool GetNetworkStateResponse::_internal_initial_sync_achieved() const {
@@ -24204,7 +24331,7 @@ inline void GetNetworkStateResponse::_internal_set_initial_sync_achieved(bool va
 inline void GetNetworkStateResponse::clear_base_node_state() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.base_node_state_ = 0;
-  _impl_._has_bits_[0] &= ~0x00000004u;
+  _impl_._has_bits_[0] &= ~0x00000008u;
 }
 inline ::tari::rpc::BaseNodeState GetNetworkStateResponse::base_node_state() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.base_node_state)
@@ -24212,7 +24339,7 @@ inline ::tari::rpc::BaseNodeState GetNetworkStateResponse::base_node_state() con
 }
 inline void GetNetworkStateResponse::set_base_node_state(::tari::rpc::BaseNodeState value) {
   _internal_set_base_node_state(value);
-  _impl_._has_bits_[0] |= 0x00000004u;
+  _impl_._has_bits_[0] |= 0x00000008u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.base_node_state)
 }
 inline ::tari::rpc::BaseNodeState GetNetworkStateResponse::_internal_base_node_state() const {
@@ -24228,7 +24355,7 @@ inline void GetNetworkStateResponse::_internal_set_base_node_state(::tari::rpc::
 inline void GetNetworkStateResponse::clear_failed_checkpoints() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.failed_checkpoints_ = false;
-  _impl_._has_bits_[0] &= ~0x00000010u;
+  _impl_._has_bits_[0] &= ~0x00000020u;
 }
 inline bool GetNetworkStateResponse::failed_checkpoints() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.failed_checkpoints)
@@ -24236,7 +24363,7 @@ inline bool GetNetworkStateResponse::failed_checkpoints() const {
 }
 inline void GetNetworkStateResponse::set_failed_checkpoints(bool value) {
   _internal_set_failed_checkpoints(value);
-  _impl_._has_bits_[0] |= 0x00000010u;
+  _impl_._has_bits_[0] |= 0x00000020u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.failed_checkpoints)
 }
 inline bool GetNetworkStateResponse::_internal_failed_checkpoints() const {
@@ -24252,7 +24379,7 @@ inline void GetNetworkStateResponse::_internal_set_failed_checkpoints(bool value
 inline void GetNetworkStateResponse::clear_reward() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.reward_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000020u;
+  _impl_._has_bits_[0] &= ~0x00000040u;
 }
 inline ::uint64_t GetNetworkStateResponse::reward() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.reward)
@@ -24260,7 +24387,7 @@ inline ::uint64_t GetNetworkStateResponse::reward() const {
 }
 inline void GetNetworkStateResponse::set_reward(::uint64_t value) {
   _internal_set_reward(value);
-  _impl_._has_bits_[0] |= 0x00000020u;
+  _impl_._has_bits_[0] |= 0x00000040u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.reward)
 }
 inline ::uint64_t GetNetworkStateResponse::_internal_reward() const {
@@ -24276,7 +24403,7 @@ inline void GetNetworkStateResponse::_internal_set_reward(::uint64_t value) {
 inline void GetNetworkStateResponse::clear_sha3x_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sha3x_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000040u;
+  _impl_._has_bits_[0] &= ~0x00000080u;
 }
 inline ::uint64_t GetNetworkStateResponse::sha3x_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.sha3x_estimated_hash_rate)
@@ -24284,7 +24411,7 @@ inline ::uint64_t GetNetworkStateResponse::sha3x_estimated_hash_rate() const {
 }
 inline void GetNetworkStateResponse::set_sha3x_estimated_hash_rate(::uint64_t value) {
   _internal_set_sha3x_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000040u;
+  _impl_._has_bits_[0] |= 0x00000080u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.sha3x_estimated_hash_rate)
 }
 inline ::uint64_t GetNetworkStateResponse::_internal_sha3x_estimated_hash_rate() const {
@@ -24300,7 +24427,7 @@ inline void GetNetworkStateResponse::_internal_set_sha3x_estimated_hash_rate(::u
 inline void GetNetworkStateResponse::clear_monero_randomx_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.monero_randomx_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000080u;
+  _impl_._has_bits_[0] &= ~0x00000100u;
 }
 inline ::uint64_t GetNetworkStateResponse::monero_randomx_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.monero_randomx_estimated_hash_rate)
@@ -24308,7 +24435,7 @@ inline ::uint64_t GetNetworkStateResponse::monero_randomx_estimated_hash_rate() 
 }
 inline void GetNetworkStateResponse::set_monero_randomx_estimated_hash_rate(::uint64_t value) {
   _internal_set_monero_randomx_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000080u;
+  _impl_._has_bits_[0] |= 0x00000100u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.monero_randomx_estimated_hash_rate)
 }
 inline ::uint64_t GetNetworkStateResponse::_internal_monero_randomx_estimated_hash_rate() const {
@@ -24324,7 +24451,7 @@ inline void GetNetworkStateResponse::_internal_set_monero_randomx_estimated_hash
 inline void GetNetworkStateResponse::clear_tari_randomx_estimated_hash_rate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tari_randomx_estimated_hash_rate_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000200u;
+  _impl_._has_bits_[0] &= ~0x00000400u;
 }
 inline ::uint64_t GetNetworkStateResponse::tari_randomx_estimated_hash_rate() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.tari_randomx_estimated_hash_rate)
@@ -24332,7 +24459,7 @@ inline ::uint64_t GetNetworkStateResponse::tari_randomx_estimated_hash_rate() co
 }
 inline void GetNetworkStateResponse::set_tari_randomx_estimated_hash_rate(::uint64_t value) {
   _internal_set_tari_randomx_estimated_hash_rate(value);
-  _impl_._has_bits_[0] |= 0x00000200u;
+  _impl_._has_bits_[0] |= 0x00000400u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.tari_randomx_estimated_hash_rate)
 }
 inline ::uint64_t GetNetworkStateResponse::_internal_tari_randomx_estimated_hash_rate() const {
@@ -24344,11 +24471,104 @@ inline void GetNetworkStateResponse::_internal_set_tari_randomx_estimated_hash_r
   _impl_.tari_randomx_estimated_hash_rate_ = value;
 }
 
+// .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
+inline bool GetNetworkStateResponse::has_cuckaroo_estimated_hash_rate() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000004u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+  return value;
+}
+inline const ::tari::rpc::UDecimalValue& GetNetworkStateResponse::_internal_cuckaroo_estimated_hash_rate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::tari::rpc::UDecimalValue* p = _impl_.cuckaroo_estimated_hash_rate_;
+  return p != nullptr ? *p : reinterpret_cast<const ::tari::rpc::UDecimalValue&>(::tari::rpc::_UDecimalValue_default_instance_);
+}
+inline const ::tari::rpc::UDecimalValue& GetNetworkStateResponse::cuckaroo_estimated_hash_rate() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.cuckaroo_estimated_hash_rate)
+  return _internal_cuckaroo_estimated_hash_rate();
+}
+inline void GetNetworkStateResponse::unsafe_arena_set_allocated_cuckaroo_estimated_hash_rate(
+    ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.cuckaroo_estimated_hash_rate_);
+  }
+  _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000004u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000004u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tari.rpc.GetNetworkStateResponse.cuckaroo_estimated_hash_rate)
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE GetNetworkStateResponse::release_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  _impl_._has_bits_[0] &= ~0x00000004u;
+  ::tari::rpc::UDecimalValue* released = _impl_.cuckaroo_estimated_hash_rate_;
+  _impl_.cuckaroo_estimated_hash_rate_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE GetNetworkStateResponse::unsafe_arena_release_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tari.rpc.GetNetworkStateResponse.cuckaroo_estimated_hash_rate)
+
+  _impl_._has_bits_[0] &= ~0x00000004u;
+  ::tari::rpc::UDecimalValue* temp = _impl_.cuckaroo_estimated_hash_rate_;
+  _impl_.cuckaroo_estimated_hash_rate_ = nullptr;
+  return temp;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL GetNetworkStateResponse::_internal_mutable_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.cuckaroo_estimated_hash_rate_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::tari::rpc::UDecimalValue>(GetArena());
+    _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(p);
+  }
+  return _impl_.cuckaroo_estimated_hash_rate_;
+}
+inline ::tari::rpc::UDecimalValue* PROTOBUF_NONNULL GetNetworkStateResponse::mutable_cuckaroo_estimated_hash_rate()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000004u;
+  ::tari::rpc::UDecimalValue* _msg = _internal_mutable_cuckaroo_estimated_hash_rate();
+  // @@protoc_insertion_point(field_mutable:tari.rpc.GetNetworkStateResponse.cuckaroo_estimated_hash_rate)
+  return _msg;
+}
+inline void GetNetworkStateResponse::set_allocated_cuckaroo_estimated_hash_rate(::tari::rpc::UDecimalValue* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.cuckaroo_estimated_hash_rate_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::Message*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000004u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000004u;
+  }
+
+  _impl_.cuckaroo_estimated_hash_rate_ = reinterpret_cast<::tari::rpc::UDecimalValue*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tari.rpc.GetNetworkStateResponse.cuckaroo_estimated_hash_rate)
+}
+
 // uint64 num_connections = 8;
 inline void GetNetworkStateResponse::clear_num_connections() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.num_connections_ = ::uint64_t{0u};
-  _impl_._has_bits_[0] &= ~0x00000100u;
+  _impl_._has_bits_[0] &= ~0x00000200u;
 }
 inline ::uint64_t GetNetworkStateResponse::num_connections() const {
   // @@protoc_insertion_point(field_get:tari.rpc.GetNetworkStateResponse.num_connections)
@@ -24356,7 +24576,7 @@ inline ::uint64_t GetNetworkStateResponse::num_connections() const {
 }
 inline void GetNetworkStateResponse::set_num_connections(::uint64_t value) {
   _internal_set_num_connections(value);
-  _impl_._has_bits_[0] |= 0x00000100u;
+  _impl_._has_bits_[0] |= 0x00000200u;
   // @@protoc_insertion_point(field_set:tari.rpc.GetNetworkStateResponse.num_connections)
 }
 inline ::uint64_t GetNetworkStateResponse::_internal_num_connections() const {

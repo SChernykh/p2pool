@@ -68,8 +68,10 @@ message BlockHeader {
 // The proof of work data structure that is included in the block header.
 message ProofOfWork {
     // The algorithm used to mine this block
-    //   0 = Monero
+    //   0 = Monero RandomX
     //   1 = Sha3X
+    //   2 = Tari RandomX
+    //   3 = Cuckaroo
     uint64 pow_algo = 1;
     // Supplemental proof of work data. For example for Sha3x, this would be empty (only the block header is
     // required), but for Monero merge mining we need the Monero block header and RandomX seed hash.
@@ -80,9 +82,10 @@ message ProofOfWork {
 message PowAlgo {
     // The permitted pow algorithms
     enum PowAlgos {
-        POW_ALGOS_RANDOMXM = 0;    // Accessible as `grpc::pow_algo::PowAlgos::RandomxM`
+        POW_ALGOS_RANDOMXM = 0;   // Accessible as `grpc::pow_algo::PowAlgos::RandomxM`
         POW_ALGOS_SHA3X = 1;      // Accessible as `grpc::pow_algo::PowAlgos::Sha3x`
-        POW_ALGOS_RANDOMXT = 2;    // Accessible as `grpc::pow_algo::PowAlgos::RandomxT`
+        POW_ALGOS_RANDOMXT = 2;   // Accessible as `grpc::pow_algo::PowAlgos::RandomxT`
+        POW_ALGOS_CUCKAROO = 3;   // Accessible as `grpc::pow_algo::PowAlgos::Cuckaroo`
     }
     // The pow algo to use
     PowAlgos pow_algo = 1;

@@ -351,40 +351,6 @@ struct NewBlockCoinbaseDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NewBlockCoinbaseDefaultTypeInternal _NewBlockCoinbase_default_instance_;
 
-inline constexpr NetworkDifficultyResponse::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : _cached_size_{0},
-        coinbase_extras_{},
-        difficulty_{::uint64_t{0u}},
-        estimated_hash_rate_{::uint64_t{0u}},
-        height_{::uint64_t{0u}},
-        timestamp_{::uint64_t{0u}},
-        pow_algo_{::uint64_t{0u}},
-        sha3x_estimated_hash_rate_{::uint64_t{0u}},
-        monero_randomx_estimated_hash_rate_{::uint64_t{0u}},
-        num_coinbases_{::uint64_t{0u}},
-        tari_randomx_estimated_hash_rate_{::uint64_t{0u}} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR NetworkDifficultyResponse::NetworkDifficultyResponse(::_pbi::ConstantInitialized)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : ::google::protobuf::Message(NetworkDifficultyResponse_class_data_.base()),
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : ::google::protobuf::Message(),
-#endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(::_pbi::ConstantInitialized()) {
-}
-struct NetworkDifficultyResponseDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR NetworkDifficultyResponseDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~NetworkDifficultyResponseDefaultTypeInternal() {}
-  union {
-    NetworkDifficultyResponse _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NetworkDifficultyResponseDefaultTypeInternal _NetworkDifficultyResponse_default_instance_;
-
 inline constexpr MigrationProgress::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -1338,6 +1304,41 @@ struct NewBlockTemplateRequestDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NewBlockTemplateRequestDefaultTypeInternal _NewBlockTemplateRequest_default_instance_;
 
+inline constexpr NetworkDifficultyResponse::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        coinbase_extras_{},
+        cuckaroo_estimated_hash_rate_{nullptr},
+        difficulty_{::uint64_t{0u}},
+        estimated_hash_rate_{::uint64_t{0u}},
+        height_{::uint64_t{0u}},
+        timestamp_{::uint64_t{0u}},
+        pow_algo_{::uint64_t{0u}},
+        sha3x_estimated_hash_rate_{::uint64_t{0u}},
+        monero_randomx_estimated_hash_rate_{::uint64_t{0u}},
+        num_coinbases_{::uint64_t{0u}},
+        tari_randomx_estimated_hash_rate_{::uint64_t{0u}} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR NetworkDifficultyResponse::NetworkDifficultyResponse(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(NetworkDifficultyResponse_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct NetworkDifficultyResponseDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR NetworkDifficultyResponseDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~NetworkDifficultyResponseDefaultTypeInternal() {}
+  union {
+    NetworkDifficultyResponse _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NetworkDifficultyResponseDefaultTypeInternal _NetworkDifficultyResponse_default_instance_;
+
 inline constexpr MinerData::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -1429,6 +1430,7 @@ inline constexpr GetNetworkStateResponse::Impl_::Impl_(
         liveness_results_{},
         metadata_{nullptr},
         readiness_status_{nullptr},
+        cuckaroo_estimated_hash_rate_{nullptr},
         base_node_state_{static_cast< ::tari::rpc::BaseNodeState >(0)},
         initial_sync_achieved_{false},
         failed_checkpoints_{false},
@@ -2103,7 +2105,7 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_._has_bits_),
-        13, // hasbit index offset
+        14, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.difficulty_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.height_),
@@ -2112,17 +2114,19 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.cuckaroo_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.num_coinbases_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::NetworkDifficultyResponse, _impl_.coinbase_extras_),
-        0,
         1,
         2,
         3,
         4,
         5,
         6,
-        8,
         7,
+        9,
+        0,
+        8,
         ~0u,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tari::rpc::ValueAtHeightResponse, _impl_._has_bits_),
@@ -2448,7 +2452,7 @@ const ::uint32_t
         0x000, // bitmap
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_._has_bits_),
-        14, // hasbit index offset
+        15, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.metadata_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.initial_sync_achieved_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.base_node_state_),
@@ -2457,18 +2461,20 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_),
+        PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.cuckaroo_estimated_hash_rate_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.num_connections_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.liveness_results_),
         PROTOBUF_FIELD_OFFSET(::tari::rpc::GetNetworkStateResponse, _impl_.readiness_status_),
         0,
-        3,
-        2,
         4,
+        3,
         5,
         6,
         7,
-        9,
         8,
+        10,
+        2,
+        9,
         ~0u,
         1,
         0x081, // bitmap
@@ -2535,56 +2541,56 @@ static const ::_pbi::MigrationSchema
         {142, sizeof(::tari::rpc::GetNewBlockWithCoinbasesRequest)},
         {149, sizeof(::tari::rpc::NewBlockCoinbase)},
         {162, sizeof(::tari::rpc::NetworkDifficultyResponse)},
-        {185, sizeof(::tari::rpc::ValueAtHeightResponse)},
-        {204, sizeof(::tari::rpc::IntegerValue)},
-        {209, sizeof(::tari::rpc::BaseNodeGetVersionResponse)},
-        {216, sizeof(::tari::rpc::BlockGroupRequest)},
-        {227, sizeof(::tari::rpc::BlockGroupResponse)},
-        {234, sizeof(::tari::rpc::HeightRequest)},
-        {243, sizeof(::tari::rpc::BlockTimingResponse)},
-        {252, sizeof(::tari::rpc::GetHeaderByHashRequest)},
-        {257, sizeof(::tari::rpc::BlockHeaderResponse)},
-        {270, sizeof(::tari::rpc::ListHeadersRequest)},
-        {279, sizeof(::tari::rpc::GetBlocksRequest)},
-        {281, sizeof(::tari::rpc::GetBlocksResponse)},
-        {283, sizeof(::tari::rpc::MetaData)},
-        {296, sizeof(::tari::rpc::SyncInfoResponse)},
-        {305, sizeof(::tari::rpc::SyncProgressResponse)},
-        {318, sizeof(::tari::rpc::GetNewBlockResult)},
-        {333, sizeof(::tari::rpc::GetNewBlockBlobResult)},
-        {348, sizeof(::tari::rpc::MinerData)},
-        {359, sizeof(::tari::rpc::SearchKernelsRequest)},
-        {361, sizeof(::tari::rpc::SearchUtxosRequest)},
-        {363, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
-        {365, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
-        {370, sizeof(::tari::rpc::GetPeersResponse)},
-        {375, sizeof(::tari::rpc::GetPeersRequest)},
-        {376, sizeof(::tari::rpc::SubmitTransactionRequest)},
-        {381, sizeof(::tari::rpc::SubmitTransactionResponse)},
-        {386, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
-        {387, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
-        {392, sizeof(::tari::rpc::TransactionStateRequest)},
-        {397, sizeof(::tari::rpc::TransactionStateResponse)},
-        {402, sizeof(::tari::rpc::MempoolStatsResponse)},
-        {411, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
-        {418, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
-        {427, sizeof(::tari::rpc::GetValidatorNodeChangesRequest)},
-        {434, sizeof(::tari::rpc::ValidatorNodeChange)},
-        {439, sizeof(::tari::rpc::ValidatorNodeChangeAdd)},
-        {450, sizeof(::tari::rpc::ValidatorNodeChangeRemove)},
-        {455, sizeof(::tari::rpc::GetValidatorNodeChangesResponse)},
-        {457, sizeof(::tari::rpc::GetShardKeyRequest)},
-        {464, sizeof(::tari::rpc::GetShardKeyResponse)},
-        {469, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
-        {476, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
-        {483, sizeof(::tari::rpc::BlockInfo)},
-        {492, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
-        {499, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
-        {506, sizeof(::tari::rpc::GetNetworkStateRequest)},
-        {507, sizeof(::tari::rpc::GetNetworkStateResponse)},
-        {532, sizeof(::tari::rpc::LivenessResult)},
-        {541, sizeof(::tari::rpc::SearchPaymentReferencesRequest)},
-        {550, sizeof(::tari::rpc::PaymentReferenceResponse)},
+        {187, sizeof(::tari::rpc::ValueAtHeightResponse)},
+        {206, sizeof(::tari::rpc::IntegerValue)},
+        {211, sizeof(::tari::rpc::BaseNodeGetVersionResponse)},
+        {218, sizeof(::tari::rpc::BlockGroupRequest)},
+        {229, sizeof(::tari::rpc::BlockGroupResponse)},
+        {236, sizeof(::tari::rpc::HeightRequest)},
+        {245, sizeof(::tari::rpc::BlockTimingResponse)},
+        {254, sizeof(::tari::rpc::GetHeaderByHashRequest)},
+        {259, sizeof(::tari::rpc::BlockHeaderResponse)},
+        {272, sizeof(::tari::rpc::ListHeadersRequest)},
+        {281, sizeof(::tari::rpc::GetBlocksRequest)},
+        {283, sizeof(::tari::rpc::GetBlocksResponse)},
+        {285, sizeof(::tari::rpc::MetaData)},
+        {298, sizeof(::tari::rpc::SyncInfoResponse)},
+        {307, sizeof(::tari::rpc::SyncProgressResponse)},
+        {320, sizeof(::tari::rpc::GetNewBlockResult)},
+        {335, sizeof(::tari::rpc::GetNewBlockBlobResult)},
+        {350, sizeof(::tari::rpc::MinerData)},
+        {361, sizeof(::tari::rpc::SearchKernelsRequest)},
+        {363, sizeof(::tari::rpc::SearchUtxosRequest)},
+        {365, sizeof(::tari::rpc::FetchMatchingUtxosRequest)},
+        {367, sizeof(::tari::rpc::FetchMatchingUtxosResponse)},
+        {372, sizeof(::tari::rpc::GetPeersResponse)},
+        {377, sizeof(::tari::rpc::GetPeersRequest)},
+        {378, sizeof(::tari::rpc::SubmitTransactionRequest)},
+        {383, sizeof(::tari::rpc::SubmitTransactionResponse)},
+        {388, sizeof(::tari::rpc::GetMempoolTransactionsRequest)},
+        {389, sizeof(::tari::rpc::GetMempoolTransactionsResponse)},
+        {394, sizeof(::tari::rpc::TransactionStateRequest)},
+        {399, sizeof(::tari::rpc::TransactionStateResponse)},
+        {404, sizeof(::tari::rpc::MempoolStatsResponse)},
+        {413, sizeof(::tari::rpc::GetActiveValidatorNodesRequest)},
+        {420, sizeof(::tari::rpc::GetActiveValidatorNodesResponse)},
+        {429, sizeof(::tari::rpc::GetValidatorNodeChangesRequest)},
+        {436, sizeof(::tari::rpc::ValidatorNodeChange)},
+        {441, sizeof(::tari::rpc::ValidatorNodeChangeAdd)},
+        {452, sizeof(::tari::rpc::ValidatorNodeChangeRemove)},
+        {457, sizeof(::tari::rpc::GetValidatorNodeChangesResponse)},
+        {459, sizeof(::tari::rpc::GetShardKeyRequest)},
+        {466, sizeof(::tari::rpc::GetShardKeyResponse)},
+        {471, sizeof(::tari::rpc::GetTemplateRegistrationsRequest)},
+        {478, sizeof(::tari::rpc::GetTemplateRegistrationResponse)},
+        {485, sizeof(::tari::rpc::BlockInfo)},
+        {494, sizeof(::tari::rpc::GetSideChainUtxosRequest)},
+        {501, sizeof(::tari::rpc::GetSideChainUtxosResponse)},
+        {508, sizeof(::tari::rpc::GetNetworkStateRequest)},
+        {509, sizeof(::tari::rpc::GetNetworkStateResponse)},
+        {536, sizeof(::tari::rpc::LivenessResult)},
+        {545, sizeof(::tari::rpc::SearchPaymentReferencesRequest)},
+        {554, sizeof(::tari::rpc::PaymentReferenceResponse)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::tari::rpc::_GetAssetMetadataRequest_default_instance_._instance,
@@ -2715,232 +2721,236 @@ const char descriptor_table_protodef_base_5fnode_2eproto[] ABSL_ATTRIBUTE_SECTIO
     ".NewBlockCoinbase\"\201\001\n\020NewBlockCoinbase\022\017"
     "\n\007address\030\001 \001(\t\022\r\n\005value\030\002 \001(\004\022\027\n\017stealt"
     "h_payment\030\003 \001(\010\022\034\n\024revealed_value_proof\030"
-    "\004 \001(\010\022\026\n\016coinbase_extra\030\005 \001(\014\"\252\002\n\031Networ"
+    "\004 \001(\010\022\026\n\016coinbase_extra\030\005 \001(\014\"\351\002\n\031Networ"
     "kDifficultyResponse\022\022\n\ndifficulty\030\001 \001(\004\022"
     "\033\n\023estimated_hash_rate\030\002 \001(\004\022\016\n\006height\030\003"
     " \001(\004\022\021\n\ttimestamp\030\004 \001(\004\022\020\n\010pow_algo\030\005 \001("
     "\004\022!\n\031sha3x_estimated_hash_rate\030\006 \001(\004\022*\n\""
     "monero_randomx_estimated_hash_rate\030\007 \001(\004"
     "\022(\n tari_randomx_estimated_hash_rate\030\n \001"
-    "(\004\022\025\n\rnum_coinbases\030\010 \001(\004\022\027\n\017coinbase_ex"
-    "tras\030\t \003(\014\"\340\001\n\025ValueAtHeightResponse\022\032\n\022"
-    "circulating_supply\030\001 \001(\004\022\016\n\006height\030\003 \001(\004"
-    "\022\025\n\rmined_rewards\030\004 \001(\004\022\031\n\021spendable_rew"
-    "ards\030\005 \001(\004\022\032\n\022spendable_pre_mine\030\006 \001(\004\022\027"
-    "\n\017total_spendable\030\007 \001(\004\022\026\n\016total_pre_min"
-    "e\030\010 \001(\004\022\034\n\024time_locked_pre_mine\030\t \001(\004\"\035\n"
-    "\014IntegerValue\022\r\n\005value\030\001 \001(\004\">\n\032BaseNode"
-    "GetVersionResponse\022\017\n\007version\030\001 \001(\t\022\017\n\007n"
-    "etwork\030\002 \001(\r\"v\n\021BlockGroupRequest\022\020\n\010fro"
-    "m_tip\030\001 \001(\004\022\024\n\014start_height\030\002 \001(\004\022\022\n\nend"
-    "_height\030\003 \001(\004\022%\n\tcalc_type\030\004 \001(\0162\022.tari."
-    "rpc.CalcType\"J\n\022BlockGroupResponse\022\r\n\005va"
-    "lue\030\001 \003(\001\022%\n\tcalc_type\030\002 \001(\0162\022.tari.rpc."
-    "CalcType\"K\n\rHeightRequest\022\020\n\010from_tip\030\001 "
-    "\001(\004\022\024\n\014start_height\030\002 \001(\004\022\022\n\nend_height\030"
-    "\003 \001(\004\"<\n\023BlockTimingResponse\022\013\n\003max\030\001 \001("
-    "\004\022\013\n\003min\030\002 \001(\004\022\013\n\003avg\030\003 \001(\001\"&\n\026GetHeader"
-    "ByHashRequest\022\014\n\004hash\030\001 \001(\014\"\221\001\n\023BlockHea"
-    "derResponse\022%\n\006header\030\001 \001(\0132\025.tari.rpc.B"
-    "lockHeader\022\025\n\rconfirmations\030\002 \001(\004\022\016\n\006rew"
-    "ard\030\003 \001(\004\022\022\n\ndifficulty\030\004 \001(\004\022\030\n\020num_tra"
-    "nsactions\030\005 \001(\r\"b\n\022ListHeadersRequest\022\023\n"
-    "\013from_height\030\001 \001(\004\022\023\n\013num_headers\030\002 \001(\004\022"
-    "\"\n\007sorting\030\003 \001(\0162\021.tari.rpc.Sorting\"#\n\020G"
-    "etBlocksRequest\022\017\n\007heights\030\001 \003(\004\">\n\021GetB"
-    "locksResponse\022)\n\006blocks\030\001 \003(\0132\031.tari.rpc"
-    ".HistoricalBlock\"\210\001\n\010MetaData\022\031\n\021best_bl"
-    "ock_height\030\001 \001(\004\022\027\n\017best_block_hash\030\002 \001("
-    "\014\022\036\n\026accumulated_difficulty\030\005 \001(\014\022\025\n\rpru"
-    "ned_height\030\006 \001(\004\022\021\n\ttimestamp\030\007 \001(\004\"R\n\020S"
-    "yncInfoResponse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014l"
-    "ocal_height\030\002 \001(\004\022\024\n\014peer_node_id\030\003 \003(\014\""
-    "\231\001\n\024SyncProgressResponse\022\022\n\ntip_height\030\001"
-    " \001(\004\022\024\n\014local_height\030\002 \001(\004\022\"\n\005state\030\003 \001("
-    "\0162\023.tari.rpc.SyncState\022\022\n\nshort_desc\030\004 \001"
-    "(\t\022\037\n\027initial_connected_peers\030\005 \001(\004\"\263\001\n\021"
-    "GetNewBlockResult\022\022\n\nblock_hash\030\001 \001(\014\022\036\n"
-    "\005block\030\002 \001(\0132\017.tari.rpc.Block\022\031\n\021merge_m"
-    "ining_hash\030\003 \001(\014\022\026\n\016tari_unique_id\030\004 \001(\014"
-    "\022\'\n\nminer_data\030\005 \001(\0132\023.tari.rpc.MinerDat"
-    "a\022\016\n\006vm_key\030\006 \001(\014\"\223\001\n\025GetNewBlockBlobRes"
-    "ult\022\022\n\nblock_hash\030\001 \001(\014\022\016\n\006header\030\002 \001(\014\022"
-    "\022\n\nblock_body\030\003 \001(\014\022\031\n\021merge_mining_hash"
-    "\030\004 \001(\014\022\017\n\007utxo_mr\030\005 \001(\014\022\026\n\016tari_unique_i"
-    "d\030\006 \001(\014\"k\n\tMinerData\022\037\n\004algo\030\001 \001(\0132\021.tar"
-    "i.rpc.PowAlgo\022\031\n\021target_difficulty\030\002 \001(\004"
-    "\022\016\n\006reward\030\003 \001(\004\022\022\n\ntotal_fees\030\005 \001(\004\"\?\n\024"
-    "SearchKernelsRequest\022\'\n\nsignatures\030\001 \003(\013"
-    "2\023.tari.rpc.Signature\")\n\022SearchUtxosRequ"
-    "est\022\023\n\013commitments\030\001 \003(\014\"+\n\031FetchMatchin"
-    "gUtxosRequest\022\016\n\006hashes\030\001 \003(\014\"I\n\032FetchMa"
-    "tchingUtxosResponse\022+\n\006output\030\001 \001(\0132\033.ta"
-    "ri.rpc.TransactionOutput\"0\n\020GetPeersResp"
-    "onse\022\034\n\004peer\030\001 \001(\0132\016.tari.rpc.Peer\"\021\n\017Ge"
-    "tPeersRequest\"F\n\030SubmitTransactionReques"
-    "t\022*\n\013transaction\030\001 \001(\0132\025.tari.rpc.Transa"
-    "ction\"N\n\031SubmitTransactionResponse\0221\n\006re"
-    "sult\030\001 \001(\0162!.tari.rpc.SubmitTransactionR"
-    "esult\"\037\n\035GetMempoolTransactionsRequest\"L"
-    "\n\036GetMempoolTransactionsResponse\022*\n\013tran"
-    "saction\030\001 \001(\0132\025.tari.rpc.Transaction\"B\n\027"
-    "TransactionStateRequest\022\'\n\nexcess_sig\030\001 "
-    "\001(\0132\023.tari.rpc.Signature\"I\n\030TransactionS"
-    "tateResponse\022-\n\006result\030\001 \001(\0162\035.tari.rpc."
-    "TransactionLocation\"^\n\024MempoolStatsRespo"
-    "nse\022\027\n\017unconfirmed_txs\030\002 \001(\004\022\021\n\treorg_tx"
-    "s\030\003 \001(\004\022\032\n\022unconfirmed_weight\030\004 \001(\004\"F\n\036G"
-    "etActiveValidatorNodesRequest\022\016\n\006height\030"
-    "\001 \001(\004\022\024\n\014sidechain_id\030\002 \001(\014\"^\n\037GetActive"
-    "ValidatorNodesResponse\022\021\n\tshard_key\030\001 \001("
-    "\014\022\022\n\npublic_key\030\002 \001(\014\022\024\n\014sidechain_id\030\003 "
-    "\001(\014\"E\n\036GetValidatorNodeChangesRequest\022\r\n"
-    "\005epoch\030\001 \001(\004\022\024\n\014sidechain_id\030\002 \001(\014\"\207\001\n\023V"
-    "alidatorNodeChange\022/\n\003add\030\001 \001(\0132 .tari.r"
-    "pc.ValidatorNodeChangeAddH\000\0225\n\006remove\030\002 "
-    "\001(\0132#.tari.rpc.ValidatorNodeChangeRemove"
-    "H\000B\010\n\006change\"\237\001\n\026ValidatorNodeChangeAdd\022"
-    "\030\n\020activation_epoch\030\001 \001(\004\0229\n\014registratio"
-    "n\030\002 \001(\0132#.tari.rpc.ValidatorNodeRegistra"
-    "tion\022\035\n\025minimum_value_promise\030\003 \001(\004\022\021\n\ts"
-    "hard_key\030\004 \001(\014\"/\n\031ValidatorNodeChangeRem"
-    "ove\022\022\n\npublic_key\030\001 \001(\014\"Q\n\037GetValidatorN"
-    "odeChangesResponse\022.\n\007changes\030\001 \003(\0132\035.ta"
-    "ri.rpc.ValidatorNodeChange\"7\n\022GetShardKe"
-    "yRequest\022\r\n\005epoch\030\001 \001(\004\022\022\n\npublic_key\030\002 "
-    "\001(\014\"(\n\023GetShardKeyResponse\022\021\n\tshard_key\030"
-    "\001 \001(\014\"D\n\037GetTemplateRegistrationsRequest"
-    "\022\022\n\nstart_hash\030\001 \001(\014\022\r\n\005count\030\002 \001(\004\"j\n\037G"
-    "etTemplateRegistrationResponse\022\021\n\tutxo_h"
-    "ash\030\001 \001(\014\0224\n\014registration\030\002 \001(\0132\036.tari.r"
-    "pc.TemplateRegistration\"B\n\tBlockInfo\022\016\n\006"
-    "height\030\001 \001(\004\022\014\n\004hash\030\002 \001(\014\022\027\n\017next_block"
-    "_hash\030\003 \001(\014\"=\n\030GetSideChainUtxosRequest\022"
-    "\022\n\nstart_hash\030\001 \001(\014\022\r\n\005count\030\002 \001(\004\"r\n\031Ge"
-    "tSideChainUtxosResponse\022\'\n\nblock_info\030\001 "
-    "\001(\0132\023.tari.rpc.BlockInfo\022,\n\007outputs\030\002 \003("
-    "\0132\033.tari.rpc.TransactionOutput\"\030\n\026GetNet"
-    "workStateRequest\"\267\003\n\027GetNetworkStateResp"
-    "onse\022$\n\010metadata\030\001 \001(\0132\022.tari.rpc.MetaDa"
-    "ta\022\035\n\025initial_sync_achieved\030\002 \001(\010\0220\n\017bas"
-    "e_node_state\030\003 \001(\0162\027.tari.rpc.BaseNodeSt"
-    "ate\022\032\n\022failed_checkpoints\030\004 \001(\010\022\016\n\006rewar"
-    "d\030\005 \001(\004\022!\n\031sha3x_estimated_hash_rate\030\006 \001"
-    "(\004\022*\n\"monero_randomx_estimated_hash_rate"
-    "\030\007 \001(\004\022(\n tari_randomx_estimated_hash_ra"
-    "te\030\n \001(\004\022\027\n\017num_connections\030\010 \001(\004\0222\n\020liv"
-    "eness_results\030\t \003(\0132\030.tari.rpc.LivenessR"
-    "esult\0223\n\020readiness_status\030\013 \001(\0132\031.tari.r"
-    "pc.ReadinessStatus\"V\n\016LivenessResult\022\024\n\014"
-    "peer_node_id\030\001 \001(\014\022\030\n\020discover_latency\030\002"
-    " \001(\004\022\024\n\014ping_latency\030\003 \001(\004\"w\n\036SearchPaym"
-    "entReferencesRequest\022\035\n\025payment_referenc"
-    "e_hex\030\001 \003(\t\022\037\n\027payment_reference_bytes\030\002"
-    " \003(\014\022\025\n\rinclude_spent\030\003 \001(\010\"\233\002\n\030PaymentR"
-    "eferenceResponse\022\035\n\025payment_reference_he"
-    "x\030\001 \001(\t\022\024\n\014block_height\030\002 \001(\004\022\022\n\nblock_h"
-    "ash\030\003 \001(\014\022\027\n\017mined_timestamp\030\004 \001(\004\022\022\n\nco"
-    "mmitment\030\005 \001(\014\022\020\n\010is_spent\030\006 \001(\010\022\024\n\014spen"
-    "t_height\030\007 \001(\004\022\030\n\020spent_block_hash\030\010 \001(\014"
-    "\022\031\n\021min_value_promise\030\t \001(\004\022\027\n\017spent_tim"
-    "estamp\030\n \001(\004\022\023\n\013output_hash\030\013 \001(\014*\200\001\n\rBa"
-    "seNodeState\022\014\n\010START_UP\020\000\022\017\n\013HEADER_SYNC"
-    "\020\001\022\020\n\014HORIZON_SYNC\020\002\022\016\n\nCONNECTING\020\003\022\016\n\n"
-    "BLOCK_SYNC\020\004\022\r\n\tLISTENING\020\005\022\017\n\013SYNC_FAIL"
-    "ED\020\006*<\n\010CalcType\022\010\n\004MEAN\020\000\022\n\n\006MEDIAN\020\001\022\014"
-    "\n\010QUANTILE\020\002\022\014\n\010QUARTILE\020\003*,\n\007Sorting\022\020\n"
-    "\014SORTING_DESC\020\000\022\017\n\013SORTING_ASC\020\001*b\n\tSync"
-    "State\022\013\n\007STARTUP\020\000\022\023\n\017HEADER_STARTING\020\001\022"
-    "\n\n\006HEADER\020\002\022\022\n\016BLOCK_STARTING\020\003\022\t\n\005BLOCK"
-    "\020\004\022\010\n\004DONE\020\005*t\n\027SubmitTransactionResult\022"
-    "\010\n\004NONE\020\000\022\014\n\010ACCEPTED\020\001\022 \n\034NOT_PROCESSAB"
-    "LE_AT_THIS_TIME\020\002\022\021\n\rALREADY_MINED\020\003\022\014\n\010"
-    "REJECTED\020\004*J\n\023TransactionLocation\022\013\n\007UNK"
-    "NOWN\020\000\022\013\n\007MEMPOOL\020\001\022\t\n\005MINED\020\002\022\016\n\nNOT_ST"
-    "ORED\020\0032\214\032\n\010BaseNode\022L\n\013ListHeaders\022\034.tar"
-    "i.rpc.ListHeadersRequest\032\035.tari.rpc.Bloc"
-    "kHeaderResponse0\001\022R\n\017GetHeaderByHash\022 .t"
-    "ari.rpc.GetHeaderByHashRequest\032\035.tari.rp"
-    "c.BlockHeaderResponse\022D\n\tGetBlocks\022\032.tar"
-    "i.rpc.GetBlocksRequest\032\031.tari.rpc.Histor"
-    "icalBlock0\001\022H\n\016GetBlockTiming\022\027.tari.rpc"
-    ".HeightRequest\032\035.tari.rpc.BlockTimingRes"
-    "ponse\022C\n\014GetConstants\022\025.tari.rpc.BlockHe"
-    "ight\032\034.tari.rpc.ConsensusConstants\022I\n\014Ge"
-    "tBlockSize\022\033.tari.rpc.BlockGroupRequest\032"
-    "\034.tari.rpc.BlockGroupResponse\022I\n\014GetBloc"
-    "kFees\022\033.tari.rpc.BlockGroupRequest\032\034.tar"
-    "i.rpc.BlockGroupResponse\022C\n\nGetVersion\022\017"
-    ".tari.rpc.Empty\032$.tari.rpc.BaseNodeGetVe"
-    "rsionResponse\022<\n\017CheckForUpdates\022\017.tari."
-    "rpc.Empty\032\030.tari.rpc.SoftwareUpdate\022W\n\026G"
-    "etTokensInCirculation\022\032.tari.rpc.GetBloc"
-    "ksRequest\032\037.tari.rpc.ValueAtHeightRespon"
-    "se0\001\022V\n\024GetNetworkDifficulty\022\027.tari.rpc."
-    "HeightRequest\032#.tari.rpc.NetworkDifficul"
-    "tyResponse0\001\022\\\n\023GetNewBlockTemplate\022!.ta"
-    "ri.rpc.NewBlockTemplateRequest\032\".tari.rp"
-    "c.NewBlockTemplateResponse\022F\n\013GetNewBloc"
-    "k\022\032.tari.rpc.NewBlockTemplate\032\033.tari.rpc"
-    ".GetNewBlockResult\022b\n\030GetNewBlockWithCoi"
-    "nbases\022).tari.rpc.GetNewBlockWithCoinbas"
-    "esRequest\032\033.tari.rpc.GetNewBlockResult\022r"
-    "\n GetNewBlockTemplateWithCoinbases\0221.tar"
-    "i.rpc.GetNewBlockTemplateWithCoinbasesRe"
-    "quest\032\033.tari.rpc.GetNewBlockResult\022N\n\017Ge"
-    "tNewBlockBlob\022\032.tari.rpc.NewBlockTemplat"
-    "e\032\037.tari.rpc.GetNewBlockBlobResult\022=\n\013Su"
-    "bmitBlock\022\017.tari.rpc.Block\032\035.tari.rpc.Su"
-    "bmitBlockResponse\022L\n\017SubmitBlockBlob\022\032.t"
-    "ari.rpc.BlockBlobRequest\032\035.tari.rpc.Subm"
-    "itBlockResponse\022\\\n\021SubmitTransaction\022\".t"
-    "ari.rpc.SubmitTransactionRequest\032#.tari."
-    "rpc.SubmitTransactionResponse\022:\n\013GetSync"
-    "Info\022\017.tari.rpc.Empty\032\032.tari.rpc.SyncInf"
-    "oResponse\022B\n\017GetSyncProgress\022\017.tari.rpc."
-    "Empty\032\036.tari.rpc.SyncProgressResponse\0228\n"
-    "\nGetTipInfo\022\017.tari.rpc.Empty\032\031.tari.rpc."
-    "TipInfoResponse\022L\n\rSearchKernels\022\036.tari."
-    "rpc.SearchKernelsRequest\032\031.tari.rpc.Hist"
-    "oricalBlock0\001\022H\n\013SearchUtxos\022\034.tari.rpc."
-    "SearchUtxosRequest\032\031.tari.rpc.Historical"
-    "Block0\001\022a\n\022FetchMatchingUtxos\022#.tari.rpc"
-    ".FetchMatchingUtxosRequest\032$.tari.rpc.Fe"
-    "tchMatchingUtxosResponse0\001\022C\n\010GetPeers\022\031"
-    ".tari.rpc.GetPeersRequest\032\032.tari.rpc.Get"
-    "PeersResponse0\001\022m\n\026GetMempoolTransaction"
-    "s\022\'.tari.rpc.GetMempoolTransactionsReque"
-    "st\032(.tari.rpc.GetMempoolTransactionsResp"
-    "onse0\001\022Y\n\020TransactionState\022!.tari.rpc.Tr"
-    "ansactionStateRequest\032\".tari.rpc.Transac"
-    "tionStateResponse\0223\n\010Identify\022\017.tari.rpc"
-    ".Empty\032\026.tari.rpc.NodeIdentity\022D\n\020GetNet"
-    "workStatus\022\017.tari.rpc.Empty\032\037.tari.rpc.N"
-    "etworkStatusResponse\022K\n\022ListConnectedPee"
-    "rs\022\017.tari.rpc.Empty\032$.tari.rpc.ListConne"
-    "ctedPeersResponse\022B\n\017GetMempoolStats\022\017.t"
-    "ari.rpc.Empty\032\036.tari.rpc.MempoolStatsRes"
-    "ponse\022p\n\027GetActiveValidatorNodes\022(.tari."
-    "rpc.GetActiveValidatorNodesRequest\032).tar"
-    "i.rpc.GetActiveValidatorNodesResponse0\001\022"
-    "n\n\027GetValidatorNodeChanges\022(.tari.rpc.Ge"
-    "tValidatorNodeChangesRequest\032).tari.rpc."
-    "GetValidatorNodeChangesResponse\022J\n\013GetSh"
-    "ardKey\022\034.tari.rpc.GetShardKeyRequest\032\035.t"
-    "ari.rpc.GetShardKeyResponse\022r\n\030GetTempla"
-    "teRegistrations\022).tari.rpc.GetTemplateRe"
-    "gistrationsRequest\032).tari.rpc.GetTemplat"
-    "eRegistrationResponse0\001\022^\n\021GetSideChainU"
-    "txos\022\".tari.rpc.GetSideChainUtxosRequest"
-    "\032#.tari.rpc.GetSideChainUtxosResponse0\001\022"
-    "V\n\017GetNetworkState\022 .tari.rpc.GetNetwork"
-    "StateRequest\032!.tari.rpc.GetNetworkStateR"
-    "esponse\022i\n\027SearchPaymentReferences\022(.tar"
-    "i.rpc.SearchPaymentReferencesRequest\032\".t"
-    "ari.rpc.PaymentReferenceResponse0\001\022q\n$Se"
-    "archPaymentReferencesViaOutputHash\022#.tar"
-    "i.rpc.FetchMatchingUtxosRequest\032\".tari.r"
-    "pc.PaymentReferenceResponse0\001b\006proto3"
+    "(\004\022=\n\034cuckaroo_estimated_hash_rate\030\013 \001(\013"
+    "2\027.tari.rpc.UDecimalValue\022\025\n\rnum_coinbas"
+    "es\030\010 \001(\004\022\027\n\017coinbase_extras\030\t \003(\014\"\340\001\n\025Va"
+    "lueAtHeightResponse\022\032\n\022circulating_suppl"
+    "y\030\001 \001(\004\022\016\n\006height\030\003 \001(\004\022\025\n\rmined_rewards"
+    "\030\004 \001(\004\022\031\n\021spendable_rewards\030\005 \001(\004\022\032\n\022spe"
+    "ndable_pre_mine\030\006 \001(\004\022\027\n\017total_spendable"
+    "\030\007 \001(\004\022\026\n\016total_pre_mine\030\010 \001(\004\022\034\n\024time_l"
+    "ocked_pre_mine\030\t \001(\004\"\035\n\014IntegerValue\022\r\n\005"
+    "value\030\001 \001(\004\">\n\032BaseNodeGetVersionRespons"
+    "e\022\017\n\007version\030\001 \001(\t\022\017\n\007network\030\002 \001(\r\"v\n\021B"
+    "lockGroupRequest\022\020\n\010from_tip\030\001 \001(\004\022\024\n\014st"
+    "art_height\030\002 \001(\004\022\022\n\nend_height\030\003 \001(\004\022%\n\t"
+    "calc_type\030\004 \001(\0162\022.tari.rpc.CalcType\"J\n\022B"
+    "lockGroupResponse\022\r\n\005value\030\001 \003(\001\022%\n\tcalc"
+    "_type\030\002 \001(\0162\022.tari.rpc.CalcType\"K\n\rHeigh"
+    "tRequest\022\020\n\010from_tip\030\001 \001(\004\022\024\n\014start_heig"
+    "ht\030\002 \001(\004\022\022\n\nend_height\030\003 \001(\004\"<\n\023BlockTim"
+    "ingResponse\022\013\n\003max\030\001 \001(\004\022\013\n\003min\030\002 \001(\004\022\013\n"
+    "\003avg\030\003 \001(\001\"&\n\026GetHeaderByHashRequest\022\014\n\004"
+    "hash\030\001 \001(\014\"\221\001\n\023BlockHeaderResponse\022%\n\006he"
+    "ader\030\001 \001(\0132\025.tari.rpc.BlockHeader\022\025\n\rcon"
+    "firmations\030\002 \001(\004\022\016\n\006reward\030\003 \001(\004\022\022\n\ndiff"
+    "iculty\030\004 \001(\004\022\030\n\020num_transactions\030\005 \001(\r\"b"
+    "\n\022ListHeadersRequest\022\023\n\013from_height\030\001 \001("
+    "\004\022\023\n\013num_headers\030\002 \001(\004\022\"\n\007sorting\030\003 \001(\0162"
+    "\021.tari.rpc.Sorting\"#\n\020GetBlocksRequest\022\017"
+    "\n\007heights\030\001 \003(\004\">\n\021GetBlocksResponse\022)\n\006"
+    "blocks\030\001 \003(\0132\031.tari.rpc.HistoricalBlock\""
+    "\210\001\n\010MetaData\022\031\n\021best_block_height\030\001 \001(\004\022"
+    "\027\n\017best_block_hash\030\002 \001(\014\022\036\n\026accumulated_"
+    "difficulty\030\005 \001(\014\022\025\n\rpruned_height\030\006 \001(\004\022"
+    "\021\n\ttimestamp\030\007 \001(\004\"R\n\020SyncInfoResponse\022\022"
+    "\n\ntip_height\030\001 \001(\004\022\024\n\014local_height\030\002 \001(\004"
+    "\022\024\n\014peer_node_id\030\003 \003(\014\"\231\001\n\024SyncProgressR"
+    "esponse\022\022\n\ntip_height\030\001 \001(\004\022\024\n\014local_hei"
+    "ght\030\002 \001(\004\022\"\n\005state\030\003 \001(\0162\023.tari.rpc.Sync"
+    "State\022\022\n\nshort_desc\030\004 \001(\t\022\037\n\027initial_con"
+    "nected_peers\030\005 \001(\004\"\263\001\n\021GetNewBlockResult"
+    "\022\022\n\nblock_hash\030\001 \001(\014\022\036\n\005block\030\002 \001(\0132\017.ta"
+    "ri.rpc.Block\022\031\n\021merge_mining_hash\030\003 \001(\014\022"
+    "\026\n\016tari_unique_id\030\004 \001(\014\022\'\n\nminer_data\030\005 "
+    "\001(\0132\023.tari.rpc.MinerData\022\016\n\006vm_key\030\006 \001(\014"
+    "\"\223\001\n\025GetNewBlockBlobResult\022\022\n\nblock_hash"
+    "\030\001 \001(\014\022\016\n\006header\030\002 \001(\014\022\022\n\nblock_body\030\003 \001"
+    "(\014\022\031\n\021merge_mining_hash\030\004 \001(\014\022\017\n\007utxo_mr"
+    "\030\005 \001(\014\022\026\n\016tari_unique_id\030\006 \001(\014\"k\n\tMinerD"
+    "ata\022\037\n\004algo\030\001 \001(\0132\021.tari.rpc.PowAlgo\022\031\n\021"
+    "target_difficulty\030\002 \001(\004\022\016\n\006reward\030\003 \001(\004\022"
+    "\022\n\ntotal_fees\030\005 \001(\004\"\?\n\024SearchKernelsRequ"
+    "est\022\'\n\nsignatures\030\001 \003(\0132\023.tari.rpc.Signa"
+    "ture\")\n\022SearchUtxosRequest\022\023\n\013commitment"
+    "s\030\001 \003(\014\"+\n\031FetchMatchingUtxosRequest\022\016\n\006"
+    "hashes\030\001 \003(\014\"I\n\032FetchMatchingUtxosRespon"
+    "se\022+\n\006output\030\001 \001(\0132\033.tari.rpc.Transactio"
+    "nOutput\"0\n\020GetPeersResponse\022\034\n\004peer\030\001 \001("
+    "\0132\016.tari.rpc.Peer\"\021\n\017GetPeersRequest\"F\n\030"
+    "SubmitTransactionRequest\022*\n\013transaction\030"
+    "\001 \001(\0132\025.tari.rpc.Transaction\"N\n\031SubmitTr"
+    "ansactionResponse\0221\n\006result\030\001 \001(\0162!.tari"
+    ".rpc.SubmitTransactionResult\"\037\n\035GetMempo"
+    "olTransactionsRequest\"L\n\036GetMempoolTrans"
+    "actionsResponse\022*\n\013transaction\030\001 \001(\0132\025.t"
+    "ari.rpc.Transaction\"B\n\027TransactionStateR"
+    "equest\022\'\n\nexcess_sig\030\001 \001(\0132\023.tari.rpc.Si"
+    "gnature\"I\n\030TransactionStateResponse\022-\n\006r"
+    "esult\030\001 \001(\0162\035.tari.rpc.TransactionLocati"
+    "on\"^\n\024MempoolStatsResponse\022\027\n\017unconfirme"
+    "d_txs\030\002 \001(\004\022\021\n\treorg_txs\030\003 \001(\004\022\032\n\022unconf"
+    "irmed_weight\030\004 \001(\004\"F\n\036GetActiveValidator"
+    "NodesRequest\022\016\n\006height\030\001 \001(\004\022\024\n\014sidechai"
+    "n_id\030\002 \001(\014\"^\n\037GetActiveValidatorNodesRes"
+    "ponse\022\021\n\tshard_key\030\001 \001(\014\022\022\n\npublic_key\030\002"
+    " \001(\014\022\024\n\014sidechain_id\030\003 \001(\014\"E\n\036GetValidat"
+    "orNodeChangesRequest\022\r\n\005epoch\030\001 \001(\004\022\024\n\014s"
+    "idechain_id\030\002 \001(\014\"\207\001\n\023ValidatorNodeChang"
+    "e\022/\n\003add\030\001 \001(\0132 .tari.rpc.ValidatorNodeC"
+    "hangeAddH\000\0225\n\006remove\030\002 \001(\0132#.tari.rpc.Va"
+    "lidatorNodeChangeRemoveH\000B\010\n\006change\"\237\001\n\026"
+    "ValidatorNodeChangeAdd\022\030\n\020activation_epo"
+    "ch\030\001 \001(\004\0229\n\014registration\030\002 \001(\0132#.tari.rp"
+    "c.ValidatorNodeRegistration\022\035\n\025minimum_v"
+    "alue_promise\030\003 \001(\004\022\021\n\tshard_key\030\004 \001(\014\"/\n"
+    "\031ValidatorNodeChangeRemove\022\022\n\npublic_key"
+    "\030\001 \001(\014\"Q\n\037GetValidatorNodeChangesRespons"
+    "e\022.\n\007changes\030\001 \003(\0132\035.tari.rpc.ValidatorN"
+    "odeChange\"7\n\022GetShardKeyRequest\022\r\n\005epoch"
+    "\030\001 \001(\004\022\022\n\npublic_key\030\002 \001(\014\"(\n\023GetShardKe"
+    "yResponse\022\021\n\tshard_key\030\001 \001(\014\"D\n\037GetTempl"
+    "ateRegistrationsRequest\022\022\n\nstart_hash\030\001 "
+    "\001(\014\022\r\n\005count\030\002 \001(\004\"j\n\037GetTemplateRegistr"
+    "ationResponse\022\021\n\tutxo_hash\030\001 \001(\014\0224\n\014regi"
+    "stration\030\002 \001(\0132\036.tari.rpc.TemplateRegist"
+    "ration\"B\n\tBlockInfo\022\016\n\006height\030\001 \001(\004\022\014\n\004h"
+    "ash\030\002 \001(\014\022\027\n\017next_block_hash\030\003 \001(\014\"=\n\030Ge"
+    "tSideChainUtxosRequest\022\022\n\nstart_hash\030\001 \001"
+    "(\014\022\r\n\005count\030\002 \001(\004\"r\n\031GetSideChainUtxosRe"
+    "sponse\022\'\n\nblock_info\030\001 \001(\0132\023.tari.rpc.Bl"
+    "ockInfo\022,\n\007outputs\030\002 \003(\0132\033.tari.rpc.Tran"
+    "sactionOutput\"\030\n\026GetNetworkStateRequest\""
+    "\366\003\n\027GetNetworkStateResponse\022$\n\010metadata\030"
+    "\001 \001(\0132\022.tari.rpc.MetaData\022\035\n\025initial_syn"
+    "c_achieved\030\002 \001(\010\0220\n\017base_node_state\030\003 \001("
+    "\0162\027.tari.rpc.BaseNodeState\022\032\n\022failed_che"
+    "ckpoints\030\004 \001(\010\022\016\n\006reward\030\005 \001(\004\022!\n\031sha3x_"
+    "estimated_hash_rate\030\006 \001(\004\022*\n\"monero_rand"
+    "omx_estimated_hash_rate\030\007 \001(\004\022(\n tari_ra"
+    "ndomx_estimated_hash_rate\030\n \001(\004\022=\n\034cucka"
+    "roo_estimated_hash_rate\030\014 \001(\0132\027.tari.rpc"
+    ".UDecimalValue\022\027\n\017num_connections\030\010 \001(\004\022"
+    "2\n\020liveness_results\030\t \003(\0132\030.tari.rpc.Liv"
+    "enessResult\0223\n\020readiness_status\030\013 \001(\0132\031."
+    "tari.rpc.ReadinessStatus\"V\n\016LivenessResu"
+    "lt\022\024\n\014peer_node_id\030\001 \001(\014\022\030\n\020discover_lat"
+    "ency\030\002 \001(\004\022\024\n\014ping_latency\030\003 \001(\004\"w\n\036Sear"
+    "chPaymentReferencesRequest\022\035\n\025payment_re"
+    "ference_hex\030\001 \003(\t\022\037\n\027payment_reference_b"
+    "ytes\030\002 \003(\014\022\025\n\rinclude_spent\030\003 \001(\010\"\233\002\n\030Pa"
+    "ymentReferenceResponse\022\035\n\025payment_refere"
+    "nce_hex\030\001 \001(\t\022\024\n\014block_height\030\002 \001(\004\022\022\n\nb"
+    "lock_hash\030\003 \001(\014\022\027\n\017mined_timestamp\030\004 \001(\004"
+    "\022\022\n\ncommitment\030\005 \001(\014\022\020\n\010is_spent\030\006 \001(\010\022\024"
+    "\n\014spent_height\030\007 \001(\004\022\030\n\020spent_block_hash"
+    "\030\010 \001(\014\022\031\n\021min_value_promise\030\t \001(\004\022\027\n\017spe"
+    "nt_timestamp\030\n \001(\004\022\023\n\013output_hash\030\013 \001(\014*"
+    "\200\001\n\rBaseNodeState\022\014\n\010START_UP\020\000\022\017\n\013HEADE"
+    "R_SYNC\020\001\022\020\n\014HORIZON_SYNC\020\002\022\016\n\nCONNECTING"
+    "\020\003\022\016\n\nBLOCK_SYNC\020\004\022\r\n\tLISTENING\020\005\022\017\n\013SYN"
+    "C_FAILED\020\006*<\n\010CalcType\022\010\n\004MEAN\020\000\022\n\n\006MEDI"
+    "AN\020\001\022\014\n\010QUANTILE\020\002\022\014\n\010QUARTILE\020\003*,\n\007Sort"
+    "ing\022\020\n\014SORTING_DESC\020\000\022\017\n\013SORTING_ASC\020\001*b"
+    "\n\tSyncState\022\013\n\007STARTUP\020\000\022\023\n\017HEADER_START"
+    "ING\020\001\022\n\n\006HEADER\020\002\022\022\n\016BLOCK_STARTING\020\003\022\t\n"
+    "\005BLOCK\020\004\022\010\n\004DONE\020\005*t\n\027SubmitTransactionR"
+    "esult\022\010\n\004NONE\020\000\022\014\n\010ACCEPTED\020\001\022 \n\034NOT_PRO"
+    "CESSABLE_AT_THIS_TIME\020\002\022\021\n\rALREADY_MINED"
+    "\020\003\022\014\n\010REJECTED\020\004*J\n\023TransactionLocation\022"
+    "\013\n\007UNKNOWN\020\000\022\013\n\007MEMPOOL\020\001\022\t\n\005MINED\020\002\022\016\n\n"
+    "NOT_STORED\020\0032\214\032\n\010BaseNode\022L\n\013ListHeaders"
+    "\022\034.tari.rpc.ListHeadersRequest\032\035.tari.rp"
+    "c.BlockHeaderResponse0\001\022R\n\017GetHeaderByHa"
+    "sh\022 .tari.rpc.GetHeaderByHashRequest\032\035.t"
+    "ari.rpc.BlockHeaderResponse\022D\n\tGetBlocks"
+    "\022\032.tari.rpc.GetBlocksRequest\032\031.tari.rpc."
+    "HistoricalBlock0\001\022H\n\016GetBlockTiming\022\027.ta"
+    "ri.rpc.HeightRequest\032\035.tari.rpc.BlockTim"
+    "ingResponse\022C\n\014GetConstants\022\025.tari.rpc.B"
+    "lockHeight\032\034.tari.rpc.ConsensusConstants"
+    "\022I\n\014GetBlockSize\022\033.tari.rpc.BlockGroupRe"
+    "quest\032\034.tari.rpc.BlockGroupResponse\022I\n\014G"
+    "etBlockFees\022\033.tari.rpc.BlockGroupRequest"
+    "\032\034.tari.rpc.BlockGroupResponse\022C\n\nGetVer"
+    "sion\022\017.tari.rpc.Empty\032$.tari.rpc.BaseNod"
+    "eGetVersionResponse\022<\n\017CheckForUpdates\022\017"
+    ".tari.rpc.Empty\032\030.tari.rpc.SoftwareUpdat"
+    "e\022W\n\026GetTokensInCirculation\022\032.tari.rpc.G"
+    "etBlocksRequest\032\037.tari.rpc.ValueAtHeight"
+    "Response0\001\022V\n\024GetNetworkDifficulty\022\027.tar"
+    "i.rpc.HeightRequest\032#.tari.rpc.NetworkDi"
+    "fficultyResponse0\001\022\\\n\023GetNewBlockTemplat"
+    "e\022!.tari.rpc.NewBlockTemplateRequest\032\".t"
+    "ari.rpc.NewBlockTemplateResponse\022F\n\013GetN"
+    "ewBlock\022\032.tari.rpc.NewBlockTemplate\032\033.ta"
+    "ri.rpc.GetNewBlockResult\022b\n\030GetNewBlockW"
+    "ithCoinbases\022).tari.rpc.GetNewBlockWithC"
+    "oinbasesRequest\032\033.tari.rpc.GetNewBlockRe"
+    "sult\022r\n GetNewBlockTemplateWithCoinbases"
+    "\0221.tari.rpc.GetNewBlockTemplateWithCoinb"
+    "asesRequest\032\033.tari.rpc.GetNewBlockResult"
+    "\022N\n\017GetNewBlockBlob\022\032.tari.rpc.NewBlockT"
+    "emplate\032\037.tari.rpc.GetNewBlockBlobResult"
+    "\022=\n\013SubmitBlock\022\017.tari.rpc.Block\032\035.tari."
+    "rpc.SubmitBlockResponse\022L\n\017SubmitBlockBl"
+    "ob\022\032.tari.rpc.BlockBlobRequest\032\035.tari.rp"
+    "c.SubmitBlockResponse\022\\\n\021SubmitTransacti"
+    "on\022\".tari.rpc.SubmitTransactionRequest\032#"
+    ".tari.rpc.SubmitTransactionResponse\022:\n\013G"
+    "etSyncInfo\022\017.tari.rpc.Empty\032\032.tari.rpc.S"
+    "yncInfoResponse\022B\n\017GetSyncProgress\022\017.tar"
+    "i.rpc.Empty\032\036.tari.rpc.SyncProgressRespo"
+    "nse\0228\n\nGetTipInfo\022\017.tari.rpc.Empty\032\031.tar"
+    "i.rpc.TipInfoResponse\022L\n\rSearchKernels\022\036"
+    ".tari.rpc.SearchKernelsRequest\032\031.tari.rp"
+    "c.HistoricalBlock0\001\022H\n\013SearchUtxos\022\034.tar"
+    "i.rpc.SearchUtxosRequest\032\031.tari.rpc.Hist"
+    "oricalBlock0\001\022a\n\022FetchMatchingUtxos\022#.ta"
+    "ri.rpc.FetchMatchingUtxosRequest\032$.tari."
+    "rpc.FetchMatchingUtxosResponse0\001\022C\n\010GetP"
+    "eers\022\031.tari.rpc.GetPeersRequest\032\032.tari.r"
+    "pc.GetPeersResponse0\001\022m\n\026GetMempoolTrans"
+    "actions\022\'.tari.rpc.GetMempoolTransaction"
+    "sRequest\032(.tari.rpc.GetMempoolTransactio"
+    "nsResponse0\001\022Y\n\020TransactionState\022!.tari."
+    "rpc.TransactionStateRequest\032\".tari.rpc.T"
+    "ransactionStateResponse\0223\n\010Identify\022\017.ta"
+    "ri.rpc.Empty\032\026.tari.rpc.NodeIdentity\022D\n\020"
+    "GetNetworkStatus\022\017.tari.rpc.Empty\032\037.tari"
+    ".rpc.NetworkStatusResponse\022K\n\022ListConnec"
+    "tedPeers\022\017.tari.rpc.Empty\032$.tari.rpc.Lis"
+    "tConnectedPeersResponse\022B\n\017GetMempoolSta"
+    "ts\022\017.tari.rpc.Empty\032\036.tari.rpc.MempoolSt"
+    "atsResponse\022p\n\027GetActiveValidatorNodes\022("
+    ".tari.rpc.GetActiveValidatorNodesRequest"
+    "\032).tari.rpc.GetActiveValidatorNodesRespo"
+    "nse0\001\022n\n\027GetValidatorNodeChanges\022(.tari."
+    "rpc.GetValidatorNodeChangesRequest\032).tar"
+    "i.rpc.GetValidatorNodeChangesResponse\022J\n"
+    "\013GetShardKey\022\034.tari.rpc.GetShardKeyReque"
+    "st\032\035.tari.rpc.GetShardKeyResponse\022r\n\030Get"
+    "TemplateRegistrations\022).tari.rpc.GetTemp"
+    "lateRegistrationsRequest\032).tari.rpc.GetT"
+    "emplateRegistrationResponse0\001\022^\n\021GetSide"
+    "ChainUtxos\022\".tari.rpc.GetSideChainUtxosR"
+    "equest\032#.tari.rpc.GetSideChainUtxosRespo"
+    "nse0\001\022V\n\017GetNetworkState\022 .tari.rpc.GetN"
+    "etworkStateRequest\032!.tari.rpc.GetNetwork"
+    "StateResponse\022i\n\027SearchPaymentReferences"
+    "\022(.tari.rpc.SearchPaymentReferencesReque"
+    "st\032\".tari.rpc.PaymentReferenceResponse0\001"
+    "\022q\n$SearchPaymentReferencesViaOutputHash"
+    "\022#.tari.rpc.FetchMatchingUtxosRequest\032\"."
+    "tari.rpc.PaymentReferenceResponse0\001b\006pro"
+    "to3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_base_5fnode_2eproto_deps[5] = {
@@ -2954,7 +2964,7 @@ static ::absl::once_flag descriptor_table_base_5fnode_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_base_5fnode_2eproto = {
     false,
     false,
-    11357,
+    11483,
     descriptor_table_protodef_base_5fnode_2eproto,
     "base_node.proto",
     &descriptor_table_base_5fnode_2eproto_once,
@@ -8734,6 +8744,11 @@ class NetworkDifficultyResponse::_Internal {
       8 * PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_._has_bits_);
 };
 
+void NetworkDifficultyResponse::clear_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.cuckaroo_estimated_hash_rate_ != nullptr) _impl_.cuckaroo_estimated_hash_rate_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
 NetworkDifficultyResponse::NetworkDifficultyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
     : ::google::protobuf::Message(arena, NetworkDifficultyResponse_class_data_.base()) {
@@ -8764,6 +8779,10 @@ NetworkDifficultyResponse::NetworkDifficultyResponse(
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.cuckaroo_estimated_hash_rate_ = ((cached_has_bits & 0x00000001u) != 0)
+                ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.cuckaroo_estimated_hash_rate_)
+                : nullptr;
   ::memcpy(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, difficulty_),
            reinterpret_cast<const char *>(&from._impl_) +
@@ -8783,10 +8802,10 @@ PROTOBUF_NDEBUG_INLINE NetworkDifficultyResponse::Impl_::Impl_(
 inline void NetworkDifficultyResponse::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
   ::memset(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, difficulty_),
+               offsetof(Impl_, cuckaroo_estimated_hash_rate_),
            0,
            offsetof(Impl_, tari_randomx_estimated_hash_rate_) -
-               offsetof(Impl_, difficulty_) +
+               offsetof(Impl_, cuckaroo_estimated_hash_rate_) +
                sizeof(Impl_::tari_randomx_estimated_hash_rate_));
 }
 NetworkDifficultyResponse::~NetworkDifficultyResponse() {
@@ -8797,6 +8816,7 @@ inline void NetworkDifficultyResponse::SharedDtor(MessageLite& self) {
   NetworkDifficultyResponse& this_ = static_cast<NetworkDifficultyResponse&>(self);
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
+  delete this_._impl_.cuckaroo_estimated_hash_rate_;
   this_._impl_.~Impl_();
 }
 
@@ -8855,18 +8875,18 @@ NetworkDifficultyResponse::GetClassData() const {
   return NetworkDifficultyResponse_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 10, 0, 0, 2>
+const ::_pbi::TcParseTable<4, 11, 1, 0, 2>
 NetworkDifficultyResponse::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_._has_bits_),
     0, // no _extensions_
-    10, 120,  // max_field_number, fast_idx_mask
+    11, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294966272,  // skipmap
+    4294965248,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    10,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
+    11,  // num_field_entries
+    1,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
     NetworkDifficultyResponse_class_data_.base(),
     nullptr,  // post_loop_handler
     ::_pbi::TcParser::GenericFallback,  // fallback
@@ -8876,36 +8896,38 @@ NetworkDifficultyResponse::_table_ = {
   }, {{
     {::_pbi::TcParser::MiniParse, {}},
     // uint64 difficulty = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.difficulty_), 0>(),
-     {8, 0, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.difficulty_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.difficulty_), 1>(),
+     {8, 1, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.difficulty_)}},
     // uint64 estimated_hash_rate = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.estimated_hash_rate_), 1>(),
-     {16, 1, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.estimated_hash_rate_), 2>(),
+     {16, 2, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.estimated_hash_rate_)}},
     // uint64 height = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.height_), 2>(),
-     {24, 2, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.height_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.height_), 3>(),
+     {24, 3, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.height_)}},
     // uint64 timestamp = 4;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.timestamp_), 3>(),
-     {32, 3, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.timestamp_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.timestamp_), 4>(),
+     {32, 4, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.timestamp_)}},
     // uint64 pow_algo = 5;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.pow_algo_), 4>(),
-     {40, 4, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.pow_algo_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.pow_algo_), 5>(),
+     {40, 5, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.pow_algo_)}},
     // uint64 sha3x_estimated_hash_rate = 6;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_), 5>(),
-     {48, 5, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_), 6>(),
+     {48, 6, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_)}},
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_), 6>(),
-     {56, 6, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_), 7>(),
+     {56, 7, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_)}},
     // uint64 num_coinbases = 8;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.num_coinbases_), 7>(),
-     {64, 7, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.num_coinbases_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.num_coinbases_), 8>(),
+     {64, 8, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.num_coinbases_)}},
     // repeated bytes coinbase_extras = 9;
     {::_pbi::TcParser::FastBR1,
      {74, 63, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.coinbase_extras_)}},
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_), 8>(),
-     {80, 8, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_), 9>(),
+     {80, 9, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_)}},
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
+    {::_pbi::TcParser::FastMtS1,
+     {90, 0, 0, PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.cuckaroo_estimated_hash_rate_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -8914,37 +8936,42 @@ NetworkDifficultyResponse::_table_ = {
     65535, 65535
   }}, {{
     // uint64 difficulty = 1;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.difficulty_), _Internal::kHasBitsOffset + 0, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.difficulty_), _Internal::kHasBitsOffset + 1, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 estimated_hash_rate = 2;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.estimated_hash_rate_), _Internal::kHasBitsOffset + 1, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.estimated_hash_rate_), _Internal::kHasBitsOffset + 2, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 height = 3;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.height_), _Internal::kHasBitsOffset + 2, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.height_), _Internal::kHasBitsOffset + 3, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 timestamp = 4;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.timestamp_), _Internal::kHasBitsOffset + 3, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.timestamp_), _Internal::kHasBitsOffset + 4, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 pow_algo = 5;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.pow_algo_), _Internal::kHasBitsOffset + 4, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.pow_algo_), _Internal::kHasBitsOffset + 5, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 sha3x_estimated_hash_rate = 6;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_), _Internal::kHasBitsOffset + 5, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.sha3x_estimated_hash_rate_), _Internal::kHasBitsOffset + 6, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 6, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.monero_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 7, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 num_coinbases = 8;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.num_coinbases_), _Internal::kHasBitsOffset + 7, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.num_coinbases_), _Internal::kHasBitsOffset + 8, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // repeated bytes coinbase_extras = 9;
     {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.coinbase_extras_), -1, 0,
     (0 | ::_fl::kFcRepeated | ::_fl::kBytes | ::_fl::kRepSString)},
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 8, 0,
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 9, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
+    {PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.cuckaroo_estimated_hash_rate_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
-  // no aux_entries
+  {{
+      {::_pbi::TcParser::GetTable<::tari::rpc::UDecimalValue>()},
+  }},
   {{
   }},
 };
@@ -8957,12 +8984,20 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
 
   _impl_.coinbase_extras_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
-  if ((cached_has_bits & 0x000000ffu) != 0) {
-    ::memset(&_impl_.difficulty_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.num_coinbases_) -
-        reinterpret_cast<char*>(&_impl_.difficulty_)) + sizeof(_impl_.num_coinbases_));
+  if ((cached_has_bits & 0x00000001u) != 0) {
+    ABSL_DCHECK(_impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+    _impl_.cuckaroo_estimated_hash_rate_->Clear();
   }
-  _impl_.tari_randomx_estimated_hash_rate_ = ::uint64_t{0u};
+  if ((cached_has_bits & 0x000000feu) != 0) {
+    ::memset(&_impl_.difficulty_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.monero_randomx_estimated_hash_rate_) -
+        reinterpret_cast<char*>(&_impl_.difficulty_)) + sizeof(_impl_.monero_randomx_estimated_hash_rate_));
+  }
+  if ((cached_has_bits & 0x00000300u) != 0) {
+    ::memset(&_impl_.num_coinbases_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.tari_randomx_estimated_hash_rate_) -
+        reinterpret_cast<char*>(&_impl_.num_coinbases_)) + sizeof(_impl_.tari_randomx_estimated_hash_rate_));
+  }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -8983,7 +9018,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   (void)cached_has_bits;
 
   // uint64 difficulty = 1;
-  if ((this_._impl_._has_bits_[0] & 0x00000001u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000002u) != 0) {
     if (this_._internal_difficulty() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -8992,7 +9027,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 estimated_hash_rate = 2;
-  if ((this_._impl_._has_bits_[0] & 0x00000002u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000004u) != 0) {
     if (this_._internal_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9001,7 +9036,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 height = 3;
-  if ((this_._impl_._has_bits_[0] & 0x00000004u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000008u) != 0) {
     if (this_._internal_height() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9010,7 +9045,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 timestamp = 4;
-  if ((this_._impl_._has_bits_[0] & 0x00000008u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000010u) != 0) {
     if (this_._internal_timestamp() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9019,7 +9054,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 pow_algo = 5;
-  if ((this_._impl_._has_bits_[0] & 0x00000010u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000020u) != 0) {
     if (this_._internal_pow_algo() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9028,7 +9063,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 sha3x_estimated_hash_rate = 6;
-  if ((this_._impl_._has_bits_[0] & 0x00000020u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000040u) != 0) {
     if (this_._internal_sha3x_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9037,7 +9072,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 monero_randomx_estimated_hash_rate = 7;
-  if ((this_._impl_._has_bits_[0] & 0x00000040u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000080u) != 0) {
     if (this_._internal_monero_randomx_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9046,7 +9081,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 num_coinbases = 8;
-  if ((this_._impl_._has_bits_[0] & 0x00000080u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000100u) != 0) {
     if (this_._internal_num_coinbases() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -9061,12 +9096,20 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
 
   // uint64 tari_randomx_estimated_hash_rate = 10;
-  if ((this_._impl_._has_bits_[0] & 0x00000100u) != 0) {
+  if ((this_._impl_._has_bits_[0] & 0x00000200u) != 0) {
     if (this_._internal_tari_randomx_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
           10, this_._internal_tari_randomx_estimated_hash_rate(), target);
     }
+  }
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
+  if ((cached_has_bits & 0x00000001u) != 0) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        11, *this_._impl_.cuckaroo_estimated_hash_rate_, this_._impl_.cuckaroo_estimated_hash_rate_->GetCachedSize(), target,
+        stream);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -9106,66 +9149,71 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
   }
   cached_has_bits = this_._impl_._has_bits_[0];
   if ((cached_has_bits & 0x000000ffu) != 0) {
-    // uint64 difficulty = 1;
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 11;
     if ((cached_has_bits & 0x00000001u) != 0) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.cuckaroo_estimated_hash_rate_);
+    }
+    // uint64 difficulty = 1;
+    if ((cached_has_bits & 0x00000002u) != 0) {
       if (this_._internal_difficulty() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_difficulty());
       }
     }
     // uint64 estimated_hash_rate = 2;
-    if ((cached_has_bits & 0x00000002u) != 0) {
+    if ((cached_has_bits & 0x00000004u) != 0) {
       if (this_._internal_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_estimated_hash_rate());
       }
     }
     // uint64 height = 3;
-    if ((cached_has_bits & 0x00000004u) != 0) {
+    if ((cached_has_bits & 0x00000008u) != 0) {
       if (this_._internal_height() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_height());
       }
     }
     // uint64 timestamp = 4;
-    if ((cached_has_bits & 0x00000008u) != 0) {
+    if ((cached_has_bits & 0x00000010u) != 0) {
       if (this_._internal_timestamp() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_timestamp());
       }
     }
     // uint64 pow_algo = 5;
-    if ((cached_has_bits & 0x00000010u) != 0) {
+    if ((cached_has_bits & 0x00000020u) != 0) {
       if (this_._internal_pow_algo() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_pow_algo());
       }
     }
     // uint64 sha3x_estimated_hash_rate = 6;
-    if ((cached_has_bits & 0x00000020u) != 0) {
+    if ((cached_has_bits & 0x00000040u) != 0) {
       if (this_._internal_sha3x_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_sha3x_estimated_hash_rate());
       }
     }
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    if ((cached_has_bits & 0x00000040u) != 0) {
+    if ((cached_has_bits & 0x00000080u) != 0) {
       if (this_._internal_monero_randomx_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_monero_randomx_estimated_hash_rate());
       }
     }
+  }
+  if ((cached_has_bits & 0x00000300u) != 0) {
     // uint64 num_coinbases = 8;
-    if ((cached_has_bits & 0x00000080u) != 0) {
+    if ((cached_has_bits & 0x00000100u) != 0) {
       if (this_._internal_num_coinbases() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_num_coinbases());
       }
     }
-  }
-   {
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    if ((cached_has_bits & 0x00000100u) != 0) {
+    if ((cached_has_bits & 0x00000200u) != 0) {
       if (this_._internal_tari_randomx_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_tari_randomx_estimated_hash_rate());
@@ -9179,6 +9227,7 @@ PROTOBUF_NOINLINE void NetworkDifficultyResponse::Clear() {
 void NetworkDifficultyResponse::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::protobuf::MessageLite& from_msg) {
   auto* const _this = static_cast<NetworkDifficultyResponse*>(&to_msg);
   auto& from = static_cast<const NetworkDifficultyResponse&>(from_msg);
+  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:tari.rpc.NetworkDifficultyResponse)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
@@ -9188,49 +9237,59 @@ void NetworkDifficultyResponse::MergeImpl(::google::protobuf::MessageLite& to_ms
   cached_has_bits = from._impl_._has_bits_[0];
   if ((cached_has_bits & 0x000000ffu) != 0) {
     if ((cached_has_bits & 0x00000001u) != 0) {
+      ABSL_DCHECK(from._impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+      if (_this->_impl_.cuckaroo_estimated_hash_rate_ == nullptr) {
+        _this->_impl_.cuckaroo_estimated_hash_rate_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.cuckaroo_estimated_hash_rate_);
+      } else {
+        _this->_impl_.cuckaroo_estimated_hash_rate_->MergeFrom(*from._impl_.cuckaroo_estimated_hash_rate_);
+      }
+    }
+    if ((cached_has_bits & 0x00000002u) != 0) {
       if (from._internal_difficulty() != 0) {
         _this->_impl_.difficulty_ = from._impl_.difficulty_;
       }
     }
-    if ((cached_has_bits & 0x00000002u) != 0) {
+    if ((cached_has_bits & 0x00000004u) != 0) {
       if (from._internal_estimated_hash_rate() != 0) {
         _this->_impl_.estimated_hash_rate_ = from._impl_.estimated_hash_rate_;
       }
     }
-    if ((cached_has_bits & 0x00000004u) != 0) {
+    if ((cached_has_bits & 0x00000008u) != 0) {
       if (from._internal_height() != 0) {
         _this->_impl_.height_ = from._impl_.height_;
       }
     }
-    if ((cached_has_bits & 0x00000008u) != 0) {
+    if ((cached_has_bits & 0x00000010u) != 0) {
       if (from._internal_timestamp() != 0) {
         _this->_impl_.timestamp_ = from._impl_.timestamp_;
       }
     }
-    if ((cached_has_bits & 0x00000010u) != 0) {
+    if ((cached_has_bits & 0x00000020u) != 0) {
       if (from._internal_pow_algo() != 0) {
         _this->_impl_.pow_algo_ = from._impl_.pow_algo_;
       }
     }
-    if ((cached_has_bits & 0x00000020u) != 0) {
+    if ((cached_has_bits & 0x00000040u) != 0) {
       if (from._internal_sha3x_estimated_hash_rate() != 0) {
         _this->_impl_.sha3x_estimated_hash_rate_ = from._impl_.sha3x_estimated_hash_rate_;
       }
     }
-    if ((cached_has_bits & 0x00000040u) != 0) {
+    if ((cached_has_bits & 0x00000080u) != 0) {
       if (from._internal_monero_randomx_estimated_hash_rate() != 0) {
         _this->_impl_.monero_randomx_estimated_hash_rate_ = from._impl_.monero_randomx_estimated_hash_rate_;
       }
     }
-    if ((cached_has_bits & 0x00000080u) != 0) {
+  }
+  if ((cached_has_bits & 0x00000300u) != 0) {
+    if ((cached_has_bits & 0x00000100u) != 0) {
       if (from._internal_num_coinbases() != 0) {
         _this->_impl_.num_coinbases_ = from._impl_.num_coinbases_;
       }
     }
-  }
-  if ((cached_has_bits & 0x00000100u) != 0) {
-    if (from._internal_tari_randomx_estimated_hash_rate() != 0) {
-      _this->_impl_.tari_randomx_estimated_hash_rate_ = from._impl_.tari_randomx_estimated_hash_rate_;
+    if ((cached_has_bits & 0x00000200u) != 0) {
+      if (from._internal_tari_randomx_estimated_hash_rate() != 0) {
+        _this->_impl_.tari_randomx_estimated_hash_rate_ = from._impl_.tari_randomx_estimated_hash_rate_;
+      }
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -9253,9 +9312,9 @@ void NetworkDifficultyResponse::InternalSwap(NetworkDifficultyResponse* PROTOBUF
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.tari_randomx_estimated_hash_rate_)
       + sizeof(NetworkDifficultyResponse::_impl_.tari_randomx_estimated_hash_rate_)
-      - PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.difficulty_)>(
-          reinterpret_cast<char*>(&_impl_.difficulty_),
-          reinterpret_cast<char*>(&other->_impl_.difficulty_));
+      - PROTOBUF_FIELD_OFFSET(NetworkDifficultyResponse, _impl_.cuckaroo_estimated_hash_rate_)>(
+          reinterpret_cast<char*>(&_impl_.cuckaroo_estimated_hash_rate_),
+          reinterpret_cast<char*>(&other->_impl_.cuckaroo_estimated_hash_rate_));
 }
 
 ::google::protobuf::Metadata NetworkDifficultyResponse::GetMetadata() const {
@@ -22815,6 +22874,11 @@ class GetNetworkStateResponse::_Internal {
       8 * PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_._has_bits_);
 };
 
+void GetNetworkStateResponse::clear_cuckaroo_estimated_hash_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.cuckaroo_estimated_hash_rate_ != nullptr) _impl_.cuckaroo_estimated_hash_rate_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000004u;
+}
 GetNetworkStateResponse::GetNetworkStateResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
     : ::google::protobuf::Message(arena, GetNetworkStateResponse_class_data_.base()) {
@@ -22852,6 +22916,9 @@ GetNetworkStateResponse::GetNetworkStateResponse(
   _impl_.readiness_status_ = ((cached_has_bits & 0x00000002u) != 0)
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.readiness_status_)
                 : nullptr;
+  _impl_.cuckaroo_estimated_hash_rate_ = ((cached_has_bits & 0x00000004u) != 0)
+                ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.cuckaroo_estimated_hash_rate_)
+                : nullptr;
   ::memcpy(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, base_node_state_),
            reinterpret_cast<const char *>(&from._impl_) +
@@ -22887,6 +22954,7 @@ inline void GetNetworkStateResponse::SharedDtor(MessageLite& self) {
   ABSL_DCHECK(this_.GetArena() == nullptr);
   delete this_._impl_.metadata_;
   delete this_._impl_.readiness_status_;
+  delete this_._impl_.cuckaroo_estimated_hash_rate_;
   this_._impl_.~Impl_();
 }
 
@@ -22945,17 +23013,17 @@ GetNetworkStateResponse::GetClassData() const {
   return GetNetworkStateResponse_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 11, 3, 0, 2>
+const ::_pbi::TcParseTable<4, 12, 4, 0, 2>
 GetNetworkStateResponse::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_._has_bits_),
     0, // no _extensions_
-    11, 120,  // max_field_number, fast_idx_mask
+    12, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294965248,  // skipmap
+    4294963200,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    11,  // num_field_entries
-    3,  // num_aux_entries
+    12,  // num_field_entries
+    4,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     GetNetworkStateResponse_class_data_.base(),
     nullptr,  // post_loop_handler
@@ -22969,36 +23037,38 @@ GetNetworkStateResponse::_table_ = {
     {::_pbi::TcParser::FastMtS1,
      {10, 0, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.metadata_)}},
     // bool initial_sync_achieved = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(GetNetworkStateResponse, _impl_.initial_sync_achieved_), 3>(),
-     {16, 3, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.initial_sync_achieved_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(GetNetworkStateResponse, _impl_.initial_sync_achieved_), 4>(),
+     {16, 4, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.initial_sync_achieved_)}},
     // .tari.rpc.BaseNodeState base_node_state = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(GetNetworkStateResponse, _impl_.base_node_state_), 2>(),
-     {24, 2, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.base_node_state_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(GetNetworkStateResponse, _impl_.base_node_state_), 3>(),
+     {24, 3, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.base_node_state_)}},
     // bool failed_checkpoints = 4;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(GetNetworkStateResponse, _impl_.failed_checkpoints_), 4>(),
-     {32, 4, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.failed_checkpoints_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(GetNetworkStateResponse, _impl_.failed_checkpoints_), 5>(),
+     {32, 5, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.failed_checkpoints_)}},
     // uint64 reward = 5;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.reward_), 5>(),
-     {40, 5, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.reward_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.reward_), 6>(),
+     {40, 6, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.reward_)}},
     // uint64 sha3x_estimated_hash_rate = 6;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_), 6>(),
-     {48, 6, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_), 7>(),
+     {48, 7, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_)}},
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_), 7>(),
-     {56, 7, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_), 8>(),
+     {56, 8, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_)}},
     // uint64 num_connections = 8;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.num_connections_), 8>(),
-     {64, 8, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.num_connections_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.num_connections_), 9>(),
+     {64, 9, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.num_connections_)}},
     // repeated .tari.rpc.LivenessResult liveness_results = 9;
     {::_pbi::TcParser::FastMtR1,
      {74, 63, 1, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.liveness_results_)}},
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_), 9>(),
-     {80, 9, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_)}},
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_), 10>(),
+     {80, 10, 0, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_)}},
     // .tari.rpc.ReadinessStatus readiness_status = 11;
     {::_pbi::TcParser::FastMtS1,
      {90, 1, 2, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.readiness_status_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
+    {::_pbi::TcParser::FastMtS1,
+     {98, 2, 3, PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.cuckaroo_estimated_hash_rate_)}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -23009,40 +23079,44 @@ GetNetworkStateResponse::_table_ = {
     {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.metadata_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // bool initial_sync_achieved = 2;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.initial_sync_achieved_), _Internal::kHasBitsOffset + 3, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.initial_sync_achieved_), _Internal::kHasBitsOffset + 4, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // .tari.rpc.BaseNodeState base_node_state = 3;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.base_node_state_), _Internal::kHasBitsOffset + 2, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.base_node_state_), _Internal::kHasBitsOffset + 3, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kOpenEnum)},
     // bool failed_checkpoints = 4;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.failed_checkpoints_), _Internal::kHasBitsOffset + 4, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.failed_checkpoints_), _Internal::kHasBitsOffset + 5, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // uint64 reward = 5;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.reward_), _Internal::kHasBitsOffset + 5, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.reward_), _Internal::kHasBitsOffset + 6, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 sha3x_estimated_hash_rate = 6;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_), _Internal::kHasBitsOffset + 6, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.sha3x_estimated_hash_rate_), _Internal::kHasBitsOffset + 7, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 7, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.monero_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 8, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // uint64 num_connections = 8;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.num_connections_), _Internal::kHasBitsOffset + 8, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.num_connections_), _Internal::kHasBitsOffset + 9, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // repeated .tari.rpc.LivenessResult liveness_results = 9;
     {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.liveness_results_), -1, 1,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 9, 0,
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.tari_randomx_estimated_hash_rate_), _Internal::kHasBitsOffset + 10, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUInt64)},
     // .tari.rpc.ReadinessStatus readiness_status = 11;
     {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.readiness_status_), _Internal::kHasBitsOffset + 1, 2,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
+    {PROTOBUF_FIELD_OFFSET(GetNetworkStateResponse, _impl_.cuckaroo_estimated_hash_rate_), _Internal::kHasBitsOffset + 2, 3,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::tari::rpc::MetaData>()},
       {::_pbi::TcParser::GetTable<::tari::rpc::LivenessResult>()},
       {::_pbi::TcParser::GetTable<::tari::rpc::ReadinessStatus>()},
+      {::_pbi::TcParser::GetTable<::tari::rpc::UDecimalValue>()},
   }},
   {{
   }},
@@ -23056,7 +23130,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
 
   _impl_.liveness_results_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000003u) != 0) {
+  if ((cached_has_bits & 0x00000007u) != 0) {
     if ((cached_has_bits & 0x00000001u) != 0) {
       ABSL_DCHECK(_impl_.metadata_ != nullptr);
       _impl_.metadata_->Clear();
@@ -23065,16 +23139,20 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
       ABSL_DCHECK(_impl_.readiness_status_ != nullptr);
       _impl_.readiness_status_->Clear();
     }
+    if ((cached_has_bits & 0x00000004u) != 0) {
+      ABSL_DCHECK(_impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+      _impl_.cuckaroo_estimated_hash_rate_->Clear();
+    }
   }
-  if ((cached_has_bits & 0x000000fcu) != 0) {
+  if ((cached_has_bits & 0x000000f8u) != 0) {
     ::memset(&_impl_.base_node_state_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.monero_randomx_estimated_hash_rate_) -
-        reinterpret_cast<char*>(&_impl_.base_node_state_)) + sizeof(_impl_.monero_randomx_estimated_hash_rate_));
+        reinterpret_cast<char*>(&_impl_.sha3x_estimated_hash_rate_) -
+        reinterpret_cast<char*>(&_impl_.base_node_state_)) + sizeof(_impl_.sha3x_estimated_hash_rate_));
   }
-  if ((cached_has_bits & 0x00000300u) != 0) {
-    ::memset(&_impl_.num_connections_, 0, static_cast<::size_t>(
+  if ((cached_has_bits & 0x00000700u) != 0) {
+    ::memset(&_impl_.monero_randomx_estimated_hash_rate_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.tari_randomx_estimated_hash_rate_) -
-        reinterpret_cast<char*>(&_impl_.num_connections_)) + sizeof(_impl_.tari_randomx_estimated_hash_rate_));
+        reinterpret_cast<char*>(&_impl_.monero_randomx_estimated_hash_rate_)) + sizeof(_impl_.tari_randomx_estimated_hash_rate_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -23104,7 +23182,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // bool initial_sync_achieved = 2;
-  if ((cached_has_bits & 0x00000008u) != 0) {
+  if ((cached_has_bits & 0x00000010u) != 0) {
     if (this_._internal_initial_sync_achieved() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -23113,7 +23191,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // .tari.rpc.BaseNodeState base_node_state = 3;
-  if ((cached_has_bits & 0x00000004u) != 0) {
+  if ((cached_has_bits & 0x00000008u) != 0) {
     if (this_._internal_base_node_state() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteEnumToArray(
@@ -23122,7 +23200,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // bool failed_checkpoints = 4;
-  if ((cached_has_bits & 0x00000010u) != 0) {
+  if ((cached_has_bits & 0x00000020u) != 0) {
     if (this_._internal_failed_checkpoints() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -23131,7 +23209,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // uint64 reward = 5;
-  if ((cached_has_bits & 0x00000020u) != 0) {
+  if ((cached_has_bits & 0x00000040u) != 0) {
     if (this_._internal_reward() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -23140,7 +23218,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // uint64 sha3x_estimated_hash_rate = 6;
-  if ((cached_has_bits & 0x00000040u) != 0) {
+  if ((cached_has_bits & 0x00000080u) != 0) {
     if (this_._internal_sha3x_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -23149,7 +23227,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // uint64 monero_randomx_estimated_hash_rate = 7;
-  if ((cached_has_bits & 0x00000080u) != 0) {
+  if ((cached_has_bits & 0x00000100u) != 0) {
     if (this_._internal_monero_randomx_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -23158,7 +23236,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // uint64 num_connections = 8;
-  if ((cached_has_bits & 0x00000100u) != 0) {
+  if ((cached_has_bits & 0x00000200u) != 0) {
     if (this_._internal_num_connections() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -23178,7 +23256,7 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   }
 
   // uint64 tari_randomx_estimated_hash_rate = 10;
-  if ((cached_has_bits & 0x00000200u) != 0) {
+  if ((cached_has_bits & 0x00000400u) != 0) {
     if (this_._internal_tari_randomx_estimated_hash_rate() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
@@ -23190,6 +23268,13 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
   if ((cached_has_bits & 0x00000002u) != 0) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         11, *this_._impl_.readiness_status_, this_._impl_.readiness_status_->GetCachedSize(), target,
+        stream);
+  }
+
+  // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
+  if ((cached_has_bits & 0x00000004u) != 0) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        12, *this_._impl_.cuckaroo_estimated_hash_rate_, this_._impl_.cuckaroo_estimated_hash_rate_->GetCachedSize(), target,
         stream);
   }
 
@@ -23238,57 +23323,62 @@ PROTOBUF_NOINLINE void GetNetworkStateResponse::Clear() {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.readiness_status_);
     }
-    // .tari.rpc.BaseNodeState base_node_state = 3;
+    // .tari.rpc.UDecimalValue cuckaroo_estimated_hash_rate = 12;
     if ((cached_has_bits & 0x00000004u) != 0) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.cuckaroo_estimated_hash_rate_);
+    }
+    // .tari.rpc.BaseNodeState base_node_state = 3;
+    if ((cached_has_bits & 0x00000008u) != 0) {
       if (this_._internal_base_node_state() != 0) {
         total_size += 1 +
                       ::_pbi::WireFormatLite::EnumSize(this_._internal_base_node_state());
       }
     }
     // bool initial_sync_achieved = 2;
-    if ((cached_has_bits & 0x00000008u) != 0) {
+    if ((cached_has_bits & 0x00000010u) != 0) {
       if (this_._internal_initial_sync_achieved() != 0) {
         total_size += 2;
       }
     }
     // bool failed_checkpoints = 4;
-    if ((cached_has_bits & 0x00000010u) != 0) {
+    if ((cached_has_bits & 0x00000020u) != 0) {
       if (this_._internal_failed_checkpoints() != 0) {
         total_size += 2;
       }
     }
     // uint64 reward = 5;
-    if ((cached_has_bits & 0x00000020u) != 0) {
+    if ((cached_has_bits & 0x00000040u) != 0) {
       if (this_._internal_reward() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_reward());
       }
     }
     // uint64 sha3x_estimated_hash_rate = 6;
-    if ((cached_has_bits & 0x00000040u) != 0) {
+    if ((cached_has_bits & 0x00000080u) != 0) {
       if (this_._internal_sha3x_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_sha3x_estimated_hash_rate());
       }
     }
+  }
+  if ((cached_has_bits & 0x00000700u) != 0) {
     // uint64 monero_randomx_estimated_hash_rate = 7;
-    if ((cached_has_bits & 0x00000080u) != 0) {
+    if ((cached_has_bits & 0x00000100u) != 0) {
       if (this_._internal_monero_randomx_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_monero_randomx_estimated_hash_rate());
       }
     }
-  }
-  if ((cached_has_bits & 0x00000300u) != 0) {
     // uint64 num_connections = 8;
-    if ((cached_has_bits & 0x00000100u) != 0) {
+    if ((cached_has_bits & 0x00000200u) != 0) {
       if (this_._internal_num_connections() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_num_connections());
       }
     }
     // uint64 tari_randomx_estimated_hash_rate = 10;
-    if ((cached_has_bits & 0x00000200u) != 0) {
+    if ((cached_has_bits & 0x00000400u) != 0) {
       if (this_._internal_tari_randomx_estimated_hash_rate() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
             this_._internal_tari_randomx_estimated_hash_rate());
@@ -23329,43 +23419,51 @@ void GetNetworkStateResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if ((cached_has_bits & 0x00000004u) != 0) {
+      ABSL_DCHECK(from._impl_.cuckaroo_estimated_hash_rate_ != nullptr);
+      if (_this->_impl_.cuckaroo_estimated_hash_rate_ == nullptr) {
+        _this->_impl_.cuckaroo_estimated_hash_rate_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.cuckaroo_estimated_hash_rate_);
+      } else {
+        _this->_impl_.cuckaroo_estimated_hash_rate_->MergeFrom(*from._impl_.cuckaroo_estimated_hash_rate_);
+      }
+    }
+    if ((cached_has_bits & 0x00000008u) != 0) {
       if (from._internal_base_node_state() != 0) {
         _this->_impl_.base_node_state_ = from._impl_.base_node_state_;
       }
     }
-    if ((cached_has_bits & 0x00000008u) != 0) {
+    if ((cached_has_bits & 0x00000010u) != 0) {
       if (from._internal_initial_sync_achieved() != 0) {
         _this->_impl_.initial_sync_achieved_ = from._impl_.initial_sync_achieved_;
       }
     }
-    if ((cached_has_bits & 0x00000010u) != 0) {
+    if ((cached_has_bits & 0x00000020u) != 0) {
       if (from._internal_failed_checkpoints() != 0) {
         _this->_impl_.failed_checkpoints_ = from._impl_.failed_checkpoints_;
       }
     }
-    if ((cached_has_bits & 0x00000020u) != 0) {
+    if ((cached_has_bits & 0x00000040u) != 0) {
       if (from._internal_reward() != 0) {
         _this->_impl_.reward_ = from._impl_.reward_;
       }
     }
-    if ((cached_has_bits & 0x00000040u) != 0) {
+    if ((cached_has_bits & 0x00000080u) != 0) {
       if (from._internal_sha3x_estimated_hash_rate() != 0) {
         _this->_impl_.sha3x_estimated_hash_rate_ = from._impl_.sha3x_estimated_hash_rate_;
       }
     }
-    if ((cached_has_bits & 0x00000080u) != 0) {
+  }
+  if ((cached_has_bits & 0x00000700u) != 0) {
+    if ((cached_has_bits & 0x00000100u) != 0) {
       if (from._internal_monero_randomx_estimated_hash_rate() != 0) {
         _this->_impl_.monero_randomx_estimated_hash_rate_ = from._impl_.monero_randomx_estimated_hash_rate_;
       }
     }
-  }
-  if ((cached_has_bits & 0x00000300u) != 0) {
-    if ((cached_has_bits & 0x00000100u) != 0) {
+    if ((cached_has_bits & 0x00000200u) != 0) {
       if (from._internal_num_connections() != 0) {
         _this->_impl_.num_connections_ = from._impl_.num_connections_;
       }
     }
-    if ((cached_has_bits & 0x00000200u) != 0) {
+    if ((cached_has_bits & 0x00000400u) != 0) {
       if (from._internal_tari_randomx_estimated_hash_rate() != 0) {
         _this->_impl_.tari_randomx_estimated_hash_rate_ = from._impl_.tari_randomx_estimated_hash_rate_;
       }

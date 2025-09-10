@@ -102,6 +102,7 @@ enum PowAlgo_PowAlgos : int {
   PowAlgo_PowAlgos_POW_ALGOS_RANDOMXM = 0,
   PowAlgo_PowAlgos_POW_ALGOS_SHA3X = 1,
   PowAlgo_PowAlgos_POW_ALGOS_RANDOMXT = 2,
+  PowAlgo_PowAlgos_POW_ALGOS_CUCKAROO = 3,
   PowAlgo_PowAlgos_PowAlgo_PowAlgos_INT_MIN_SENTINEL_DO_NOT_USE_ =
       ::std::numeric_limits<::int32_t>::min(),
   PowAlgo_PowAlgos_PowAlgo_PowAlgos_INT_MAX_SENTINEL_DO_NOT_USE_ =
@@ -112,11 +113,11 @@ extern const uint32_t PowAlgo_PowAlgos_internal_data_[];
 inline constexpr PowAlgo_PowAlgos PowAlgo_PowAlgos_PowAlgos_MIN =
     static_cast<PowAlgo_PowAlgos>(0);
 inline constexpr PowAlgo_PowAlgos PowAlgo_PowAlgos_PowAlgos_MAX =
-    static_cast<PowAlgo_PowAlgos>(2);
+    static_cast<PowAlgo_PowAlgos>(3);
 inline bool PowAlgo_PowAlgos_IsValid(int value) {
-  return 0 <= value && value <= 2;
+  return 0 <= value && value <= 3;
 }
-inline constexpr int PowAlgo_PowAlgos_PowAlgos_ARRAYSIZE = 2 + 1;
+inline constexpr int PowAlgo_PowAlgos_PowAlgos_ARRAYSIZE = 3 + 1;
 const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL PowAlgo_PowAlgos_descriptor();
 template <typename T>
 const ::std::string& PowAlgo_PowAlgos_Name(T value) {
@@ -127,7 +128,7 @@ const ::std::string& PowAlgo_PowAlgos_Name(T value) {
 }
 template <>
 inline const ::std::string& PowAlgo_PowAlgos_Name(PowAlgo_PowAlgos value) {
-  return ::google::protobuf::internal::NameOfDenseEnum<PowAlgo_PowAlgos_descriptor, 0, 2>(
+  return ::google::protobuf::internal::NameOfDenseEnum<PowAlgo_PowAlgos_descriptor, 0, 3>(
       static_cast<int>(value));
 }
 inline bool PowAlgo_PowAlgos_Parse(
@@ -493,6 +494,7 @@ class PowAlgo final : public ::google::protobuf::Message
   static constexpr PowAlgos POW_ALGOS_RANDOMXM = PowAlgo_PowAlgos_POW_ALGOS_RANDOMXM;
   static constexpr PowAlgos POW_ALGOS_SHA3X = PowAlgo_PowAlgos_POW_ALGOS_SHA3X;
   static constexpr PowAlgos POW_ALGOS_RANDOMXT = PowAlgo_PowAlgos_POW_ALGOS_RANDOMXT;
+  static constexpr PowAlgos POW_ALGOS_CUCKAROO = PowAlgo_PowAlgos_POW_ALGOS_CUCKAROO;
   static inline bool PowAlgos_IsValid(int value) {
     return PowAlgo_PowAlgos_IsValid(value);
   }
