@@ -32,7 +32,6 @@ jobs:
     - name: Build cppcheck
       run: |
         cd cppcheck-main
-        git checkout 1d9ea2ffcca587f99c68f0b6a4c37d5b3e046c28
         make -j$(nproc) cppcheck
 
     - name: cmake p2pool
