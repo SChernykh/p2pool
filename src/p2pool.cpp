@@ -1121,6 +1121,8 @@ void p2pool::submit_block() const
 
 	const Params::Host& host = current_host();
 
+	const uint64_t t1 = microseconds_since_epoch();
+
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const char* data, size_t size, double)
 		{
@@ -1166,7 +1168,7 @@ void p2pool::submit_block() const
 
 			LOGWARN(0, "submit_block: daemon sent unrecognizable reply: " << log::const_buf(data, size));
 		},
-		[is_external](const char* data, size_t size, double)
+		[is_external, t1](const char* data, size_t size, double)
 		{
 			if (size > 0) {
 				if (is_external) {
@@ -1175,6 +1177,9 @@ void p2pool::submit_block() const
 				else {
 					LOGERR(0, "submit_block: RPC request failed, error " << log::const_buf(data, size));
 				}
+			}
+			else {
+				LOGINFO(4, "submit_block RPC completed in " << static_cast<double>(microseconds_since_epoch() - t1) / 1e3 << " ms");
 			}
 		});
 }

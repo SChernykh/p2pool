@@ -1645,6 +1645,8 @@ void P2PServer::submit_monero_blocks()
 
 	const Params::Host& host = m_pool->current_host();
 
+	const uint64_t t1 = microseconds_since_epoch();
+
 	JSONRPCRequest::call(
 		host.m_address,
 		host.m_rpcPort,
@@ -1654,10 +1656,13 @@ void P2PServer::submit_monero_blocks()
 		host.m_rpcSSL,
 		host.m_rpcSSL_Fingerprint,
 		JSONRPCRequest::dummy_callback,
-		[this](const char* data, size_t size, double)
+		[this, t1](const char* data, size_t size, double)
 		{
 			if (size > 0) {
-				LOGERR(3, "on_monero_block_broadcast: submit_block RPC request failed, error " << log::const_buf(data, size));
+				LOGERR(3, "submit_monero_blocks: submit_block RPC request failed, error " << log::const_buf(data, size));
+			}
+			else {
+				LOGINFO(4, "submit_monero_blocks: submit_block RPC completed in " << static_cast<double>(microseconds_since_epoch() - t1) / 1e3 << " ms");
 			}
 
 			if (!m_MoneroBlocksToSubmit.empty()) {
