@@ -5,12 +5,12 @@ set -e
 
 _7ZIP_VERSION=2501
 BINUTILS_VERSION=2_45
-CLANG_VERSION=20.1.8
+CLANG_VERSION=21.1.1
 CMAKE_VERSION=4.1.1
 FREEBSD_VERSION=12.4
 GCC_VERSION=15.2.0
 GLIBC_VERSION=2.42
-LINUX_HEADERS_VERSION=6.16.3
+LINUX_HEADERS_VERSION=6.16.7
 MACOSX_SDK_VERSION=15.5
 MAKE_VERSION=4.4.1
 MINGW_VERSION=13.0.0
@@ -22,7 +22,7 @@ CMAKE_SHA256="5a6c61cb62b38e153148a2c8d4af7b3d387f0c8c32b6dbceb5eb4af113efd65a"
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
 GLIBC_SHA256="d1775e32e4628e64ef930f435b67bb63af7599acb6be2b335b9f19f16509f17f"
-HEADERS_SHA256="80439ba055c12f541abf44b8fc3c9b825a8f42fc25ce67462ec7e556c5790b85"
+HEADERS_SHA256="5be3daa1f9427b1bdb34c4894d9c1adfac38cff674376fe0611a3065729a1a81"
 MACOSX_SDK_SHA256="c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
@@ -32,7 +32,29 @@ echo "Install prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext patch git gcc g++ make
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext patch git gcc g++
+
+echo "Install make"
+
+cd /root
+
+MAKE_NAME=make-$MAKE_VERSION
+MAKE_FILE=$MAKE_NAME.tar.gz
+
+curl -L -O https://ftpmirror.gnu.org/make/$MAKE_FILE
+
+MAKE_FILE_SHA256="$(sha256sum $MAKE_FILE | awk '{ print $1 }')"
+
+if [ $MAKE_FILE_SHA256 != $MAKE_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $MAKE_FILE - expected $MAKE_SHA256, got $MAKE_FILE_SHA256"
+    exit 1
+fi
+
+tar xvf $MAKE_FILE
+cd $MAKE_NAME
+CFLAGS='-O2' ./configure --disable-dependency-tracking
+./build.sh
+./make install
 
 echo "Install 7-zip"
 
@@ -116,28 +138,6 @@ tar xvf $CMAKE_FILE
 cp $CMAKE_NAME/bin/* /usr/local/bin
 cp -r $CMAKE_NAME/share/cmake-4.1 /usr/local/share
 
-echo "Install make"
-
-cd /root
-
-MAKE_NAME=make-$MAKE_VERSION
-MAKE_FILE=$MAKE_NAME.tar.gz
-
-curl -L -O https://ftpmirror.gnu.org/make/$MAKE_FILE
-
-MAKE_FILE_SHA256="$(sha256sum $MAKE_FILE | awk '{ print $1 }')"
-
-if [ $MAKE_FILE_SHA256 != $MAKE_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $MAKE_FILE - expected $MAKE_SHA256, got $MAKE_FILE_SHA256"
-    exit 1
-fi
-
-tar xvf $MAKE_FILE
-cd $MAKE_NAME
-CFLAGS='-O2' ./configure
-make
-cp -f make /usr/bin
-
 echo "Install clang"
 
 cd /root
@@ -146,7 +146,7 @@ git clone --depth 1 --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm
 
 cd llvm-project
 mkdir build && cd build
-cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DLLVM_ENABLE_PROJECTS="clang;lld;libc" -DCMAKE_BUILD_TYPE=Release -DLLVM_VERSION_SUFFIX="_p2pool" ../llvm
+cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DLLVM_ENABLE_PROJECTS="clang;lld;libc" -DCMAKE_BUILD_TYPE=Release -DLLVM_VERSION_SUFFIX="_p2pool" -DLIBC_WNO_ERROR=ON ../llvm
 ninja
 ninja install
 
