@@ -121,7 +121,7 @@ public:
 		void on_peer_list_response(const uint8_t* buf);
 		void on_block_notify(const uint8_t* buf);
 		[[nodiscard]] bool on_aux_job_donation(const uint8_t* buf, uint32_t size);
-		[[nodiscard]] bool on_monero_block_broadcast(const uint8_t* buf, uint32_t size) const;
+		[[nodiscard]] bool on_monero_block_broadcast(const uint8_t* buf, uint32_t size);
 
 		[[nodiscard]] bool handle_incoming_block_async(const PoolBlock* block, uint64_t max_time_delta = 0);
 		static void handle_incoming_block(p2pool* pool, PoolBlock& block, std::vector<hash>& missing_blocks, bool& result);

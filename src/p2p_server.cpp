@@ -3010,7 +3010,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	return true;
 }
 
-bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size) const
+bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
@@ -3115,37 +3115,110 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	blob.insert(blob.end(), root.h, root.h + HASH_SIZE);
 	writeVarint(num_transactions + 1, blob);
 
-	hash pow_hash;
-	if (!pool->hasher()->calculate(blob.data(), blob.size(), height, seed, pow_hash, false)) {
-		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash");
-		return false;
-	}
+	struct Work
+	{
+		uv_work_t req;
 
-	if (!diff.check_pow(pow_hash)) {
-		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: diff check failed, PoW hash = " << pow_hash);
-		return false;
-	}
+		P2PServer* server;
+		P2PClient* client;
 
-	server->broadcast_monero_block(buf0, size0, this, true);
+		uint32_t reset_counter;
+		bool is_v6;
+		raw_ip addr;
 
-	std::string request;
-	request.reserve(size * 2 + 128);
+		RandomX_Hasher_Base* hasher;
 
-	request.append("{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"");
+		std::vector<uint8_t> blob;
+		uint64_t height;
+		hash seed;
+		difficulty_type diff;
 
-	for (size_t i = 0; i < size; ++i) {
-		request.append(1, "0123456789abcdef"[buf[i] >> 4]);
-		request.append(1, "0123456789abcdef"[buf[i] & 15]);
-	}
+		std::vector<uint8_t> message;
 
-	request.append("\"]}");
+		bool pow_check_passed;
+	};
 
-	server->m_MoneroBlocksToSubmit.emplace_back(std::move(request));
+	Work* work = new Work{ {}, server, this, m_resetCounter, m_isV6, m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
+	work->req.data = work;
 
-	// Kick the JSON RPC request loop only when the first request arrives
-	// The other requests will be queued and submit_monero_blocks() will process them one by one
-	if (server->m_MoneroBlocksToSubmit.size() == 1) {
-		server->submit_monero_blocks();
+	const int err = uv_queue_work(&server->m_loop, &work->req,
+		[](uv_work_t* req)
+		{
+			BACKGROUND_JOB_START(P2PServer::on_monero_block_broadcast);
+
+			Work* work = reinterpret_cast<Work*>(req->data);
+
+			hash pow_hash;
+			if (!work->hasher->calculate(work->blob.data(), work->blob.size(), work->height, work->seed, pow_hash, false)) {
+				LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash for height = " << work->height);
+				return;
+			}
+
+			if (!work->diff.check_pow(pow_hash)) {
+				LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: diff check failed for height = " << work->height << ", PoW hash = " << pow_hash);
+				return;
+			}
+
+			LOGINFO(6, "on_monero_block_broadcast: PoW check passed for height = " << work->height);
+			work->pow_check_passed = true;
+		},
+		[](uv_work_t* req, int /*status*/)
+		{
+			Work* work = reinterpret_cast<Work*>(req->data);
+
+			P2PServer* server = work->server;
+
+			if (work->pow_check_passed) {
+				const uint8_t* buf0 = work->message.data();
+				const uint32_t size0 = static_cast<uint32_t>(work->message.size());
+
+				const uint8_t* buf = buf0 + sizeof(MoneroBlockBroadcastHeader);
+				const uint32_t size = static_cast<uint32_t>(size0 - sizeof(MoneroBlockBroadcastHeader));
+
+				server->broadcast_monero_block(buf0, size0, work->client, true);
+
+				std::string request;
+				request.reserve(size * 2 + 128);
+
+				request.append("{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"");
+
+				for (size_t i = 0; i < size; ++i) {
+					request.append(1, "0123456789abcdef"[buf[i] >> 4]);
+					request.append(1, "0123456789abcdef"[buf[i] & 15]);
+				}
+
+				request.append("\"]}");
+
+				server->m_MoneroBlocksToSubmit.emplace_back(std::move(request));
+
+				// Kick the JSON RPC request loop only when the first request arrives
+				// The other requests will be queued and submit_monero_blocks() will process them one by one
+				if (server->m_MoneroBlocksToSubmit.size() == 1) {
+					server->submit_monero_blocks();
+				}
+			}
+			else {
+				P2PClient* client = work->client;
+
+				if (client->m_resetCounter == work->reset_counter) {
+					client->close();
+					LOGWARN(3, "peer " << static_cast<const char*>(client->m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
+				}
+				else {
+					LOGWARN(3, work->addr << " banned for " << DEFAULT_BAN_TIME << " seconds");
+				}
+
+				server->ban(work->is_v6, work->addr, DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(work->addr);
+			}
+
+			delete work;
+			BACKGROUND_JOB_STOP(P2PServer::on_monero_block_broadcast);
+		});
+
+	if (err) {
+		LOGERR(1, "on_monero_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
+		delete work;
 	}
 
 	return true;
