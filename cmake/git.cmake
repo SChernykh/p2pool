@@ -1,29 +1,33 @@
-set(GIT_COMMIT "unknown")
+if (GIT_COMMIT)
+	message(STATUS "GIT_COMMIT is set to ${GIT_COMMIT}")
+else()
+	set(GIT_COMMIT "unknown")
 
-find_program(GIT_EXECUTABLE git)
+	find_program(GIT_EXECUTABLE git)
 
-if (GIT_EXECUTABLE)
-	execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=7 HEAD
-		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-		RESULT_VARIABLE RET
-		OUTPUT_VARIABLE COMMIT
-		OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-	if (RET EQUAL 0)
-		set(GIT_COMMIT "${COMMIT}")
-
-		execute_process(COMMAND git status --porcelain
+	if (GIT_EXECUTABLE)
+		execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=7 HEAD
 			WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 			RESULT_VARIABLE RET
-			OUTPUT_VARIABLE GIT_UNSTAGED
+			OUTPUT_VARIABLE COMMIT
 			OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-		if(GIT_UNSTAGED OR RET)
-			set(GIT_COMMIT "${GIT_COMMIT} (dirty)")
+		if (RET EQUAL 0)
+			set(GIT_COMMIT "${COMMIT}")
+
+			execute_process(COMMAND git status --porcelain
+				WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+				RESULT_VARIABLE RET
+				OUTPUT_VARIABLE GIT_UNSTAGED
+				OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+			if(GIT_UNSTAGED OR RET)
+				set(GIT_COMMIT "${GIT_COMMIT} (dirty)")
+			endif()
 		endif()
 	endif()
-endif()
 
-message(STATUS "You are currently on commit ${GIT_COMMIT}")
+	message(STATUS "You are currently on commit ${GIT_COMMIT}")
+endif()
 
 add_compile_definitions(GIT_COMMIT="${GIT_COMMIT}")
