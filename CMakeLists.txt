@@ -394,6 +394,8 @@ if (WIN32 AND (CMAKE_BUILD_TYPE STREQUAL "Release"))
 	add_definitions(-DNDEBUG)
 endif()
 
+include(cmake/git.cmake)
+
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 if (STATIC_BINARY OR STATIC_LIBS)

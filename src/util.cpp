@@ -74,6 +74,9 @@ const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MIN
 #elif defined(_MSC_VER)
 	" with MSVC/" STR2(_MSC_VER)
 #endif
+#ifdef GIT_COMMIT
+" from " GIT_COMMIT
+#endif
 " on " __DATE__ ")";
 
 std::string p2pool_version()
