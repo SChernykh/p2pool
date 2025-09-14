@@ -97,6 +97,8 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_connectedTime(0)
 	, m_proxy(proxy)
 {
+	BACKGROUND_JOB_START(CurlContext);
+
 	m_pollHandles.reserve(2);
 
 	{
@@ -266,6 +268,8 @@ CurlContext::~CurlContext()
 	delete m_closeCallback;
 
 	curl_slist_free_all(m_headers);
+
+	BACKGROUND_JOB_STOP(CurlContext);
 }
 
 int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)

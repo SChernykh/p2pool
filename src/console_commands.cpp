@@ -388,7 +388,6 @@ static void do_stop_mining(p2pool* m_pool, const char* /*args*/)
 
 static void do_exit(p2pool *m_pool, const char * /* args */)
 {
-	bkg_jobs_tracker->wait();
 	m_pool->stop();
 }
 

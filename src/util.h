@@ -243,7 +243,7 @@ public:
 	template<size_t N> FORCEINLINE void start(const char (&name)[N]) { start_internal(name); }
 	template<size_t N> FORCEINLINE void stop (const char (&name)[N]) { stop_internal (name); }
 
-	void wait();
+	std::vector<std::pair<const char*, int32_t>> get_jobs();
 	void print_status();
 
 private:

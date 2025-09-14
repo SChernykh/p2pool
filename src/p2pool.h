@@ -291,6 +291,8 @@ private:
 	bool m_getMinerDataPending = false;
 
 	std::atomic<uint64_t> m_lastMinerDataReceived;
+
+	uv_timer_t m_timer;
 };
 
 } // namespace p2pool

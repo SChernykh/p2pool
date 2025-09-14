@@ -188,6 +188,13 @@ p2pool::p2pool(int argc, char* argv[])
 
 	uv_mutex_init_checked(&m_missingHeightsLock);
 
+	err = uv_timer_init(uv_default_loop_checked(), &m_timer);
+	if (err) {
+		LOGERR(1, "uv_timer_init failed, error " << uv_err_name(err));
+		throw std::exception();
+	}
+	m_timer.data = this;
+
 	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
 
 	if (p->m_localStats && !m_api) {
@@ -1023,6 +1030,22 @@ void p2pool::on_stop(uv_async_t* async)
 {
 	p2pool* pool = reinterpret_cast<p2pool*>(async->data);
 
+	const std::vector<std::pair<const char*, int32_t>> bkg_jobs = bkg_jobs_tracker->get_jobs();
+
+	if (!bkg_jobs.empty()) {
+		for (const auto& job : bkg_jobs) {
+			LOGINFO(1, "waiting for " << job.second << " \"" << job.first << "\" jobs to finish");
+		}
+
+		// There are still some background jobs running. Wait for 1 second and call on_stop again.
+		uv_timer_start(&pool->m_timer, [](uv_timer_t* timer) {
+			p2pool* pool = reinterpret_cast<p2pool*>(timer->data);
+			pool->on_stop(&pool->m_stopAsync);
+		}, 1000, 0);
+
+		return;
+	}
+
 #ifndef P2POOL_UNIT_TESTS
 	delete pool->m_consoleCommands;
 #endif
@@ -1037,6 +1060,9 @@ void p2pool::on_stop(uv_async_t* async)
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_stopAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_reconnectToHostAsync), nullptr);
 	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_getMissingHeightsAsync), nullptr);
+
+	uv_timer_stop(&pool->m_timer);
+	uv_close(reinterpret_cast<uv_handle_t*>(&pool->m_timer), nullptr);
 
 	init_signals(pool, false);
 
@@ -2338,8 +2364,6 @@ int p2pool::run()
 	}
 
 	m_stopped = true;
-
-	bkg_jobs_tracker->wait();
 
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	{

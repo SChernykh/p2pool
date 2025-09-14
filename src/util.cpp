@@ -441,26 +441,19 @@ struct BackgroundJobTracker::Impl
 		}
 	}
 
-	void wait()
+	std::vector<std::pair<const char*, int32_t>> get_jobs()
 	{
-		uint64_t last_msg_time = 0;
-		do {
-			{
-				MutexLock lock(m_lock);
-				// cppcheck-suppress knownConditionTrueFalse
-				if (m_jobs.empty()) {
-					return;
-				}
-				const uint64_t t = seconds_since_epoch();
-				if (t != last_msg_time) {
-					last_msg_time = t;
-					for (const auto& job : m_jobs) {
-						LOGINFO(1, "waiting for " << job.second << " \"" << job.first << "\" jobs to finish");
-					}
-				}
+		std::vector<std::pair<const char*, int32_t>> result;
+		{
+			MutexLock lock(m_lock);
+
+			result.reserve(m_jobs.size());
+
+			for (const auto& job : m_jobs) {
+				result.emplace_back(job.first, job.second);
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		} while (1);
+		}
+		return result;
 	}
 
 	void print_status()
@@ -507,9 +500,9 @@ void BackgroundJobTracker::stop_internal(const char* name)
 	m_impl->stop(name);
 }
 
-void BackgroundJobTracker::wait()
+std::vector<std::pair<const char*, int32_t>> BackgroundJobTracker::get_jobs()
 {
-	m_impl->wait();
+	return m_impl->get_jobs();
 }
 
 void BackgroundJobTracker::print_status()
