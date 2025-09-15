@@ -103,7 +103,8 @@ private:
 	const std::string m_hostStr;
 
 	grpc::ChannelArguments m_channelArgs;
-	tari::rpc::BaseNode::Stub* m_TariNode;
+	std::shared_ptr<grpc::Channel> m_channel;
+	std::unique_ptr<tari::rpc::BaseNode::Stub> m_TariNode;
 
 	struct TariClient : public TCPServer::Client
 	{

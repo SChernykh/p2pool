@@ -96,7 +96,8 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	m_channelArgs.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, -1);
 	m_channelArgs.SetInt(GRPC_ARG_MAX_SEND_MESSAGE_LENGTH, -1);
 
-	m_TariNode = new BaseNode::Stub(grpc::CreateCustomChannel(buf, grpc::InsecureChannelCredentials(), m_channelArgs));
+	m_channel = grpc::CreateCustomChannel(buf, grpc::InsecureChannelCredentials(), m_channelArgs);
+	m_TariNode.reset(new BaseNode::Stub(m_channel));
 
 	uv_mutex_init_checked(&m_workerLock);
 	uv_cond_init_checked(&m_workerCond);
@@ -166,7 +167,8 @@ MergeMiningClientTari::~MergeMiningClientTari()
 	m_server->shutdown_tcp();
 	delete m_server;
 
-	delete m_TariNode;
+	m_TariNode.reset();
+	m_channel.reset();
 
 	uv_rwlock_destroy(&m_chainParamsLock);
 
@@ -181,6 +183,13 @@ MergeMiningClientTari::~MergeMiningClientTari()
 
 bool MergeMiningClientTari::get_params(ChainParameters& out_params) const
 {
+	const grpc_connectivity_state channel_state = m_channel->GetState(false);
+
+	if (channel_state != GRPC_CHANNEL_READY) {
+		LOGWARN(4, m_hostStr << " is not ready (" << channel_state << ')');
+		return false;
+	}
+
 	const uint64_t t = seconds_since_epoch();
 
 	ReadLock lock(m_chainParamsLock);
@@ -606,12 +615,31 @@ template<> struct log::Stream::Entry<TariAmount>
 	}
 };
 
+template<> struct log::Stream::Entry<grpc_connectivity_state>
+{
+	static NOINLINE void put(grpc_connectivity_state value, Stream* wrapper)
+	{
+		switch (value) {
+#define X(name) case GRPC_CHANNEL_##name: *wrapper << #name; return;
+			X(IDLE)
+			X(CONNECTING)
+			X(READY)
+			X(TRANSIENT_FAILURE)
+			X(SHUTDOWN)
+#undef X
+		}
+		*wrapper << "unknown (" << static_cast<int>(value) << ')';
+	}
+};
+
 void MergeMiningClientTari::print_status() const
 {
+	const grpc_connectivity_state channel_state = m_channel->GetState(false);
+
 	ReadLock lock(m_chainParamsLock);
 
 	LOGINFO(0, "status" <<
-		"\nHost       = " << m_hostStr <<
+		"\nHost       = " << m_hostStr << " (" << channel_state << ')' <<
 		"\nWallet     = " << m_auxWallet <<
 		"\nHeight     = " << m_tariJobParams.height <<
 		"\nDifficulty = " << m_tariJobParams.diff <<
@@ -622,12 +650,15 @@ void MergeMiningClientTari::print_status() const
 
 void MergeMiningClientTari::api_status(log::Stream& s) const
 {
+	const grpc_connectivity_state channel_state = m_channel->GetState(false);
+
 	ReadLock lock(m_chainParamsLock);
 
 	s << '{'
 		<< "\"api\":\"Tari gRPC\","
 		<< "\"id\":\"" << m_chainParams.aux_id << "\","
 		<< "\"host\":\"" << m_hostStr << "\","
+		<< "\"channel_state\":\"" << channel_state << "\","
 		<< "\"wallet\":\"" << m_auxWallet << "\","
 		<< "\"height\":" << m_tariJobParams.height << ","
 		<< "\"difficulty\":" << m_tariJobParams.diff << ","
@@ -681,7 +712,9 @@ void MergeMiningClientTari::run()
 		const grpc::Status get_tip_info_status = m_TariNode->GetTipInfo(&get_tip_info_ctx, get_tip_info_request, &cur_tip_info);
 
 		if (!get_tip_info_status.ok()) {
-			LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_message());
+			const grpc_connectivity_state channel_state = m_channel->GetState(false);
+			LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_message() << ", channel state = " << channel_state);
+
 			if (!get_tip_info_status.error_details().empty()) {
 				LOGWARN(4, "GetTipInfo failed: " << get_tip_info_status.error_details());
 			}
