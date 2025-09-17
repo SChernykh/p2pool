@@ -49,7 +49,7 @@ static bssl::UniquePtr<EVP_PKEY> init_evp_pkey()
 	return evp_pkey;
 }
 
-static bssl::UniquePtr<EVP_PKEY> s_evp_pkey = init_evp_pkey();
+static bssl::UniquePtr<EVP_PKEY> s_evp_pkey;
 
 static bssl::UniquePtr<X509> init_cert()
 {
@@ -115,7 +115,7 @@ static bssl::UniquePtr<X509> init_cert()
 	return x509;
 }
 
-static bssl::UniquePtr<X509> s_cert = init_cert();
+static bssl::UniquePtr<X509> s_cert;
 
 static bssl::UniquePtr<SSL_CTX> init_ctx()
 {
@@ -140,7 +140,15 @@ static bssl::UniquePtr<SSL_CTX> init_ctx()
 	return ctx;
 }
 
-static bssl::UniquePtr<SSL_CTX> s_ctx = init_ctx();
+static bssl::UniquePtr<SSL_CTX> s_ctx;
+
+bool ServerTls::global_init()
+{
+	s_evp_pkey = init_evp_pkey();
+	s_cert = init_cert();
+	s_ctx = init_ctx();
+	return s_evp_pkey && s_cert && s_ctx;
+}
 
 bool ServerTls::load_from_files(const char* cert, const char* cert_key)
 {

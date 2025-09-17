@@ -37,6 +37,7 @@ class ServerTls
 public:
 	FORCEINLINE ServerTls() { reset(); }
 
+	[[nodiscard]] static bool global_init();
 	[[nodiscard]] static bool load_from_files(const char* cert, const char* cert_key);
 
 	void reset();

@@ -44,6 +44,10 @@
 #include "randomx.h"
 #endif
 
+#ifdef WITH_TLS
+#include "tls.h"
+#endif
+
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 
 #include <DbgHelp.h>
@@ -310,6 +314,13 @@ int main(int argc, char* argv[])
 
 #ifdef WITH_GRPC
 	grpc_init();
+#endif
+
+#ifdef WITH_TLS
+	if (!p2pool::ServerTls::global_init()) {
+		printf("ServerTls::global_init failed\n");
+		return 1;
+	}
 #endif
 
 	try {
