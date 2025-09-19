@@ -84,7 +84,7 @@ jobs:
           build/data/
 
   sync-test-ubuntu-msan:
-    timeout-minutes: 120
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
 
     steps:
@@ -153,7 +153,7 @@ jobs:
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         sudo sysctl vm.mmap_rnd_bits=28
-        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --data-api data --local-api --loglevel 6
+        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6
 
     - name: Check p2pool.log
       run: |
