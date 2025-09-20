@@ -1338,7 +1338,7 @@ void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_hei
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}\0";
 
 		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-			[this, start_height, next_height, host, current_height](const char* data, size_t size, double) {
+			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
 				if (parse_block_headers_range(data, size) == next_height - start_height + 1) {
 					download_block_headers3(next_height + 1, current_height);
 				}
