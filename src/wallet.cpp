@@ -33,6 +33,8 @@ namespace {
 // Values taken from cryptonote_config.h (CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX)
 constexpr uint64_t valid_prefixes[] = { 18, 53, 24 };
 
+constexpr uint64_t valid_prefixes_subaddress[] = { 42, 63, 36 };
+
 constexpr std::array<int, 9> block_sizes{ 0, 2, 3, 5, 6, 7, 9, 10, 11 };
 constexpr int num_full_blocks = p2pool::Wallet::ADDRESS_LENGTH / block_sizes.back();
 constexpr int last_block_size = p2pool::Wallet::ADDRESS_LENGTH % block_sizes.back();
@@ -77,7 +79,7 @@ static_assert(rev_alphabet.num_symbols == 58, "Check alphabet");
 
 namespace p2pool {
 
-Wallet::Wallet(const char* address) : m_prefix(0), m_checksum(0), m_type(NetworkType::Invalid)
+Wallet::Wallet(const char* address) : m_prefix(0), m_checksum(0), m_type(NetworkType::Invalid), m_subaddress(false)
 {
 	decode(address);
 }
@@ -98,6 +100,7 @@ Wallet& Wallet::operator=(const Wallet& w)
 	m_viewPublicKey = w.m_viewPublicKey;
 	m_checksum = w.m_checksum;
 	m_type = w.m_type;
+	m_subaddress = w.m_subaddress;
 
 	return *this;
 }
@@ -152,6 +155,10 @@ bool Wallet::decode(const char* address)
 	case valid_prefixes[1]: m_type = NetworkType::Testnet;  break;
 	case valid_prefixes[2]: m_type = NetworkType::Stagenet; break;
 
+	case valid_prefixes_subaddress[0]: m_type = NetworkType::Mainnet;  m_subaddress = true; break;
+	case valid_prefixes_subaddress[1]: m_type = NetworkType::Testnet;  m_subaddress = true; break;
+	case valid_prefixes_subaddress[2]: m_type = NetworkType::Stagenet; m_subaddress = true; break;
+
 	default:
 		return false;
 	}
@@ -175,7 +182,7 @@ bool Wallet::decode(const char* address)
 	return valid();
 }
 
-bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type)
+bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress)
 {
 	ge_p3 point;
 	if ((ge_frombytes_vartime(&point, spend_pub_key.h) != 0) || (ge_frombytes_vartime(&point, view_pub_key.h) != 0)) {
@@ -184,9 +191,9 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 
 	switch (type)
 	{
-	case NetworkType::Mainnet:  m_prefix = valid_prefixes[0]; break;
-	case NetworkType::Testnet:  m_prefix = valid_prefixes[1]; break;
-	case NetworkType::Stagenet: m_prefix = valid_prefixes[2]; break;
+	case NetworkType::Mainnet:  m_prefix = subaddress ? valid_prefixes_subaddress[0] : valid_prefixes[0]; break;
+	case NetworkType::Testnet:  m_prefix = subaddress ? valid_prefixes_subaddress[1] : valid_prefixes[1]; break;
+	case NetworkType::Stagenet: m_prefix = subaddress ? valid_prefixes_subaddress[2] : valid_prefixes[2]; break;
 	default:                    m_prefix = 0;                 break;
 	}
 
@@ -204,6 +211,7 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 	memcpy(&m_checksum, md, sizeof(m_checksum));
 
 	m_type = type;
+	m_subaddress = subaddress;
 
 	return true;
 }

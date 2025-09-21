@@ -37,7 +37,7 @@ public:
 	FORCEINLINE bool valid() const { return m_type != NetworkType::Invalid; }
 
 	bool decode(const char* address);
-	bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type);
+	bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress);
 
 	void encode(char (&buf)[ADDRESS_LENGTH]) const;
 
@@ -58,6 +58,7 @@ public:
 	FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
 	FORCEINLINE uint32_t checksum() const { return m_checksum; }
 	FORCEINLINE NetworkType type() const { return m_type; }
+	FORCEINLINE bool is_subaddress() const { return m_subaddress; }
 
 private:
 	uint64_t m_prefix;
@@ -65,6 +66,7 @@ private:
 	hash m_viewPublicKey;
 	uint32_t m_checksum;
 	NetworkType m_type;
+	bool m_subaddress;
 };
 
 } // namespace p2pool

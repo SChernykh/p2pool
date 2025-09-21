@@ -314,6 +314,11 @@ bool Params::valid() const
 		return false;
 	}
 
+	if (m_wallet.is_subaddress()) {
+		LOGERR(1, "Wallet address must be a main address (starting with 4...). Try \"p2pool --help\".");
+		return false;
+	}
+
 	if (m_mergeMiningHosts.size() > 10) {
 		LOGERR(1, "Too many merge mining blockchains.");
 		return false;
