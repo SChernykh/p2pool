@@ -121,7 +121,7 @@ void Miner::on_block(const BlockTemplate& block)
 	m_totalHashes += hash_count;
 
 	if (m_pool->api() && m_pool->params().m_localStats && !m_pool->stopped()) {
-		const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
+		const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_miningWallet) * 100.0;
 
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner",
 			[cur_ts, hash_count, dt, block_reward_share_percent, this](log::Stream& s)

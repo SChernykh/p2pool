@@ -60,7 +60,8 @@ void p2pool_usage()
 {
 	printf("P2Pool %s\n"
 		"\nUsage:\n\n" \
-		"--wallet              Wallet address to mine to. Subaddresses and integrated addresses are not supported!\n"
+		"--wallet              Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress\n"
+		"--subaddress          Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter\n"
 		"--host                IP address of your Monero node, default is 127.0.0.1\n"
 		"--rpc-port            monerod RPC API port number, default is 18081\n"
 		"--zmq-port            monerod ZMQ pub port number, default is 18083 (same port as in monerod's \"--zmq-pub\" command line parameter)\n"

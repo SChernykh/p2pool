@@ -662,7 +662,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		WriteLock lock(m_watchBlockLock);
 
 		if (block.m_merkleRoot == m_watchBlockMerkleRoot) {
-			const Wallet& w = m_pool->params().m_wallet;
+			const Wallet& w = m_pool->params().m_miningWallet;
 
 			const char* who = (block.m_minerWallet == w) ? "you" : "someone else in this p2pool";
 			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << m_watchBlock.height << " was mined by " << who << BLOCK_FOUND);
@@ -971,7 +971,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 	std::array<uint64_t, N> our_blocks_in_window{};
 	std::array<uint64_t, N> our_uncles_in_window{};
 
-	const Wallet& w = m_pool->params().m_wallet;
+	const Wallet& w = m_pool->params().m_miningWallet;
 
 	while (cur) {
 		blocks_in_window.emplace(cur->m_sidechainId);
@@ -1079,7 +1079,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		(hashrate_est ? "\nYour hashrate (pool-side) = " : "") << (hashrate_est ? log::Hashrate(hashrate_est) : log::Hashrate()) <<
 		"\nPPLNS window              = " << total_blocks_in_window << " blocks (+" << total_uncles_in_window << " uncles, " << total_orphans << " orphans)" <<
 		"\nPPLNS window duration     = " << log::Duration((pplns_weight / pool_hashrate).lo) <<
-		"\nYour wallet address       = " << w <<
+		"\nYour wallet address       = " << m_pool->params().m_displayWallet <<
 		"\nYour shares               = " << our_blocks_in_window_total << " blocks (+" << our_uncles_in_window_total << " uncles, " << our_orphans << " orphans)"
 										 << our_blocks_in_window_chart << our_uncles_in_window_chart <<
 		"\nBlock reward share        = " << block_share << "% (" << log::XMRAmount(your_reward) << ')'
@@ -1425,7 +1425,7 @@ void SideChain::verify_loop(PoolBlock* block)
 			if (block->m_wantBroadcast && !block->m_broadcasted) {
 				block->m_broadcasted = true;
 				if (server && (block->m_depth < UNCLE_BLOCK_DEPTH)) {
-					if (m_pool && (block->m_minerWallet == m_pool->params().m_wallet)) {
+					if (m_pool && (block->m_minerWallet == m_pool->params().m_miningWallet)) {
 						LOGINFO(0, log::Green() << "SHARE ADDED: height = " << block->m_sidechainHeight << ", id = " << block->m_sidechainId << ", mainchain height = " << block->m_txinGenHeight);
 					}
 					server->broadcast(*block, get_parent(block));

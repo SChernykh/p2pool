@@ -73,7 +73,12 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--wallet") == 0) && (i + 1 < argc)) {
-			m_wallet.decode(argv[++i]);
+			m_mainWallet.decode(argv[++i]);
+			ok = true;
+		}
+
+		if ((strcmp(argv[i], "--subaddress") == 0) && (i + 1 < argc)) {
+			m_subaddress.decode(argv[++i]);
 			ok = true;
 		}
 
@@ -305,18 +310,42 @@ Params::Params(int argc, char* const argv[])
 		LOGWARN(1, "Value for --stratum-ban-time is too high, adjusting to " << MAX_STRATUM_BAN_TIME);
 		m_stratumBanTime = MAX_STRATUM_BAN_TIME;
 	}
+
+	char display_wallet_buf[Wallet::ADDRESS_LENGTH] = {};
+
+	if (m_mainWallet.valid() && m_subaddress.valid()) {
+		m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.type(), false);
+		m_subaddress.encode(display_wallet_buf);
+	}
+	else if (m_mainWallet.valid()) {
+		m_miningWallet = m_mainWallet;
+		m_mainWallet.encode(display_wallet_buf);
+	}
+
+	m_displayWallet.assign(display_wallet_buf, Wallet::ADDRESS_LENGTH);
 }
 
 bool Params::valid() const
 {
-	if (!m_wallet.valid()) {
+	if (!m_mainWallet.valid() || !m_miningWallet.valid()) {
 		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
 		return false;
 	}
 
-	if (m_wallet.is_subaddress()) {
+	if (m_mainWallet.is_subaddress()) {
 		LOGERR(1, "Wallet address must be a main address (starting with 4...). Try \"p2pool --help\".");
 		return false;
+	}
+
+	if (m_subaddress.valid()) {
+		if (!m_subaddress.is_subaddress()) {
+			LOGERR(1, "Subaddress must start with 8... Try \"p2pool --help\".");
+			return false;
+		}
+		if (m_subaddress.type() != m_mainWallet.type()) {
+			LOGERR(1, "Subaddress must belong to the same network type as the main wallet address. Try \"p2pool --help\".");
+			return false;
+		}
 	}
 
 	if (m_mergeMiningHosts.size() > 10) {
