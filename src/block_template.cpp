@@ -27,7 +27,6 @@
 #include "p2pool.h"
 #include "side_chain.h"
 #include "pool_block.h"
-#include "params.h"
 #include "merkle.h"
 #include <zmq.hpp>
 #include <ctime>
@@ -205,7 +204,7 @@ void BlockTemplate::shuffle_tx_order()
 	}
 }
 
-void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Wallet* miner_wallet)
+void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Wallet* miner_wallet, const Wallet* subaddress)
 {
 	if (data.major_version > HARDFORK_SUPPORTED_VERSION) {
 		LOGERR(1, "got hardfork version " << data.major_version << ", expected <= " << HARDFORK_SUPPORTED_VERSION);
@@ -624,6 +623,17 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		writeVarint(c.difficulty.hi, v);
 
 		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
+	}
+
+	if (subaddress->valid()) {
+		std::vector<uint8_t> v;
+		v.reserve(HASH_SIZE + 1);
+
+		const hash& key = subaddress->view_public_key();
+		v.insert(v.end(), key.h, key.h + HASH_SIZE);
+		v.insert(v.end(), 0);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_subaddress_viewpub, std::move(v));
 	}
 
 	init_merge_mining_merkle_proof();

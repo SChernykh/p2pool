@@ -235,16 +235,26 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		return;
 	}
 
+	std::vector<std::pair<hash, std::vector<uint8_t>>> mm_extra;
+	mm_extra.reserve(block.m_mergeMiningExtra.size());
+
+	// Filter aux chain data only
+	for (const auto& i : block.m_mergeMiningExtra) {
+		if (i.first != keccak_subaddress_viewpub) {
+			mm_extra.emplace_back(i.first, i.second);
+		}
+	}
+
 	std::vector<hash> aux_ids;
 	std::vector<AuxChainData> aux_chains;
 
 	// All aux chains in this block + the P2Pool sidechain
-	aux_ids.reserve(block.m_mergeMiningExtra.size() + 1);
+	aux_ids.reserve(mm_extra.size() + 1);
 
 	// All aux chains in this block
-	aux_chains.reserve(block.m_mergeMiningExtra.size());
+	aux_chains.reserve(mm_extra.size());
 
-	for (const auto& i : block.m_mergeMiningExtra) {
+	for (const auto& i : mm_extra) {
 		const std::vector<uint8_t>& v = i.second;
 
 		const uint8_t* p = v.data();
@@ -356,7 +366,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 	uint32_t aux_merkle_proof_path = 0;
 
 	const hash sidechain_id = block.m_sidechainId;
-	const uint32_t n_aux_chains = static_cast<uint32_t>(block.m_mergeMiningExtra.size() + 1);
+	const uint32_t n_aux_chains = static_cast<uint32_t>(mm_extra.size() + 1);
 
 	std::vector<hash> hashes(n_aux_chains);
 
