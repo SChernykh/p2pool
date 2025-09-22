@@ -145,6 +145,9 @@ cd /root
 git clone --depth 1 --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm-project.git
 
 cd llvm-project
+mv /clang_version.patch .
+git apply --verbose --ignore-whitespace clang_version.patch
+
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DLLVM_ENABLE_PROJECTS="clang;lld;libc" -DCMAKE_BUILD_TYPE=Release -DLLVM_VERSION_SUFFIX="_p2pool" -DLIBC_WNO_ERROR=ON -DLLVM_APPEND_VC_REV=OFF ../llvm
 ninja

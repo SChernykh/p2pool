@@ -1,0 +1,15 @@
+diff --git a/clang/lib/Frontend/InitPreprocessor.cpp b/clang/lib/Frontend/InitPreprocessor.cpp
+index cce839295..b87fe998e 100644
+--- a/clang/lib/Frontend/InitPreprocessor.cpp
++++ b/clang/lib/Frontend/InitPreprocessor.cpp
+@@ -873,9 +873,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
+   Builder.defineMacro("__clang_patchlevel__", TOSTR(CLANG_VERSION_PATCHLEVEL));
+ #undef TOSTR
+ #undef TOSTR2
+-  Builder.defineMacro("__clang_version__",
+-                      "\"" CLANG_VERSION_STRING " "
+-                      + getClangFullRepositoryVersion() + "\"");
++  Builder.defineMacro("__clang_version__", "\"" CLANG_VERSION_STRING "\"");
+ 
+   if (LangOpts.GNUCVersion != 0) {
+     // Major, minor, patch, are given two decimal places each, so 4.2.1 becomes
