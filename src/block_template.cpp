@@ -627,11 +627,12 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	if (subaddress.valid()) {
 		std::vector<uint8_t> v;
-		v.reserve(HASH_SIZE + 1);
+		v.reserve(HASH_SIZE + 2);
 
 		const hash& key = subaddress.view_public_key();
 		v.insert(v.end(), key.h, key.h + HASH_SIZE);
-		v.insert(v.end(), 0);
+		v.emplace_back(0);
+		v.emplace_back(0);
 
 		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_subaddress_viewpub, std::move(v));
 	}
