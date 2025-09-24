@@ -91,7 +91,7 @@ struct MinerCallbackHandler
 
 	virtual void handle_tx(TxMempoolData& tx) = 0;
 	virtual void handle_miner_data(MinerData& data) = 0;
-	virtual void handle_chain_main(ChainMain& data, const char* extra) = 0;
+	virtual void handle_chain_main(ChainMain& data, const char* extra, const std::vector<hash>& tx_hashes_in_block) = 0;
 	virtual void handle_monero_block_broadcast(std::vector<std::vector<uint8_t>>&& blobs) = 0;
 };
 

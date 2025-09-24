@@ -584,8 +584,11 @@ const char* BLOCK_FOUND = "\n\
 | ######   #######  #######   #####   #    #      #        #######   #####   #     #  ######  |\n\
 -----------------------------------------------------------------------------------------------";
 
-void p2pool::handle_chain_main(ChainMain& data, const char* extra)
+void p2pool::handle_chain_main(ChainMain& data, const char* extra, const std::vector<hash>& tx_hashes_in_block)
 {
+	// These transactions were already mined, so remove them from mempool if any of them slipped through
+	m_mempool->remove(tx_hashes_in_block);
+
 	{
 		WriteLock lock(m_mainchainLock);
 

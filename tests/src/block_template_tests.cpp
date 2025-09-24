@@ -81,12 +81,29 @@ TEST(block_template, update)
 	ASSERT_EQ(blobs_hash, H("da11e1ee86779a559df63a55e0b238ce5a67b977e0f68a0b347a39d37096a4bc"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
-	for (uint64_t i = 0; i < 512; ++i) {
+	for (uint64_t i = 0; i < 513; ++i) {
 		TxMempoolData tx;
 		*reinterpret_cast<uint64_t*>(tx.id.h) = i;
 		tx.fee = (i < 256) ? 30000000 : 60000000;
 		tx.weight = 1500;
 		mempool.add(tx);
+	}
+	ASSERT_EQ(mempool.size(), 513);
+
+	// Test transaction removing from mempool
+	{
+		std::vector<hash> tx_hashes;
+
+		// Empty list, should do nothing
+		mempool.remove(tx_hashes);
+		ASSERT_EQ(mempool.size(), 513);
+
+		hash h;
+		*reinterpret_cast<uint64_t*>(h.h) = 512;
+		tx_hashes.push_back(h);
+
+		// Should remove a single hash
+		mempool.remove(tx_hashes);
 	}
 	ASSERT_EQ(mempool.size(), 512);
 

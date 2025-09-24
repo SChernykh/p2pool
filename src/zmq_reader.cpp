@@ -253,8 +253,10 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	return true;
 }
 
-static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
+static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value, std::vector<hash>& out_transaction_hashes)
 {
+	out_transaction_hashes.clear();
+
 	std::vector<uint8_t> empty_blob;
 
 #define X(type, name) type name; if (!parseValue(*value, #name, name)) return empty_blob;
@@ -405,6 +407,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 	auto arr2 = tx_hashes->value.GetArray();
 
 	writeVarint(arr2.Size(), blob);
+	out_transaction_hashes.reserve(arr2.Size());
 
 	for (auto i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString()) {
@@ -416,6 +419,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value)
 			return empty_blob;
 		}
 		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
+		out_transaction_hashes.emplace_back(h);
 	}
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(&data);
@@ -525,7 +529,8 @@ void ZMQReader::parse(char* data, size_t size)
 		blobs.reserve(arr.Size());
 
 		for (auto i = arr.begin(); i != arr.end(); ++i) {
-			blobs.emplace_back(construct_monero_block_blob(i));
+			std::vector<hash> tx_hashes;
+			blobs.emplace_back(construct_monero_block_blob(i, tx_hashes));
 
 			if (!PARSE(*i, m_chainmainData, timestamp)) {
 				LOGWARN(1, "json-full-chain_main timestamp failed to parse, skipping it");
@@ -586,7 +591,7 @@ void ZMQReader::parse(char* data, size_t size)
 				continue;
 			}
 
-			m_handler->handle_chain_main(m_chainmainData, extra_it->value.GetString());
+			m_handler->handle_chain_main(m_chainmainData, extra_it->value.GetString(), tx_hashes);
 		}
 
 		m_handler->handle_monero_block_broadcast(std::move(blobs));

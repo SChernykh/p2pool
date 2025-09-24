@@ -56,6 +56,8 @@ public:
 		m_transactions.clear();
 	}
 
+	void remove(const std::vector<hash>& tx_hashes);
+
 private:
 	mutable uv_rwlock_t m_lock;
 	unordered_map<hash, TxMempoolData> m_transactions;

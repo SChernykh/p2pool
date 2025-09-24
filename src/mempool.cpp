@@ -65,4 +65,17 @@ void Mempool::swap(std::vector<TxMempoolData>& transactions)
 	}
 }
 
+void Mempool::remove(const std::vector<hash>& tx_hashes)
+{
+	if (tx_hashes.empty()) {
+		return;
+	}
+
+	WriteLock lock(m_lock);
+
+	for (const hash& h : tx_hashes) {
+		m_transactions.erase(h);
+	}
+}
+
 } // namespace p2pool

@@ -85,7 +85,7 @@ public:
 
 	virtual void handle_tx(TxMempoolData& tx) override;
 	virtual void handle_miner_data(MinerData& data) override;
-	virtual void handle_chain_main(ChainMain& data, const char* extra) override;
+	virtual void handle_chain_main(ChainMain& data, const char* extra, const std::vector<hash>& tx_hashes_in_block) override;
 	virtual void handle_monero_block_broadcast(std::vector<std::vector<uint8_t>>&& blobs) override;
 
 #ifdef WITH_MERGE_MINING_DONATION
