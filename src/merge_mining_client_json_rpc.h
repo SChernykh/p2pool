@@ -52,7 +52,7 @@ private:
 	bool parse_merge_mining_submit_solution(const char* data, size_t size) const;
 
 	std::string m_host;
-	uint32_t m_port;
+	int32_t m_port;
 
 	mutable uv_rwlock_t m_lock;
 	ChainParameters m_chainParams;

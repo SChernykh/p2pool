@@ -97,7 +97,7 @@ TCPServer::~TCPServer()
 	delete m_connectedClientsList;
 }
 
-void TCPServer::parse_address_list_internal(const std::string& address_list, Callback<void, bool, const std::string&, const std::string&, int>::Base&& callback)
+void TCPServer::parse_address_list_internal(const std::string& address_list, const Callback<void, bool, const std::string&, const std::string&, int>::Base& callback)
 {
 	if (address_list.empty()) {
 		return;
@@ -128,7 +128,7 @@ void TCPServer::parse_address_list_internal(const std::string& address_list, Cal
 
 			const uint32_t port = std::stoul(address.substr(k2 + 1), nullptr, 10);
 			if ((port > 0) && (port < 65536)) {
-				callback(is_v6, address, ip, port);
+				callback(is_v6, address, ip, static_cast<int>(port));
 			}
 			else {
 				error_invalid_ip(address);
@@ -420,10 +420,8 @@ bool TCPServer::connect_to_peer(Client* client)
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
 	}
-	else {
-		LOGINFO(5, "connecting to " << log::Gray() << static_cast<const char*>(client->m_addrString));
-	}
 
+	LOGINFO(5, "connecting to " << log::Gray() << static_cast<const char*>(client->m_addrString));
 	return true;
 }
 
@@ -538,7 +536,7 @@ void TCPServer::print_bans()
 	}
 }
 
-bool TCPServer::send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback, bool raw)
+bool TCPServer::send_internal(Client* client, const Callback<size_t, uint8_t*, size_t>::Base& callback, bool raw)
 {
 	check_event_loop_thread(__func__);
 
@@ -627,6 +625,7 @@ void TCPServer::loop(void* data)
 			if (n < sizeof(buf)) {
 				// Set the thread name as is
 				memcpy(buf, log_category_prefix, n);
+				buf[n] = '\0';
 			}
 			else {
 				// Thread name is too long, use the "first 7 characters - last 7 characters" format

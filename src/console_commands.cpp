@@ -91,7 +91,7 @@ ConsoleCommands::ConsoleCommands(p2pool* pool)
 		rng.discard(10000);
 
 		for (int i = 0; i < 10; ++i) {
-			if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
+			if (start_listening(false, "127.0.0.1", 49152 + static_cast<int>(rng() % 16384))) {
 				break;
 			}
 		}
@@ -293,7 +293,7 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 
 static void do_loglevel(p2pool * /* m_pool */, const char *args)
 {
-	int level = strtol(args, nullptr, 10);
+	int level = static_cast<int>(strtol(args, nullptr, 10));
 	level = std::min(std::max(level, 0), log::MAX_GLOBAL_LOG_LEVEL);
 	log::GLOBAL_LOG_LEVEL = level;
 	LOGINFO(0, "log level set to " << level);

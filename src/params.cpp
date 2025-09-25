@@ -38,7 +38,7 @@ Params::Params(int argc, char* const argv[])
 			const char* address = argv[++i];
 
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 				m_hosts.back().m_address = address;
 			}
 			else {
@@ -51,19 +51,19 @@ Params::Params(int argc, char* const argv[])
 
 		if ((strcmp(argv[i], "--rpc-port") == 0) && (i + 1 < argc)) {
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_rpcPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
+			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
 		if ((strcmp(argv[i], "--zmq-port") == 0) && (i + 1 < argc)) {
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_zmqPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
+			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
@@ -103,7 +103,7 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--loglevel") == 0) && (i + 1 < argc)) {
-			const int level = std::min(std::max<int>(strtol(argv[++i], nullptr, 10), 0), log::MAX_GLOBAL_LOG_LEVEL);
+			const int level = std::min(std::max<int>(static_cast<int>(strtol(argv[++i], nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
 			log::GLOBAL_LOG_LEVEL = level;
 			ok = true;
 		}
@@ -178,7 +178,7 @@ Params::Params(int argc, char* const argv[])
 
 		if ((strcmp(argv[i], "--rpc-login") == 0) && (i + 1 < argc)) {
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 			}
 
 			m_hosts.back().m_rpcLogin = argv[++i];
@@ -188,7 +188,7 @@ Params::Params(int argc, char* const argv[])
 #ifdef WITH_TLS
 		if (strcmp(argv[i], "--rpc-ssl") == 0) {
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 			}
 
 			m_hosts.back().m_rpcSSL = true;
@@ -197,7 +197,7 @@ Params::Params(int argc, char* const argv[])
 
 		if ((strcmp(argv[i], "--rpc-ssl-fingerprint") == 0) && (i + 1 < argc)) {
 			if (m_hosts.empty()) {
-				m_hosts.emplace_back(Host());
+				m_hosts.emplace_back();
 			}
 
 			m_hosts.back().m_rpcSSL_Fingerprint = argv[++i];
@@ -217,7 +217,7 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--p2p-external-port") == 0) && (i + 1 < argc)) {
-			m_p2pExternalPort = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL);
+			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
@@ -290,7 +290,7 @@ Params::Params(int argc, char* const argv[])
 	m_hosts.erase(std::remove_if(m_hosts.begin(), m_hosts.end(), invalid_host), m_hosts.end());
 
 	if (m_hosts.empty()) {
-		m_hosts.emplace_back(Host());
+		m_hosts.emplace_back();
 	}
 
 	if (m_stratumAddresses.empty()) {

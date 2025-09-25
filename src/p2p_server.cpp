@@ -867,7 +867,7 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 		data->compact_blob.reserve(data->pruned_blob.capacity() + (N - 1));
 
 		// Copy pruned_blob without the transaction list
-		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - (N - 1) * HASH_SIZE);
+		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - static_cast<uint32_t>((N - 1) * HASH_SIZE));
 
 		// Process transaction hashes one by one
 		size_t num_found = 0;
@@ -1602,7 +1602,7 @@ void P2PServer::clean_aux_job_messages()
 
 	for (auto it = m_auxJobMessages.begin(); it != m_auxJobMessages.end();) {
 		// Delete old messages only after 3x the timeout to give some leeway for system clock adjustments
-		if (cur_time > it->second + AUX_JOB_TIMEOUT * 3) {
+		if (cur_time > it->second + static_cast<uint64_t>(AUX_JOB_TIMEOUT * 3)) {
 			it = m_auxJobMessages.erase(it);
 		}
 		else {

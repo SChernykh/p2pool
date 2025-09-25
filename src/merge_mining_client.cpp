@@ -34,11 +34,8 @@ IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& 
 		if (host.find(MergeMiningClientTari::TARI_PREFIX) == 0) {
 			return new MergeMiningClientTari(pool, host, wallet);
 		}
-		else
 #endif
-		{
-			return new MergeMiningClientJSON_RPC(pool, host, wallet);
-		}
+		return new MergeMiningClientJSON_RPC(pool, host, wallet);
 	}
 	catch (...) {
 		LOGERR(1, "Failed to create merge mining client for " << host);

@@ -54,7 +54,7 @@ private:
 		std::vector<char> buf;
 	};
 
-	void dump_to_file_async_internal(Category category, const char* filename, Callback<void, log::Stream&>::Base&& callback);
+	void dump_to_file_async_internal(Category category, const char* filename, const Callback<void, log::Stream&>::Base& callback);
 	void dump_to_file();
 	static void on_fs_open(uv_fs_t* req);
 	static void on_fs_write(uv_fs_t* req);

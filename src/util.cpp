@@ -569,7 +569,7 @@ bool resolve_host(std::string& host, bool& is_v6)
 	return true;
 }
 
-bool get_dns_txt_records_base(const std::string& host, Callback<void, const char*, size_t>::Base&& callback)
+bool get_dns_txt_records_base(const std::string& host, const Callback<void, const char*, size_t>::Base& callback)
 {
 	if (disable_resolve_host) {
 		LOGERR(1, "get_dns_txt_records was called with DNS disabled for host " << host);
@@ -849,10 +849,9 @@ int add_portmapping(int external_port, int internal_port)
 			LOGWARN(1, "UPNP_DeletePortMapping returned error " << result);
 			return 0;
 		}
-		else {
-			LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
-			result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport, iport, local_addr, "P2Pool", "TCP", nullptr, nullptr);
-		}
+
+		LOGINFO(1, "UPnP: Deleted mapping for external port " << external_port);
+		result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, eport, iport, local_addr, "P2Pool", "TCP", nullptr, nullptr);
 	}
 
 	if (result) {

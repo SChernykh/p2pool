@@ -41,7 +41,7 @@ void Mempool::add(const TxMempoolData& tx)
 	}
 }
 
-void Mempool::swap(std::vector<TxMempoolData>& transactions)
+void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
 {
 	const uint64_t cur_time = seconds_since_epoch();
 
@@ -59,6 +59,7 @@ void Mempool::swap(std::vector<TxMempoolData>& transactions)
 	}
 
 	m_transactions.clear();
+	m_transactions.reserve(transactions.size());
 
 	for (TxMempoolData& data : transactions) {
 		m_transactions.emplace(data.id, data);

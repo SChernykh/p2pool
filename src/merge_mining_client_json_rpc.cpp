@@ -44,10 +44,10 @@ MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::st
 	const size_t k = host.find_last_of(':');
 	if (k != std::string::npos) {
 		m_host = host.substr(0, k);
-		m_port = std::stoul(host.substr(k + 1), nullptr, 10);
+		m_port = static_cast<int32_t>(std::stol(host.substr(k + 1), nullptr, 10));
 	}
 
-	if (m_host.empty() || (m_port == 0) || (m_port >= 65536)) {
+	if (m_host.empty() || (m_port <= 0) || (m_port >= 65536)) {
 		LOGERR(1, "Invalid host " << host);
 		throw std::exception();
 	}
@@ -390,12 +390,10 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_submit_solution(const char* d
 		if (error_result.IsString()) {
 			return err(error_result.GetString());
 		}
-		else if (error_result.IsObject() && error_result.HasMember("message") && error_result["message"].IsString()) {
+		if (error_result.IsObject() && error_result.HasMember("message") && error_result["message"].IsString()) {
 			return err(error_result["message"].GetString());
 		}
-		else {
-			return err("an unknown error occurred");
-		}
+		return err("an unknown error occurred");
 	}
 
 	if (!doc.HasMember("result")) {

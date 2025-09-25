@@ -43,12 +43,12 @@ NOINLINE void keccakf_bmi(std::array<uint64_t, 25>& st)
 		bc[4] = st[4] ^ st[9] ^ st[14] ^ st[19] ^ st[24];
 
 #define THETA(i) { \
-			const uint64_t t = bc[(i + 4) % 5] ^ ROTL64(bc[(i + 1) % 5], 1); \
-			st[i +  0 ] ^= t; \
-			st[i +  5] ^= t; \
-			st[i + 10] ^= t; \
-			st[i + 15] ^= t; \
-			st[i + 20] ^= t; \
+			const uint64_t t = bc[((i) + 4) % 5] ^ ROTL64(bc[((i) + 1) % 5], 1); \
+			st[(i) +  0 ] ^= t; \
+			st[(i) +  5] ^= t; \
+			st[(i) + 10] ^= t; \
+			st[(i) + 15] ^= t; \
+			st[(i) + 20] ^= t; \
 		}
 
 		THETA(0);
@@ -86,16 +86,16 @@ NOINLINE void keccakf_bmi(std::array<uint64_t, 25>& st)
 
 		//  Chi
 #define CHI(j) { \
-			const uint64_t st0 = st[j    ]; \
-			const uint64_t st1 = st[j + 1]; \
-			const uint64_t st2 = st[j + 2]; \
-			const uint64_t st3 = st[j + 3]; \
-			const uint64_t st4 = st[j + 4]; \
-			st[j    ] ^= _andn_u64(st1, st2); \
-			st[j + 1] ^= _andn_u64(st2, st3); \
-			st[j + 2] ^= _andn_u64(st3, st4); \
-			st[j + 3] ^= _andn_u64(st4, st0); \
-			st[j + 4] ^= _andn_u64(st0, st1); \
+			const uint64_t st0 = st[(j)    ]; \
+			const uint64_t st1 = st[(j) + 1]; \
+			const uint64_t st2 = st[(j) + 2]; \
+			const uint64_t st3 = st[(j) + 3]; \
+			const uint64_t st4 = st[(j) + 4]; \
+			st[(j)    ] ^= _andn_u64(st1, st2); \
+			st[(j) + 1] ^= _andn_u64(st2, st3); \
+			st[(j) + 2] ^= _andn_u64(st3, st4); \
+			st[(j) + 3] ^= _andn_u64(st4, st0); \
+			st[(j) + 4] ^= _andn_u64(st0, st1); \
 		}
 
 		CHI(0);

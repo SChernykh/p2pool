@@ -37,4 +37,4 @@ jobs:
     - name: Run clang-tidy
       run: |
         cd src
-        clang-tidy-21 *.cpp -p ../build -checks=-clang-diagnostic-undefined-internal,-clang-analyzer-optin.performance.Padding,-clang-diagnostic-nan-infinity-disabled -warnings-as-errors=* -header-filter=^[^\.]
+        clang-tidy-21 *.cpp -p ../build -checks=bugprone-*,clang-analyzer-*,llvm-*,cppcoreguidelines-pro-type-cstyle-cast,cppcoreguidelines-rvalue-reference-param-not-moved,hicpp-use-emplace,hicpp-use-override,-bugprone-easily-swappable-parameters,-bugprone-empty-catch,-llvm-include-order -warnings-as-errors=* -header-filter=^[^\./]

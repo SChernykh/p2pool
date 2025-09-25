@@ -153,7 +153,8 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 	if (count == 1) {
 		return true;
 	}
-	else if (count == 2) {
+
+	if (count == 2) {
 		proof.emplace_back(hashes[index ^ 1]);
 		path = index & 1;
 	}

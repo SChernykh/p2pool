@@ -71,7 +71,7 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 				PANIC_STOP();
 			}
 		}
-		memory_allocated += RANDOMX_ARGON_MEMORY * 1024;
+		memory_allocated += static_cast<uint64_t>(RANDOMX_ARGON_MEMORY * 1024);
 	}
 
 	uv_rwlock_init_checked(&m_datasetLock);
@@ -456,7 +456,7 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"calc_pow\",\"params\":{\"major_version\":" << major_version <<
 		",\"height\":" << height <<
 		",\"block_blob\":\"" << log::hex_buf(data, size) << '"' <<
-		",\"seed_hash\":\"\"}}\0";
+		",\"seed_hash\":\"\"}}" << '\0';
 
 	std::atomic<int> result{ 0 };
 	std::atomic<bool> done{ false };

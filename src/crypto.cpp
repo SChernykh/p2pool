@@ -66,7 +66,7 @@ private:
 
 static RandomBytes* randomBytes = nullptr;
 
-}
+} // namespace
 
 static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 {
@@ -390,7 +390,7 @@ private:
 					m_viewTags1[i] = k; \
 					return; \
 				} \
-				else if (t == k) { \
+				if (t == k) { \
 					return; \
 				} \
 			} while (0)
@@ -481,12 +481,12 @@ void init_crypto_cache()
 void destroy_crypto_cache()
 {
 	{
-		auto p = randomBytes;
+		auto* p = randomBytes;
 		randomBytes = nullptr;
 		delete p;
 	}
 	{
-		auto p = cache;
+		auto* p = cache;
 		cache = nullptr;
 		delete p;
 	}

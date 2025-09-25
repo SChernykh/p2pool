@@ -207,7 +207,7 @@ int p2pool_test()
 
 	constexpr char expected_hash[] = "3b5ecc2bb14f467161a04fe476b541194fba82dbbbfc7c320961f922a0294dee";
 
-	if (memcmp(buf, expected_hash, RANDOMX_HASH_SIZE * 2) != 0) {
+	if (memcmp(buf, expected_hash, static_cast<int>(RANDOMX_HASH_SIZE * 2)) != 0) {
 		printf("Invalid hash calculated: expected %s, got %s\n", expected_hash, buf);
 		return 1;
 	}

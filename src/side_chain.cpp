@@ -161,7 +161,7 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		rx_vec_i128* scratchpad_ptr = scratchpad;
 		rx_vec_i128* cache_ptr = scratchpad_end;
 
-		for (uint64_t i = scratchpad_size, n = RANDOMX_ARGON_MEMORY * 1024 / sizeof(rx_vec_i128); i < n; ++i) {
+		for (uint64_t i = scratchpad_size, n = static_cast<uint64_t>(RANDOMX_ARGON_MEMORY * 1024) / sizeof(rx_vec_i128); i < n; ++i) {
 			*scratchpad_ptr = rx_xor_vec_i128(*scratchpad_ptr, *cache_ptr);
 			++cache_ptr;
 			++scratchpad_ptr;
@@ -523,7 +523,7 @@ void SideChain::cleanup_incoming_blocks()
 
 	// Forget seen blocks that were added more than 10 minutes ago
 	for (auto i = m_incomingBlocks.begin(); i != m_incomingBlocks.end();) {
-		if (cur_time < i->second + 10 * 60) {
+		if (cur_time < i->second + 10ul * 60ul) {
 			++i;
 		}
 		else {
@@ -1165,9 +1165,9 @@ uint64_t SideChain::miner_count()
 	MutexLock lock(m_seenWalletsLock);
 
 	// Every 5 minutes, delete wallets that weren't seen for more than 72 hours
-	if (m_seenWalletsLastPruneTime + 5 * 60 <= cur_time) {
+	if (m_seenWalletsLastPruneTime + 5ul * 60ul <= cur_time) {
 		for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
-			if (it->second + 72 * 60 * 60 < cur_time) {
+			if (it->second + 72ul * 60ul * 60ul < cur_time) {
 				it = m_seenWallets.erase(it);
 			}
 			else {
@@ -1314,10 +1314,10 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 	const uint64_t index1 = cut_size - 1;
 	const uint64_t index2 = difficultyData.size() - cut_size;
 
-	std::nth_element(tmpTimestamps.begin(), tmpTimestamps.begin() + index1, tmpTimestamps.end());
+	std::nth_element(tmpTimestamps.begin(), tmpTimestamps.begin() + static_cast<int32_t>(index1), tmpTimestamps.end());
 	const uint64_t timestamp1 = oldest_timestamp + tmpTimestamps[index1];
 
-	std::nth_element(tmpTimestamps.begin(), tmpTimestamps.begin() + index2, tmpTimestamps.end());
+	std::nth_element(tmpTimestamps.begin(), tmpTimestamps.begin() + static_cast<int32_t>(index2), tmpTimestamps.end());
 	const uint64_t timestamp2 = oldest_timestamp + tmpTimestamps[index2];
 
 	// Make a reasonable assumption that each block has higher timestamp, so delta_t can't be less than delta_index
@@ -2047,9 +2047,7 @@ void SideChain::update_depths(PoolBlock* block)
 					LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
 					return;
 				}
-				else {
-					update_depth(block, child->m_depth + 1);
-				}
+				update_depth(block, child->m_depth + 1);
 			}
 
 			if (std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId) != child->m_uncles.end()) {
@@ -2090,7 +2088,7 @@ void SideChain::update_depths(PoolBlock* block)
 						LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
 						return;
 					}
-					else if (block->m_depth > 0) {
+					if (block->m_depth > 0) {
 						update_depth(child, block->m_depth - 1);
 					}
 				}

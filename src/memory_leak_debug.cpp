@@ -395,5 +395,5 @@ char* strdup_hook(const char* s) noexcept
 #endif
 }
 
-}
+} // namespace p2pool
 #endif

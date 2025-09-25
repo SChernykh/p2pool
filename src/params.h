@@ -33,7 +33,7 @@ struct Params
 	{
 		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083), m_rpcSSL(false) {}
 
-		Host(const char* address, uint32_t rpcPort, uint32_t zmqPort, const char* rpcLogin)
+		Host(const char* address, int32_t rpcPort, int32_t zmqPort, const char* rpcLogin)
 			: m_address(address)
 			, m_rpcPort(rpcPort)
 			, m_zmqPort(zmqPort)
@@ -46,8 +46,8 @@ struct Params
 		bool init_display_name(const Params& p);
 
 		std::string m_address;
-		uint32_t m_rpcPort;
-		uint32_t m_zmqPort;
+		int32_t m_rpcPort;
+		int32_t m_zmqPort;
 
 		std::string m_rpcLogin;
 
@@ -99,7 +99,7 @@ struct Params
 	bool m_autoDiff = true;
 	std::string m_socks5Proxy;
 	bool m_dns = true;
-	uint32_t m_p2pExternalPort = 0;
+	int32_t m_p2pExternalPort = 0;
 #ifdef WITH_UPNP
 	bool m_upnp = true;
 	bool m_upnpStratum = false;

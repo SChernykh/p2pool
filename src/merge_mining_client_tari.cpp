@@ -303,11 +303,10 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 					LOGINFO(4, "External aux job solution found, but it's for another miner");
 					return;
 				}
-				else {
-					LOGINFO(4, "External aux job solution found, but it's stale");
-					chain_params.aux_hash = data;
-					chain_params.aux_diff = diff;
-				}
+
+				LOGINFO(4, "External aux job solution found, but it's stale");
+				chain_params.aux_hash = data;
+				chain_params.aux_diff = diff;
 			}
 			else {
 				m_previousAuxHashesFoundIndex = std::numeric_limits<uint32_t>::max();
@@ -512,10 +511,10 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 		data.append(reinterpret_cast<const char*>(keccak_state.data()), sizeof(keccak_state));
 
 		// coinbase_tx_hasher.offset
-		data.append(1, static_cast<uint8_t>(offset));
+		data.append(1, static_cast<char>(static_cast<uint8_t>(offset)));
 
 		// coinbase_tx_hasher.rate
-		data.append(1, static_cast<uint8_t>(KeccakParams::HASH_DATA_AREA));
+		data.append(1, static_cast<char>(static_cast<uint8_t>(KeccakParams::HASH_DATA_AREA)));
 
 		// coinbase_tx_hasher.mode
 		data.append(1, 1);
@@ -527,7 +526,7 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 		// aux_chain_merkle_proof
 		data.append(1, static_cast<char>(merkle_proof.size()));
 		data.append(reinterpret_cast<const char*>(merkle_proof.data()), merkle_proof.size() * HASH_SIZE);
-		writeVarint(merkle_proof_path, [&data](uint8_t value) { data.append(1, value); });
+		writeVarint(merkle_proof_path, [&data](uint8_t value) { data.append(1, static_cast<char>(value)); });
 
 		pow->set_pow_data(data);
 	}
@@ -865,7 +864,7 @@ bool MergeMiningClientTari::TariServer::start()
 	std::mt19937_64 rng(rd());
 
 	for (size_t i = 0; i < 10; ++i) {
-		if (start_listening(false, "127.0.0.1", 49152 + (rng() % 16384))) {
+		if (start_listening(false, "127.0.0.1", 49152 + static_cast<int>((rng() % 16384)))) {
 			break;
 		}
 	}

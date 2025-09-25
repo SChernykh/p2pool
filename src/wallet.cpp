@@ -61,8 +61,8 @@ struct ReverseAlphabet
 
 		result.num_symbols = 0;
 		for (size_t i = 0; i < alphabet_size; ++i) {
-			if (result.data[static_cast<int>(alphabet[i])] < 0) {
-				result.data[static_cast<int>(alphabet[i])] = static_cast<int8_t>(i);
+			if (result.data[static_cast<uint8_t>(alphabet[i])] < 0) {
+				result.data[static_cast<uint8_t>(alphabet[i])] = static_cast<int8_t>(i);
 				++result.num_symbols;
 			}
 		}
@@ -75,7 +75,7 @@ constexpr ReverseAlphabet rev_alphabet = ReverseAlphabet::init();
 
 static_assert(rev_alphabet.num_symbols == 58, "Check alphabet");
 
-}
+} // namespace
 
 namespace p2pool {
 
@@ -125,7 +125,7 @@ bool Wallet::decode(const char* address)
 		uint64_t order = 1;
 
 		for (int j = ((i < num_full_blocks) ? block_sizes.back() : last_block_size) - 1; j >= 0; --j) {
-			const int digit = rev_alphabet.data[static_cast<int>(address[j])];
+			const int8_t digit = rev_alphabet.data[static_cast<uint8_t>(address[j])];
 			if (digit < 0) {
 				return false;
 			}
@@ -142,7 +142,7 @@ bool Wallet::decode(const char* address)
 
 		address += block_sizes.back();
 
-		for (int j = ((i < num_full_blocks) ? sizeof(num) : last_block_size_index) - 1; j >= 0; --j) {
+		for (int j = static_cast<int>((i < num_full_blocks) ? sizeof(num) : last_block_size_index) - 1; j >= 0; --j) {
 			data[data_index++] = static_cast<uint8_t>(num >> (j * 8));
 		}
 	}
@@ -231,7 +231,7 @@ void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 			n = (n << 8) | data[i * sizeof(uint64_t) + j];
 		}
 		for (int j = ((i < num_full_blocks) ? block_sizes.back() : last_block_size) - 1; j >= 0; --j) {
-			const int digit = n % alphabet_size;
+			const int digit = static_cast<int>(n % alphabet_size);
 			n /= alphabet_size;
 			buf[i * block_sizes.back() + j] = alphabet[digit];
 		}

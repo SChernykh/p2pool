@@ -141,7 +141,7 @@ TEST(block_template, update)
 		tx.weight = 1500;
 		transactions.push_back(tx);
 	}
-	mempool.swap(transactions);
+	mempool.swap_transactions(transactions);
 	ASSERT_EQ(mempool.size(), 10);
 
 	data.aux_chains.emplace_back(H("01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990"), H("d9de1cfba7cdbd47f12f77addcb39b24c1ae7a16c35372bf28d6aee5d7579ee6"), difficulty_type(1000000));

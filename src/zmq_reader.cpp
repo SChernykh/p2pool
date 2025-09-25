@@ -347,7 +347,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	writeVarint(arr.Size(), blob);
 
-	for (auto i = arr.begin(); i != arr.end(); ++i) {
+	for (auto* i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
 			LOGWARN(3, "construct_monero_block_blob: amount not found or is not UInt64");
@@ -409,7 +409,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 	writeVarint(arr2.Size(), blob);
 	out_transaction_hashes.reserve(arr2.Size());
 
-	for (auto i = arr2.begin(); i != arr2.end(); ++i) {
+	for (auto* i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString()) {
 			LOGWARN(3, "construct_monero_block_blob: tx_hash is not a string");
 			return empty_blob;
@@ -528,7 +528,7 @@ void ZMQReader::parse(char* data, size_t size)
 		std::vector<std::vector<uint8_t>> blobs;
 		blobs.reserve(arr.Size());
 
-		for (auto i = arr.begin(); i != arr.end(); ++i) {
+		for (auto* i = arr.begin(); i != arr.end(); ++i) {
 			std::vector<hash> tx_hashes;
 			blobs.emplace_back(construct_monero_block_blob(i, tx_hashes));
 

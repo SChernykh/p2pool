@@ -211,7 +211,7 @@ public:
 #endif
 
 		// Mark that everything is written into this log slot
-		p[0] = buf[0] + 1;
+		p[0] = static_cast<char>(buf[0] + 1);
 
 		// Signal the worker thread
 		uv_cond_signal(&m_cond);
@@ -453,7 +453,7 @@ static FORCEINLINE void writeCurrentTime(Stream& s)
 	s.setNumberWidth(2);
 	s << (t.tm_year + 1900) << '-' << (t.tm_mon + 1) << '-' << t.tm_mday << ' ' << t.tm_hour << ':' << t.tm_min << ':' << t.tm_sec << '.';
 
-	const int32_t mcs = time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000;
+	const int32_t mcs = static_cast<int32_t>(time_point_cast<microseconds>(now).time_since_epoch().count() % 1000000);
 
 	s.setNumberWidth(4);
 	s << (mcs / 100);
@@ -474,8 +474,8 @@ NOINLINE Writer::Writer(Severity severity) : Stream(m_stackBuf)
 NOINLINE Writer::~Writer()
 {
 	const uint32_t size = static_cast<uint32_t>(m_pos + 1);
-	m_buf[1] = static_cast<uint8_t>(size & 255);
-	m_buf[2] = static_cast<uint8_t>(size >> 8);
+	m_buf[1] = static_cast<char>(static_cast<uint8_t>(size & 255));
+	m_buf[2] = static_cast<char>(static_cast<uint8_t>(size >> 8));
 	m_buf[m_pos] = '\n';
 #ifndef P2POOL_LOG_DISABLE
 	worker->write(m_buf, size);

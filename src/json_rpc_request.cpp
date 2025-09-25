@@ -126,7 +126,7 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 			m_req.clear();
 		}
 		else {
-			s << "/json_rpc\0";
+			s << "/json_rpc" << '\0';
 		}
 
 		m_url = buf;

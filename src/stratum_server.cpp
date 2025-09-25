@@ -362,7 +362,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 	for (int i = static_cast<int>(sizeof(uint32_t)) - 1; i >= 0; --i) {
 		uint32_t d[2];
-		if (!from_hex(nonce_str[i * 2], d[0]) || !from_hex(nonce_str[i * 2 + 1], d[1])) {
+		if (!from_hex(nonce_str[i * 2 + 0], d[0]) || !from_hex(nonce_str[i * 2 + 1], d[1])) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('nonce' is not a hex integer)");
 			return false;
 		}
@@ -373,7 +373,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 	for (size_t i = 0; i < HASH_SIZE; ++i) {
 		uint32_t d[2];
-		if (!from_hex(result_str[i * 2], d[0]) || !from_hex(result_str[i * 2 + 1], d[1])) {
+		if (!from_hex(result_str[i * 2 + 0], d[0]) || !from_hex(result_str[i * 2 + 1], d[1])) {
 			LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('result' is not a hex value)");
 			return false;
 		}
@@ -684,8 +684,6 @@ void StratumServer::print_stratum_status() const
 }
 
 // Compresses 64-bit hashes value into 16-bit value (5 bits for shift, 11 bits for data)
-namespace {
-
 enum HashValue : uint64_t {
 	bits = 11,
 	mask = (1 << bits) - 1,
@@ -712,8 +710,6 @@ static FORCEINLINE uint16_t hash_compress(uint64_t h)
 
 	const uint64_t shift = bsr(h) - (HashValue::bits - 1);
 	return static_cast<uint16_t>((shift << HashValue::bits) | (h >> shift));
-}
-
 }
 
 void StratumServer::update_auto_diff(StratumClient* client, const uint64_t timestamp, const uint64_t hashes)
@@ -928,15 +924,15 @@ void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
 		data[m_hashrateDataHead] = { timestamp, m_cumulativeHashes };
 	}
 
-	while (data[m_hashrateDataTail_15m].m_timestamp + 15 * 60 < timestamp) {
+	while (data[m_hashrateDataTail_15m].m_timestamp + 15ul * 60ul < timestamp) {
 		m_hashrateDataTail_15m = (m_hashrateDataTail_15m + 1) % N;
 	}
 
-	while (data[m_hashrateDataTail_1h].m_timestamp + 60 * 60 < timestamp) {
+	while (data[m_hashrateDataTail_1h].m_timestamp + 60ul * 60ul < timestamp) {
 		m_hashrateDataTail_1h = (m_hashrateDataTail_1h + 1) % N;
 	}
 
-	while (data[m_hashrateDataTail_24h].m_timestamp + 60 * 60 * 24 < timestamp) {
+	while (data[m_hashrateDataTail_24h].m_timestamp + 60ul * 60ul * 24ul < timestamp) {
 		m_hashrateDataTail_24h = (m_hashrateDataTail_24h + 1) % N;
 	}
 }
@@ -1348,11 +1344,11 @@ bool StratumServer::StratumClient::process_request(char* data, uint32_t size)
 		LOGINFO(6, "incoming login from " << log::Gray() << static_cast<char*>(m_addrString));
 		return process_login(doc, id.GetUint());
 	}
-	else if (strcmp(s, "submit") == 0) {
+	if (strcmp(s, "submit") == 0) {
 		LOGINFO(6, "incoming share from " << log::Gray() << static_cast<char*>(m_addrString));
 		return process_submit(doc, id.GetUint());
 	}
-	else if (strcmp(s, "keepalived") == 0) {
+	if (strcmp(s, "keepalived") == 0) {
 		LOGINFO(6, "incoming keepalive from " << log::Gray() << static_cast<char*>(m_addrString));
 		return true;
 	}

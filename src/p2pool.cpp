@@ -290,12 +290,12 @@ p2pool::~p2pool()
 	delete m_params;
 
 	{
-		auto p = bkg_jobs_tracker;
+		auto* p = bkg_jobs_tracker;
 		bkg_jobs_tracker = nullptr;
 		delete p;
 	}
 	{
-		auto p = PoolBlock::s_precalculatedSharesLock;
+		auto* p = PoolBlock::s_precalculatedSharesLock;
 		PoolBlock::s_precalculatedSharesLock = nullptr;
 		delete p;
 	}
@@ -422,7 +422,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		m_mempool->swap(data.tx_backlog);
 	}
 #else
-	m_mempool->swap(data.tx_backlog);
+	m_mempool->swap_transactions(data.tx_backlog);
 #endif
 
 	{
@@ -545,7 +545,7 @@ void p2pool::get_missing_heights()
 
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}\0";
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}" << '\0';
 
 	const Params::Host& host = current_host();
 
@@ -1269,7 +1269,7 @@ void p2pool::download_block_headers1(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}\0";
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
@@ -1302,7 +1302,7 @@ void p2pool::download_block_headers2(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}\0";
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, seed_height, current_height](const char* data, size_t size, double) {
@@ -1338,7 +1338,7 @@ void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_hei
 		const uint64_t next_height = start_height + RESTRICTED_BLOCK_HEADER_RANGE;
 
 		s.m_pos = 0;
-		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}\0";
+		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}" << '\0';
 
 		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
@@ -1371,7 +1371,7 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}\0";
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, start_height, current_height, host](const char* data, size_t size, double)
@@ -1863,7 +1863,7 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 	auto headers = it2->value.GetArray();
 	uint64_t min_height = std::numeric_limits<uint64_t>::max();
 	uint64_t max_height = 0;
-	for (auto i = headers.begin(); i != headers.end(); ++i) {
+	for (auto* i = headers.begin(); i != headers.end(); ++i) {
 		if (!i->IsObject()) {
 			continue;
 		}
@@ -2093,7 +2093,7 @@ void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* bloc
 		if (data) {
 			m_foundBlocks.emplace_back(cur_time, data->height, data->id, diff, total_hashes);
 		}
-		found_blocks.assign(m_foundBlocks.end() - std::min<size_t>(m_foundBlocks.size(), 51), m_foundBlocks.end());
+		found_blocks.assign(m_foundBlocks.end() - std::min<int>(static_cast<int>(m_foundBlocks.size()), 51), m_foundBlocks.end());
 	}
 
 	m_api->set(p2pool_api::Category::POOL, "blocks",

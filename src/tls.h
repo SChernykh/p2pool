@@ -61,8 +61,8 @@ private:
 	typedef Callback<bool, char*, uint32_t> ReadCallback;
 	typedef Callback<bool, const uint8_t*, size_t> WriteCallback;
 
-	[[nodiscard]] bool on_read_internal(const char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback);
-	[[nodiscard]] bool on_write_internal(const uint8_t* data, size_t size, WriteCallback::Base&& write_callback);
+	[[nodiscard]] bool on_read_internal(const char* data, uint32_t size, const ReadCallback::Base& read_callback, const WriteCallback::Base& write_callback);
+	[[nodiscard]] bool on_write_internal(const uint8_t* data, size_t size, const WriteCallback::Base& write_callback);
 
 private:
 	bssl::UniquePtr<SSL> m_ssl;

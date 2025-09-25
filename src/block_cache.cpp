@@ -44,16 +44,16 @@ struct BlockCache::Impl : public nocopy_nomove
 			return;
 		}
 
-		int result = lseek(m_fd, static_cast<off_t>(CACHE_SIZE) - 1, SEEK_SET);
-		if (result == -1) {
+		auto result1 = lseek(m_fd, static_cast<off_t>(CACHE_SIZE) - 1, SEEK_SET);
+		if (result1 == -1) {
 			LOGERR(1, "lseek failed");
 			close(m_fd);
 			m_fd = -1;
 			return;
 		}
 
-		result = write(m_fd, "", 1);
-		if (result != 1) {
+		auto result2 = write(m_fd, "", 1);
+		if (result2 != 1) {
 			LOGERR(1, "write failed");
 			close(m_fd);
 			m_fd = -1;

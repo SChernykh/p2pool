@@ -152,7 +152,7 @@ private:
 	void on_new_client(uv_stream_t* server);
 	void on_new_client(uv_stream_t* server, Client* client);
 
-	[[nodiscard]] bool send_internal(Client* client, Callback<size_t, uint8_t*, size_t>::Base&& callback, bool raw);
+	[[nodiscard]] bool send_internal(Client* client, const Callback<size_t, uint8_t*, size_t>::Base& callback, bool raw);
 
 	allocate_client_callback m_allocateNewClient;
 
@@ -173,7 +173,7 @@ protected:
 
 	static void loop(void* data);
 
-	static void parse_address_list_internal(const std::string& address_list, Callback<void, bool, const std::string&, const std::string&, int>::Base&& callback);
+	static void parse_address_list_internal(const std::string& address_list, const Callback<void, bool, const std::string&, const std::string&, int>::Base& callback);
 	void start_listening(const std::string& listen_addresses, bool upnp);
 	bool start_listening(bool is_v6, const std::string& ip, int port, std::string address = std::string());
 

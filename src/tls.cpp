@@ -225,7 +225,7 @@ bool ServerTls::init()
 	return true;
 }
 
-bool ServerTls::on_read_internal(const char* data, uint32_t size, ReadCallback::Base&& read_callback, WriteCallback::Base&& write_callback)
+bool ServerTls::on_read_internal(const char* data, uint32_t size, const ReadCallback::Base& read_callback, const WriteCallback::Base& write_callback)
 {
 	SSL* ssl = m_ssl.get();
 	if (!ssl) {
@@ -270,7 +270,8 @@ bool ServerTls::on_read_internal(const char* data, uint32_t size, ReadCallback::
 			// Continue handshake, nothing to read yet
 			return true;
 		}
-		else if (result == 1) {
+
+		if (result == 1) {
 			// Handshake finished, skip to "SSL_read" further down
 		}
 		else {
@@ -291,7 +292,7 @@ bool ServerTls::on_read_internal(const char* data, uint32_t size, ReadCallback::
 	return true;
 }
 
-bool ServerTls::on_write_internal(const uint8_t* data, size_t size, WriteCallback::Base&& write_callback)
+bool ServerTls::on_write_internal(const uint8_t* data, size_t size, const WriteCallback::Base& write_callback)
 {
 	SSL* ssl = m_ssl.get();
 	if (!ssl) {

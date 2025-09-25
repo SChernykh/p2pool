@@ -32,7 +32,7 @@ public:
 	~Mempool();
 
 	void add(const TxMempoolData& tx);
-	void swap(std::vector<TxMempoolData>& transactions);
+	void swap_transactions(std::vector<TxMempoolData>& transactions);
 
 	size_t size() const
 	{

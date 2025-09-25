@@ -357,14 +357,14 @@ struct Callback
 	struct Base
 	{
 		virtual ~Base() {}
-		virtual R operator()(Args...) = 0;
+		virtual R operator()(Args...) const = 0;
 	};
 
 	template<typename T>
 	struct Derived : public Base
 	{
 		explicit FORCEINLINE Derived(T&& cb) : m_cb(std::move(cb)) {}
-		R operator()(Args... args) override { return m_cb(args...); }
+		R operator()(Args... args) const override { return m_cb(args...); }
 
 	private:
 		Derived& operator=(Derived&&) = delete;
@@ -372,7 +372,7 @@ struct Callback
 	};
 };
 
-bool get_dns_txt_records_base(const std::string& host, Callback<void, const char*, size_t>::Base&& callback);
+bool get_dns_txt_records_base(const std::string& host, const Callback<void, const char*, size_t>::Base& callback);
 
 template<typename T>
 FORCEINLINE bool get_dns_txt_records(const std::string& host, T&& callback) { return get_dns_txt_records_base(host, Callback<void, const char*, size_t>::Derived<T>(std::move(callback))); }
