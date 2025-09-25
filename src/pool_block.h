@@ -143,8 +143,15 @@ struct PoolBlock
 	uint32_t m_merkleProofPath;
 
 	// Merge mining extra data
+	//
 	// Format: vector of (chain ID, chain data) pairs
-	// Chain data always has merge mining hash and difficulty in the beginning, the rest is arbitrary and depends on the merge mined chain's requirements
+	//
+	// Chain data always has merge mining hash and difficulty (two varints for low and high 64 bits) in the beginning, the rest is arbitrary and depends on the merge mined chain's requirements
+	//
+	// Some chain IDs are used for other purposes:
+	//
+	// - keccak("subaddress_viewpub") stores the public viewkey part of the subaddress, if it's used for mining ("merge mining hash" = viewkey, "difficulty" = 0,0)
+	//
 	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 
 	// Arbitrary extra data

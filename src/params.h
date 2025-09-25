@@ -70,7 +70,14 @@ struct Params
 	std::vector<MergeMiningHost> m_mergeMiningHosts;
 
 	bool m_lightMode = false;
-	Wallet m_wallet{ nullptr };
+
+	Wallet m_mainWallet{ nullptr };
+	Wallet m_subaddress{ nullptr };
+
+	Wallet m_miningWallet{ nullptr };
+
+	std::string m_displayWallet;
+
 	std::string m_stratumAddresses;
 	std::string m_p2pAddresses;
 	std::string m_p2pPeerList;

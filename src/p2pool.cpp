@@ -109,12 +109,12 @@ p2pool::p2pool(int argc, char* argv[])
 	generate_keys(pub, sec);
 
 	uint8_t view_tag;
-	if (!p->m_wallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
+	if (!p->m_miningWallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
 		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
 		throw std::exception();
 	}
 
-	const NetworkType type = p->m_wallet.type();
+	const NetworkType type = p->m_miningWallet.type();
 
 	if (type == NetworkType::Testnet) {
 		LOGWARN(1, "Mining to a testnet wallet address");
@@ -628,7 +628,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra, const std::ve
 	if (!merkle_root.empty()) {
 		const PoolBlock* block = side_chain().find_block_by_merkle_root(merkle_root);
 		if (block) {
-			const Wallet& w = params().m_wallet;
+			const Wallet& w = params().m_miningWallet;
 
 			const char* who = (block->m_minerWallet == w) ? "you" : "someone else in this p2pool";
 			LOGINFO(0, log::LightGreen() << "BLOCK FOUND: main chain block at height " << data.height << " was mined by " << who << BLOCK_FOUND);
@@ -1243,7 +1243,7 @@ void p2pool::update_block_template()
 	if (m_updateSeed.exchange(false)) {
 		m_hasher->set_seed_async(data.seed_hash);
 	}
-	m_blockTemplate->update(data, *m_mempool, &m_params->m_wallet);
+	m_blockTemplate->update(data, *m_mempool, m_params->m_miningWallet, m_params->m_subaddress);
 	stratum_on_block();
 	api_update_pool_stats();
 

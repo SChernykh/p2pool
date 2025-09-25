@@ -1555,7 +1555,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 	uint32_t connections = m_numConnections;
 	uint32_t incoming_connections = m_numIncomingConnections;
 
-	const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_wallet) * 100.0;
+	const double block_reward_share_percent = m_pool->side_chain().get_reward_share(m_pool->params().m_miningWallet) * 100.0;
 
 	CallOnLoop(&m_loop, [=]() {
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "stratum", [=](log::Stream& s) {
@@ -1572,7 +1572,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 				<< ",\"connections\":" << connections
 				<< ",\"incoming_connections\":" << incoming_connections
 				<< ",\"block_reward_share_percent\":" << block_reward_share_percent
-				<< ",\"wallet\":\"" << m_pool->params().m_wallet << '"'
+				<< ",\"wallet\":\"" << m_pool->params().m_displayWallet << '"'
 				<< ",\"workers\":[";
 
 			const difficulty_type pool_diff = m_pool->side_chain().difficulty();

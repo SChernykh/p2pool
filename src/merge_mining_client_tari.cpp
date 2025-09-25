@@ -235,41 +235,54 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 		return;
 	}
 
+	std::vector<std::pair<hash, std::vector<uint8_t>>> mm_extra;
+	mm_extra.reserve(block.m_mergeMiningExtra.size());
+
+	// Filter aux chain data only
+	for (const auto& i : block.m_mergeMiningExtra) {
+		if (i.first != keccak_subaddress_viewpub) {
+			mm_extra.emplace_back(i.first, i.second);
+		}
+	}
+
 	std::vector<hash> aux_ids;
 	std::vector<AuxChainData> aux_chains;
 
 	// All aux chains in this block + the P2Pool sidechain
-	aux_ids.reserve(block.m_mergeMiningExtra.size() + 1);
+	aux_ids.reserve(mm_extra.size() + 1);
 
 	// All aux chains in this block
-	aux_chains.reserve(block.m_mergeMiningExtra.size());
+	aux_chains.reserve(mm_extra.size());
 
-	for (const auto& i : block.m_mergeMiningExtra) {
-		const std::vector<uint8_t>& v = i.second;
-
-		const uint8_t* p = v.data();
-		const uint8_t* e = v.data() + v.size();
-
-		if (p + HASH_SIZE > e) {
-			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '1');
-			return;
-		}
-
+	for (const auto& i : mm_extra) {
 		hash data;
-		memcpy(data.h, p, HASH_SIZE);
-		p += HASH_SIZE;
-
 		difficulty_type diff;
-		p = readVarint(p, e, diff.lo);
-		if (!p) {
-			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '2');
-			return;
-		}
+		{
+			const std::vector<uint8_t>& v = i.second;
 
-		p = readVarint(p, e, diff.hi);
-		if (!p) {
-			LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '3');
-			return;
+			const uint8_t* p = v.data();
+			const uint8_t* e = v.data() + v.size();
+
+			if (p + HASH_SIZE > e) {
+				LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '1');
+				return;
+			}
+
+			memcpy(data.h, p, HASH_SIZE);
+			p += HASH_SIZE;
+
+			p = readVarint(p, e, diff.lo);
+			if (!p) {
+				LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '2');
+				diff.lo = 0;
+			}
+			else {
+				p = readVarint(p, e, diff.hi);
+				if (!p) {
+					LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '3');
+					diff.hi = 0;
+				}
+			}
 		}
 
 		// If it's our aux chain, check that it's the same job and that there is enough PoW
@@ -356,7 +369,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 	uint32_t aux_merkle_proof_path = 0;
 
 	const hash sidechain_id = block.m_sidechainId;
-	const uint32_t n_aux_chains = static_cast<uint32_t>(block.m_mergeMiningExtra.size() + 1);
+	const uint32_t n_aux_chains = static_cast<uint32_t>(mm_extra.size() + 1);
 
 	std::vector<hash> hashes(n_aux_chains);
 
