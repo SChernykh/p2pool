@@ -5,12 +5,12 @@ set -e
 
 _7ZIP_VERSION=2501
 BINUTILS_VERSION=2_45
-CLANG_VERSION=21.1.1
+CLANG_VERSION=21.1.2
 CMAKE_VERSION=4.1.1
 FREEBSD_VERSION=12.4
 GCC_VERSION=15.2.0
 GLIBC_VERSION=2.42
-LINUX_HEADERS_VERSION=6.16.7
+LINUX_HEADERS_VERSION=6.16.8
 MACOSX_SDK_VERSION=15.5
 MAKE_VERSION=4.4.1
 MINGW_VERSION=13.0.0
@@ -22,7 +22,7 @@ CMAKE_SHA256="5a6c61cb62b38e153148a2c8d4af7b3d387f0c8c32b6dbceb5eb4af113efd65a"
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
 GLIBC_SHA256="d1775e32e4628e64ef930f435b67bb63af7599acb6be2b335b9f19f16509f17f"
-HEADERS_SHA256="5be3daa1f9427b1bdb34c4894d9c1adfac38cff674376fe0611a3065729a1a81"
+HEADERS_SHA256="231311bd7084dc3129944d26bb43be6ff837da82fb2104a67704aebca8bfa69f"
 MACOSX_SDK_SHA256="c15cf0f3f17d714d1aa5a642da8e118db53d79429eb015771ba816aa7c6c1cbd"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
@@ -34,14 +34,50 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get upgrade -yq --no-install-recommends
 apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext patch git gcc g++
 
-echo "Install make"
+echo "Cloning the P2Pool repository in background"
+
+cd /
+git clone --recursive --jobs $(nproc) https://github.com/SChernykh/p2pool &
+
+echo "Download archives"
 
 cd /root
 
 MAKE_NAME=make-$MAKE_VERSION
 MAKE_FILE=$MAKE_NAME.tar.gz
 
-curl -L -O https://ftpmirror.gnu.org/make/$MAKE_FILE
+_7ZIP_FILE=7z$_7ZIP_VERSION-linux-x64.tar.xz
+
+CMAKE_NAME=cmake-$CMAKE_VERSION-linux-x86_64
+CMAKE_FILE=$CMAKE_NAME.tar.gz
+
+HEADERS_FILE=linux-$LINUX_HEADERS_VERSION.tar.xz
+
+GLIBC_FILE=glibc-$GLIBC_VERSION.tar.xz
+
+MACOSX_SDK_FILE=MacOSX$MACOSX_SDK_VERSION.sdk.tar.xz
+
+FREEBSD_FILE=base.txz
+
+TAR_FILE=tar-$TAR_VERSION.tar.xz
+
+mkdir /usr/local/cross-freebsd-x86_64
+mkdir /usr/local/cross-freebsd-aarch64
+
+curl -L -Z \
+-O https://ftpmirror.gnu.org/make/$MAKE_FILE \
+-O https://7-zip.org/a/$_7ZIP_FILE \
+-O https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/$CMAKE_FILE \
+-O https://www.kernel.org/pub/linux/kernel/v6.x/$HEADERS_FILE \
+-O https://ftpmirror.gnu.org/glibc/$GLIBC_FILE \
+-O https://github.com/joseluisq/macosx-sdks/releases/download/$MACOSX_SDK_VERSION/$MACOSX_SDK_FILE \
+-o /usr/local/cross-freebsd-x86_64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
+-o /usr/local/cross-freebsd-aarch64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/arm64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
+-O https://ftpmirror.gnu.org/tar/$TAR_FILE
+
+echo "Verifying checksums"
+
+cd /root
 
 MAKE_FILE_SHA256="$(sha256sum $MAKE_FILE | awk '{ print $1 }')"
 
@@ -49,6 +85,85 @@ if [ $MAKE_FILE_SHA256 != $MAKE_SHA256 ]; then
     echo "Error: SHA256 sum does not match for $MAKE_FILE - expected $MAKE_SHA256, got $MAKE_FILE_SHA256"
     exit 1
 fi
+
+_7ZIP_FILE_SHA256="$(sha256sum $_7ZIP_FILE | awk '{ print $1 }')"
+
+if [ $_7ZIP_FILE_SHA256 != $_7ZIP_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $_7ZIP_FILE - expected $_7ZIP_SHA256, got $_7ZIP_FILE_SHA256"
+    exit 1
+fi
+
+CMAKE_FILE_SHA256="$(sha256sum $CMAKE_FILE | awk '{ print $1 }')"
+
+if [ $CMAKE_FILE_SHA256 != $CMAKE_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $CMAKE_FILE - expected $CMAKE_SHA256, got $CMAKE_FILE_SHA256"
+    exit 1
+fi
+
+HEADERS_FILE_SHA256="$(sha256sum $HEADERS_FILE | awk '{ print $1 }')"
+
+if [ $HEADERS_FILE_SHA256 != $HEADERS_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $HEADERS_FILE - expected $HEADERS_SHA256, got $HEADERS_FILE_SHA256"
+    exit 1
+fi
+
+GLIBC_FILE_SHA256="$(sha256sum $GLIBC_FILE | awk '{ print $1 }')"
+
+if [ $GLIBC_FILE_SHA256 != $GLIBC_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $GLIBC_FILE - expected $GLIBC_SHA256, got $GLIBC_FILE_SHA256"
+    exit 1
+fi
+
+MACOSX_SDK_FILE_SHA256="$(sha256sum $MACOSX_SDK_FILE | awk '{ print $1 }')"
+
+if [ $MACOSX_SDK_FILE_SHA256 != $MACOSX_SDK_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $MACOSX_SDK_FILE - expected $MACOSX_SDK_SHA256, got $MACOSX_SDK_FILE_SHA256"
+    exit 1
+fi
+
+cd /usr/local/cross-freebsd-x86_64
+
+FREEBSD_X86_64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
+
+if [ $FREEBSD_X86_64_FILE_SHA256 != $FREEBSD_X86_64_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_X86_64_SHA256, got $FREEBSD_X86_64_FILE_SHA256"
+    exit 1
+fi
+
+cd /usr/local/cross-freebsd-aarch64
+
+FREEBSD_AARCH64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
+
+if [ $FREEBSD_AARCH64_FILE_SHA256 != $FREEBSD_AARCH64_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_AARCH64_SHA256, got $FREEBSD_AARCH64_FILE_SHA256"
+    exit 1
+fi
+
+cd /root
+
+TAR_FILE_SHA256="$(sha256sum $TAR_FILE | awk '{ print $1 }')"
+
+if [ $TAR_FILE_SHA256 != $TAR_SHA256 ]; then
+    echo "Error: SHA256 sum does not match for $TAR_FILE - expected $TAR_SHA256, got $TAR_FILE_SHA256"
+    exit 1
+fi
+
+echo "Cloning repositories"
+
+cd /root
+
+git clone --depth 1 --branch releases/gcc-$GCC_VERSION git://gcc.gnu.org/git/gcc.git
+git clone --depth 1 --branch binutils-$BINUTILS_VERSION git://sourceware.org/git/binutils-gdb.git
+git clone --depth 1 --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm-project.git
+git clone --depth=1 --branch v$MINGW_VERSION https://git.code.sf.net/p/mingw-w64/mingw-w64 mingw-w64-v$MINGW_VERSION
+git clone --branch 2.0-llvm-based https://github.com/tpoechtrager/osxcross
+git clone --depth=1 --branch v$XZ_VERSION https://github.com/tukaani-project/xz
+
+mv /root/$MACOSX_SDK_FILE osxcross/tarballs
+
+echo "Install make"
+
+cd /root
 
 tar xvf $MAKE_FILE
 cd $MAKE_NAME
@@ -60,17 +175,6 @@ echo "Install 7-zip"
 
 cd /root
 
-_7ZIP_FILE=7z$_7ZIP_VERSION-linux-x64.tar.xz
-
-curl -L -O https://7-zip.org/a/$_7ZIP_FILE
-
-_7ZIP_FILE_SHA256="$(sha256sum $_7ZIP_FILE | awk '{ print $1 }')"
-
-if [ $_7ZIP_FILE_SHA256 != $_7ZIP_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $_7ZIP_FILE - expected $_7ZIP_SHA256, got $_7ZIP_FILE_SHA256"
-    exit 1
-fi
-
 tar xf $_7ZIP_FILE
 cp -f 7zz /usr/local/bin/7z
 
@@ -78,7 +182,6 @@ echo "Install GCC"
 
 cd /root
 
-git clone --depth 1 --branch releases/gcc-$GCC_VERSION git://gcc.gnu.org/git/gcc.git
 rm -rf gcc/.git
 
 cd gcc
@@ -105,7 +208,6 @@ echo "Install binutils"
 
 cd /root
 
-git clone --depth 1 --branch binutils-$BINUTILS_VERSION git://sourceware.org/git/binutils-gdb.git
 rm -rf binutils-gdb/.git
 
 cp -r binutils-gdb binutils-gdb-aarch64
@@ -122,18 +224,6 @@ echo "Install cmake"
 
 cd /root
 
-CMAKE_NAME=cmake-$CMAKE_VERSION-linux-x86_64
-CMAKE_FILE=$CMAKE_NAME.tar.gz
-
-curl -L -O https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/$CMAKE_FILE
-
-CMAKE_FILE_SHA256="$(sha256sum $CMAKE_FILE | awk '{ print $1 }')"
-
-if [ $CMAKE_FILE_SHA256 != $CMAKE_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $CMAKE_FILE - expected $CMAKE_SHA256, got $CMAKE_FILE_SHA256"
-    exit 1
-fi
-
 tar xvf $CMAKE_FILE
 cp $CMAKE_NAME/bin/* /usr/local/bin
 cp -r $CMAKE_NAME/share/cmake-4.1 /usr/local/share
@@ -141,8 +231,6 @@ cp -r $CMAKE_NAME/share/cmake-4.1 /usr/local/share
 echo "Install clang"
 
 cd /root
-
-git clone --depth 1 --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm-project.git
 
 cd llvm-project
 mv /clang_version.patch .
@@ -171,17 +259,6 @@ echo "Install Linux headers for aarch64-linux-gnu"
 
 cd /root
 
-HEADERS_FILE=linux-$LINUX_HEADERS_VERSION.tar.xz
-
-curl -L -O https://www.kernel.org/pub/linux/kernel/v6.x/$HEADERS_FILE
-
-HEADERS_FILE_SHA256="$(sha256sum $HEADERS_FILE | awk '{ print $1 }')"
-
-if [ $HEADERS_FILE_SHA256 != $HEADERS_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $HEADERS_FILE - expected $HEADERS_SHA256, got $HEADERS_FILE_SHA256"
-    exit 1
-fi
-
 tar xf linux-$LINUX_HEADERS_VERSION.tar.xz
 cd linux-$LINUX_HEADERS_VERSION
 make ARCH=arm64 INSTALL_HDR_PATH=/usr/local/aarch64-linux-gnu headers_install
@@ -198,17 +275,6 @@ make install-gcc
 echo "Install glibc for aarch64-linux-gnu"
 
 cd /root
-
-GLIBC_FILE=glibc-$GLIBC_VERSION.tar.xz
-
-curl -L -O https://ftpmirror.gnu.org/glibc/$GLIBC_FILE
-
-GLIBC_FILE_SHA256="$(sha256sum $GLIBC_FILE | awk '{ print $1 }')"
-
-if [ $GLIBC_FILE_SHA256 != $GLIBC_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $GLIBC_FILE - expected $GLIBC_SHA256, got $GLIBC_FILE_SHA256"
-    exit 1
-fi
 
 tar xf $GLIBC_FILE
 
@@ -302,7 +368,6 @@ echo "Install mingw-w64 headers"
 
 cd /root
 
-git clone --depth=1 --branch v$MINGW_VERSION https://git.code.sf.net/p/mingw-w64/mingw-w64 mingw-w64-v$MINGW_VERSION
 rm -rf mingw-w64-v$MINGW_VERSION/.git
 
 cd mingw-w64-v$MINGW_VERSION/mingw-w64-headers
@@ -353,65 +418,23 @@ gcc -nostdlib -nostartfiles -shared -x c /dev/null -o /usr/local/x86_64-pc-linux
 make -j$(nproc)
 make install
 
-echo "Get osxcross"
-
-cd /root
-
-git clone --branch 2.0-llvm-based https://github.com/tpoechtrager/osxcross
-cd osxcross
-git checkout cb444e230e815c06202bef1c30eca5d353235a05
-
-echo "Get MacOSX $MACOSX_SDK_VERSION SDK"
-
-cd /root/osxcross/tarballs
-
-MACOSX_SDK_FILE=MacOSX$MACOSX_SDK_VERSION.sdk.tar.xz
-
-curl -L -O https://github.com/joseluisq/macosx-sdks/releases/download/$MACOSX_SDK_VERSION/$MACOSX_SDK_FILE
-
-MACOSX_SDK_FILE_SHA256="$(sha256sum $MACOSX_SDK_FILE | awk '{ print $1 }')"
-
-if [ $MACOSX_SDK_FILE_SHA256 != $MACOSX_SDK_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $MACOSX_SDK_FILE - expected $MACOSX_SDK_SHA256, got $MACOSX_SDK_FILE_SHA256"
-    exit 1
-fi
-
 echo "Build MacOSX cross compilers"
 
 cd /root/osxcross
+git checkout cb444e230e815c06202bef1c30eca5d353235a05
+
 TARGET_DIR=/usr/local OSX_VERSION_MIN=10.15 UNATTENDED=1 ./build.sh
 ./build_compiler_rt.sh
 
 echo "Install FreeBSD $FREEBSD_VERSION SDK"
 
-cd /usr/local
-
-FREEBSD_FILE=base.txz
-
-mkdir cross-freebsd-x86_64 && mkdir cross-freebsd-aarch64
-curl -L -Z -o cross-freebsd-x86_64/$FREEBSD_FILE -o cross-freebsd-aarch64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE https://archive.freebsd.org/old-releases/arm64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE
-
 cd /usr/local/cross-freebsd-x86_64
-
-FREEBSD_X86_64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
-
-if [ $FREEBSD_X86_64_FILE_SHA256 != $FREEBSD_X86_64_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_X86_64_SHA256, got $FREEBSD_X86_64_FILE_SHA256"
-    exit 1
-fi
 
 tar -xf $FREEBSD_FILE ./lib/ ./usr/lib/ ./usr/include/
 rm $FREEBSD_FILE
 #find /usr/local/cross-freebsd-x86_64/usr/lib -xtype l|xargs ls -l|grep ' /lib/'|awk '{print "ln -sf /usr/local/cross-freebsd-x86_64"$11 " " $9}'|/bin/sh
 
 cd /usr/local/cross-freebsd-aarch64
-
-FREEBSD_AARCH64_FILE_SHA256="$(sha256sum $FREEBSD_FILE | awk '{ print $1 }')"
-
-if [ $FREEBSD_AARCH64_FILE_SHA256 != $FREEBSD_AARCH64_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $FREEBSD_FILE - expected $FREEBSD_AARCH64_SHA256, got $FREEBSD_AARCH64_FILE_SHA256"
-    exit 1
-fi
 
 tar -xf $FREEBSD_FILE ./lib/ ./usr/lib/ ./usr/include/
 rm $FREEBSD_FILE
@@ -423,7 +446,6 @@ apt-get remove -yq xz-utils
 
 cd /root
 
-git clone --depth=1 --branch v$XZ_VERSION https://github.com/tukaani-project/xz
 cd xz
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang
@@ -435,17 +457,6 @@ cp -f xz* /usr/bin
 echo "Install tar"
 
 cd /root
-
-TAR_FILE=tar-$TAR_VERSION.tar.xz
-
-curl -L -O https://ftpmirror.gnu.org/tar/$TAR_FILE
-
-TAR_FILE_SHA256="$(sha256sum $TAR_FILE | awk '{ print $1 }')"
-
-if [ $TAR_FILE_SHA256 != $TAR_SHA256 ]; then
-    echo "Error: SHA256 sum does not match for $TAR_FILE - expected $TAR_SHA256, got $TAR_FILE_SHA256"
-    exit 1
-fi
 
 tar xvf $TAR_FILE
 cd tar-$TAR_VERSION
@@ -464,10 +475,5 @@ echo "Deleting temporary files"
 
 cd /root
 rm -rf *
-
-echo "Cloning the repository"
-
-cd /
-git clone --recursive --jobs $(nproc) https://github.com/SChernykh/p2pool
 
 echo "All done"
