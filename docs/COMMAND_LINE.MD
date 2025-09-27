@@ -49,6 +49,12 @@
 p2pool.exe --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37889
 ```
 
+### Example command line (mining to a subaddress)
+
+```
+p2pool.exe --host 127.0.0.1 --wallet WALLET_MAIN_ADDRESS --subaddress SUBADDRESS_FROM_THE_SAME_WALLET
+```
+
 ### Multiple backup hosts
 
 You can have multiple hosts in command line. If P2Pool detects that the host it's currently using is down or stuck, it will cycle through hosts until it finds a working one. It will not switch back as long as the current host it found is working.
