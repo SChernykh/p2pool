@@ -1712,13 +1712,19 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 		return;
 	}
 
-	if (!duplicate_check_done && !store_monero_block_broadcast(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader))) {
+	hash digest;
+	sha256(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader), digest.h);
+
+	if (!duplicate_check_done && !store_monero_block_broadcast(digest)) {
 		LOGINFO(6, "broadcast_monero_block: skipping duplicate broadcast");
 		return;
 	}
 
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-		if ((source && (client == source)) || !client->is_good() || (client->m_protocolVersion < PROTOCOL_VERSION_1_4)) {
+		if ((source && (client == source)) ||
+			!client->is_good() ||
+			(client->m_protocolVersion < PROTOCOL_VERSION_1_4) ||
+			(client->m_lastMoneroBlockBroadcastDigest == digest)) {
 			continue;
 		}
 
@@ -1749,11 +1755,8 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 	}
 }
 
-bool P2PServer::store_monero_block_broadcast(const uint8_t* data, uint32_t data_size)
+bool P2PServer::store_monero_block_broadcast(const hash& digest)
 {
-	hash digest;
-	sha256(data, data_size, digest.h);
-
 	// Every message can be received from multiple peers, so broadcast it only once
 	MutexLock lock(m_MoneroBlockBroadcastsLock);
 	return m_MoneroBlockBroadcasts.emplace(*digest.u64(), seconds_since_epoch()).second;
@@ -3069,8 +3072,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		return true;
 	}
 
+	sha256(buf, size, m_lastMoneroBlockBroadcastDigest.h);
+
 	// Ignore repeated old messages
-	if (!server->store_monero_block_broadcast(buf, size)) {
+	if (!server->store_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest)) {
 		LOGINFO(6, "Repeated MONERO_BLOCK_BROADCAST - ignored");
 		return true;
 	}

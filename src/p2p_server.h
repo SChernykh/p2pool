@@ -162,6 +162,8 @@ public:
 		hash m_broadcastedHashes[8];
 		uint32_t m_broadcastedHashesIndex;
 
+		hash m_lastMoneroBlockBroadcastDigest;
+
 		// log::Stream wrapper
 		struct SoftwareDisplayName
 		{
@@ -220,7 +222,7 @@ public:
 	void broadcast_monero_block_handler();
 	void broadcast_monero_block(const uint8_t* data, uint32_t data_size, const P2PClient* source, bool duplicate_check_done);
 
-	bool store_monero_block_broadcast(const uint8_t* data, uint32_t data_size);
+	bool store_monero_block_broadcast(const hash& digest);
 
 private:
 	[[nodiscard]] const char* get_log_category() const override;
