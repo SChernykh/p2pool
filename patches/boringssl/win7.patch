@@ -1,7 +1,7 @@
-diff --git a/src/crypto/rand/windows.cc b/src/crypto/rand/windows.cc
+diff --git a/crypto/rand/windows.cc b/crypto/rand/windows.cc
 index 59df467e7..aa5ac076c 100644
---- a/src/crypto/rand/windows.cc
-+++ b/src/crypto/rand/windows.cc
+--- a/crypto/rand/windows.cc
++++ b/crypto/rand/windows.cc
 @@ -24,6 +24,7 @@
  #include <stdlib.h>
  

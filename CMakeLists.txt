@@ -43,7 +43,7 @@ if (WITH_GRPC)
 	add_subdirectory(external/src/Tari)
 elseif (WITH_TLS)
 	add_subdirectory(cmake/ssl)
-	include_directories(external/src/grpc/third_party/boringssl-with-bazel/src/include)
+	include_directories(external/src/grpc/third_party/boringssl-with-bazel/include)
 endif()
 
 if (WITH_RANDOMX)

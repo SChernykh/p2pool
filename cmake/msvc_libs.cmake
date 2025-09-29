@@ -56,7 +56,7 @@ set(CURL_STATIC_CRT ON CACHE BOOL "")
 
 if (WITH_TLS)
 	set(P2POOL_BORINGSSL ON CACHE BOOL "")
-	set(OPENSSL_INCLUDE_DIR "../grpc/third_party/boringssl-with-bazel/src/include" CACHE STRING "")
+	set(OPENSSL_INCLUDE_DIR "../grpc/third_party/boringssl-with-bazel/include" CACHE STRING "")
 endif()
 
 add_subdirectory(external/src/curl)
