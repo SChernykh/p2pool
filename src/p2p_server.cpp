@@ -1416,6 +1416,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastBlockrequestTimestamp(0)
 	, m_broadcastedHashes{}
 	, m_broadcastedHashesIndex(0)
+	, m_lastMoneroBlockBroadcastDigest{}
 {
 	m_p2pReadBuf[0] = '\0';
 }
@@ -1802,6 +1803,8 @@ void P2PServer::P2PClient::reset()
 		h = {};
 	}
 	m_broadcastedHashesIndex = 0;
+
+	m_lastMoneroBlockBroadcastDigest = {};
 }
 
 bool P2PServer::P2PClient::on_connect()
