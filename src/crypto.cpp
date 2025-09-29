@@ -89,7 +89,7 @@ void generate_keys(hash& pub, hash& sec)
 	} while (!sc_isnonzero(sec.h));
 
 	ge_p3 point;
-	ge_scalarmult_base(&point, sec.h);
+	ge_scalarmult_base_vartime(&point, sec.h);
 	ge_p3_tobytes(pub.h, &point);
 }
 
@@ -113,7 +113,7 @@ void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, s
 	} while (!sc_isnonzero(sec.h));
 
 	ge_p3 point;
-	ge_scalarmult_base(&point, sec.h);
+	ge_scalarmult_base_vartime(&point, sec.h);
 	ge_p3_tobytes(pub.h, &point);
 }
 
@@ -125,7 +125,7 @@ bool check_keys(const hash& pub, const hash& sec)
 	}
 
 	ge_p3 point;
-	ge_scalarmult_base(&point, sec.h);
+	ge_scalarmult_base_vartime(&point, sec.h);
 
 	hash pub_check;
 	ge_p3_tobytes(pub_check.h, &point);
@@ -206,7 +206,7 @@ public:
 				return false;
 			}
 
-			ge_scalarmult(&point2, key2.h, &point);
+			ge_scalarmult_vartime(&point2, key2.h, &point);
 			ge_mul8(&point3, &point2);
 			ge_p1p1_to_p2(&point2, &point3);
 			ge_tobytes(reinterpret_cast<uint8_t*>(&derivation), &point2);
@@ -253,7 +253,7 @@ public:
 		}
 
 		derivation_to_scalar(derivation, output_index, scalar);
-		ge_scalarmult_base(&point2, reinterpret_cast<uint8_t*>(&scalar));
+		ge_scalarmult_base_vartime(&point2, reinterpret_cast<uint8_t*>(&scalar));
 		ge_p3_to_cached(&point3, &point2);
 		ge_add(&point4, &point1, &point3);
 		ge_p1p1_to_p2(&point5, &point4);

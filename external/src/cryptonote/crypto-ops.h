@@ -118,6 +118,8 @@ void ge_p3_tobytes(unsigned char *, const ge_p3 *);
 extern const ge_precomp ge_base[32][8];
 void ge_scalarmult_base(ge_p3 *, const unsigned char *);
 
+void ge_scalarmult_base_vartime(ge_p3 *h, const unsigned char *a);
+
 /* From ge_tobytes.c */
 
 void ge_tobytes(unsigned char *, const ge_p2 *);
@@ -129,6 +131,7 @@ void sc_reduce(unsigned char *);
 /* New code */
 
 void ge_scalarmult(ge_p2 *, const unsigned char *, const ge_p3 *);
+void ge_scalarmult_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A);
 void ge_scalarmult_p3(ge_p3 *, const unsigned char *, const ge_p3 *);
 void ge_double_scalarmult_precomp_vartime(ge_p2 *, const unsigned char *, const ge_p3 *, const unsigned char *, const ge_dsmp);
 void ge_triple_scalarmult_precomp_vartime(ge_p2 *, const unsigned char *, const ge_dsmp, const unsigned char *, const ge_dsmp, const unsigned char *, const ge_dsmp);
