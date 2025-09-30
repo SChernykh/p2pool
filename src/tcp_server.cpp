@@ -829,7 +829,7 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 		int peer_addr_len = static_cast<int>(sizeof(peer_addr));
 		int err = uv_tcp_getpeername(&client->m_socket, reinterpret_cast<sockaddr*>(&peer_addr), &peer_addr_len);
 		if (err) {
-			LOGERR(1, "failed to get IP address of the client connection, error " << uv_err_name(err));
+			LOGWARN(5, "failed to get IP address of the client connection, error " << uv_err_name(err));
 			client->close();
 			return;
 		}
