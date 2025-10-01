@@ -406,7 +406,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 				return false;
 			}
 
-			PoolBlock* uncle = it->second;
+			const PoolBlock* uncle = it->second;
 
 			// Skip uncles which are already out of PPLNS window
 			if (tip->m_sidechainHeight - uncle->m_sidechainHeight >= m_chainWindowSize) {
@@ -747,7 +747,7 @@ bool SideChain::add_block(const PoolBlock& block)
 	return true;
 }
 
-PoolBlock* SideChain::find_block(const hash& id) const
+const PoolBlock* SideChain::find_block(const hash& id) const
 {
 	ReadLock lock(m_sidechainLock);
 
@@ -759,7 +759,7 @@ PoolBlock* SideChain::find_block(const hash& id) const
 	return nullptr;
 }
 
-PoolBlock* SideChain::find_block_by_merkle_root(const root_hash& merkle_root) const
+const PoolBlock* SideChain::find_block_by_merkle_root(const root_hash& merkle_root) const
 {
 	ReadLock lock(m_sidechainLock);
 
@@ -834,7 +834,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		auto it = block->m_sidechainId.empty() ? m_blocksById.end() : m_blocksById.find(block->m_sidechainId);
 		if (it != m_blocksById.end()) {
-			PoolBlock* b = it->second;
+			const PoolBlock* b = it->second;
 			const size_t n = b->m_outputs.size();
 
 			blob.reserve(n * 39 + 64);
@@ -1521,7 +1521,7 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	// If it's invalid then this block is also invalid
-	PoolBlock* parent = it->second;
+	const PoolBlock* parent = it->second;
 	if (parent->m_invalid) {
 		block->m_verified = true;
 		block->m_invalid = true;
@@ -1570,7 +1570,7 @@ void SideChain::verify(PoolBlock* block)
 	if (!block->m_uncles.empty()) {
 		mined_blocks.reserve(UNCLE_BLOCK_DEPTH * 2 + 1);
 
-		PoolBlock* tmp = parent;
+		const PoolBlock* tmp = parent;
 		for (uint64_t i = 0, n = std::min<uint64_t>(UNCLE_BLOCK_DEPTH, block->m_sidechainHeight + 1); tmp && (i < n); ++i) {
 			mined_blocks.push_back(tmp->m_sidechainId);
 			mined_blocks.insert(mined_blocks.end(), tmp->m_uncles.begin(), tmp->m_uncles.end());
@@ -1606,7 +1606,7 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		PoolBlock* uncle = it->second;
+		const PoolBlock* uncle = it->second;
 
 		// If it's invalid then this block is also invalid
 		if (uncle->m_invalid) {
@@ -2041,7 +2041,7 @@ void SideChain::update_depths(PoolBlock* block)
 		if (it == m_blocksByHeight.end()) {
 			continue;
 		}
-		for (PoolBlock* child : it->second) {
+		for (const PoolBlock* child : it->second) {
 			if (child->m_parent == block->m_sidechainId) {
 				if (i != 1) {
 					LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");

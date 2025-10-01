@@ -53,8 +53,8 @@ public:
 	[[nodiscard]] bool add_block(const PoolBlock& block);
 	void get_missing_blocks(unordered_set<hash>& missing_blocks) const;
 
-	[[nodiscard]] PoolBlock* find_block(const hash& id) const;
-	[[nodiscard]] PoolBlock* find_block_by_merkle_root(const root_hash& merkle_root) const;
+	[[nodiscard]] const PoolBlock* find_block(const hash& id) const;
+	[[nodiscard]] const PoolBlock* find_block_by_merkle_root(const root_hash& merkle_root) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root);
 
 	[[nodiscard]] const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
