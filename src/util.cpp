@@ -584,6 +584,10 @@ bool get_dns_txt_records_base(const std::string& host, const Callback<void, cons
 		}
 
 		for (PDNS_RECORD p = pQueryResults; p; p = p->pNext) {
+			if (p->wType != DNS_TYPE_TEXT) {
+				continue;
+			}
+
 			for (size_t j = 0; j < p->Data.TXT.dwStringCount; ++j) {
 				const char* s = p->Data.TXT.pStringArray[j];
 				if (s) {
