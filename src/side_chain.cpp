@@ -238,7 +238,7 @@ SideChain::~SideChain()
 	s_networkType = NetworkType::Invalid;
 }
 
-void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
+bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
 {
 	block.m_uncles.clear();
 
@@ -254,10 +254,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_txkeySecSeed = m_consensusHash;
 		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
-		if (!get_shares(&block, shares)) {
-			LOGERR(6, "fill_sidechain_data: get_shares failed");
-		}
-		return;
+		return get_shares(&block, shares);
 	}
 
 	block.m_txkeySecSeed = (block.m_prevId == tip->m_prevId) ? tip->m_txkeySecSeed : tip->calculate_tx_key_seed();
@@ -350,9 +347,7 @@ void SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_cumulativeDifficulty += it->second->m_difficulty;
 	}
 
-	if (!get_shares(&block, shares)) {
-		LOGERR(6, "fill_sidechain_data: get_shares failed");
-	}
+	return get_shares(&block, shares);
 }
 
 P2PServer* SideChain::p2pServer() const
@@ -1376,7 +1371,7 @@ void SideChain::verify_loop(PoolBlock* block)
 	// PoW is already checked at this point
 
 	std::vector<PoolBlock*> blocks_to_verify(1, block);
-	const PoolBlock* highest_block = nullptr;
+	PoolBlock* highest_block = nullptr;
 
 	while (!blocks_to_verify.empty()) {
 		block = blocks_to_verify.back();
@@ -1803,7 +1798,7 @@ void SideChain::verify(PoolBlock* block)
 	block->m_invalid = false;
 }
 
-void SideChain::update_chain_tip(const PoolBlock* block)
+void SideChain::update_chain_tip(PoolBlock* block)
 {
 	if (!block->m_verified || block->m_invalid) {
 		LOGERR(1, "trying to update chain tip to an unverified or invalid block, fix the code!");
@@ -1815,7 +1810,7 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 		return;
 	}
 
-	const PoolBlock* tip = m_chainTip;
+	PoolBlock* tip = m_chainTip;
 
 	if (block == tip) {
 		LOGINFO(5, "Trying to update chain tip to the same block again. Ignoring it.");
@@ -1826,7 +1821,10 @@ void SideChain::update_chain_tip(const PoolBlock* block)
 	if (is_longer_chain(tip, block, is_alternative)) {
 		difficulty_type diff;
 		if (get_difficulty(block, m_difficultyData, diff)) {
-			m_chainTip = const_cast<PoolBlock*>(block);
+			if (!m_chainTip.compare_exchange_strong(tip, block)) {
+				LOGINFO(5, "Trying to update an outdated chain tip. Ignoring it.");
+				return;
+			}
 			{
 				WriteLock lock(m_curDifficultyLock);
 				m_curDifficulty = diff;

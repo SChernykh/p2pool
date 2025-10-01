@@ -43,7 +43,7 @@ public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	void fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
+	[[nodiscard]] bool fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
 
 	[[nodiscard]] bool incoming_block_seen(const PoolBlock& block);
 	void forget_incoming_block(const PoolBlock& block);
@@ -103,7 +103,7 @@ private:
 	[[nodiscard]] bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
-	void update_chain_tip(const PoolBlock* block);
+	void update_chain_tip(PoolBlock* block);
 	[[nodiscard]] PoolBlock* get_parent(const PoolBlock* block) const;
 
 	// Checks if "candidate" has longer (higher difficulty) chain than "block"

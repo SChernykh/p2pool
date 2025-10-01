@@ -271,7 +271,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_poolBlockTemplate->m_minerWallet = miner_wallet;
 
-	m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares);
+	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares)) {
+		use_old_template();
+		return;
+	}
 
 	// Pre-calculate outputs to speed up miner tx generation
 	if (!m_shares.empty()) {
