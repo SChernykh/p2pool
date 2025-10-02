@@ -577,29 +577,28 @@ bool get_dns_txt_records_base(const std::string& host, const Callback<void, cons
 	}
 
 #ifdef _WIN32
-	try {
-		PDNS_RECORD pQueryResults;
-		if (DnsQuery(host.c_str(), DNS_TYPE_TEXT, DNS_QUERY_STANDARD, NULL, &pQueryResults, NULL) != 0) {
-			return false;
+	PDNS_RECORD pQueryResults;
+	if (DnsQuery(host.c_str(), DNS_TYPE_TEXT, DNS_QUERY_STANDARD, NULL, &pQueryResults, NULL) != 0) {
+		return false;
+	}
+
+	for (PDNS_RECORD p = pQueryResults; p; p = p->pNext) {
+		if (p->wType != DNS_TYPE_TEXT) {
+			continue;
 		}
 
-		for (PDNS_RECORD p = pQueryResults; p; p = p->pNext) {
-			for (size_t j = 0; j < p->Data.TXT.dwStringCount; ++j) {
-				const char* s = p->Data.TXT.pStringArray[j];
-				if (s) {
-					const size_t n = strlen(s);
-					if (n > 0) {
-						callback(s, n);
-					}
+		for (size_t j = 0; j < p->Data.TXT.dwStringCount; ++j) {
+			const char* s = p->Data.TXT.pStringArray[j];
+			if (s) {
+				const size_t n = strlen(s);
+				if (n > 0) {
+					callback(s, n);
 				}
 			}
 		}
+	}
 
-		DnsRecordListFree(pQueryResults, DnsFreeRecordList);
-	}
-	catch (...) {
-		return false;
-	}
+	DnsRecordListFree(pQueryResults, DnsFreeRecordList);
 
 	return true;
 #elif defined(HAVE_RES_QUERY)
