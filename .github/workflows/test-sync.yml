@@ -70,12 +70,18 @@ jobs:
         sudo sysctl vm.mmap_rnd_bits=28
         TSAN_OPTIONS="suppressions=../tests/src/tsan_sup.txt halt_on_error=1 history_size=4" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
-    - name: Check p2pool.log
+    - name: Check synchronization
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_ubuntu_data_tsan
@@ -155,12 +161,18 @@ jobs:
         sudo sysctl vm.mmap_rnd_bits=28
         MSAN_OPTIONS="halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6
 
-    - name: Check p2pool.log
+    - name: Check synchronization
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_ubuntu_data_msan
@@ -202,12 +214,18 @@ jobs:
         sudo sysctl vm.mmap_rnd_bits=28
         UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
-    - name: Check p2pool.log
+    - name: Check synchronization
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_ubuntu_data_ubsan
@@ -236,7 +254,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_C_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DCMAKE_CXX_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DWITH_LTO=OFF -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -DDEV_TEST_SYNC=ON -DDEV_DEBUG=ON -DDEV_WITH_ASAN=ON -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_C_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DCMAKE_CXX_FLAGS="-fno-omit-frame-pointer -fsanitize=address -Og -g" -DWITH_LTO=OFF -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc) p2pool
 
     - name: Run p2pool
@@ -249,12 +267,18 @@ jobs:
         sudo sysctl vm.mmap_rnd_bits=28
         ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
-    - name: Check p2pool.log
+    - name: Check synchronization
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_ubuntu_data_asan
@@ -317,12 +341,18 @@ jobs:
         python3 ../tests/src/stratum_dummy.py 3 &
         ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
 
-    - name: Check p2pool.log
+    - name: Check synchronization
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_${{ matrix.config.os }}_data
@@ -348,7 +378,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -G "Visual Studio 17 2022" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_TEST_SYNC=ON -DDEV_WITH_ASAN=ON -DDEV_DEBUG=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Debug p2pool.vcxproj
 
     - name: Run p2pool
@@ -368,6 +398,7 @@ jobs:
         findstr /C:"Synchronization finished successfully" p2pool.log
 
     - name: Archive p2pool.log
+      if: '!cancelled()'
       uses: actions/upload-artifact@v4
       with:
         name: p2pool_windows_data_debug_asan
@@ -393,7 +424,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_TEST_SYNC=ON -DDEV_TRACK_MEMORY=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -G "Visual Studio 17 2022" -DCMAKE_SYSTEM_VERSION="10.0" -DDEV_TEST_SYNC=ON -DDEV_DEBUG=ON -DDEV_TRACK_MEMORY=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=RelWithDebInfo p2pool.vcxproj
 
     - name: Run p2pool
