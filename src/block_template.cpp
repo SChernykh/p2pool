@@ -912,8 +912,6 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_poolBlockTemplate->m_outputs.clear();
 	m_poolBlockTemplate->m_outputs.reserve(num_outputs);
 
-	const uint8_t tx_type = m_poolBlockTemplate->get_tx_type();
-
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
 		writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
@@ -921,7 +919,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 				m_minerTx.push_back(b);
 				++reward_amounts_weight;
 			});
-		m_minerTx.push_back(tx_type);
+		m_minerTx.push_back(TXOUT_TO_TAGGED_KEY);
 
 		uint8_t view_tag = 0;
 
@@ -937,9 +935,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key, view_tag);
 		}
 
-		if (tx_type == TXOUT_TO_TAGGED_KEY) {
-			m_minerTx.emplace_back(view_tag);
-		}
+		m_minerTx.emplace_back(view_tag);
 	}
 
 	if (dry_run) {

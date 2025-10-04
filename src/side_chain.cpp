@@ -835,16 +835,11 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			blob.reserve(n * 39 + 64);
 			writeVarint(n, blob);
 
-			const uint8_t tx_type = b->get_tx_type();
-
 			for (const PoolBlock::TxOutput& output : b->m_outputs) {
 				writeVarint(output.m_reward, blob);
-				blob.emplace_back(tx_type);
+				blob.emplace_back(TXOUT_TO_TAGGED_KEY);
 				blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
-
-				if (tx_type == TXOUT_TO_TAGGED_KEY) {
-					blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
-				}
+				blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
 			}
 
 			block->m_outputs = b->m_outputs;
@@ -895,8 +890,6 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_outputs.clear();
 	block->m_outputs.reserve(n);
 
-	const uint8_t tx_type = block->get_tx_type();
-
 	hash eph_public_key;
 	for (size_t i = 0; i < n; ++i) {
 		// stop helper jobs when they meet with current thread
@@ -908,7 +901,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		writeVarint(tmpRewards[i], blob);
 
-		blob.emplace_back(tx_type);
+		blob.emplace_back(TXOUT_TO_TAGGED_KEY);
 
 		uint8_t view_tag;
 		if (!data->tmpShares[i].m_wallet->get_eph_public_key(data->txkeySec, i, eph_public_key, view_tag)) {
@@ -916,9 +909,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 
-		if (tx_type == TXOUT_TO_TAGGED_KEY) {
-			blob.emplace_back(view_tag);
-		}
+		blob.emplace_back(view_tag);
 
 		block->m_outputs.emplace_back(tmpRewards[i], eph_public_key, view_tag);
 	}
@@ -1090,23 +1081,14 @@ double SideChain::get_reward_share(const Wallet& w) const
 
 		const PoolBlock* tip = m_chainTip;
 		if (tip) {
-			const uint8_t tx_type = tip->get_tx_type();
 			hash eph_public_key;
 			for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
 				const PoolBlock::TxOutput& out = tip->m_outputs[i];
 				if (!reward) {
-					if (tx_type == TXOUT_TO_TAGGED_KEY) {
-						uint8_t view_tag;
-						const uint8_t expected_view_tag = out.m_viewTag;
-						if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
-							reward = out.m_reward;
-						}
-					}
-					else {
-						uint8_t view_tag;
-						if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag) && (out.m_ephPublicKey == eph_public_key)) {
-							reward = out.m_reward;
-						}
+					uint8_t view_tag;
+					const uint8_t expected_view_tag = out.m_viewTag;
+					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
+						reward = out.m_reward;
 					}
 				}
 				total_reward += out.m_reward;
@@ -1750,8 +1732,6 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	const uint8_t tx_type = block->get_tx_type();
-
 	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
 		const PoolBlock::TxOutput& out = block->m_outputs[i];
 
@@ -1775,7 +1755,7 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if ((tx_type == TXOUT_TO_TAGGED_KEY) && (out.m_viewTag != view_tag)) {
+		if (out.m_viewTag != view_tag) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<

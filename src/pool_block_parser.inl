@@ -108,8 +108,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			m_outputs.resize(num_outputs);
 			m_outputs.shrink_to_fit();
 
-			const uint8_t expected_tx_type = get_tx_type();
-
 			for (uint64_t i = 0; i < num_outputs; ++i) {
 				TxOutput& t = m_outputs[i];
 
@@ -124,15 +122,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				t.m_reward = reward;
 				total_reward += reward;
 
-				EXPECT_BYTE(expected_tx_type);
+				EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
 
 				READ_BUF(t.m_ephPublicKey.h, HASH_SIZE);
 
-				if (expected_tx_type == TXOUT_TO_TAGGED_KEY) {
-					uint8_t view_tag;
-					READ_BYTE(view_tag);
-					t.m_viewTag = view_tag;
-				}
+				uint8_t view_tag;
+				READ_BYTE(view_tag);
+				t.m_viewTag = view_tag;
 			}
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;

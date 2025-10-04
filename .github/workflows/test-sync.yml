@@ -288,7 +288,7 @@ jobs:
 
   sync-test-macos:
 
-    timeout-minutes: 60
+    timeout-minutes: 120
     runs-on: ${{ matrix.config.os }}
 
     strategy:
