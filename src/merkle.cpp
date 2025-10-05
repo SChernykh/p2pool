@@ -128,6 +128,98 @@ void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vec
 	}
 }
 
+bool merkle_hash_with_proof(const std::vector<hash>& hashes, const hash& hash_to_prove, std::vector<hash>& proof, uint32_t& path, root_hash& root)
+{
+	for (size_t i = 0, n = hashes.size(); i < n; ++i) {
+		if (hashes[i] == hash_to_prove) {
+			return merkle_hash_with_proof(hashes, i, proof, path, root);
+		}
+	}
+	return false;
+}
+
+bool merkle_hash_with_proof(const std::vector<hash>& hashes, size_t index_to_prove, std::vector<hash>& proof, uint32_t& path, root_hash& root)
+{
+	const size_t count = hashes.size();
+
+	proof.clear();
+	path = 0;
+
+	if ((count == 0) || (index_to_prove >= count)) {
+		root.clear();
+		return false;
+	}
+
+	const uint8_t* h = hashes[0].h;
+
+	if (count == 1) {
+		root = root_hash(hashes[0]);
+	}
+	else if (count == 2) {
+		keccak(h, HASH_SIZE * 2, root.h);
+
+		proof.reserve(1);
+		proof.emplace_back(hashes[index_to_prove ^ 1]);
+		path = static_cast<uint32_t>(index_to_prove);
+	}
+	else {
+		hash h2 = hashes[index_to_prove];
+
+		size_t cnt = 1, proof_max_size = 0;
+		do {
+			cnt <<= 1;
+			++proof_max_size;
+		} while (cnt <= count);
+		cnt >>= 1;
+
+		proof.reserve(proof_max_size);
+
+		std::vector<hash> tmp_ints(cnt);
+
+		const size_t k = cnt * 2 - count;
+		memcpy(tmp_ints.data(), h, k * HASH_SIZE);
+
+		for (size_t i = k, j = k; j < cnt; i += 2, ++j) {
+			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints[j].h);
+
+			if (hashes[i] == h2) {
+				proof.emplace_back(hashes[i + 1]);
+				h2 = tmp_ints[j];
+			}
+			else if (hashes[i + 1] == h2) {
+				proof.emplace_back(hashes[i]);
+				h2 = tmp_ints[j];
+				path = 1;
+			}
+		}
+
+		while (cnt >= 2) {
+			cnt >>= 1;
+			for (size_t i = 0, j = 0; j < cnt; i += 2, ++j) {
+				hash tmp;
+				keccak(tmp_ints[i].h, HASH_SIZE * 2, tmp.h);
+
+				if (tmp_ints[i] == h2) {
+					proof.emplace_back(tmp_ints[i + 1]);
+					h2 = tmp;
+					path <<= 1;
+				}
+				else if (tmp_ints[i + 1] == h2) {
+					proof.emplace_back(tmp_ints[i]);
+					h2 = tmp;
+					path = (path << 1) | 1;
+				}
+
+				tmp_ints[j] = tmp;
+			}
+		}
+
+		root = static_cast<root_hash>(tmp_ints[0]);
+	}
+
+	return true;
+}
+
 bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof, uint32_t& path)
 {
 	if (tree.empty()) {
@@ -156,7 +248,7 @@ bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h,
 
 	if (count == 2) {
 		proof.emplace_back(hashes[index ^ 1]);
-		path = index & 1;
+		path = static_cast<uint32_t>(index);
 	}
 	else {
 		size_t cnt = 1;

@@ -22,6 +22,9 @@ namespace p2pool {
 void merkle_hash(const std::vector<hash>& hashes, root_hash& root);
 void merkle_hash_full_tree(const std::vector<hash>& hashes, std::vector<std::vector<hash>>& tree);
 
+bool merkle_hash_with_proof(const std::vector<hash>& hashes, const hash& hash_to_prove, std::vector<hash>& proof, uint32_t& path, root_hash& root);
+bool merkle_hash_with_proof(const std::vector<hash>& hashes, size_t index_to_prove, std::vector<hash>& proof, uint32_t& path, root_hash& root);
+
 bool get_merkle_proof(const std::vector<std::vector<hash>>& tree, const hash& h, std::vector<hash>& proof, uint32_t& path);
 
 root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t index, size_t count);

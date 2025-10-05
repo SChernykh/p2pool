@@ -1359,10 +1359,10 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 		return false;
 	}
 
-	bool found = false;
-
 	const hash sidechain_id = calc_sidechain_hash(extra_nonce);
 	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
+
+	uint32_t found_aux_slot = n_aux_chains;
 
 	std::vector<hash> hashes(n_aux_chains);
 
@@ -1371,7 +1371,7 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 		hashes[aux_slot] = aux_data.data;
 
 		if (aux_data.data == h) {
-			found = true;
+			found_aux_slot = aux_slot;
 		}
 	}
 
@@ -1379,17 +1379,31 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 	hashes[aux_slot] = sidechain_id;
 
 	if (sidechain_id == h) {
-		found = true;
+		found_aux_slot = aux_slot;
 	}
 
-	if (!found) {
+	if (found_aux_slot >= n_aux_chains) {
 		return false;
 	}
 
-	std::vector<std::vector<hash>> tree;
-	merkle_hash_full_tree(hashes, tree);
+	root_hash root;
+	const bool result = merkle_hash_with_proof(hashes, found_aux_slot, proof, path, root);
 
-	return get_merkle_proof(tree, h, proof, path);
+	if (pool_block_debug()) {
+		std::vector<std::vector<hash>> tree;
+		merkle_hash_full_tree(hashes, tree);
+
+		std::vector<hash> proof2;
+		uint32_t path2 = 0;
+
+		const bool result2 = get_merkle_proof(tree, h, proof2, path2);
+		
+		if ((result2 != result) || (proof2 != proof) || (path2 != path)) {
+			LOGERR(1, "get_aux_proof: merkle_hash_with_proof and get_merkle_proof returned different results. Fix the code!");
+		}
+	}
+
+	return result;
 }
 
 std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const
@@ -1529,10 +1543,28 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 		}
 	}
 
-	std::vector<std::vector<hash>> tree;
-	merkle_hash_full_tree(hashes, tree);
+	root_hash root;
+	if (!merkle_hash_with_proof(hashes, aux_slot, m_poolBlockTemplate->m_merkleProof, m_poolBlockTemplate->m_merkleProofPath, root)) {
+		LOGERR(1, "init_merge_mining_merkle_proof: merkle_hash_with_proof failed. Fix the code!");
+		return;
+	}
 
-	get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, m_poolBlockTemplate->m_merkleProof, m_poolBlockTemplate->m_merkleProofPath);
+	if (pool_block_debug()) {
+		std::vector<std::vector<hash>> tree;
+		merkle_hash_full_tree(hashes, tree);
+
+		std::vector<hash> proof;
+		uint32_t path = 0;
+
+		if (!get_merkle_proof(tree, m_poolBlockTemplate->m_sidechainId, proof, path)) {
+			LOGERR(1, "init_merge_mining_merkle_proof: get_merkle_proof failed. Fix the code!");
+			return;
+		}
+
+		if ((proof != m_poolBlockTemplate->m_merkleProof) || (path != m_poolBlockTemplate->m_merkleProofPath)) {
+			LOGERR(1, "init_merge_mining_merkle_proof: merkle_hash_with_proof and get_merkle_proof returned different results. Fix the code!");
+		}
+	}
 }
 
 } // namespace p2pool

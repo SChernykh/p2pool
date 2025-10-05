@@ -327,20 +327,23 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 	LOGINFO(0, log::LightGreen() << "External aux job solution found. Processing it!");
 
 	// coinbase_merkle_proof
-
-	std::vector<std::vector<hash>> tree;
-
-	merkle_hash_full_tree(block.m_transactions, tree);
-
+	root_hash root;
 	std::vector<hash> proof;
 	uint32_t path;
 
-	if (!get_merkle_proof(tree, block.m_transactions[0], proof, path)) {
-		LOGWARN(3, "on_external_block: get_merkle_proof failed for coinbase transaction");
+	if (!merkle_hash_with_proof(block.m_transactions, 0, proof, path, root)) {
+		LOGWARN(3, "on_external_block: merkle_hash_with_proof failed for coinbase transaction");
+		return;
+	}
+
+	if (!verify_merkle_proof(block.m_transactions[0], proof, path, root)) {
+		LOGWARN(3, "on_external_block: verify_merkle_proof failed for coinbase transaction");
 		return;
 	}
 
 	std::vector<uint8_t> coinbase_merkle_proof;
+	coinbase_merkle_proof.reserve(proof.size() * HASH_SIZE);
+	
 	for (const hash& h : proof) {
 		coinbase_merkle_proof.insert(coinbase_merkle_proof.end(), h.h, h.h + HASH_SIZE);
 	}
@@ -398,15 +401,18 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	hashes[aux_slot] = sidechain_id;
 
-	merkle_hash_full_tree(hashes, tree);
+	if (!merkle_hash_with_proof(hashes, chain_params.aux_hash, aux_merkle_proof, aux_merkle_proof_path, root)) {
+		LOGWARN(3, "on_external_block: merkle_hash_with_proof failed for the aux hash");
+		return;
+	}
 
-	if (tree.empty() || tree.back().empty() || (tree.back().front() != block.m_merkleRoot)) {
+	if (root != block.m_merkleRoot) {
 		LOGWARN(3, "on_external_block: merkle root didn't match");
 		return;
 	}
 
-	if (!get_merkle_proof(tree, chain_params.aux_hash, aux_merkle_proof, aux_merkle_proof_path)) {
-		LOGWARN(3, "on_external_block: get_merkle_proof failed for the aux hash");
+	if (!verify_merkle_proof(chain_params.aux_hash, aux_merkle_proof, aux_merkle_proof_path, root)) {
+		LOGWARN(3, "on_external_block: verify_merkle_proof failed for the aux hash");
 		return;
 	}
 

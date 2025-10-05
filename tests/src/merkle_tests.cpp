@@ -144,7 +144,24 @@ TEST(merkle, tree)
 			uint32_t path;
 
 			ASSERT_TRUE(get_merkle_proof(tree, h, proof, path));
+
+			root_hash root2;
+			std::vector<hash> proof2;
+			uint32_t path2;
+
+			ASSERT_TRUE(merkle_hash_with_proof(hashes, i, proof2, path2, root2));
+			ASSERT_EQ(root2, root);
+			ASSERT_EQ(proof2, proof);
+			ASSERT_EQ(path2, path);
+
+			ASSERT_TRUE(merkle_hash_with_proof(hashes, hashes[i], proof2, path2, root2));
+			ASSERT_EQ(root2, root);
+			ASSERT_EQ(proof2, proof);
+			ASSERT_EQ(path2, path);
+
 			ASSERT_FALSE(get_merkle_proof(tree, empty_hash, proof, path));
+			ASSERT_FALSE(merkle_hash_with_proof(hashes, n, proof2, path2, root2));
+			ASSERT_FALSE(merkle_hash_with_proof(hashes, empty_hash, proof2, path2, root2));
 
 			uint32_t path_monero;
 			ASSERT_TRUE(tree_path(n, i, &path_monero));
