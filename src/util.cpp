@@ -139,6 +139,7 @@ __attribute__((optimize("O0")))
 secure_zero_memory(volatile void* data, size_t size)
 {
 	volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(data);
+	// cppcheck-suppress constVariablePointer
 	volatile uint8_t* e = reinterpret_cast<volatile uint8_t*>(data) + size;
 
 	while (p < e) {

@@ -582,7 +582,7 @@ jobs:
 
   build-macos:
 
-    timeout-minutes: 60
+    timeout-minutes: 90
     runs-on: macos-15-intel
 
     steps:

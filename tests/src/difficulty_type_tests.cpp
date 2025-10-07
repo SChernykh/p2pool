@@ -258,6 +258,9 @@ TEST(difficulty_type, div128)
 	// (2^128 - 1) / (2^64 + 1) = 2^64 - 1
 	check(max_diff, { 1, 1 }, { std::numeric_limits<uint64_t>::max(), 0 });
 
+	// (2^128 - 1) / (2^64 + 2) = 2^64 - 2
+	check(max_diff, { 2, 1 }, { std::numeric_limits<uint64_t>::max() - 1, 0 });
+
 	// (2^128 - 1) / 8100430714362380904069067128193 = 42007935
 	check(max_diff, { 439125228929, 439125228929 }, { 42007935, 0 });
 
@@ -269,6 +272,49 @@ TEST(difficulty_type, div128)
 
 	// (2^128 - 2^64) / (2^64 - 1) = 2^64
 	check({ 0, std::numeric_limits<uint64_t>::max() }, { std::numeric_limits<uint64_t>::max(), 0 }, { 0, 1 });
+
+	// 2^128 - 1 = 3*5*17*257*641*65537*274177*6700417*67280421310721
+	constexpr uint64_t factors_2_128_minus_1[] = { 3, 5, 17, 257, 641, 65537, 274177, 6700417, 67280421310721 };
+
+	for (uint32_t i = 0, n = 1U << array_size(factors_2_128_minus_1); i < n; ++i) {
+		difficulty_type a{1, 0}, b{1, 0};
+
+		for (uint32_t j = 0; j < array_size(factors_2_128_minus_1); ++j) {
+			if (i & (1U << j)) {
+				a *= factors_2_128_minus_1[j];
+			}
+			else {
+				b *= factors_2_128_minus_1[j];
+			}
+		}
+
+		// Check that a*b = 2^128 - 1
+		difficulty_type c;
+		c.lo = umul128(a.lo, b.lo, &c.hi);
+
+		uint64_t t0;
+		const uint64_t t1 = umul128(a.lo, b.hi, &t0);
+		ASSERT_EQ(t0, 0);
+
+		c.hi += t1;
+		ASSERT_GE(c.hi, t1);
+
+		const uint64_t t2 = umul128(a.hi, b.lo, &t0);
+		ASSERT_EQ(t0, 0);
+
+		c.hi += t2;
+		ASSERT_GE(c.hi, t2);
+
+		ASSERT_EQ(c, max_diff);
+
+		check(max_diff, a, b);
+		check(max_diff - 1, a, b - 1);
+		check(max_diff - a, a, b - 1);
+
+		if (a != max_diff) {
+			check(max_diff - a - 1, a, b - 2);
+		}
+	}
 
 	{
 		difficulty_type a = max_diff - 4;
