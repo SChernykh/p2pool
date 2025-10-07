@@ -32,6 +32,8 @@ option(DEV_DEBUG "[Developer only] Compile a debug build" OFF)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool)
 
+set(BUILD_TESTING OFF CACHE BOOL "CMake's CTest module")
+
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	include(cmake/msvc_libs.cmake)
 endif()

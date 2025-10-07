@@ -124,6 +124,32 @@ void fixup_path(std::string& path)
 	}
 }
 
+// Tell the compiler to not optimize secure_zero_memory and hope that it listens
+
+#ifdef _MSC_VER
+#pragma optimize("", off)
+#endif
+
+void
+#if defined(__clang__)
+__attribute__((optnone))
+#elif defined(__GNUC__)
+__attribute__((optimize("O0")))
+#endif
+secure_zero_memory(volatile void* data, size_t size)
+{
+	volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(data);
+	volatile uint8_t* e = reinterpret_cast<volatile uint8_t*>(data) + size;
+
+	while (p < e) {
+		*(p++) = 0;
+	}
+}
+
+#ifdef _MSC_VER
+#pragma optimize("", on)
+#endif
+
 const uint8_t ED25519_MASTER_PUBLIC_KEY[32] = {51,175,37,73,203,241,188,115,195,255,123,53,218,120,90,74,186,240,82,178,67,139,124,91,180,106,188,181,187,51,236,10};
 
 std::string DATA_DIR;

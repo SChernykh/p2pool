@@ -806,6 +806,7 @@ void p2pool::send_aux_job_donation()
 	}
 
 	Params::AuthorKey key;
+	ON_SCOPE_LEAVE([&key](){ secure_zero_memory(key); });
 
 	if (f.tellg() != static_cast<std::streampos>(sizeof(key))) {
 		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << " has an invalid size");
@@ -868,8 +869,6 @@ void p2pool::send_aux_job_donation()
 		LOGERR(1, "send_aux_job_donation: failed to verify the donation job's signature");
 		return;
 	}
-
-	OPENSSL_cleanse(&key, sizeof(key));
 
 	job.insert(job.end(), signature, signature + sizeof(signature));
 

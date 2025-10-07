@@ -386,6 +386,17 @@ std::string p2pool_version();
 
 void fixup_path(std::string& path);
 
+void secure_zero_memory(volatile void* data, size_t size);
+
+template<typename T>
+FORCEINLINE void secure_zero_memory(T& value)
+{
+	static_assert(!std::is_pointer_v<T>, "Trying to zero a pointer instead of data it points to");
+	static_assert(std::is_trivially_copyable_v<T>, "Trying to zero a complex data type");
+
+	secure_zero_memory(&value, sizeof(T));
+}
+
 } // namespace p2pool
 
 void memory_tracking_start();
