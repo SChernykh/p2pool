@@ -584,7 +584,12 @@ struct DummyStream
 
 #define LOGINFO(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
 #define LOGWARN(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
+
+#ifdef P2POOL_ABORT_ON_LOG_ERROR
+#define LOGERR(level, ...) abort()
+#else
 #define LOGERR(level, ...) SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__)
+#endif
 
 #else
 

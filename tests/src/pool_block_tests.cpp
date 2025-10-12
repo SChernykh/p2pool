@@ -17,14 +17,24 @@
 
 #include "common.h"
 #include "crypto.h"
+#include "block_template.h"
+#include "mempool.h"
 #include "pool_block.h"
 #include "pow_hash.h"
 #include "side_chain.h"
 #include "p2p_server.h"
+#include "keccak.h"
 #include "gtest/gtest.h"
 #include <fstream>
 
 namespace p2pool {
+
+static hash H(const char* s)
+{
+	hash result;
+	from_hex(s, strlen(s), result);
+	return result;
+};
 
 TEST(pool_block, deserialize)
 {
@@ -99,12 +109,7 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_broadcasted, false);
 	ASSERT_EQ(b.m_wantBroadcast, false);
 
-	hash seed;
-	{
-		std::stringstream s;
-		s << "bf513dbe52c22b09e65edae222ec902d6adb75585a0141b81a165f0fb0c9c0bc";
-		s >> seed;
-	}
+	const hash seed = H("bf513dbe52c22b09e65edae222ec902d6adb75585a0141b81a165f0fb0c9c0bc");
 
 	RandomX_Hasher hasher(nullptr);
 	hasher.set_seed(seed);
@@ -139,13 +144,14 @@ TEST(pool_block, verify)
 		uint64_t m_sidechainHeight;
 		uint32_t m_expectedSharesNextBlock;
 		bool m_shuffle;
+		hash m_templateBlobsHash;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false },
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("c84a85eebf17ab266e8a81b347dd7490043ede3a055c0dbe85e9cd378905845a") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("c84a85eebf17ab266e8a81b347dd7490043ede3a055c0dbe85e9cd378905845a") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
+	{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
 	};
 
 	for (const STest& t : tests)
@@ -207,12 +213,58 @@ TEST(pool_block, verify)
 		ASSERT_EQ(tip->m_txinGenHeight, t.m_txinGenHeight);
 		ASSERT_EQ(tip->m_sidechainHeight, t.m_sidechainHeight);
 
+		{
+			BlockTemplate tpl(&sidechain, nullptr);
+			auto& r = tpl.rng();
+			r.seed(0);
+
+			MinerData data;
+			data.major_version = 16;
+			data.height = t.m_txinGenHeight;
+			data.prev_id = H("f7723462d2f4d9f605601df8de8bd483802d2275f77cbf3a6f61d8f3fc4c47bc");
+			data.seed_hash = H("11186f5a8473d8dc7a0d3a0bf25834a07b1dffe8741d53cd543a8708c2e8b2a9");
+			data.difficulty = { 656711234691ULL, 0 };
+			data.median_weight = 300000;
+			data.already_generated_coins = std::numeric_limits<uint64_t>::max();
+			data.median_timestamp = (1ULL << 35) - 2;
+
+			Mempool mempool;
+
+			for (uint64_t i = 0; i < 8192; ++i) {
+				TxMempoolData tx;
+				*reinterpret_cast<uint64_t*>(tx.id.h) = i;
+				tx.fee = (r() % 1'000'000'000) + 30'000'000;
+				tx.weight = (r() % 20'000) + 1'500;
+				mempool.add(tx);
+			}
+
+			tpl.update(
+				data,
+				mempool,
+				Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg"),
+				Wallet("86eQxzSW4AZfvsWRSop755WZUsog6L3x32NRZukeeShnS4mBGVpcqQhS6pCNxj44usPKNwesZ45ooHyjDku6nVZdT3Q9qrz")
+			);
+
+			std::vector<uint8_t> blobs;
+			uint64_t height;
+			difficulty_type diff, aux_diff, sidechain_diff;
+			hash seed_hash;
+			size_t nonce_offset;
+			uint32_t template_id;
+			const uint32_t blob_size = tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+			ASSERT_EQ(blob_size, 77);
+
+			hash blobs_hash;
+			keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
+			ASSERT_EQ(blobs_hash, t.m_templateBlobsHash);
+		}
+
 		PoolBlock block;
 		block.m_minerWallet.decode("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
 
 		std::vector<MinerShare> shares;
 
-		sidechain.fill_sidechain_data(block, shares);
+		ASSERT_TRUE(sidechain.fill_sidechain_data(block, shares));
 
 		ASSERT_EQ(block.m_sidechainHeight, t.m_sidechainHeight + 1);
 		ASSERT_EQ(shares.size(), t.m_expectedSharesNextBlock);
