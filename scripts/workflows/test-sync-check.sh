@@ -1,5 +1,5 @@
 #!/bin/bash
-grep 'ERROR ' p2pool.log | grep -E -v 'submit_block|failed to bind|ZMQ is not running' > errors.log
+grep 'ERROR ' p2pool.log | grep -E -v 'submit_block|failed to bind|ZMQ is not running|block header for seed' > errors.log
 
 if [ -s errors.log ]; then
 	cat errors.log
