@@ -98,17 +98,17 @@ struct PoolBlock
 
 	struct TxOutput
 	{
-		FORCEINLINE TxOutput() : m_ephPublicKey(), m_reward(0), m_viewTag(0) {}
-		FORCEINLINE TxOutput(uint64_t r, const hash& k, uint8_t view_tag) : m_ephPublicKey(k), m_reward(r), m_viewTag(view_tag) {}
+		FORCEINLINE TxOutput() : m_reward(0), m_viewTag(0) {}
+		FORCEINLINE TxOutput(uint64_t r, uint8_t view_tag) : m_reward(r), m_viewTag(view_tag) {}
 
-		hash m_ephPublicKey;
 		uint64_t m_reward : 56;
 		uint64_t m_viewTag : 8;
 	};
 
-	static_assert(sizeof(TxOutput) == sizeof(hash) + sizeof(uint64_t), "TxOutput bit packing didn't work with this compiler, fix the code!");
+	static_assert(sizeof(TxOutput) == sizeof(uint64_t), "TxOutput bit packing didn't work with this compiler, fix the code!");
 
-	std::vector<TxOutput> m_outputs;
+	std::vector<indexed_hash> m_ephPublicKeys;
+	std::vector<TxOutput> m_outputAmounts;
 
 	hash m_txkeyPub;
 	uint64_t m_extraNonceSize;
@@ -119,7 +119,7 @@ struct PoolBlock
 	root_hash m_merkleRoot;
 
 	// All block transaction hashes including the miner transaction hash at index 0
-	std::vector<hash> m_transactions;
+	std::vector<indexed_hash> m_transactions;
 
 	// Miner's wallet
 	Wallet m_minerWallet{ nullptr };

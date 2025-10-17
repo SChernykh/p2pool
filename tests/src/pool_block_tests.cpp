@@ -39,7 +39,7 @@ static hash H(const char* s)
 TEST(pool_block, deserialize)
 {
 	init_crypto_cache();
-
+	{
 	PoolBlock b;
 	SideChain sidechain(nullptr, NetworkType::Mainnet, "default");
 
@@ -93,7 +93,8 @@ TEST(pool_block, deserialize)
 	ASSERT_EQ(b.m_timestamp, 1728813765U);
 	ASSERT_EQ(b.m_nonce, 352454720U);
 	ASSERT_EQ(b.m_txinGenHeight, 3258099U);
-	ASSERT_EQ(b.m_outputs.size(), 27U);
+	ASSERT_EQ(b.m_ephPublicKeys.size(), 27U);
+	ASSERT_EQ(b.m_outputAmounts.size(), 27U);
 	ASSERT_EQ(b.m_extraNonceSize, 4U);
 	ASSERT_EQ(b.m_extraNonce, 2983923783U);
 	ASSERT_EQ(b.m_transactions.size(), 21U);
@@ -128,14 +129,18 @@ TEST(pool_block, deserialize)
 
 	ASSERT_EQ(b.serialize_mainchain_data(), mainchain_data);
 	ASSERT_EQ(b.serialize_sidechain_data(), sidechain_data);
-
+	}
 	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
 }
 
 TEST(pool_block, verify)
 {
 	init_crypto_cache();
-
+	{
 	struct STest
 	{
 		const char* m_poolName;
@@ -151,7 +156,7 @@ TEST(pool_block, verify)
 		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
 		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
 		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
-	{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
 	};
 
 	for (const STest& t : tests)
@@ -231,8 +236,11 @@ TEST(pool_block, verify)
 			Mempool mempool;
 
 			for (uint64_t i = 0; i < 8192; ++i) {
+				hash h;
+				h.u64()[0] = i;
+
 				TxMempoolData tx;
-				*reinterpret_cast<uint64_t*>(tx.id.h) = i;
+				tx.id = static_cast<indexed_hash>(h);
 				tx.fee = (r() % 1'000'000'000) + 30'000'000;
 				tx.weight = (r() % 20'000) + 1'500;
 				mempool.add(tx);
@@ -302,8 +310,12 @@ TEST(pool_block, verify)
 			ASSERT_EQ(v1, tip_full_blob);
 		}
 	}
-
+	}
 	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
 }
 
 }

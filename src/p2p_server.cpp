@@ -842,7 +842,7 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	// 0 outputs in the pruned blob
 	data->pruned_blob.push_back(0);
 
-	const uint64_t total_reward = std::accumulate(block.m_outputs.begin(), block.m_outputs.end(), 0ULL,
+	const uint64_t total_reward = std::accumulate(block.m_outputAmounts.begin(), block.m_outputAmounts.end(), 0ULL,
 		[](uint64_t a, const PoolBlock::TxOutput& b)
 		{
 			return a + b.m_reward;

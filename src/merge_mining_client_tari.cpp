@@ -331,12 +331,23 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 	std::vector<hash> proof;
 	uint32_t path;
 
-	if (!merkle_hash_with_proof(block.m_transactions, 0, proof, path, root)) {
+#ifdef WITH_INDEXED_HASHES
+	std::vector<hash> transactions;
+	transactions.reserve(block.m_transactions.size());
+
+	for (const auto& h : block.m_transactions) {
+		transactions.emplace_back(h);
+	}
+#else
+	const std::vector<hash>& transactions = block.m_transactions;
+#endif
+
+	if (!merkle_hash_with_proof(transactions, 0, proof, path, root)) {
 		LOGWARN(3, "on_external_block: merkle_hash_with_proof failed for coinbase transaction");
 		return;
 	}
 
-	if (!verify_merkle_proof(block.m_transactions[0], proof, path, root)) {
+	if (!verify_merkle_proof(transactions[0], proof, path, root)) {
 		LOGWARN(3, "on_external_block: verify_merkle_proof failed for coinbase transaction");
 		return;
 	}

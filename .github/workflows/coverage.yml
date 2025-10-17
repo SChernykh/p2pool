@@ -38,7 +38,7 @@ jobs:
         cd tests
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DDEV_DEBUG=ON -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DDEV_DEBUG=ON -DWITH_INDEXED_HASHES=ON -DWITH_COVERAGE=ON -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         make -j$(nproc) p2pool_tests
 
     - name: Run tests

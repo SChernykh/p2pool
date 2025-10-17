@@ -85,6 +85,23 @@ struct parse_wrapper<T, hash>
 	}
 };
 
+#ifdef WITH_INDEXED_HASHES
+template<typename T>
+struct parse_wrapper<T, indexed_hash>
+{
+	static NOINLINE bool parse(T& v, const char* name, indexed_hash& out_value)
+	{
+		hash h;
+		if (!parse_wrapper<T, hash>::parse(v, name, h)) {
+			return false;
+		}
+
+		out_value = static_cast<indexed_hash>(h);
+		return true;
+	}
+};
+#endif
+
 template<typename T>
 struct parse_wrapper<T, difficulty_type>
 {

@@ -429,8 +429,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - {c: "gcc", cxx: "g++", flags: "-ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes -Wno-unknown-attributes"}
-          - {c: "clang", cxx: "clang++", flags: "-fuse-ld=lld -Wno-unused-command-line-argument -Wno-nan-infinity-disabled -Wno-unknown-attributes"}
+          - {c: "gcc", cxx: "g++", flags: "-ffunction-sections -Wno-error=maybe-uninitialized -Wno-error=attributes -Wno-attributes"}
+          - {c: "clang", cxx: "clang++", flags: "-fuse-ld=lld -Wno-unused-command-line-argument -Wno-nan-infinity-disabled -Wno-attributes"}
 
     defaults:
       run:

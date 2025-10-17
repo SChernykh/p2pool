@@ -36,7 +36,7 @@ static hash H(const char* s)
 TEST(block_template, update)
 {
 	init_crypto_cache();
-
+	{
 	SideChain sidechain(nullptr, NetworkType::Mainnet);
 	BlockTemplate tpl(&sidechain, nullptr);
 	tpl.rng().seed(123);
@@ -83,8 +83,11 @@ TEST(block_template, update)
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
 	for (uint64_t i = 0; i < 513; ++i) {
+		hash h;
+		h.u64()[0] = i;
+
 		TxMempoolData tx;
-		*reinterpret_cast<uint64_t*>(tx.id.h) = i;
+		tx.id = static_cast<indexed_hash>(h);
 		tx.fee = (i < 256) ? 30000000 : 60000000;
 		tx.weight = 1500;
 		mempool.add(tx);
@@ -115,7 +118,7 @@ TEST(block_template, update)
 	ASSERT_EQ(b->m_transactions.size(), 203);
 
 	for (size_t i = 1; i < b->m_transactions.size(); ++i) {
-		ASSERT_GE(*reinterpret_cast<const uint64_t*>(b->m_transactions[i].h), 256);
+		ASSERT_GE(static_cast<hash>(b->m_transactions[i]).u64()[0], 256);
 	}
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
@@ -135,8 +138,11 @@ TEST(block_template, update)
 	std::vector<TxMempoolData> transactions;
 
 	for (uint64_t i = 0; i < 10; ++i) {
+		hash h;
+		h.u64()[0] = i;
+
 		TxMempoolData tx;
-		*reinterpret_cast<uint64_t*>(tx.id.h) = i;
+		tx.id = static_cast<indexed_hash>(h);
 		tx.fee = 30000000;
 		tx.weight = 1500;
 		transactions.push_back(tx);
@@ -171,10 +177,11 @@ TEST(block_template, update)
 	std::mt19937_64 rng;
 
 	for (uint64_t i = 0; i < 10000; ++i) {
+		hash h;
+		h.u64()[0] = i;
+
 		TxMempoolData tx;
-
-		*reinterpret_cast<uint64_t*>(tx.id.h) = i;
-
+		tx.id = static_cast<indexed_hash>(h);
 		tx.weight = 1500 + (rng() % 10007);
 		tx.fee = 30000000 + (rng() % 100000007);
 
@@ -199,14 +206,18 @@ TEST(block_template, update)
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("4f62562aa84400eb085f58447d8daa45257369f1ec046b2150212329c9e86ae4"));
-
+	}
 	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
 }
 
 TEST(block_template, submit_sidechain_block)
 {
 	init_crypto_cache();
-
+	{
 	SideChain sidechain(nullptr, NetworkType::Mainnet, "unit_test");
 
 	ASSERT_EQ(sidechain.consensus_hash(), H("81d45b62c10afa4fdda7cebb02dd5ad82c43b577eb3fb0857824427c55fd8a8d"));
@@ -270,8 +281,12 @@ TEST(block_template, submit_sidechain_block)
 	ASSERT_EQ(tip->m_sidechainHeight, sidechain.chain_window_size() * 3 - 1);
 
 	ASSERT_EQ(tip->m_sidechainId, H("12d57571a28d62d2b6dca3a647500d23ac22864138b22a133f237b459a0862da"));
-
+	}
 	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
 }
 
 }

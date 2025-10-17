@@ -340,6 +340,10 @@ int main(int argc, char* argv[])
 
 	p2pool::destroy_crypto_cache();
 
+#ifdef WITH_INDEXED_HASHES
+	p2pool::indexed_hash::cleanup_storage();
+#endif
+
 	p2pool::log::stop();
 
 	uv_loop_close(uv_default_loop());
