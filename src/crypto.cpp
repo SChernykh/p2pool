@@ -218,7 +218,7 @@ public:
 		{
 			WriteLock lock(derivations_lock);
 
-			auto entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, t }).first;
+			auto entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, static_cast<uint32_t>(t) }).first;
 			entry->second.add_view_tag(static_cast<uint32_t>(output_index << 8) | view_tag);
 		}
 
@@ -262,7 +262,7 @@ public:
 		const uint64_t t = seconds_since_epoch();
 		{
 			WriteLock lock(public_keys_lock);
-			public_keys->emplace(index, PublicKeyEntry{ derived_key, t });
+			public_keys->emplace(index, PublicKeyEntry{ static_cast<indexed_hash>(derived_key), static_cast<uint32_t>(t) });
 		}
 
 		return true;
@@ -297,7 +297,7 @@ public:
 		const uint64_t t = seconds_since_epoch();
 		{
 			WriteLock lock(tx_keys_lock);
-			tx_keys->emplace(index, TxKeyEntry{ pub, sec, t });
+			tx_keys->emplace(index, TxKeyEntry{ pub, sec, static_cast<uint32_t>(t) });
 		}
 	}
 
@@ -306,7 +306,8 @@ public:
 		if (timestamp) {
 			auto clean_old = [timestamp](auto* table) {
 				for (auto it = table->begin(); it != table->end();) {
-					if (it->second.m_timestamp < timestamp) {
+					// Wraparound-safe way of checking "it->second.m_timestamp < timestamp"
+					if (((it->second.m_timestamp - static_cast<uint32_t>(timestamp)) & 0x80000000UL) != 0) {
 						it = table->erase(it);
 					}
 					else {
@@ -357,7 +358,7 @@ private:
 		uint32_t m_viewTags1[2] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 		std::vector<uint32_t> m_viewTags2;
 		// cppcheck-suppress unusedStructMember
-		uint64_t m_timestamp;
+		uint32_t m_timestamp;
 
 		FORCEINLINE bool find_view_tag(size_t output_index, uint8_t& view_tag) const
 		{
@@ -407,9 +408,9 @@ private:
 
 	struct PublicKeyEntry
 	{
-		hash m_key;
+		indexed_hash m_key;
 		// cppcheck-suppress unusedStructMember
-		uint64_t m_timestamp;
+		uint32_t m_timestamp;
 	};
 
 	struct TxKeyEntry
@@ -417,7 +418,7 @@ private:
 		hash m_pub;
 		hash m_sec;
 		// cppcheck-suppress unusedStructMember
-		uint64_t m_timestamp;
+		uint32_t m_timestamp;
 	};
 
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> DerivationsMap;

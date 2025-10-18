@@ -377,6 +377,85 @@ FORCEINLINE difficulty_type operator/(const difficulty_type& a, const T& b)
 	return result;
 }
 
+#ifdef WITH_INDEXED_HASHES
+struct indexed_hash
+{
+	enum {
+		BUCKET_BITS = 12,
+		BUCKET_SHIFT = 32 - BUCKET_BITS,
+	};
+
+	static_assert((BUCKET_BITS > 0) && (BUCKET_BITS < 32), "Invalid bucket bit size");
+
+	FORCEINLINE indexed_hash() : m_index(std::numeric_limits<uint32_t>::max()) {}
+
+	explicit indexed_hash(const hash& h);
+	~indexed_hash();
+
+	indexed_hash(const indexed_hash& h);
+	FORCEINLINE indexed_hash(indexed_hash&& h) : m_index(h.m_index) { h.m_index = std::numeric_limits<uint32_t>::max(); }
+
+	indexed_hash& operator=(const indexed_hash& h);
+	indexed_hash& operator=(indexed_hash&& h);
+
+	FORCEINLINE indexed_hash& operator=(const hash& h)
+	{
+		if (*this == h) {
+			return *this;
+		}
+		return operator=(indexed_hash(h));
+	}
+
+	FORCEINLINE bool operator==(const indexed_hash& h) const { return m_index == h.m_index; }
+
+	FORCEINLINE bool operator==(const hash& h) const
+	{
+		const uint32_t i = m_index;
+
+		if (i == std::numeric_limits<uint32_t>::max()) {
+			return h.empty();
+		}
+
+		const uint32_t bucket = i >> BUCKET_SHIFT;
+
+		if (bucket != get_bucket(h)) {
+			return false;
+		}
+
+		return is_same(i, bucket, h);
+	}
+
+	FORCEINLINE operator hash() const
+	{
+		const uint32_t i = m_index;
+
+		if (i == std::numeric_limits<uint32_t>::max()) {
+			return {};
+		}
+
+		return get(i);
+	}
+
+	FORCEINLINE uint32_t get_bucket() const { return m_index >> BUCKET_SHIFT; }
+
+	static void cleanup_storage();
+
+	static void print_status();
+
+private:
+	uint32_t m_index;
+
+	static FORCEINLINE uint32_t get_bucket(const hash& h) { return h.u64()[3] >> (64 - BUCKET_BITS); }
+
+	static hash get(uint32_t index);
+	static bool is_same(uint32_t index, uint32_t bucket, const hash& h);
+};
+
+static_assert(sizeof(indexed_hash) == 4, "indexed_hash has wrong size");
+#else
+typedef hash indexed_hash;
+#endif
+
 struct TxMempoolData
 {
 	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0), time_received(0) {}
@@ -395,10 +474,22 @@ struct TxMempoolData
 		if (weight > tx.weight) return false;
 
 		// If two transactions have exactly the same fee and weight, just order them by id
+#ifdef WITH_INDEXED_HASHES
+		const uint32_t id_bucket = id.get_bucket();
+		const uint32_t tx_id_bucket = tx.id.get_bucket();
+
+		if (id_bucket < tx_id_bucket) return true;
+		if (id_bucket > tx_id_bucket) return false;
+
+		const hash h1 = id;
+		const hash h2 = tx.id;
+		return h1 < h2;
+#else
 		return id < tx.id;
+#endif
 	}
 
-	hash id;
+	indexed_hash id;
 	uint64_t blob_size;
 	uint64_t weight;
 	uint64_t fee;

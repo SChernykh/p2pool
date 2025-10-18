@@ -107,7 +107,11 @@ private:
 
 	PoolBlock* m_poolBlockTemplate;
 
+#ifdef P2POOL_UNIT_TESTS
+	BlockTemplate* m_oldTemplates[1] = {};
+#else
 	BlockTemplate* m_oldTemplates[4] = {};
+#endif
 
 	std::atomic<uint64_t> m_finalReward;
 

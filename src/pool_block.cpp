@@ -90,7 +90,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_prevId = b.m_prevId;
 	m_nonce = b.m_nonce;
 	m_txinGenHeight = b.m_txinGenHeight;
-	m_outputs = b.m_outputs;
+	m_ephPublicKeys = b.m_ephPublicKeys;
+	m_outputAmounts = b.m_outputAmounts;
 	m_txkeyPub = b.m_txkeyPub;
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
@@ -139,7 +140,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
-	data.reserve(128 + m_outputs.size() * 39 + m_transactions.size() * HASH_SIZE);
+	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + m_transactions.size() * HASH_SIZE, 131072));
 
 	// Header
 	data.push_back(m_majorVersion);
@@ -169,12 +170,15 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		*outputs_offset = outputs_offset0;
 	}
 
-	writeVarint(m_outputs.size(), data);
+	writeVarint(m_outputAmounts.size(), data);
 
-	for (const TxOutput& output : m_outputs) {
+	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
+		const TxOutput& output = m_outputAmounts[i];
+
 		writeVarint(output.m_reward, data);
 		data.push_back(TXOUT_TO_TAGGED_KEY);
-		data.insert(data.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+		const hash h = m_ephPublicKeys[i];
+		data.insert(data.end(), h.h, h.h + HASH_SIZE);
 		data.push_back(static_cast<uint8_t>(output.m_viewTag));
 	}
 
@@ -225,8 +229,16 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 	}
 
 	writeVarint(m_transactions.size() - 1, data);
+
+#ifdef WITH_INDEXED_HASHES
+	for (size_t i = 1, n = m_transactions.size(); i < n; ++i) {
+		const hash h = m_transactions[i];
+		data.insert(data.end(), h.h, h.h + HASH_SIZE);
+	}
+#else
 	const uint8_t* t = reinterpret_cast<const uint8_t*>(m_transactions.data());
 	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
+#endif
 
 #if POOL_BLOCK_DEBUG
 	if ((nonce == &m_nonce) && (extra_nonce == &m_extraNonce) && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
@@ -369,15 +381,27 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		memcpy(hashes, tmp.h, HASH_SIZE);
 
 		count = m_transactions.size();
-		uint8_t* h = reinterpret_cast<uint8_t*>(m_transactions.data());
 
 		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
 
 		// Save the coinbase tx hash into the first element of m_transactions
-		memcpy(h, tmp.h, HASH_SIZE);
+		m_transactions[0] = static_cast<indexed_hash>(tmp);
 
 		root_hash tmp_root;
+
+#ifdef WITH_INDEXED_HASHES
+		std::vector<hash> transactions;
+		transactions.reserve(m_transactions.size());
+
+		for (const auto& h : m_transactions) {
+			transactions.emplace_back(h);
+		}
+
+		merkle_hash(transactions, tmp_root);
+#else
 		merkle_hash(m_transactions, tmp_root);
+#endif
+
 		memcpy(blob + blob_size, tmp_root.h, HASH_SIZE);
 		blob_size += HASH_SIZE;
 	}
@@ -392,13 +416,14 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
-	for (size_t i = 0, n = m_outputs.size(); i < n; ++i) {
-		const TxOutput& out = m_outputs[i];
+	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
+		const TxOutput& out = m_outputAmounts[i];
+
 		hash eph_public_key;
 
 		uint8_t view_tag;
 		const uint8_t expected_view_tag = out.m_viewTag;
-		if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (eph_public_key == out.m_ephPublicKey)) {
+		if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (m_ephPublicKeys[i] == eph_public_key)) {
 			return out.m_reward;
 		}
 	}

@@ -395,7 +395,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
 				continue;
 			}
-			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
+			const hash h = tx.id;
+			m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
 			final_fees += tx.fee;
 			final_weight += tx.weight;
 		}
@@ -476,7 +477,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
 				continue;
 			}
-			m_transactionHashes.insert(m_transactionHashes.end(), tx.id.h, tx.id.h + HASH_SIZE);
+			const hash h = tx.id;
+			m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
 			final_fees += tx.fee;
 			final_weight += tx.weight;
 		}
@@ -728,7 +730,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	LOGINFO(3, "final reward = " << log::Gray() << log::XMRAmount(final_reward) << log::NoColor() <<
 		", weight = " << log::Gray() << final_weight << log::NoColor() <<
-		", outputs = " << log::Gray() << m_poolBlockTemplate->m_outputs.size() << log::NoColor() <<
+		", outputs = " << log::Gray() << m_poolBlockTemplate->m_outputAmounts.size() << log::NoColor() <<
 		", " << log::Gray() << m_numTransactionHashes << log::NoColor() <<
 		" of " << log::Gray() << m_mempoolTxs.size() << log::NoColor() << " transactions included");
 
@@ -847,7 +849,8 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	PoolBlock* b = m_poolBlockTemplate;
 	b->m_transactions.clear();
 	b->m_transactions.resize(1);
-	b->m_outputs.clear();
+	b->m_ephPublicKeys.clear();
+	b->m_outputAmounts.clear();
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
 	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
@@ -909,8 +912,11 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Number of outputs (1 output per miner)
 	writeVarint(num_outputs, m_minerTx);
 
-	m_poolBlockTemplate->m_outputs.clear();
-	m_poolBlockTemplate->m_outputs.reserve(num_outputs);
+	m_poolBlockTemplate->m_ephPublicKeys.clear();
+	m_poolBlockTemplate->m_outputAmounts.clear();
+
+	m_poolBlockTemplate->m_ephPublicKeys.reserve(num_outputs);
+	m_poolBlockTemplate->m_outputAmounts.reserve(num_outputs);
 
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
@@ -932,7 +938,8 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
-			m_poolBlockTemplate->m_outputs.emplace_back(m_rewards[i], eph_public_key, view_tag);
+			m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
+			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i], view_tag);
 		}
 
 		m_minerTx.emplace_back(view_tag);

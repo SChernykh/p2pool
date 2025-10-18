@@ -26,7 +26,7 @@ namespace p2pool {
 TEST(crypto, derivation)
 {
 	init_crypto_cache();
-
+	{
 	hash pub, sec;
 	generate_keys(pub, sec);
 	ASSERT_TRUE(check_keys(pub, sec));
@@ -105,9 +105,13 @@ TEST(crypto, derivation)
 			}
 		} while (!f.eof());
 	}
-
+	}
 	clear_crypto_cache(0);
 	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
 }
 
 }

@@ -6,7 +6,8 @@ include(cmake/standard.cmake)
 option(STATIC_LIBS "Use locally built libuv and libzmq static libs" OFF)
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_COVERAGE "Generate code coverage data" OFF)
-option(DEV_DEBUG "[Developer only] Compile a debug build" OFF)
+option(WITH_INDEXED_HASHES "Save memory used for storing transaction hashes and public keys (a bit slower block verification, use it only if you compile for a very low memory system)" ON)
+option(DEV_DEBUG "[Developer only] Compile a debug build" ON)
 
 if (DEV_DEBUG)
 	add_definitions(-DDEV_DEBUG)
@@ -83,6 +84,11 @@ set(SOURCES
 	../src/util.cpp
 	../src/wallet.cpp
 )
+
+if (WITH_INDEXED_HASHES)
+	add_compile_definitions(WITH_INDEXED_HASHES)
+	set(SOURCES ${SOURCES} ../src/indexed_hash.cpp)
+endif()
 
 if (AMD64)
 	set(SOURCES ${SOURCES} ../src/keccak_bmi.cpp)

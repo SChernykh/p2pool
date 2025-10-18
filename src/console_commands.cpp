@@ -224,6 +224,10 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 
 	m_pool->print_merge_mining_status();
 
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::print_status();
+#endif
+
 	bkg_jobs_tracker->print_status();
 
 	if (p2p) {

@@ -830,19 +830,22 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		auto it = block->m_sidechainId.empty() ? m_blocksById.end() : m_blocksById.find(block->m_sidechainId);
 		if (it != m_blocksById.end()) {
 			const PoolBlock* b = it->second;
-			const size_t n = b->m_outputs.size();
+			const size_t n = b->m_outputAmounts.size();
 
 			blob.reserve(n * 39 + 64);
 			writeVarint(n, blob);
 
-			for (const PoolBlock::TxOutput& output : b->m_outputs) {
+			for (size_t i = 0; i < n; ++i) {
+				const PoolBlock::TxOutput& output = b->m_outputAmounts[i];
 				writeVarint(output.m_reward, blob);
 				blob.emplace_back(TXOUT_TO_TAGGED_KEY);
-				blob.insert(blob.end(), output.m_ephPublicKey.h, output.m_ephPublicKey.h + HASH_SIZE);
+				const hash h = b->m_ephPublicKeys[i];
+				blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
 				blob.emplace_back(static_cast<uint8_t>(output.m_viewTag));
 			}
 
-			block->m_outputs = b->m_outputs;
+			block->m_ephPublicKeys = b->m_ephPublicKeys;
+			block->m_outputAmounts = b->m_outputAmounts;
 			return true;
 		}
 
@@ -887,8 +890,11 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	writeVarint(n, blob);
 
-	block->m_outputs.clear();
-	block->m_outputs.reserve(n);
+	block->m_ephPublicKeys.clear();
+	block->m_outputAmounts.clear();
+
+	block->m_ephPublicKeys.reserve(n);
+	block->m_outputAmounts.reserve(n);
 
 	hash eph_public_key;
 	for (size_t i = 0; i < n; ++i) {
@@ -911,10 +917,12 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		blob.emplace_back(view_tag);
 
-		block->m_outputs.emplace_back(tmpRewards[i], eph_public_key, view_tag);
+		block->m_ephPublicKeys.emplace_back(eph_public_key);
+		block->m_outputAmounts.emplace_back(tmpRewards[i], view_tag);
 	}
 
-	block->m_outputs.shrink_to_fit();
+	block->m_ephPublicKeys.shrink_to_fit();
+	block->m_outputAmounts.shrink_to_fit();
 	return true;
 }
 
@@ -1082,12 +1090,12 @@ double SideChain::get_reward_share(const Wallet& w) const
 		const PoolBlock* tip = m_chainTip;
 		if (tip) {
 			hash eph_public_key;
-			for (size_t i = 0, n = tip->m_outputs.size(); i < n; ++i) {
-				const PoolBlock::TxOutput& out = tip->m_outputs[i];
+			for (size_t i = 0, n = tip->m_outputAmounts.size(); i < n; ++i) {
+				const PoolBlock::TxOutput& out = tip->m_outputAmounts[i];
 				if (!reward) {
 					uint8_t view_tag;
 					const uint8_t expected_view_tag = out.m_viewTag;
-					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (out.m_ephPublicKey == eph_public_key)) {
+					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (tip->m_ephPublicKeys[i] == eph_public_key)) {
 						reward = out.m_reward;
 					}
 				}
@@ -1699,16 +1707,16 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (shares.size() != block->m_outputs.size()) {
+	if (shares.size() != block->m_outputAmounts.size()) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputs.size() << ", expected " << shares.size());
+			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << shares.size());
 		block->m_invalid = true;
 		return;
 	}
 
-	uint64_t total_reward = std::accumulate(block->m_outputs.begin(), block->m_outputs.end(), 0ULL,
+	uint64_t total_reward = std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL,
 		[](uint64_t a, const PoolBlock::TxOutput& b)
 		{
 			return a + b.m_reward;
@@ -1723,17 +1731,17 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (rewards.size() != block->m_outputs.size()) {
+	if (rewards.size() != block->m_outputAmounts.size()) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputs.size() << ", expected " << rewards.size());
+			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << rewards.size());
 		block->m_invalid = true;
 		return;
 	}
 
 	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
-		const PoolBlock::TxOutput& out = block->m_outputs[i];
+		const PoolBlock::TxOutput& out = block->m_outputAmounts[i];
 
 		if (rewards[i] != out.m_reward) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
@@ -1764,7 +1772,7 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if (eph_public_key != out.m_ephPublicKey) {
+		if (eph_public_key != block->m_ephPublicKeys[i]) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
