@@ -282,7 +282,7 @@ bool TCPServer::connect_to_peer(bool is_v6, const char* ip, int port)
 	Client* client = get_client();
 	client->m_owner = this;
 	client->m_port = port;
-	client->m_isV6 = is_v6;
+	client->m_addressType = is_v6 ? Client::AddressType::IPv6 : Client::AddressType::IPv4;
 
 	if (!str_to_ip(is_v6, ip, client->m_addr)) {
 		return_client(client);
@@ -310,8 +310,36 @@ bool TCPServer::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
 	client->m_owner = this;
 	client->m_addr = ip;
 	client->m_port = port;
-	client->m_isV6 = is_v6;
+	client->m_addressType = is_v6 ? Client::AddressType::IPv6 : Client::AddressType::IPv4;
 	client->init_addr_string();
+
+	return connect_to_peer(client);
+}
+
+bool TCPServer::connect_to_peer(const std::string& domain, int port)
+{
+	if (m_socks5Proxy.empty()) {
+        LOGERR(1, "Can't connect to " << domain << ": SOCKS5 proxy is required");
+        return false;
+    }
+
+	if (m_finished.load()) {
+		return false;
+	}
+
+	Client* client = get_client();
+	client->m_owner = this;
+	client->m_addr = raw_ip::localhost_ipv4;
+	client->m_port = port;
+	client->m_addressType = Client::AddressType::DomainName;
+
+	log::Stream s(client->m_addrString);
+	s << domain << ':' << port << '\0';
+
+	if (s.m_spilled) {
+        LOGERR(1, "Can't connect to " << domain << ": too long domain name");
+		return false;
+	}
 
 	return connect_to_peer(client);
 }
@@ -345,13 +373,13 @@ bool TCPServer::is_banned(bool is_v6, raw_ip ip)
 
 bool TCPServer::connect_to_peer(Client* client)
 {
-	if (is_banned(client->m_isV6, client->m_addr)) {
+	if (is_banned(client->isV6(), client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, not connecting to it");
 		return_client(client);
 		return false;
 	}
 
-	if (!m_pendingConnections.insert(client->m_addr).second) {
+	if ((client->m_addressType != Client::AddressType::DomainName) && (m_pendingConnections.find(client->m_addr) != m_pendingConnections.end())) {
 		LOGINFO(6, "there is already a pending connection to this IP, not connecting to " << log::Gray() << static_cast<char*>(client->m_addrString));
 		return_client(client);
 		return false;
@@ -385,17 +413,21 @@ bool TCPServer::connect_to_peer(Client* client)
 	sockaddr_storage addr{};
 
 	if (m_socks5Proxy.empty()) {
-		if (client->m_isV6) {
+		if (client->m_addressType == Client::AddressType::IPv6) {
 			sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
 			addr6->sin6_family = AF_INET6;
 			memcpy(&addr6->sin6_addr, client->m_addr.data, sizeof(in6_addr));
 			addr6->sin6_port = htons(static_cast<uint16_t>(client->m_port));
 		}
-		else {
+		else if (client->m_addressType == Client::AddressType::IPv4) {
 			sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
 			addr4->sin_family = AF_INET;
 			memcpy(&addr4->sin_addr, client->m_addr.data + sizeof(raw_ip::ipv4_prefix), sizeof(in_addr));
 			addr4->sin_port = htons(static_cast<uint16_t>(client->m_port));
+		}
+		else {
+			LOGWARN(5, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ": domain name is unresolved and SOCKS5 proxy is not enabled");
+			return false;
 		}
 	}
 	else {
@@ -416,9 +448,12 @@ bool TCPServer::connect_to_peer(Client* client)
 	err = uv_tcp_connect(connect_request, &client->m_socket, reinterpret_cast<sockaddr*>(&addr), on_connect);
 	if (err) {
 		LOGWARN(5, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ", error " << uv_err_name(err));
-		m_pendingConnections.erase(client->m_addr);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return false;
+	}
+
+	if (client->m_addressType != Client::AddressType::DomainName) {
+		m_pendingConnections.insert(client->m_addr);
 	}
 
 	LOGINFO(5, "connecting to " << log::Gray() << static_cast<const char*>(client->m_addrString));
@@ -755,7 +790,9 @@ void TCPServer::on_connect(uv_connect_t* req, int status)
 		return;
 	}
 
-	server->m_pendingConnections.erase(client->m_addr);
+	if (client->m_addressType != Client::AddressType::DomainName) {
+		server->m_pendingConnections.erase(client->m_addr);
+	}
 
 	if (status) {
 		if (status == UV_ETIMEDOUT) {
@@ -764,7 +801,7 @@ void TCPServer::on_connect(uv_connect_t* req, int status)
 		else {
 			LOGWARN(5, "failed to connect to " << static_cast<char*>(client->m_addrString) << ", error " << uv_err_name(status));
 		}
-		server->on_connect_failed(client->m_isV6, client->m_addr, client->m_port);
+		server->on_connect_failed(client->isV6(), client->m_addr, client->m_port);
 		client->on_connect_failed(status);
 		uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 		return;
@@ -823,7 +860,12 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 	if (client->m_isIncoming) {
 		++m_numIncomingConnections;
 
-		client->m_isV6 = (std::find(m_listenSockets6.begin(), m_listenSockets6.end(), reinterpret_cast<uv_tcp_t*>(server)) != m_listenSockets6.end());
+		if (std::find(m_listenSockets6.begin(), m_listenSockets6.end(), reinterpret_cast<uv_tcp_t*>(server)) != m_listenSockets6.end()) {
+			client->m_addressType = Client::AddressType::IPv6;
+		}
+		else {
+			client->m_addressType = Client::AddressType::IPv4;
+		}
 
 		sockaddr_storage peer_addr;
 		int peer_addr_len = static_cast<int>(sizeof(peer_addr));
@@ -834,7 +876,7 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 			return;
 		}
 
-		if (client->m_isV6) {
+		if (client->isV6()) {
 			memcpy(client->m_addr.data, &reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_addr, sizeof(in6_addr));
 			client->m_port = ntohs(reinterpret_cast<sockaddr_in6*>(&peer_addr)->sin6_port);
 		}
@@ -849,7 +891,7 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 
 	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
 
-	if (is_banned(client->m_isV6, client->m_addr)) {
+	if (is_banned(client->isV6(), client->m_addr)) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
 		client->close();
 		return;
@@ -1033,12 +1075,12 @@ TCPServer::Client::Client(char* read_buf, size_t size)
 	, m_prev(nullptr)
 	, m_next(nullptr)
 	, m_socket{}
-	, m_isV6(false)
+	, m_addressType(AddressType::IPv4)
 	, m_isIncoming(false)
 	, m_readBufInUse(false)
 	, m_isClosing(false)
 	, m_numRead(0)
-	, m_addr{}
+	, m_addr(raw_ip::localhost_ipv4)
 	, m_port(0)
 	, m_addrString{}
 	, m_socks5ProxyState(Socks5ProxyState::Default)
@@ -1059,12 +1101,12 @@ void TCPServer::Client::reset()
 	m_prev = nullptr;
 	m_next = nullptr;
 	memset(&m_socket, 0, sizeof(m_socket));
-	m_isV6 = false;
+	m_addressType = AddressType::IPv4;
 	m_isIncoming = false;
 	m_readBufInUse = false;
 	m_isClosing = false;
 	m_numRead = 0;
-	m_addr = {};
+	m_addr = raw_ip::localhost_ipv4;
 	m_port = -1;
 	m_addrString[0] = '\0';
 	m_socks5ProxyState = Socks5ProxyState::Default;
@@ -1157,27 +1199,44 @@ bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 			const bool result = m_owner->send(this,
 				[this](uint8_t* buf, size_t buf_size) -> size_t
 				{
-					if (buf_size < 22) {
+					if (buf_size < ADDR_STRING_SIZE + 7) {
 						return 0;
 					}
 
 					buf[0] = 5; // Protocol version (SOCKS5)
 					buf[1] = 1; // CONNECT
 					buf[2] = 0; // RESERVED
-					if (m_isV6) {
+
+					if (m_addressType == AddressType::DomainName) {
+						buf[3] = 3; // ATYP
+
+						const char* s = strchr(m_addrString, ':');
+						const size_t domain_len = s ? (s - m_addrString) : strlen(m_addrString);
+
+						buf[4] = static_cast<uint8_t>(domain_len);
+						memcpy(buf + 5, m_addrString, domain_len);
+
+						buf[domain_len + 5] = static_cast<uint8_t>(m_port >> 8);
+						buf[domain_len + 6] = static_cast<uint8_t>(m_port & 0xFF);
+
+						return domain_len + 7;
+					}
+
+					if (m_addressType == AddressType::IPv6) {
 						buf[3] = 4; // ATYP
 						memcpy(buf + 4, m_addr.data, 16);
 						buf[20] = static_cast<uint8_t>(m_port >> 8);
 						buf[21] = static_cast<uint8_t>(m_port & 0xFF);
-					}
-					else {
-						buf[3] = 1; // ATYP
-						memcpy(buf + 4, m_addr.data + sizeof(raw_ip::ipv4_prefix), 4);
-						buf[8] = static_cast<uint8_t>(m_port >> 8);
-						buf[9] = static_cast<uint8_t>(m_port & 0xFF);
+
+						return 22;
 					}
 
-					return m_isV6 ? 22 : 10;
+					buf[3] = 1; // ATYP
+					memcpy(buf + 4, m_addr.data + sizeof(raw_ip::ipv4_prefix), 4);
+					buf[8] = static_cast<uint8_t>(m_port >> 8);
+					buf[9] = static_cast<uint8_t>(m_port & 0xFF);
+
+					return 10;
 				});
 
 			if (result) {
@@ -1298,7 +1357,7 @@ void TCPServer::Client::ban(uint64_t seconds)
 
 	if (m_owner) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << seconds << " seconds");
-		m_owner->ban(m_isV6, m_addr, seconds);
+		m_owner->ban(isV6(), m_addr, seconds);
 	}
 }
 
@@ -1307,7 +1366,7 @@ void TCPServer::Client::init_addr_string()
 	const char* addr_str;
 	char addr_str_buf[64];
 
-	if (m_isV6) {
+	if (isV6()) {
 		addr_str = inet_ntop(AF_INET6, m_addr.data, addr_str_buf, sizeof(addr_str_buf));
 	}
 	else {
@@ -1321,7 +1380,7 @@ void TCPServer::Client::init_addr_string()
 		}
 
 		log::Stream s(m_addrString);
-		if (m_isV6) {
+		if (isV6()) {
 			s << '[' << log::const_buf(addr_str, n) << "]:" << m_port << '\0';
 		}
 		else {

@@ -47,6 +47,7 @@ public:
 	[[nodiscard]] virtual int external_listen_port() const { return m_listenPort; }
 
 	[[nodiscard]] bool connect_to_peer(bool is_v6, const raw_ip& ip, int port);
+	[[nodiscard]] bool connect_to_peer(const std::string& domain, int port);
 	[[nodiscard]] bool connect_to_peer(Client* client);
 
 	virtual void on_connect_failed(bool /*is_v6*/, const raw_ip& /*ip*/, int /*port*/) {}
@@ -80,6 +81,8 @@ public:
 
 		void asan_poison_this() const;
 
+		FORCEINLINE bool isV6() const { return m_addressType == AddressType::IPv6; }
+
 		char* m_readBuf;
 		uint32_t m_readBufSize;
 
@@ -91,7 +94,13 @@ public:
 
 		uv_tcp_t m_socket;
 
-		bool m_isV6;
+		enum class AddressType {
+			IPv4,
+			IPv6,
+			DomainName
+		};
+
+		AddressType m_addressType;
 		bool m_isIncoming;
 		bool m_readBufInUse;
 		bool m_isClosing;

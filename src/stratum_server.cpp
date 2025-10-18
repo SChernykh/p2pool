@@ -448,7 +448,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 		share.m_server = this;
 		share.m_client = client;
-		share.m_clientIPv6 = client->m_isV6;
+		share.m_clientIPv6 = client->isV6();
 		share.m_clientAddr = client->m_addr;
 		memcpy(share.m_clientAddrString, client->m_addrString, sizeof(share.m_clientAddrString));
 		memcpy(share.m_clientCustomUser, client->m_customUser, sizeof(share.m_clientCustomUser));

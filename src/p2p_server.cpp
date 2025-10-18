@@ -274,7 +274,13 @@ void P2PServer::connect_to_peers(const std::string& peer_list)
 	parse_address_list(peer_list,
 		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
-			if (!m_pool->params().m_dns || resolve_host(ip, is_v6)) {
+			if (!m_socks5Proxy.empty() && (ip.find_first_not_of("0123456789.:") != std::string::npos)) {
+				// Assume it's a domain name and use the proxy to resolve it
+				if (!connect_to_peer(ip, port)) {
+					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
+				}
+			}
+			else if (!m_pool->params().m_dns || resolve_host(ip, is_v6)) {
 				if (!connect_to_peer(is_v6, ip.c_str(), port)) {
 					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
 				}
@@ -315,11 +321,14 @@ void P2PServer::update_peer_connections()
 	connected_clients.reserve(m_numConnections);
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		const int timeout = client->m_handshakeComplete ? 300 : 10;
-		if ((cur_time >= client->m_lastAlive + timeout) && (client->m_socks5ProxyState == Client::Socks5ProxyState::Default)) {
-			const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
-			LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
-			client->close();
-			continue;
+		if (cur_time >= client->m_lastAlive + timeout) {
+			const Client::Socks5ProxyState s = client->m_socks5ProxyState;
+			if ((s == Client::Socks5ProxyState::Default) || (s == Client::Socks5ProxyState::ConnectRequestSent)) {
+				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
+				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
+				client->close();
+				continue;
+			}
 		}
 
 		if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
@@ -791,7 +800,7 @@ void P2PServer::remove_peer_from_list(const P2PClient* client)
 
 	for (auto it = m_peerList.begin(); it != m_peerList.end(); ++it) {
 		const Peer& p = *it;
-		if ((p.m_isV6 == client->m_isV6) && (p.m_port == client->m_listenPort) && (p.m_addr == client->m_addr)) {
+		if ((p.m_isV6 == client->isV6()) && (p.m_port == client->m_listenPort) && (p.m_addr == client->m_addr)) {
 			m_peerList.erase(it);
 			return;
 		}
@@ -2462,7 +2471,7 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 
 	m_listenPort = port;
 
-	static_cast<P2PServer*>(m_owner)->update_peer_in_list(m_isV6, m_addr, port);
+	static_cast<P2PServer*>(m_owner)->update_peer_in_list(isV6(), m_addr, port);
 	return true;
 }
 
@@ -2675,7 +2684,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 				continue;
 			}
 
-			const Peer p{ client->m_isV6, client->m_addr, client->m_listenPort, 0, 0 };
+			const Peer p{ client->isV6(), client->m_addr, client->m_listenPort, 0, 0 };
 			++n;
 
 			// Use https://en.wikipedia.org/wiki/Reservoir_sampling algorithm
@@ -3146,7 +3155,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		bool pow_check_passed;
 	};
 
-	Work* work = new Work{ {}, server, this, m_resetCounter, m_isV6, m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
+	Work* work = new Work{ {}, server, this, m_resetCounter, isV6(), m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -3301,7 +3310,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		bool result;
 	};
 
-	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), m_isV6, m_addr, {}, true };
+	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), isV6(), m_addr, {}, true };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -3369,7 +3378,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 		P2PClient* c = server->m_fastestPeer;
 		if (c && (c != this) && (c->m_broadcastMaxHeight >= block.m_sidechainHeight)) {
 			LOGINFO(5, "peer " << static_cast<char*>(c->m_addrString) << " is faster, sending BLOCK_REQUEST to it instead");
-			c->post_handle_incoming_block(pool, block, c->m_resetCounter.load(), c->m_isV6, c->m_addr, missing_blocks, true);
+			c->post_handle_incoming_block(pool, block, c->m_resetCounter.load(), c->isV6(), c->m_addr, missing_blocks, true);
 			return;
 		}
 	}

@@ -911,7 +911,7 @@ bool MergeMiningClientTari::TariServer::connect_upstream(TariClient* downstream)
 
 	upstream->m_owner = this;
 	upstream->m_port = port;
-	upstream->m_isV6 = is_v6;
+	upstream->m_addressType = is_v6 ? Client::AddressType::IPv6 : Client::AddressType::IPv4;
 
 	if (!str_to_ip(is_v6, ip.c_str(), upstream->m_addr)) {
 		return_client(upstream);
