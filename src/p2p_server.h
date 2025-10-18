@@ -189,7 +189,7 @@ public:
 
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);
 	[[nodiscard]] uint64_t get_random64();
-	[[nodiscard]] uint64_t get_peerId() const { return m_peerId; }
+	[[nodiscard]] uint64_t get_peerId(bool is_tor) const { return is_tor ? m_peerId_TOR : m_peerId; }
 
 	void print_status() override;
 	void show_peers_async();
@@ -268,6 +268,7 @@ private:
 	uint64_t m_timerInterval;
 
 	uint64_t m_peerId;
+	uint64_t m_peerId_TOR;
 
 	mutable uv_mutex_t m_peerListLock;
 

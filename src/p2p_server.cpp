@@ -87,6 +87,7 @@ P2PServer::P2PServer(p2pool* pool)
 	m_rng.discard(10000);
 
 	m_peerId = m_rng();
+	m_peerId_TOR = m_rng();
 
 	const Params& params = pool->params();
 
@@ -321,9 +322,8 @@ void P2PServer::update_peer_connections()
 	connected_clients.reserve(m_numConnections);
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		const int timeout = client->m_handshakeComplete ? 300 : 10;
-		if (cur_time >= client->m_lastAlive + timeout) {
-			const Client::Socks5ProxyState s = client->m_socks5ProxyState;
-			if ((s == Client::Socks5ProxyState::Default) || (s == Client::Socks5ProxyState::ConnectRequestSent)) {
+		if (client->m_lastAlive && (cur_time >= client->m_lastAlive + timeout)) {
+			if (client->m_socks5ProxyState == Client::Socks5ProxyState::Default) {
 				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
 				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
 				client->close();
@@ -2173,7 +2173,7 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 				k >>= 8;
 			}
 
-			k = owner->get_peerId();
+			k = owner->get_peerId((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:")));
 			memcpy(p, &k, sizeof(uint64_t));
 			p += sizeof(uint64_t);
 
@@ -2366,7 +2366,7 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 	uint64_t peer_id;
 	memcpy(&peer_id, buf + CHALLENGE_SIZE, sizeof(uint64_t));
 
-	if (peer_id == server->get_peerId()) {
+	if ((peer_id == server->get_peerId(false)) || (peer_id == server->get_peerId(true))) {
 		LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
 		return false;
 	}
