@@ -210,6 +210,22 @@ struct alignas(uint64_t) hash
 	FORCEINLINE uint64_t* u64() { return reinterpret_cast<uint64_t*>(h); }
 	FORCEINLINE const uint64_t* u64() const { return reinterpret_cast<const uint64_t*>(h); }
 
+	template<int index>
+	FORCEINLINE constexpr uint64_t u64() const
+	{
+		if constexpr ((index < 0) || (index >= HASH_SIZE / sizeof(uint64_t))) {
+			return 0;
+		}
+
+		uint64_t k = 0;
+
+		for (size_t i = 0; i < sizeof(uint64_t); ++i) {
+			k |= static_cast<uint64_t>(h[index * sizeof(uint64_t) + i]) << (i * sizeof(uint64_t));
+		}
+
+		return k;
+	}
+
 	friend std::ostream& operator<<(std::ostream& s, const hash& d);
 	friend std::istream& operator>>(std::istream& s, hash& d);
 };

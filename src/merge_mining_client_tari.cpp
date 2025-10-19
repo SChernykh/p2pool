@@ -997,6 +997,10 @@ bool MergeMiningClientTari::TariClient::on_connect()
 		// Check if the incoming connection (downstream) has already sent something that needs to be relayed
 		TariClient* downstream = m_pairedClient;
 
+		if (!downstream) {
+			return false;
+		}
+
 		const std::vector<uint8_t>& v = downstream->m_pendingData;
 
 		if (!v.empty()) {

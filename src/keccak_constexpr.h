@@ -28,7 +28,7 @@ static FORCEINLINE constexpr uint64_t rotl64(uint64_t x) { return (x << y) | (x 
 template<int ROUNDS>
 static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 {
-	constexpr uint64_t keccakf_rndc[24] = 
+	constexpr uint64_t round_constants[24] = 
 	{
 		0x0000000000000001, 0x0000000000008082, 0x800000000000808a,
 		0x8000000080008000, 0x000000000000808b, 0x0000000080000001,
@@ -85,7 +85,7 @@ static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 		}
 
 		// Iota
-		st[0] ^= keccakf_rndc[round];
+		st[0] ^= round_constants[round];
 	}
 }
 
@@ -139,6 +139,6 @@ constexpr hash keccak_0x00 = keccak("\0");
 constexpr hash keccak_subaddress_viewpub = keccak("subaddress_viewpub");
 constexpr hash keccak_onion_address_v3 = keccak("onion_address_v3");
 
-static_assert((keccak_0x00.h[0] == 0xBC) && (keccak_0x00.h[1] == 0x36) && (keccak_0x00.h[2] == 0x78) && (keccak_0x00.h[3] == 0x9E), "constexpr keccak code check failed");
+static_assert(keccak_0x00.u64<0>() == 0x14281E7A9E7836BCULL, "constexpr keccak code check failed");
 
 } // namespace p2pool
