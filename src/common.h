@@ -162,7 +162,7 @@ struct alignas(uint64_t) hash
 {
 	uint8_t h[HASH_SIZE];
 
-	FORCEINLINE hash() : h{} {}
+	FORCEINLINE constexpr hash() : h{} {}
 
 	constexpr hash(std::initializer_list<uint8_t> l) : h{} {
 		auto it = l.begin();

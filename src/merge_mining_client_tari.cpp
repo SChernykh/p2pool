@@ -240,7 +240,8 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	// Filter aux chain data only
 	for (const auto& i : block.m_mergeMiningExtra) {
-		if (i.first != keccak_subaddress_viewpub) {
+		if ((i.first != keccak_subaddress_viewpub) &&
+			(i.first != keccak_onion_address_v3)) {
 			mm_extra.emplace_back(i.first, i.second);
 		}
 	}
