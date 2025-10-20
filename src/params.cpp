@@ -268,12 +268,26 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+		if ((strcmp(argv[i], "--onion-address") == 0) && (i + 1 < argc)) {
+			m_onionAddress = argv[++i];
+			ok = true;
+		}
+
 		if (!ok) {
 			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
 			p2pool_usage();
+			throw std::exception();
+		}
+	}
+
+	if (!m_onionAddress.empty()) {
+		m_onionPubkey = from_onion_v3(m_onionAddress);
+
+		if (m_onionPubkey.empty()) {
+			LOGERR(1, "Failed to parse \"" << m_onionAddress << '"');
 			throw std::exception();
 		}
 	}

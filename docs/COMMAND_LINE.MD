@@ -41,6 +41,7 @@
 --rpc-ssl-fingerprint base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)
 --no-stratum-http     Disable HTTP on Stratum ports
 --full-validation     Enables full share validation / increases CPU usage
+--onion-address       Tell other peers to use this .onion address to connect to this node through TOR
 ```
 
 ### Example command line

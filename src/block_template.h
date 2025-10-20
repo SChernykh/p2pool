@@ -29,6 +29,7 @@ class Mempool;
 class Wallet;
 struct PoolBlock;
 struct MinerShare;
+struct Params;
 
 class BlockTemplate
 {
@@ -39,7 +40,7 @@ public:
 	BlockTemplate(const BlockTemplate& b);
 	BlockTemplate& operator=(const BlockTemplate& b);
 
-	void update(const MinerData& data, const Mempool& mempool, const Wallet& miner_wallet, const Wallet& subaddress);
+	void update(const MinerData& data, const Mempool& mempool, const Params* params);
 	uint64_t last_updated() const { return m_lastUpdated.load(); }
 
 	bool get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty) const;

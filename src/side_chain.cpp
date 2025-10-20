@@ -101,7 +101,6 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	m_curDifficulty = m_minDifficulty;
 
 	uv_rwlock_init_checked(&m_sidechainLock);
-	uv_mutex_init_checked(&m_seenWalletsLock);
 	uv_mutex_init_checked(&m_incomingBlocksLock);
 	uv_rwlock_init_checked(&m_curDifficultyLock);
 	uv_rwlock_init_checked(&m_watchBlockLock);
@@ -226,7 +225,6 @@ SideChain::~SideChain()
 	finish_precalc();
 
 	uv_rwlock_destroy(&m_sidechainLock);
-	uv_mutex_destroy(&m_seenWalletsLock);
 	uv_mutex_destroy(&m_incomingBlocksLock);
 	uv_rwlock_destroy(&m_curDifficultyLock);
 	uv_rwlock_destroy(&m_watchBlockLock);
@@ -693,8 +691,18 @@ bool SideChain::add_block(const PoolBlock& block)
 
 	PoolBlock* new_block = new PoolBlock(block);
 	{
-		MutexLock lock(m_seenWalletsLock);
+		WriteLock lock(m_seenDataLock);
+
 		m_seenWallets[new_block->m_minerWallet.spend_public_key()] = new_block->m_localTimestamp;
+
+		auto it = new_block->m_mergeMiningExtra.find(keccak_onion_address_v3);
+		if ((it != new_block->m_mergeMiningExtra.end()) && (it->second.size() >= HASH_SIZE)) {
+			hash h;
+			memcpy(h.h, it->second.data(), HASH_SIZE);
+			m_seenOnionPubkeys[h] = new_block->m_localTimestamp;
+		}
+
+		prune_seen_data();
 	}
 
 	WriteLock lock(m_sidechainLock);
@@ -1143,26 +1151,29 @@ difficulty_type SideChain::total_hashes() const
 	return tip ? tip->m_cumulativeDifficulty : difficulty_type();
 }
 
-uint64_t SideChain::miner_count()
+// Expects that m_seenDataLock is already locked for writing
+void SideChain::prune_seen_data()
 {
 	const uint64_t cur_time = seconds_since_epoch();
 
-	MutexLock lock(m_seenWalletsLock);
-
-	// Every 5 minutes, delete wallets that weren't seen for more than 72 hours
+	// Every 5 minutes, delete wallets that weren't seen for more than 72 hours and onion pubkeys that weren't seen for more than 12 hours
 	if (m_seenWalletsLastPruneTime + 5ul * 60ul <= cur_time) {
-		for (auto it = m_seenWallets.begin(); it != m_seenWallets.end();) {
-			if (it->second + 72ul * 60ul * 60ul < cur_time) {
-				it = m_seenWallets.erase(it);
+		auto prune = [cur_time](auto& data, uint64_t timeout) {
+			for (auto it = data.begin(); it != data.end();) {
+				if (it->second + timeout < cur_time) {
+					it = data.erase(it);
+				}
+				else {
+					++it;
+				}
 			}
-			else {
-				++it;
-			}
-		}
+		};
+
+		prune(m_seenWallets, 72 * 3600);
+		prune(m_seenOnionPubkeys, 12 * 3600);
+
 		m_seenWalletsLastPruneTime = cur_time;
 	}
-
-	return m_seenWallets.size();
 }
 
 uint64_t SideChain::last_updated() const
@@ -1354,6 +1365,21 @@ bool SideChain::p2pool_update_available() const
 
 	// Assume that a new version is out if >= 20% of hashrate is using it already
 	return newer_p2pool_diff * 5 >= total_p2pool_diff;
+}
+
+std::vector<hash> SideChain::seen_onion_pubkeys() const
+{
+	std::vector<hash> result;
+
+	ReadLock lock(m_seenDataLock);
+
+	result.reserve(m_seenOnionPubkeys.size());
+
+	for (const auto& it : m_seenOnionPubkeys) {
+		result.push_back(it.first);
+	}
+
+	return result;
 }
 
 void SideChain::verify_loop(PoolBlock* block)

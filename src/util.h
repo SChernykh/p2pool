@@ -397,6 +397,9 @@ FORCEINLINE void secure_zero_memory(T& value)
 	secure_zero_memory(&value, sizeof(T));
 }
 
+std::string to_onion_v3(const hash& pubkey);
+hash from_onion_v3(const std::string& address);
+
 } // namespace p2pool
 
 void memory_tracking_start();

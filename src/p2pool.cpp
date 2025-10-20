@@ -1246,7 +1246,7 @@ void p2pool::update_block_template()
 	if (m_updateSeed.exchange(false)) {
 		m_hasher->set_seed_async(data.seed_hash);
 	}
-	m_blockTemplate->update(data, *m_mempool, m_params->m_miningWallet, m_params->m_subaddress);
+	m_blockTemplate->update(data, *m_mempool, m_params);
 	stratum_on_block();
 	api_update_pool_stats();
 

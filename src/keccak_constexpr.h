@@ -22,9 +22,6 @@ namespace p2pool {
 namespace ConstexprKeccak
 {
 
-template<int y>
-static FORCEINLINE constexpr uint64_t rotl64(uint64_t x) { return (x << y) | (x >> (64 - y)); }
-
 template<int ROUNDS>
 static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 {
@@ -39,6 +36,8 @@ static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 		0x000000000000800a, 0x800000008000000a, 0x8000000080008081,
 		0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 	};
+	constexpr int order[25] = { 1, 6, 9, 22, 14, 20, 2, 12, 13, 19, 23, 15, 4, 24, 21, 8, 16, 5, 3, 18, 17, 11, 7, 10, 1 };
+	constexpr int shift[24] = { 44, 20, 61, 39, 18, 62, 43, 25, 8, 56, 41, 27, 14, 2, 55, 45, 36, 28, 21, 15, 10, 6, 3, 1 };
 
 	for (int round = 0; round < ROUNDS; ++round) {
 		uint64_t bc[5] = {};
@@ -47,36 +46,13 @@ static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 		for (int i = 0; i < 5; ++i) bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
 
 		for (int i = 0; i < 5; ++i) {
-			const uint64_t t = bc[(i + 4) % 5] ^ rotl64<1>(bc[(i + 1) % 5]);
+			const uint64_t t = bc[(i + 4) % 5] ^ ((bc[(i + 1) % 5] << 1) | (bc[(i + 1) % 5] >> 63));
 			for (int j = 0; j < 25; j += 5) st[i + j] ^= t;
 		}
 
 		// Rho Pi
-		const uint64_t st1 = st[1];
-		st[ 1] = rotl64<44>(st[ 6]);
-		st[ 6] = rotl64<20>(st[ 9]);
-		st[ 9] = rotl64<61>(st[22]);
-		st[22] = rotl64<39>(st[14]);
-		st[14] = rotl64<18>(st[20]);
-		st[20] = rotl64<62>(st[ 2]);
-		st[ 2] = rotl64<43>(st[12]);
-		st[12] = rotl64<25>(st[13]);
-		st[13] = rotl64< 8>(st[19]);
-		st[19] = rotl64<56>(st[23]);
-		st[23] = rotl64<41>(st[15]);
-		st[15] = rotl64<27>(st[ 4]);
-		st[ 4] = rotl64<14>(st[24]);
-		st[24] = rotl64< 2>(st[21]);
-		st[21] = rotl64<55>(st[ 8]);
-		st[ 8] = rotl64<45>(st[16]);
-		st[16] = rotl64<36>(st[ 5]);
-		st[ 5] = rotl64<28>(st[ 3]);
-		st[ 3] = rotl64<21>(st[18]);
-		st[18] = rotl64<15>(st[17]);
-		st[17] = rotl64<10>(st[11]);
-		st[11] = rotl64< 6>(st[ 7]);
-		st[ 7] = rotl64< 3>(st[10]);
-		st[10] = rotl64< 1>(st1);
+		const auto st0 = st;
+		for (int i = 0; i < 24; ++i) st[order[i]] = (st0[order[i + 1]] << shift[i]) | (st0[order[i + 1]] >> (64 - shift[i]));
 
 		//  Chi
 		for (int i = 0; i < 25; i += 5) {
@@ -94,20 +70,11 @@ static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 template<int len>
 static constexpr hash keccak(const char (&input)[len])
 {
-	hash result{};
-
-	if constexpr (len <= 0) {
-		return result;
-	}
-
-	constexpr int inlen = len - 1;
-
 	constexpr int rsiz = 136;
-	constexpr int rsizw = rsiz / 8;
-
+	constexpr int inlen = len - 1;
 	static_assert(inlen < rsiz, "Too long input");
 
-	uint8_t temp[144] = {};
+	uint8_t temp[rsiz] = {};
 
 	for (int i = 0; i < inlen; ++i) {
 		temp[i] = static_cast<uint8_t>(input[i]);
@@ -118,7 +85,7 @@ static constexpr hash keccak(const char (&input)[len])
 
 	std::array<uint64_t, 25> st = {};
 
-	for (int i = 0; i < rsizw; i++) {
+	for (int i = 0; i < rsiz / 8; i++) {
 		uint64_t k = 0;
 		for (int j = 0; j < 8; ++j) {
 			k |= static_cast<uint64_t>(temp[i * 8 + j]) << (j * 8);
@@ -127,6 +94,8 @@ static constexpr hash keccak(const char (&input)[len])
 	}
 
 	ConstexprKeccak::keccakf<24>(st);
+
+	hash result{};
 
 	for (size_t i = 0; i < HASH_SIZE; ++i) {
 		result.h[i] = static_cast<uint8_t>(st[i / 8] >> ((i % 8) * 8));

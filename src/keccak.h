@@ -49,7 +49,7 @@ FORCEINLINE void keccak(const uint8_t* in, int inlen, uint8_t (&md)[N])
 }
 
 template<typename T>
-FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
+FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen, bool SHA3 = false)
 {
 	std::array<uint64_t, 25> st = {};
 
@@ -76,7 +76,7 @@ FORCEINLINE void keccak_custom(T&& in, int inlen, uint8_t* md, int mdlen)
 		temp[i] = in(offset + i);
 	}
 
-	temp[inlen++] = 1;
+	temp[inlen++] = SHA3 ? 6 : 1;
 	memset(temp + inlen, 0, rsiz - inlen);
 	temp[rsiz - 1] |= 0x80;
 

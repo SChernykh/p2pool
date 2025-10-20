@@ -74,7 +74,8 @@ public:
 	[[nodiscard]] FORCEINLINE difficulty_type difficulty() const { ReadLock lock(m_curDifficultyLock); return m_curDifficulty; }
 	[[nodiscard]] difficulty_type total_hashes() const;
 	[[nodiscard]] uint64_t block_time() const { return m_targetBlockTime; }
-	[[nodiscard]] uint64_t miner_count();
+	[[nodiscard]] FORCEINLINE uint64_t miner_count() const { ReadLock lock(m_seenDataLock); return m_seenWallets.size(); }
+	[[nodiscard]] FORCEINLINE uint64_t onion_pubkeys_count() const { ReadLock lock(m_seenDataLock); return m_seenOnionPubkeys.size(); }
 	[[nodiscard]] uint64_t last_updated() const;
 	[[nodiscard]] bool is_default() const;
 	[[nodiscard]] bool is_mini() const;
@@ -85,6 +86,8 @@ public:
 	[[nodiscard]] bool precalcFinished() const { return m_precalcFinished.load(); }
 
 	[[nodiscard]] bool p2pool_update_available() const;
+
+	[[nodiscard]] std::vector<hash> seen_onion_pubkeys() const;
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
@@ -114,14 +117,17 @@ private:
 	[[nodiscard]] bool load_config(const std::string& filename);
 	[[nodiscard]] bool check_config() const;
 
+	void prune_seen_data();
+
 	mutable uv_rwlock_t m_sidechainLock;
 	std::atomic<PoolBlock*> m_chainTip;
 	std::map<uint64_t, std::vector<PoolBlock*>> m_blocksByHeight;
 	unordered_map<hash, PoolBlock*> m_blocksById;
 	unordered_map<root_hash, PoolBlock*> m_blocksByMerkleRoot;
 
-	uv_mutex_t m_seenWalletsLock;
+	mutable ReadWriteLock m_seenDataLock;
 	unordered_map<hash, uint64_t> m_seenWallets;
+	unordered_map<hash, uint64_t> m_seenOnionPubkeys;
 	uint64_t m_seenWalletsLastPruneTime;
 
 	// Used to quickly cut off multiple broadcasts of the same block by different peers. Only the first broadcast will be processed.

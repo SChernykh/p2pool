@@ -204,7 +204,7 @@ void BlockTemplate::shuffle_tx_order()
 	}
 }
 
-void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Wallet& miner_wallet, const Wallet& subaddress)
+void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Params* params)
 {
 	if (data.major_version > HARDFORK_SUPPORTED_VERSION) {
 		LOGERR(1, "got hardfork version " << data.major_version << ", expected <= " << HARDFORK_SUPPORTED_VERSION);
@@ -269,7 +269,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_blockHeaderSize = m_blockHeader.size();
 
-	m_poolBlockTemplate->m_minerWallet = miner_wallet;
+	m_poolBlockTemplate->m_minerWallet = params->m_miningWallet;
 
 	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares)) {
 		use_old_template();
@@ -595,7 +595,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		m_poolBlockTemplate->m_transactions.push_back(m_mempoolTxs[m_mempoolTxsOrder[i]].id);
 	}
 
-	m_poolBlockTemplate->m_minerWallet = miner_wallet;
+	m_poolBlockTemplate->m_minerWallet = params->m_miningWallet;
 
 	// Layout: [software id, version, random number, sidechain extra_nonce]
 	uint32_t* sidechain_extra = m_poolBlockTemplate->m_sidechainExtraBuf;
@@ -630,16 +630,18 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
 	}
 
-	if (subaddress.valid()) {
-		std::vector<uint8_t> v;
-		v.reserve(HASH_SIZE + 2);
+	if (params->m_subaddress.valid()) {
+		uint8_t buf[HASH_SIZE + 2] = {};
+		memcpy(buf, params->m_subaddress.view_public_key().h, HASH_SIZE);
 
-		const hash& key = subaddress.view_public_key();
-		v.insert(v.end(), key.h, key.h + HASH_SIZE);
-		v.push_back(0);
-		v.push_back(0);
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_subaddress_viewpub, std::vector(buf, buf + sizeof(buf)));
+	}
 
-		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_subaddress_viewpub, std::move(v));
+	if (!params->m_onionPubkey.empty()) {
+		uint8_t buf[HASH_SIZE + 2] = {};
+		memcpy(buf, params->m_onionPubkey.h, HASH_SIZE);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_onion_address_v3, std::vector(buf, buf + sizeof(buf)));
 	}
 
 	init_merge_mining_merkle_proof();

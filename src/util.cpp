@@ -18,6 +18,12 @@
 #include "common.h"
 #include "util.h"
 #include "uv_util.h"
+#include "keccak.h"
+
+extern "C" {
+#include "crypto-ops.h"
+}
+
 #include <map>
 #include <istream>
 #include <ostream>
@@ -480,7 +486,7 @@ struct BackgroundJobTracker::Impl
 			result.reserve(m_jobs.size());
 
 			for (const auto& job : m_jobs) {
-				result.emplace_back(job.first, job.second);
+				result.emplace_back(job.first.data(), job.second);
 			}
 		}
 		return result;
@@ -505,10 +511,8 @@ struct BackgroundJobTracker::Impl
 		LOGINFO(0, "background jobs running:" << log::const_buf(buf, s.m_pos));
 	}
 
-	struct Compare { FORCEINLINE bool operator()(const char* a, const char* b) const { return strcmp(a, b) < 0; } };
-
 	uv_mutex_t m_lock;
-	std::map<const char*, int32_t, Compare> m_jobs;
+	std::map<std::string_view, int32_t> m_jobs;
 };
 
 BackgroundJobTracker::BackgroundJobTracker() : m_impl(new Impl())
@@ -945,6 +949,115 @@ void set_thread_name(const char* name)
 #else
 	(void)name;
 #endif
+}
+
+std::string to_onion_v3(const hash& pubkey)
+{
+	static constexpr uint8_t prefix[] = ".onion checksum";
+	static constexpr uint8_t version = 3;
+
+	hash h;
+	keccak_custom([&pubkey](int offset) {
+		size_t k = static_cast<size_t>(offset);
+		if (k < sizeof(prefix) - 1) {
+			return prefix[k];
+		}
+		k -= sizeof(prefix) - 1;
+
+		return (k < HASH_SIZE) ? pubkey.h[k] : version;
+	}, sizeof(prefix) + HASH_SIZE, h.h, HASH_SIZE, true);
+
+	// pubkey (32 bytes), checksum (2 bytes), version (1 byte), and a zero byte for padding
+	uint8_t buf[HASH_SIZE + 4];
+
+	memcpy(buf, pubkey.h, HASH_SIZE);
+	memcpy(buf + HASH_SIZE, h.h, 2);
+	buf[HASH_SIZE + 2] = version;
+	buf[HASH_SIZE + 3] = 0;
+
+	std::string result;
+	result.reserve(62);
+
+	uint64_t data = 0;
+	uint64_t bit_size = 0;
+
+	for (size_t i = 0; i < HASH_SIZE + 3; ++i) {
+		data = (data << 8) | buf[i];
+		bit_size += 8;
+
+		while (bit_size >= 5) {
+			bit_size -= 5;
+			result += "abcdefghijklmnopqrstuvwxyz234567"[(data >> bit_size) & 31];
+		}
+	}
+
+	result.append(".onion");
+
+	return result;
+}
+
+hash from_onion_v3(const std::string& address)
+{
+	if ((address.length() < 6) || (address.find(".onion") != address.length() - 6)) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": doesn't end with \".onion\"");
+		return {};
+	}
+
+	if (address.length() != 62) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": expected length 62, got " << address.length() );
+		return {};
+	}
+
+	uint8_t buf[HASH_SIZE + 4] = {};
+	uint8_t* p = buf;
+
+	uint64_t data = 0;
+	uint64_t bit_size = 0;
+
+	for (size_t i = 0; i < 56; ++i) {
+		const char c = address[i];
+		uint64_t digit;
+
+		if ('a' <= c && c <= 'z') {
+			digit = static_cast<uint64_t>(c - 'a');
+		}
+		else if ('A' <= c && c <= 'Z') {
+			digit = static_cast<uint64_t>(c - 'A');
+		}
+		else if ('2' <= c && c <= '7') {
+			digit = static_cast<uint64_t>(c - '2') + 26;
+		}
+		else {
+			LOGWARN(3, "Invalid onion address \"" << address << "\": has an invalid character \"" << c << '"');
+			return {};
+		}
+
+		data = (data << 5) | digit;
+		bit_size += 5;
+
+		while (bit_size >= 8) {
+			bit_size -= 8;
+			*(p++) = static_cast<uint8_t>(data >> bit_size);
+		}
+	}
+
+	hash result;
+	memcpy(result.h, buf, HASH_SIZE);
+
+	// Checksum validation
+	if (to_onion_v3(result) != address) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": checksum failed");
+		return {};
+	}
+
+	// Pubkey validation
+	ge_p3 point;
+	if (ge_frombytes_vartime(&point, result.h) != 0) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": invalid ed25519 pubkey");
+		return {};
+	}
+
+	return result;
 }
 
 } // namespace p2pool

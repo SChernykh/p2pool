@@ -106,6 +106,7 @@ void p2pool_usage()
 #endif
 		"--no-stratum-http     Disable HTTP on Stratum ports\n"
 		"--full-validation     Enables full share validation / increases CPU usage\n"
+		"--onion-address       Tell other peers to use this .onion address to connect to this node through TOR\n"
 		"--help                Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",

@@ -25,6 +25,10 @@ static constexpr uint64_t DEFAULT_STRATUM_BAN_TIME = 600;
 
 struct Params
 {
+#ifdef P2POOL_UNIT_TESTS
+	FORCEINLINE Params() {}
+#endif
+
 	Params(int argc, char* const argv[]);
 
 	bool valid() const;
@@ -124,6 +128,9 @@ struct Params
 	};
 #endif
 	bool m_enableFullValidation = false;
+
+	std::string m_onionAddress;
+	hash m_onionPubkey;
 };
 
 } // namespace p2pool

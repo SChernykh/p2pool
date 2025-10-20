@@ -22,6 +22,7 @@
 #include "side_chain.h"
 #include "wallet.h"
 #include "keccak.h"
+#include "params.h"
 #include "gtest/gtest.h"
 
 namespace p2pool {
@@ -52,11 +53,12 @@ TEST(block_template, update)
 	data.median_timestamp = (1ULL << 35) - 2;
 
 	Mempool mempool;
-	Wallet wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
-	Wallet subaddress{ nullptr };
+	Params params;
+
+	params.m_miningWallet = Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
 
 	// Test 1: empty template
-	tpl.update(data, mempool, wallet, subaddress);
+	tpl.update(data, mempool, &params);
 	ASSERT_EQ(tpl.get_reward(), 600000000000ULL);
 
 	const PoolBlock* b = tpl.pool_block_template();
@@ -111,7 +113,7 @@ TEST(block_template, update)
 	}
 	ASSERT_EQ(mempool.size(), 512);
 
-	tpl.update(data, mempool, wallet, subaddress);
+	tpl.update(data, mempool, &params);
 	ASSERT_EQ(tpl.get_reward(), 612054770773ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("c9df4853003ab436416b9fc9a5a072d16b4dede849e697a8be2ebb9c88c8ec72"));
@@ -152,7 +154,7 @@ TEST(block_template, update)
 
 	data.aux_chains.emplace_back(H("01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990"), H("d9de1cfba7cdbd47f12f77addcb39b24c1ae7a16c35372bf28d6aee5d7579ee6"), difficulty_type(1000000));
 
-	tpl.update(data, mempool, wallet, subaddress);
+	tpl.update(data, mempool, &params);
 	ASSERT_EQ(tpl.get_reward(), 600300000000ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("c32abac2cad40e263a94f5f43f90e0a7d7d4b151305b79951dbc8c88c3180613"));
@@ -189,7 +191,7 @@ TEST(block_template, update)
 	}
 	ASSERT_EQ(mempool.size(), 10000);
 
-	tpl.update(data, mempool, wallet, subaddress);
+	tpl.update(data, mempool, &params);
 	ASSERT_EQ(tpl.get_reward(), 619742028747ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("69e7dd43dd99ac6be3f57ca333cc0d814189e83aee1773c99a341aca085c0d46"));
@@ -242,19 +244,20 @@ TEST(block_template, submit_sidechain_block)
 	data.median_timestamp = (1ULL << 35) - (sidechain.chain_window_size() * 2 + 10) * sidechain.block_time() - 3600;
 
 	Mempool mempool;
-	Wallet wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
-	Wallet subaddress{ nullptr };
+	Params params;
+
+	params.m_miningWallet = Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
 
 	std::mt19937_64 rng(101112);
 
 	for (uint64_t i = 0, i2 = 0, i3 = 0; i < sidechain.chain_window_size() * 3; ++i) {
-		tpl.update(data, mempool, wallet, subaddress);
+		tpl.update(data, mempool, &params);
 
 		if ((rng() % 31) == 0) {
-			tpl2.update(data, mempool, wallet, subaddress);
+			tpl2.update(data, mempool, &params);
 
 			if ((rng() % 11) == 0) {
-				tpl3.update(data, mempool, wallet, subaddress);
+				tpl3.update(data, mempool, &params);
 				++i3;
 				ASSERT_TRUE(tpl3.submit_sidechain_block(i3, 0, 0));
 			}

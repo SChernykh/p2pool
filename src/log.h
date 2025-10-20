@@ -184,6 +184,11 @@ template<> struct Stream::Entry<char>
 	static FORCEINLINE void put(char c, Stream* wrapper) { wrapper->writeBuf(&c, 1); }
 };
 
+template<> struct Stream::Entry<std::string_view>
+{
+	static FORCEINLINE void put(const std::string_view& data, Stream* wrapper) { wrapper->writeBuf(data.data(), data.size()); }
+};
+
 #define INT_ENTRY(x) \
 template<> struct Stream::Entry<x> { static FORCEINLINE void put(x data, Stream* wrapper) { wrapper->writeInt(data); } };
 

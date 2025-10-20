@@ -72,6 +72,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_timerInterval(2)
 	, m_seenGoodPeers(false)
 	, m_peerListLastSaved(0)
+	, m_numOnionConnections(0)
 	, m_lookForMissingBlocks(true)
 	, m_fastestPeer(nullptr)
 	, m_newP2PoolVersionDetected(false)
@@ -318,8 +319,14 @@ void P2PServer::update_peer_connections()
 	uint64_t newer_version_p2pool = 0;
 
 	unordered_set<raw_ip> connected_clients;
+	unordered_set<std::string_view> connected_clients_domain;
 
 	connected_clients.reserve(m_numConnections);
+
+	if (!m_socks5Proxy.empty()) {
+		connected_clients_domain.reserve(m_numConnections);
+	}
+
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		const int timeout = client->m_handshakeComplete ? 300 : 10;
 		if (client->m_lastAlive && (cur_time >= client->m_lastAlive + timeout)) {
@@ -346,7 +353,19 @@ void P2PServer::update_peer_connections()
 			}
 		}
 
-		connected_clients.insert(client->m_addr);
+		if ((client->m_addressType == Client::AddressType::IPv4) || (client->m_addressType == Client::AddressType::IPv6)) {
+			connected_clients.insert(client->m_addr);
+		}
+		else if (!m_socks5Proxy.empty() && (client->m_addressType == Client::AddressType::DomainName)) {
+			const char* c = strchr(client->m_addrString, ':');
+			if (c) {
+				connected_clients_domain.emplace(client->m_addrString, c - client->m_addrString);
+			}
+			else {
+				connected_clients_domain.emplace(client->m_addrString);
+			}
+		}
+
 		if (client->is_good()) {
 			has_good_peers = true;
 			if ((client->m_pingTime >= 0) && (!m_fastestPeer || (m_fastestPeer->m_pingTime > client->m_pingTime))) {
@@ -397,18 +416,36 @@ void P2PServer::update_peer_connections()
 		N = static_cast<uint32_t>(peer_list.size());
 	}
 
+	uint32_t num_outgoing = m_numConnections - m_numIncomingConnections;
+
+	// Try to have at least N/2 outgoing onion connections
+	if (!m_socks5Proxy.empty()) {
+		std::vector<hash> pubkeys = m_pool->side_chain().seen_onion_pubkeys();
+
+		for (uint32_t i = m_numOnionConnections, n = N / 2; (i < n) && !pubkeys.empty();) {
+			const uint64_t k = get_random64() % pubkeys.size();
+			const std::string addr = to_onion_v3(pubkeys[k]);
+
+			if ((connected_clients_domain.find(addr) == connected_clients_domain.end()) && connect_to_peer(addr, DEFAULT_P2P_PORT_ONION)) {
+				++i;
+				++num_outgoing;
+			}
+
+			pubkeys[k] = pubkeys.back();
+			pubkeys.pop_back();
+		}
+	}
+
 	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
-	for (uint32_t i = m_numConnections - m_numIncomingConnections; (i < N) && !peer_list.empty();) {
+	while ((num_outgoing < N) && !peer_list.empty()) {
 		const uint64_t k = get_random64() % peer_list.size();
 		const Peer& peer = peer_list[k];
 
 		if ((connected_clients.find(peer.m_addr) == connected_clients.end()) && connect_to_peer(peer.m_isV6, peer.m_addr, peer.m_port)) {
-			++i;
+			++num_outgoing;
 		}
 
-		if (k + 1 < peer_list.size()) {
-			peer_list[k] = peer_list.back();
-		}
+		peer_list[k] = peer_list.back();
 		peer_list.pop_back();
 	}
 
@@ -1091,12 +1128,15 @@ uint64_t P2PServer::get_random64()
 
 void P2PServer::print_status()
 {
+	const uint64_t onion_list_size = m_pool->side_chain().onion_pubkeys_count();
+
 	MutexLock lock(m_peerListLock);
 
 	LOGINFO(0, "status" <<
-		"\nConnections    = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming)" <<
-		"\nPeer list size = " << m_peerList.size() <<
-		"\nUptime         = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
+		"\nConnections     = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming, " << m_numOnionConnections.load() << " onion)"
+		"\nPeer list size  = " << m_peerList.size() <<
+		"\nOnion list size = " << onion_list_size <<
+		"\nUptime          = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
 	);
 }
 
@@ -1780,8 +1820,13 @@ void P2PServer::P2PClient::reset()
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
-	if (server && (server->m_fastestPeer == this)) {
-		server->m_fastestPeer = nullptr;
+	if (server) {
+		if (server->m_fastestPeer == this) {
+			server->m_fastestPeer = nullptr;
+		}
+		if (m_addressType == AddressType::DomainName) {
+			--server->m_numOnionConnections;
+		}
 	}
 
 	Client::reset();
@@ -1818,7 +1863,7 @@ void P2PServer::P2PClient::reset()
 
 bool P2PServer::P2PClient::on_connect()
 {
-	const P2PServer* server = static_cast<P2PServer*>(m_owner);
+	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
 	if (!server) {
 		return false;
@@ -1837,6 +1882,10 @@ bool P2PServer::P2PClient::on_connect()
 				return false;
 			}
 		}
+	}
+
+	if (m_addressType == AddressType::DomainName) {
+		++server->m_numOnionConnections;
 	}
 
 	const uint64_t cur_time = seconds_since_epoch();

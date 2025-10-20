@@ -36,6 +36,8 @@ static constexpr int DEFAULT_P2P_PORT = 37889;
 static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 static constexpr int DEFAULT_P2P_PORT_NANO = 37890;
 
+static constexpr int DEFAULT_P2P_PORT_ONION = 28722;
+
 static constexpr uint32_t PROTOCOL_VERSION_1_0 = 0x00010000UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_2 = 0x00010002UL;
@@ -287,6 +289,8 @@ private:
 	std::vector<Peer> m_peerList;
 	std::vector<Peer> m_peerListMonero;
 	std::atomic<uint64_t> m_peerListLastSaved;
+
+	std::atomic<uint32_t> m_numOnionConnections;
 
 	uv_mutex_t m_broadcastLock;
 	uv_async_t m_broadcastAsync;
