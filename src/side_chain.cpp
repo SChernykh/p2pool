@@ -1169,8 +1169,10 @@ void SideChain::prune_seen_data()
 			}
 		};
 
-		prune(m_seenWallets, 72 * 3600);
-		prune(m_seenOnionPubkeys, 12 * 3600);
+		constexpr uint64_t hour = 3600;
+
+		prune(m_seenWallets, 72 * hour);
+		prune(m_seenOnionPubkeys, 12 * hour);
 
 		m_seenWalletsLastPruneTime = cur_time;
 	}

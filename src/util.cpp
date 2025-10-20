@@ -957,7 +957,7 @@ std::string to_onion_v3(const hash& pubkey)
 	static constexpr uint8_t version = 3;
 
 	hash h;
-	keccak_custom([&pubkey](int offset) {
+	keccak_custom([&pubkey](int offset) -> uint8_t {
 		size_t k = static_cast<size_t>(offset);
 		if (k < sizeof(prefix) - 1) {
 			return prefix[k];
