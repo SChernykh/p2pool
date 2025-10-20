@@ -1015,8 +1015,14 @@ hash from_onion_v3(const std::string& address)
 		return {};
 	}
 
+	// Convert address to lowercase
+	std::string s = address;
+	for (char& c : s) {
+		c = static_cast<char>(std::tolower(c));
+	}
+
 	// Checksum validation
-	if (to_onion_v3(result) != address) {
+	if (to_onion_v3(result) != s) {
 		LOGWARN(3, "Invalid onion address \"" << address << "\": checksum failed");
 		return {};
 	}

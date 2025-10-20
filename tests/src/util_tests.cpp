@@ -221,14 +221,21 @@ TEST(util, onion)
 		"testq4ryujfitfcxabcjde6m7uqdztdep6mzd32e4wbtqna4jyponaad.onion",
 		"test2muitbvopcoducxb6d5bqry5dmxdatupvh34anzjdeav6xiigead.onion",
 		"test76ais6k5t4bmap4uyl2eleh6o4g423cxuvifcoke4gtgd6pjtpqd.onion",
+		"TEST76ais6k5t4bmap4uyl2eleh6o4g423cxuvifcoke4gtgd6pjtpqd.onion",
 	};
 
 	for (const std::string& address : tests) {
 		const hash h = from_onion_v3(address);
 		ASSERT_TRUE(!h.empty());
 
-		const std::string s = to_onion_v3(h);
-		ASSERT_EQ(s, address);
+		const std::string s1 = to_onion_v3(h);
+
+		std::string s2 = address;
+		for (char& c : s2) {
+			c = std::tolower(c);
+		}
+
+		ASSERT_EQ(s1, s2);
 	}
 
 	ASSERT_TRUE(from_onion_v3("tooshort.onion").empty());
