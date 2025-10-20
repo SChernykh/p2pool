@@ -1384,6 +1384,23 @@ std::vector<hash> SideChain::seen_onion_pubkeys() const
 	return result;
 }
 
+void SideChain::add_onion_pubkeys(const std::vector<hash>& pubkeys)
+{
+	if (pubkeys.empty()) {
+		return;
+	}
+
+	const uint64_t cur_time = seconds_since_epoch();
+
+	WriteLock lock(m_seenDataLock);
+
+	for (const hash& h : pubkeys) {
+		if (!h.empty()) {
+			m_seenOnionPubkeys[h] = cur_time;
+		}
+	}
+}
+
 void SideChain::verify_loop(PoolBlock* block)
 {
 	// PoW is already checked at this point

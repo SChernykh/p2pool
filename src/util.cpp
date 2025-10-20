@@ -1008,41 +1008,12 @@ hash from_onion_v3(const std::string& address)
 		return {};
 	}
 
-	uint8_t buf[HASH_SIZE + 4] = {};
-	uint8_t* p = buf;
+	const hash result = from_onion_v3_const(address.c_str());
 
-	uint64_t data = 0;
-	uint64_t bit_size = 0;
-
-	for (size_t i = 0; i < 56; ++i) {
-		const char c = address[i];
-		uint64_t digit;
-
-		if ('a' <= c && c <= 'z') {
-			digit = static_cast<uint64_t>(c - 'a');
-		}
-		else if ('A' <= c && c <= 'Z') {
-			digit = static_cast<uint64_t>(c - 'A');
-		}
-		else if ('2' <= c && c <= '7') {
-			digit = static_cast<uint64_t>(c - '2') + 26;
-		}
-		else {
-			LOGWARN(3, "Invalid onion address \"" << address << "\": has an invalid character \"" << c << '"');
-			return {};
-		}
-
-		data = (data << 5) | digit;
-		bit_size += 5;
-
-		while (bit_size >= 8) {
-			bit_size -= 8;
-			*(p++) = static_cast<uint8_t>(data >> bit_size);
-		}
+	if (result.empty()) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": has invalid character(s)");
+		return {};
 	}
-
-	hash result;
-	memcpy(result.h, buf, HASH_SIZE);
 
 	// Checksum validation
 	if (to_onion_v3(result) != address) {

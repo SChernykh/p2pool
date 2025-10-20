@@ -47,6 +47,7 @@
 LOG_CATEGORY(P2PServer)
 
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
+static constexpr char saved_onion_peer_list_file_name[] = "p2pool_onion_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "main.gupax.io", "" };
 static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "mini.gupax.io", "" };
 static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpeers.net", "nano.gupax.io", ""};
@@ -56,6 +57,11 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 
 namespace p2pool {
+
+static constexpr hash seed_onion_nodes[] = {
+	from_onion_v3_const("p2pseeds5qoenuuseyuqxhzzefzxpbhiq4z4h5hfbry5dxd5y2fwudyd.onion"),
+	from_onion_v3_const("p2pool2giz2r5cpqicajwoazjcxkfujxswtk3jolfk2ubilhrkqam2id.onion")
+};
 
 P2PServer::P2PServer(p2pool* pool)
 	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy)
@@ -422,11 +428,24 @@ void P2PServer::update_peer_connections()
 	if (!m_socks5Proxy.empty()) {
 		std::vector<hash> pubkeys = m_pool->side_chain().seen_onion_pubkeys();
 
+		// Add seed nodes
+		pubkeys.insert(pubkeys.end(), seed_onion_nodes, seed_onion_nodes + array_size(seed_onion_nodes));
+
 		for (uint32_t i = m_numOnionConnections, n = N / 2; (i < n) && !pubkeys.empty();) {
 			const uint64_t k = get_random64() % pubkeys.size();
 			const std::string addr = to_onion_v3(pubkeys[k]);
 
-			if ((connected_clients_domain.find(addr) == connected_clients_domain.end()) && connect_to_peer(addr, DEFAULT_P2P_PORT_ONION)) {
+			int port = DEFAULT_P2P_PORT_ONION;
+
+			for (const hash& seed_onion : seed_onion_nodes) {
+				if (pubkeys[k] == seed_onion) {
+					const SideChain& s = m_pool->side_chain();
+					port = s.is_mini() ? DEFAULT_P2P_PORT_MINI : (s.is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+					break;
+				}
+			}
+
+			if ((connected_clients_domain.find(addr) == connected_clients_domain.end()) && connect_to_peer(addr, port)) {
 				++i;
 				++num_outgoing;
 			}
@@ -579,6 +598,31 @@ void P2PServer::save_peer_list()
 	f.close();
 
 	LOGINFO(5, "peer list saved (" << peer_list.size() << " peers)");
+
+	const SideChain& s = m_pool->side_chain();
+
+	if (s.onion_pubkeys_count() > 0) {
+		const std::string onion_path = DATA_DIR + saved_onion_peer_list_file_name;
+
+		f.open(onion_path, std::ios::binary);
+
+		if (!f.is_open()) {
+			LOGERR(1, "failed to save onion peer list " << onion_path << ": error " << errno);
+		}
+		else {
+			const std::vector<hash> pubkeys = s.seen_onion_pubkeys();
+
+			for (const hash& h : pubkeys) {
+				f << to_onion_v3(h) << '\n';
+			}
+
+			f.flush();
+			f.close();
+
+			LOGINFO(5, "onion peer list saved (" << pubkeys.size() << " peers)");
+		}
+	}
+
 	m_peerListLastSaved = seconds_since_epoch();
 }
 
@@ -662,34 +706,54 @@ void P2PServer::load_peer_list()
 		}
 	};
 
+	SideChain& s = m_pool->side_chain();
+
 	if (m_pool->params().m_dns) {
-		if (m_pool->side_chain().is_default()) {
+		if (s.is_default()) {
 			load_from_seed_nodes(seed_nodes, DEFAULT_P2P_PORT);
 		}
-		else if (m_pool->side_chain().is_mini()) {
+		else if (s.is_mini()) {
 			load_from_seed_nodes(seed_nodes_mini, DEFAULT_P2P_PORT_MINI);
 		}
-		else if (m_pool->side_chain().is_nano()) {
+		else if (s.is_nano()) {
 			load_from_seed_nodes(seed_nodes_nano, DEFAULT_P2P_PORT_NANO);
 		}
 	}
 
-	// Finally load peers from p2pool_peers.txt
-	const std::string path = DATA_DIR + saved_peer_list_file_name;
+	// Finally load peers from p2pool_peers.txt and p2pool_onion_peers.txt
+	for (size_t i = 0, n = (m_socks5Proxy.empty() ? 1 : 2); i < n; ++i) {
+		const std::string path = DATA_DIR + (i ? saved_onion_peer_list_file_name : saved_peer_list_file_name);
 
-	std::ifstream f(path);
-	if (f.is_open()) {
-		std::string address;
-		while (f.good()) {
-			std::getline(f, address);
-			if (!address.empty()) {
-				if (!saved_list.empty()) {
-					saved_list += ',';
+		std::ifstream f(path);
+
+		if (f.is_open()) {
+			std::string address;
+			std::vector<hash> pubkeys;
+
+			while (f.good()) {
+				std::getline(f, address);
+
+				if (!address.empty()) {
+					if (i > 0) {
+						const hash h = from_onion_v3(address);
+						if (!h.empty()) {
+							pubkeys.emplace_back(h);
+						}
+					}
+					else {
+						if (!saved_list.empty()) {
+							saved_list += ',';
+						}
+						saved_list += address;
+					}
 				}
-				saved_list += address;
+			}
+			f.close();
+
+			if (i > 0) {
+				s.add_onion_pubkeys(pubkeys);
 			}
 		}
-		f.close();
 	}
 
 	if (saved_list.empty()) {

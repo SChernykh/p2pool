@@ -88,6 +88,7 @@ public:
 	[[nodiscard]] bool p2pool_update_available() const;
 
 	[[nodiscard]] std::vector<hash> seen_onion_pubkeys() const;
+	void add_onion_pubkeys(const std::vector<hash>& pubkeys);
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
