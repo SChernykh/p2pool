@@ -205,9 +205,16 @@ p2pool::p2pool(int argc, char* argv[])
 
 	m_sideChain = new SideChain(this, type, p->m_mini ? "mini" : (p->m_nano ? "nano" : nullptr));
 
-	if (p->m_p2pAddresses.empty()) {
-		const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : (m_sideChain->is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+	const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : (m_sideChain->is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
 
+	if (p->m_noClearnetP2P) {
+		char buf[48] = {};
+		log::Stream s(buf);
+		s << "127.0.0.1:" << p2p_port;
+
+		p->m_p2pAddresses = buf;
+	}
+	else if (p->m_p2pAddresses.empty()) {
 		char buf[48] = {};
 		log::Stream s(buf);
 		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port;

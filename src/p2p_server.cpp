@@ -60,7 +60,7 @@ namespace p2pool {
 
 static constexpr hash seed_onion_nodes[] = {
 	from_onion_v3_const("p2pseeds5qoenuuseyuqxhzzefzxpbhiq4z4h5hfbry5dxd5y2fwudyd.onion"),
-	from_onion_v3_const("p2pool2giz2r5cpqicajwoazjcxkfujxswtk3jolfk2ubilhrkqam2id.onion")
+	from_onion_v3_const("p2pseedtwyepi4crkf4akceen4twejcptnsbm6gjmzdfgxua57hiijid.onion")
 };
 
 P2PServer::P2PServer(p2pool* pool)
@@ -282,13 +282,15 @@ void P2PServer::connect_to_peers(const std::string& peer_list)
 	parse_address_list(peer_list,
 		[this](bool is_v6, const std::string& /*address*/, std::string ip, int port)
 		{
+			const Params& params = m_pool->params();
+
 			if (!m_socks5Proxy.empty() && (ip.find_first_not_of("0123456789.:") != std::string::npos)) {
 				// Assume it's a domain name and use the proxy to resolve it
 				if (!connect_to_peer(ip, port)) {
 					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
 				}
 			}
-			else if (!m_pool->params().m_dns || resolve_host(ip, is_v6)) {
+			else if (!params.m_noClearnetP2P && (!params.m_dns || resolve_host(ip, is_v6))) {
 				if (!connect_to_peer(is_v6, ip.c_str(), port)) {
 					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
 				}
@@ -456,16 +458,18 @@ void P2PServer::update_peer_connections()
 	}
 
 	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
-	while ((num_outgoing < N) && !peer_list.empty()) {
-		const uint64_t k = get_random64() % peer_list.size();
-		const Peer& peer = peer_list[k];
+	if (!m_pool->params().m_noClearnetP2P) {
+		while ((num_outgoing < N) && !peer_list.empty()) {
+			const uint64_t k = get_random64() % peer_list.size();
+			const Peer& peer = peer_list[k];
 
-		if ((connected_clients.find(peer.m_addr) == connected_clients.end()) && connect_to_peer(peer.m_isV6, peer.m_addr, peer.m_port)) {
-			++num_outgoing;
+			if ((connected_clients.find(peer.m_addr) == connected_clients.end()) && connect_to_peer(peer.m_isV6, peer.m_addr, peer.m_port)) {
+				++num_outgoing;
+			}
+
+			peer_list[k] = peer_list.back();
+			peer_list.pop_back();
 		}
-
-		peer_list[k] = peer_list.back();
-		peer_list.pop_back();
 	}
 
 	if (!has_good_peers && ((m_timerCounter % 10) == 0) && (SideChain::network_type() == NetworkType::Mainnet)) {

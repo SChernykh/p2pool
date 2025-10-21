@@ -273,6 +273,11 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+		if (strcmp(argv[i], "--no-clearnet-p2p") == 0) {
+			m_noClearnetP2P = true;
+			ok = true;
+		}
+
 		if (!ok) {
 			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));

@@ -131,6 +131,7 @@ struct Params
 
 	std::string m_onionAddress;
 	hash m_onionPubkey;
+	bool m_noClearnetP2P = false;
 };
 
 } // namespace p2pool

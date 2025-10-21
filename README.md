@@ -60,6 +60,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * Advanced mempool picking algorithm, it creates blocks with better reward than what monerod solo mining does
 * Password protected private pools
 * Highly reliable configurations are supported (multiple P2Pool nodes mining to the same wallet, each P2Pool node can use multiple Monero nodes and switch on the fly if an issue is detected)
+* Mining through [TOR](docs/TOR.MD) is fully supported
 
 ## How payouts work in P2Pool
 

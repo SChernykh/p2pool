@@ -42,6 +42,7 @@
 --no-stratum-http     Disable HTTP on Stratum ports
 --full-validation     Enables full share validation / increases CPU usage
 --onion-address       Tell other peers to use this .onion address to connect to this node through TOR
+--no-clearnet-p2p     Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs
 ```
 
 ### Example command line
