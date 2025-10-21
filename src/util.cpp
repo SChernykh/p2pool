@@ -1017,9 +1017,7 @@ hash from_onion_v3(const std::string& address)
 
 	// Convert address to lowercase
 	std::string s = address;
-	for (char& c : s) {
-		c = static_cast<char>(std::tolower(c));
-	}
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
 	// Checksum validation
 	if (to_onion_v3(result) != s) {
