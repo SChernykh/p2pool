@@ -27,37 +27,37 @@ TEST(wallet, input_output)
 	// No data
 	{
 		Wallet w(nullptr);
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// Wrong length
 	{
 		Wallet w("456");
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// Symbol '0' is not from base-58
 	{
 		Wallet w("40ccoSmrBTPJd5yf8VYCULh4J5rHQaXP1TeC8Cnqhd5H9Y2cMwkJ9w42euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HLSexS6");
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// Invalid checksum
 	{
 		Wallet w("49ccoSmrBTPJd5yf8VYCULh4J5rHQaXP1TeC8Cnqhd5H9Y2cMwkJ9w42euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HLSexS7");
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// 64-bit overflow
 	{
 		Wallet w("49ccoSmrBTPzzzzzzzzzzzh4J5rHQaXP1TeC8Cnqhd5H9Y2cMwkJ9w42euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HLSexS6");
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// Invalid pubkey
 	{
 		Wallet w("47wU9Pe8Ez8anN3jf2XjqfXQfxmoqT4Pw1h4msNWyynMBiwjCtkQFAvBoR7sQJR4Khhcq8Nmgufa6JKLm8yWEu9R1g6B9jj");
-		ASSERT_EQ(w.valid(), false);
+		ASSERT_FALSE(w.valid());
 	}
 
 	// Invalid pubkeys
@@ -74,6 +74,17 @@ TEST(wallet, input_output)
 		ASSERT_FALSE(w.assign(invalid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
 		ASSERT_FALSE(w.assign(valid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
 		ASSERT_FALSE(w.assign(invalid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
+	}
+
+	// Invalid prefix
+	{
+		Wallet w1("4KKHpFbLniuJd5yf8VYCULh4J5rHQaXP1TeC8Cnqhd5H9Y2cMwkJ9w42euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HLSexS6");
+		Wallet w2("49ccoSmrBTPJd5yf8VYCULh4J5rHQaXP1TeC8Cnqhd5H9Y2cMwkJ9w42euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HLSexS6");
+
+		ASSERT_TRUE(w2.assign(w2.spend_public_key(), w2.view_public_key(), NetworkType::Invalid, false));
+
+		ASSERT_FALSE(w1.valid());
+		ASSERT_FALSE(w2.valid());
 	}
 
 	auto check = [](NetworkType t, bool subaddress, uint64_t prefix, uint32_t checksum, const char* address, const char* spendkey, const char* viewkey)
