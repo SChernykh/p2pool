@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "wallet.h"
+#include "keccak.h"
 #include "gtest/gtest.h"
 
 namespace p2pool {
@@ -53,6 +54,28 @@ TEST(wallet, input_output)
 		ASSERT_EQ(w.valid(), false);
 	}
 
+	// Invalid pubkey
+	{
+		Wallet w("47wU9Pe8Ez8anN3jf2XjqfXQfxmoqT4Pw1h4msNWyynMBiwjCtkQFAvBoR7sQJR4Khhcq8Nmgufa6JKLm8yWEu9R1g6B9jj");
+		ASSERT_EQ(w.valid(), false);
+	}
+
+	// Invalid pubkeys
+	{
+		Wallet w(nullptr);
+
+		constexpr hash invalid_spend_pub = keccak("invalid spend pub key 1");
+		constexpr hash valid_spend_pub = keccak("valid spend pub key 2");
+
+		constexpr hash invalid_view_pub = keccak("invalid view pub key 3");
+		constexpr hash valid_view_pub = keccak("valid view pub key 1");
+
+		ASSERT_TRUE(w.assign(valid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(invalid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(valid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(invalid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
+	}
+
 	auto check = [](NetworkType t, bool subaddress, uint64_t prefix, uint32_t checksum, const char* address, const char* spendkey, const char* viewkey)
 	{
 		// Test Wallet::decode()
@@ -85,7 +108,7 @@ TEST(wallet, input_output)
 
 		// Test Wallet::assign()
 		Wallet w2(nullptr);
-		w2.assign(w.spend_public_key(), w.view_public_key(), w.type(), w.is_subaddress());
+		ASSERT_TRUE(w2.assign(w.spend_public_key(), w.view_public_key(), w.type(), w.is_subaddress()));
 
 		ASSERT_EQ(w2.prefix(),           w.prefix());
 		ASSERT_EQ(w2.spend_public_key(), w.spend_public_key());
