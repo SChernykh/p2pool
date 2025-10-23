@@ -63,6 +63,7 @@ set(SOURCES
 	../external/src/crypto/sha256.c
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
+	../external/src/cryptonote/fcmp_pp_crypto.cpp
 	../external/src/hardforks/hardforks.cpp
 	../src/block_cache.cpp
 	../src/block_template.cpp

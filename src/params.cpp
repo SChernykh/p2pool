@@ -73,12 +73,22 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--wallet") == 0) && (i + 1 < argc)) {
-			m_mainWallet.decode(argv[++i]);
+			const char* s = argv[++i];
+
+			if (!m_mainWallet.decode(s)) {
+				LOGERR(1, "Wallet " << s << " failed to decode");
+			}
+
 			ok = true;
 		}
 
 		if ((strcmp(argv[i], "--subaddress") == 0) && (i + 1 < argc)) {
-			m_subaddress.decode(argv[++i]);
+			const char* s = argv[++i];
+
+			if (!m_subaddress.decode(s)) {
+				LOGERR(1, "Subaddress " << s << " failed to decode");
+			}
+
 			ok = true;
 		}
 
@@ -333,8 +343,14 @@ Params::Params(int argc, char* const argv[])
 	char display_wallet_buf[Wallet::ADDRESS_LENGTH] = {};
 
 	if (m_mainWallet.valid() && m_subaddress.valid()) {
-		m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.type(), false);
-		m_subaddress.encode(display_wallet_buf);
+		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.type(), false)) {
+			LOGERR(1, "Failed to configure the mining wallet, falling back to " << m_mainWallet);
+			m_miningWallet = m_mainWallet;
+			m_mainWallet.encode(display_wallet_buf);
+		}
+		else {
+			m_subaddress.encode(display_wallet_buf);
+		}
 	}
 	else if (m_mainWallet.valid()) {
 		m_miningWallet = m_mainWallet;
@@ -365,6 +381,16 @@ bool Params::valid() const
 			LOGERR(1, "Subaddress must belong to the same network type as the main wallet address. Try \"p2pool --help\".");
 			return false;
 		}
+	}
+
+	if (!m_mainWallet.torsion_check()) {
+		LOGERR(1, m_mainWallet << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+		return false;
+	}
+
+	if (m_subaddress.valid() && !m_subaddress.torsion_check()) {
+		LOGERR(1, m_subaddress << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+		return false;
 	}
 
 	if (m_mergeMiningHosts.size() > 10) {

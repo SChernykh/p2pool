@@ -34,31 +34,32 @@ public:
 	Wallet(const Wallet& w);
 	Wallet& operator=(const Wallet& w);
 
-	FORCEINLINE bool valid() const { return m_type != NetworkType::Invalid; }
+	[[nodiscard]] FORCEINLINE bool valid() const { return m_type != NetworkType::Invalid; }
 
-	bool decode(const char* address);
-	bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress);
+	[[nodiscard]] bool decode(const char* address);
+	[[nodiscard]] bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress);
 
 	void encode(char (&buf)[ADDRESS_LENGTH]) const;
 
-	FORCEINLINE std::string encode() const
+	[[nodiscard]] FORCEINLINE std::string encode() const
 	{
 		char buf[ADDRESS_LENGTH];
 		encode(buf);
 		return std::string(buf, buf + ADDRESS_LENGTH);
 	}
 
-	bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag = nullptr) const;
+	[[nodiscard]] bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag = nullptr) const;
 
 	FORCEINLINE bool operator<(const Wallet& w) const { return (m_spendPublicKey < w.m_spendPublicKey) || ((m_spendPublicKey == w.m_spendPublicKey) && (m_viewPublicKey < w.m_viewPublicKey)); }
 	FORCEINLINE bool operator==(const Wallet& w) const { return (m_spendPublicKey == w.m_spendPublicKey) && (m_viewPublicKey == w.m_viewPublicKey); }
 
-	FORCEINLINE uint64_t prefix() const { return m_prefix; }
-	FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
-	FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
-	FORCEINLINE uint32_t checksum() const { return m_checksum; }
-	FORCEINLINE NetworkType type() const { return m_type; }
-	FORCEINLINE bool is_subaddress() const { return m_subaddress; }
+	[[nodiscard]] FORCEINLINE uint64_t prefix() const { return m_prefix; }
+	[[nodiscard]] FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
+	[[nodiscard]] FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
+	[[nodiscard]] FORCEINLINE uint32_t checksum() const { return m_checksum; }
+	[[nodiscard]] FORCEINLINE NetworkType type() const { return m_type; }
+	[[nodiscard]] FORCEINLINE bool is_subaddress() const { return m_subaddress; }
+	[[nodiscard]] bool torsion_check() const;
 
 private:
 	uint64_t m_prefix;

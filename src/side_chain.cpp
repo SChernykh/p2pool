@@ -2486,7 +2486,9 @@ void SideChain::precalc_worker()
 		for (const std::pair<size_t, const Wallet*>& w : wallets) {
 			hash eph_public_key;
 			uint8_t view_tag;
-			w.second->get_eph_public_key(job->m_txkeySec, w.first, eph_public_key, view_tag);
+			if (!w.second->get_eph_public_key(job->m_txkeySec, w.first, eph_public_key, view_tag)) {
+				LOGWARN(6, "get_eph_public_key failed in precalc_worker");
+			}
 		}
 	} while (true);
 }

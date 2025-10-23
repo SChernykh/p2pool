@@ -27,6 +27,10 @@ extern "C" {
 #include "crypto-ops.h"
 }
 
+#include "fcmp_pp_crypto.h"
+
+LOG_CATEGORY(Wallet)
+
 namespace {
 
 // Allow only regular addresses (no integrated addresses, no subaddresses)
@@ -81,7 +85,9 @@ namespace p2pool {
 
 Wallet::Wallet(const char* address) : m_prefix(0), m_checksum(0), m_type(NetworkType::Invalid), m_subaddress(false)
 {
-	decode(address);
+	if (!decode(address) && address) {
+		LOGWARN(1, address << " failed to decode");
+	}
 }
 
 Wallet::Wallet(const Wallet& w)
@@ -179,6 +185,11 @@ bool Wallet::decode(const char* address)
 		m_type = NetworkType::Invalid;
 	}
 
+	if (!torsion_check()) {
+		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");
+		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
+	}
+
 	return valid();
 }
 
@@ -212,6 +223,11 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 
 	m_type = type;
 	m_subaddress = subaddress;
+
+	if (!torsion_check()) {
+		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");		
+		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
+	}
 
 	return true;
 }
@@ -254,6 +270,20 @@ bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash
 	}
 
 	return true;
+}
+
+bool Wallet::torsion_check() const
+{
+	ge_p3 p1, p2;
+	if ((ge_frombytes_vartime(&p1, m_spendPublicKey.h) != 0) || (ge_frombytes_vartime(&p2, m_viewPublicKey.h) != 0)) {
+		return false;
+	}
+
+	return
+		!fcmp_pp::mul8_is_identity(p1) &&
+		!fcmp_pp::mul8_is_identity(p2) &&
+		fcmp_pp::torsion_check_vartime(p1) &&
+		fcmp_pp::torsion_check_vartime(p2);
 }
 
 } // namespace p2pool

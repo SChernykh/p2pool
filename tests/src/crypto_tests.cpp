@@ -18,12 +18,17 @@
 #include "common.h"
 #include "crypto.h"
 #include "util.h"
+extern "C" {
+#include "crypto-ops.h"
+}
+#include "fcmp_pp_crypto.h"
+
 #include "gtest/gtest.h"
 #include <fstream>
 
 namespace p2pool {
 
-TEST(crypto, derivation)
+TEST(crypto, ops)
 {
 	init_crypto_cache();
 	{
@@ -102,6 +107,28 @@ TEST(crypto, derivation)
 
 				ASSERT_EQ(pub, pub_check);
 				ASSERT_EQ(sec, sec_check);
+			}
+			else if (name == "check_key") {
+				hash pub_key;
+				std::string result_str;
+
+				f >> pub_key >> result_str;				
+
+				ge_p3 p;
+				ASSERT_EQ(ge_frombytes_vartime(&p, pub_key.h) == 0, result_str == "true");
+			}
+			else if (name == "check_torsion") {
+				hash pub_key;
+				std::string result_str;
+
+				f >> pub_key >> result_str;				
+
+				ge_p3 p;
+				ASSERT_EQ(
+					(ge_frombytes_vartime(&p, pub_key.h) == 0)
+					&& !fcmp_pp::mul8_is_identity(p)
+					&& fcmp_pp::torsion_check_vartime(p)
+				, result_str == "true");
 			}
 		} while (!f.eof());
 	}
