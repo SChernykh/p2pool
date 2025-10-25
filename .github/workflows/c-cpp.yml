@@ -644,7 +644,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: p2pool-macos-13
+        name: p2pool-macos
         path: build/p2pool
 
   build-macos-aarch64:
@@ -711,7 +711,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v4
       with:
-        name: p2pool-macos-11-aarch64
+        name: p2pool-macos-aarch64
         path: build/p2pool
 
   build-freebsd:
