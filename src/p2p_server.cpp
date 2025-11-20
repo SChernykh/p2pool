@@ -1892,7 +1892,7 @@ void P2PServer::P2PClient::reset()
 		if (server->m_fastestPeer == this) {
 			server->m_fastestPeer = nullptr;
 		}
-		if (m_addressType == AddressType::DomainName) {
+		if ((m_addressType == AddressType::DomainName) && m_connectedTime) {
 			--server->m_numOnionConnections;
 		}
 	}
