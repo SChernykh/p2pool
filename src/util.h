@@ -45,6 +45,7 @@ extern const char* VERSION;
 extern const uint8_t ED25519_MASTER_PUBLIC_KEY[32];
 
 extern std::string DATA_DIR;
+extern std::string LOG_FILE_PATH;
 
 enum class SoftwareID : uint32_t {
 	P2Pool = 0,

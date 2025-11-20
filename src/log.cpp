@@ -132,7 +132,7 @@ public:
 
 		std::setlocale(LC_ALL, "en_001");
 
-		m_logFilePath = DATA_DIR + log_file_name;
+		m_logFilePath = LOG_FILE_PATH.empty() ? (DATA_DIR + log_file_name) : LOG_FILE_PATH;
 
 		m_buf.resize(BUF_SIZE);
 

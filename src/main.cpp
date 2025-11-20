@@ -72,6 +72,7 @@ void p2pool_usage()
 		"--light-mode          Don't allocate RandomX dataset, saves 2GB of RAM\n"
 		"--loglevel            Verbosity of the log, integer number between 0 and %d\n"
 		"--data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory\n"
+		"--log-file            Path to the log file, default is \"p2pool.log\" in p2pool's working directory\n"
 		"--sidechain-config    Name of the p2pool sidechain parameters file (only use it if you run your own sidechain)\n"
 		"--data-api            Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!\n"
 		"--local-api           Enable /local/ path in api path for Stratum Server and built-in miner statistics\n"
@@ -248,9 +249,12 @@ int main(int argc, char* argv[])
 		}
 
 		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
-			std::string path = argv[++i];
-			p2pool::DATA_DIR = std::move(path);
+			p2pool::DATA_DIR = argv[++i];
 			p2pool::fixup_path(p2pool::DATA_DIR);
+		}
+
+		if ((strcmp(argv[i], "--log-file") == 0) && (i + 1 < argc)) {
+			p2pool::LOG_FILE_PATH = argv[++i];
 		}
 
 		if (!strcmp(argv[i], "--mini")) is_mini = true;

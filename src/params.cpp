@@ -124,6 +124,12 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
+		if ((strcmp(argv[i], "--log-file") == 0) && (i + 1 < argc)) {
+			// Processed in main.cpp
+			++i;
+			ok = true;
+		}
+
 		if ((strcmp(argv[i], "--sidechain-config") == 0) && (i + 1 < argc)) {
 			m_sidechainConfig = argv[++i];
 			ok = true;
