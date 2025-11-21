@@ -1070,7 +1070,7 @@ std::vector<std::vector<std::string>> parse_config(const std::string& file_name)
 				case BEFORE_NAME:
 					if (is_alpha(c)) {
 						state = NAME;
-						args.emplace_back(std::vector<std::string>(1, std::string(1, c)));
+						args.emplace_back(1, std::string(1, c));
 					}
 					else if (c == '#') {
 						state = COMMENT;
@@ -1100,10 +1100,10 @@ std::vector<std::vector<std::string>> parse_config(const std::string& file_name)
 						state = VALUE;
 						quoted = (c == '"');
 						if (quoted) {
-							args.back().emplace_back(std::string());
+							args.back().emplace_back();
 						}
 						else {
-							args.back().emplace_back(std::string(1, c));
+							args.back().emplace_back(1, c);
 						}
 					}
 					break;

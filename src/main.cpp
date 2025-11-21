@@ -237,7 +237,7 @@ static p2pool::Params get_params(int argc, const char* const argv[]) noexcept
 			if ((arg.size() > 2) && (arg[0] == '-') && (arg[1] == '-')) {
 				// Store the parameter name without the "--" prefix
 				arg.remove_prefix(2);
-				args.emplace_back(std::vector<std::string>(1, std::string(arg)));
+				args.emplace_back(1, std::string(arg));
 			}
 			else if (!args.empty()) {
 				args.back().emplace_back(std::move(arg));
@@ -315,6 +315,9 @@ int main(int argc, char* argv[])
 
 	memory_tracking_start();
 
+	int result;
+	{
+
 	// Create the default libuv loop and initialize libuv here
 	// It will call the important stuff like WSAStartup and many other things
 	// Some P2Pool code will not work without libuv initialized, so the code above this line must be minimal
@@ -334,7 +337,7 @@ int main(int argc, char* argv[])
 
 	p2pool::init_crypto_cache();
 
-	int result = static_cast<int>(curl_global_init_mem(CURL_GLOBAL_ALL, p2pool::malloc_hook, p2pool::free_hook, p2pool::realloc_hook, p2pool::strdup_hook, p2pool::calloc_hook));
+	result = static_cast<int>(curl_global_init_mem(CURL_GLOBAL_ALL, p2pool::malloc_hook, p2pool::free_hook, p2pool::realloc_hook, p2pool::strdup_hook, p2pool::calloc_hook));
 	if (result != CURLE_OK) {
 		return result;
 	}
@@ -377,6 +380,8 @@ int main(int argc, char* argv[])
 #if ((UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 38)))
 	uv_library_shutdown();
 #endif
+
+	}
 
 	if (!memory_tracking_stop()) {
 		result = 1;
