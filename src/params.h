@@ -29,7 +29,7 @@ struct Params
 	FORCEINLINE Params() {}
 #endif
 
-	Params(int argc, char* const argv[]);
+	Params(const std::vector<std::vector<std::string_view>>& args);
 
 	bool valid() const;
 
@@ -65,7 +65,8 @@ struct Params
 
 	struct MergeMiningHost
 	{
-		MergeMiningHost(const char* host, const char* wallet) : m_host(host), m_wallet(wallet) {}
+		template<typename T>
+		FORCEINLINE MergeMiningHost(const T& host, const T& wallet) : m_host(host), m_wallet(wallet) {}
 
 		std::string m_host;
 		std::string m_wallet;

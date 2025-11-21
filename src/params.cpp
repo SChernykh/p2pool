@@ -30,13 +30,21 @@ namespace p2pool {
 static constexpr uint64_t MIN_STRATUM_BAN_TIME = UINT64_C(1);
 static constexpr uint64_t MAX_STRATUM_BAN_TIME = (UINT64_C(1) << 34) - 1;
 
-Params::Params(int argc, char* const argv[])
+Params::Params(const std::vector<std::vector<std::string_view>>& args)
 {
-	for (int i = 1; i < argc; ++i) {
+	auto has1 = [](const auto& v) { return (v.size() > 1) && !v[1].empty();};
+	auto has2 = [](const auto& v) { return (v.size() > 2) && !v[2].empty();};
+
+	for (const auto& arg : args) {
+		// Ignore empty parameters
+		if (arg.empty() || arg[0].empty()) {
+			continue;
+		}
+
 		bool ok = false;
 
-		if ((strcmp(argv[i], "--host") == 0) && (i + 1 < argc)) {
-			const char* address = argv[++i];
+		if ((arg[0] == "host") && has1(arg)) {
+			const char* address = arg[1].data();
 
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
@@ -50,31 +58,31 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--rpc-port") == 0) && (i + 1 < argc)) {
+		if ((arg[0] == "rpc-port") && has1(arg)) {
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
+			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--zmq-port") == 0) && (i + 1 < argc)) {
+		if ((arg[0] == "zmq-port") && has1(arg)) {
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
+			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--light-mode") == 0) {
+		if (arg[0] == "light-mode") {
 			m_lightMode = true;
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--wallet") == 0) && (i + 1 < argc)) {
-			const char* s = argv[++i];
+		if ((arg[0] == "wallet") && has1(arg)) {
+			const char* s = arg[1].data();
 
 			if (!m_mainWallet.decode(s)) {
 				LOGERR(1, "Wallet " << s << " failed to decode");
@@ -83,8 +91,8 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--subaddress") == 0) && (i + 1 < argc)) {
-			const char* s = argv[++i];
+		if ((arg[0] == "subaddress") && has1(arg)) {
+			const char* s = arg[1].data();
 
 			if (!m_subaddress.decode(s)) {
 				LOGERR(1, "Subaddress " << s << " failed to decode");
@@ -93,115 +101,115 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--stratum") == 0) && (i + 1 < argc)) {
-			m_stratumAddresses = argv[++i];
+		if ((arg[0] == "stratum") && has1(arg)) {
+			m_stratumAddresses = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--stratum-ban-time") == 0) && (i + 1 < argc)) {
-			m_stratumBanTime = strtoull(argv[++i], nullptr, 10);
+		if ((arg[0] == "stratum-ban-time") && has1(arg)) {
+			m_stratumBanTime = strtoull(arg[1].data(), nullptr, 10);
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--p2p") == 0) && (i + 1 < argc)) {
-			m_p2pAddresses = argv[++i];
+		if ((arg[0] == "p2p") && has1(arg)) {
+			m_p2pAddresses = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--addpeers") == 0) && (i + 1 < argc)) {
-			m_p2pPeerList = argv[++i];
+		if ((arg[0] == "addpeers") && has1(arg)) {
+			m_p2pPeerList = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--loglevel") == 0) && (i + 1 < argc)) {
-			const int level = std::min(std::max<int>(static_cast<int>(strtol(argv[++i], nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
+		if ((arg[0] == "loglevel") && has1(arg)) {
+			const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].data(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
 			log::GLOBAL_LOG_LEVEL = level;
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
-			m_dataDir = argv[++i];
+		if ((arg[0] == "data-dir") && has1(arg)) {
+			m_dataDir = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--log-file") == 0) && (i + 1 < argc)) {
-			m_logFilePath = argv[++i];
+		if ((arg[0] == "log-file") && has1(arg)) {
+			m_logFilePath = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--sidechain-config") == 0) && (i + 1 < argc)) {
-			m_sidechainConfig = argv[++i];
+		if ((arg[0] == "sidechain-config") && has1(arg)) {
+			m_sidechainConfig = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--data-api") == 0) && (i + 1 < argc)) {
-			m_apiPath = argv[++i];
+		if ((arg[0] == "data-api") && has1(arg)) {
+			m_apiPath = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--local-api") == 0) || (strcmp(argv[i], "--stratum-api") == 0)) {
+		if ((arg[0] == "local-api") || (arg[0] == "stratum-api")) {
 			m_localStats = true;
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--no-cache") == 0) {
+		if (arg[0] == "no-cache") {
 			m_blockCache = false;
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--no-color") == 0) {
+		if (arg[0] == "no-color") {
 			log::CONSOLE_COLORS = false;
 			ok = true;
 		}
 
 #ifdef WITH_RANDOMX
-		if (strcmp(argv[i], "--no-randomx") == 0) {
+		if (arg[0] == "no-randomx") {
 			m_disableRandomX = true;
 			ok = true;
 		}
 #endif
 
-		if ((!strcmp(argv[i], "--out-peers") || !strcmp(argv[i], "--outpeers")) && (i + 1 < argc)) {
-			m_maxOutgoingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 450UL);
+		if (((arg[0] == "out-peers") || (arg[0] == "outpeers")) && has1(arg)) {
+			m_maxOutgoingPeers = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
 
-		if ((!strcmp(argv[i], "--in-peers") || !strcmp(argv[i], "--inpeers")) && (i + 1 < argc)) {
-			m_maxIncomingPeers = std::min(std::max(strtoul(argv[++i], nullptr, 10), 10UL), 450UL);
+		if (((arg[0] == "in-peers") || (arg[0] == "inpeers")) && has1(arg)) {
+			m_maxIncomingPeers = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--start-mining") == 0) && (i + 1 < argc)) {
-			m_minerThreads = std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 64UL);
+		if ((arg[0] == "start-mining") && has1(arg)) {
+			m_minerThreads = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 64UL);
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--mini") == 0) {
+		if (arg[0] == "mini") {
 			m_mini = true;
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--nano") == 0) {
+		if (arg[0] == "nano") {
 			m_nano = true;
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--no-autodiff") == 0) {
+		if (arg[0] == "no-autodiff") {
 			m_autoDiff = false;
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--rpc-login") == 0) && (i + 1 < argc)) {
+		if ((arg[0] == "rpc-login") && has1(arg)) {
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_rpcLogin = argv[++i];
+			m_hosts.back().m_rpcLogin = arg[1];
 			ok = true;
 		}
 
 #ifdef WITH_TLS
-		if (strcmp(argv[i], "--rpc-ssl") == 0) {
+		if (arg[0] == "rpc-ssl") {
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
 			}
@@ -210,94 +218,90 @@ Params::Params(int argc, char* const argv[])
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--rpc-ssl-fingerprint") == 0) && (i + 1 < argc)) {
+		if ((arg[0] == "rpc-ssl-fingerprint") && has1(arg)) {
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_rpcSSL_Fingerprint = argv[++i];
+			m_hosts.back().m_rpcSSL_Fingerprint = arg[1];
 			ok = true;
 		}
 #endif
 
-		if ((strcmp(argv[i], "--socks5") == 0) && (i + 1 < argc)) {
-			m_socks5Proxy = argv[++i];
+		if ((arg[0] == "socks5") && has1(arg)) {
+			m_socks5Proxy = arg[1];
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--no-dns") == 0) {
+		if (arg[0] == "no-dns") {
 			m_dns = false;
 			disable_resolve_host = true;
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--p2p-external-port") == 0) && (i + 1 < argc)) {
-			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(argv[++i], nullptr, 10), 1UL), 65535UL));
+		if ((arg[0] == "p2p-external-port") && has1(arg)) {
+			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
 #ifdef WITH_UPNP
-		if ((strcmp(argv[i], "--no-upnp") == 0) || (strcmp(argv[i], "--no-igd") == 0)) {
+		if ((arg[0] == "no-upnp") || (arg[0] == "no-igd")) {
 			m_upnp = false;
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--upnp-stratum") == 0) {
+		if (arg[0] == "upnp-stratum") {
 			m_upnpStratum = true;
 			ok = true;
 		}
 #endif
 
-		if ((strcmp(argv[i], "--merge-mine") == 0) && (i + 2 < argc)) {
-			m_mergeMiningHosts.emplace_back(argv[i + 1], argv[i + 2]);
-			i += 2;
+		if ((arg[0] == "merge-mine") && has1(arg) && has2(arg)) {
+			m_mergeMiningHosts.emplace_back(arg[1], arg[2]);
 			ok = true;
 		}
 
 #ifdef WITH_TLS
-		if ((strcmp(argv[i], "--tls-cert") == 0) && (i + 1 < argc)) {
-			m_tlsCert = argv[++i];
+		if ((arg[0] == "tls-cert") && has1(arg)) {
+			m_tlsCert = arg[1];
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--tls-cert-key") == 0) && (i + 1 < argc)) {
-			m_tlsCertKey = argv[++i];
+		if ((arg[0] == "tls-cert-key") && has1(arg)) {
+			m_tlsCertKey = arg[1];
 			ok = true;
 		}
 #endif
 
-		if (strcmp(argv[i], "--no-stratum-http") == 0) {
+		if (arg[0] == "no-stratum-http") {
 			m_enableStratumHTTP = false;
 			ok = true;
 		}
 
 #ifdef WITH_MERGE_MINING_DONATION
-		if ((strcmp(argv[i], "--adkf") == 0) && (i + 1 < argc)) {
-			m_authorKeyFile = argv[++i];
+		if ((arg[0] == "adkf") && has1(arg)) {
+			m_authorKeyFile = arg[1];
 			ok = true;
 		}
 #endif
 
-		if (strcmp(argv[i], "--full-validation") == 0) {
+		if (arg[0] == "full-validation") {
 			m_enableFullValidation = true;
 			ok = true;
 		}
 
-		if ((strcmp(argv[i], "--onion-address") == 0) && (i + 1 < argc)) {
-			m_onionAddress = argv[++i];
+		if ((arg[0] == "onion-address") && has1(arg)) {
+			m_onionAddress = arg[1];
 			ok = true;
 		}
 
-		if (strcmp(argv[i], "--no-clearnet-p2p") == 0) {
+		if (arg[0] == "no-clearnet-p2p") {
 			m_noClearnetP2P = true;
 			ok = true;
 		}
 
 		if (!ok) {
-			// Wait to avoid log messages overlapping with printf() calls and making a mess on screen
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-			fprintf(stderr, "Unknown command line parameter %s\n\n", argv[i]);
+			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].data());
 			p2pool_usage();
 			throw std::exception();
 		}

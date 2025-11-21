@@ -225,7 +225,25 @@ int p2pool_test()
 static p2pool::Params get_params(int argc, char* argv[]) noexcept
 {
 	try {
-		p2pool::Params params(argc, argv);
+		std::vector<std::vector<std::string_view>> args;
+		args.reserve(argc);
+
+		// Group command-line parameters by the pattern "--name [data1 data2 ... data_n]"
+		// Each parameter starting with "--" can have 0 or more values attached to it
+		for (int i = 1; i < argc; ++i) {
+			std::string_view arg = argv[i];
+
+			if ((arg.size() > 2) && (arg[0] == '-') && (arg[1] == '-')) {
+				// Store the parameter name without the "--" prefix
+				arg.remove_prefix(2);
+				args.emplace_back(std::vector<std::string_view>(1, std::move(arg)));
+			}
+			else if (!args.empty()) {
+				args.back().emplace_back(std::move(arg));
+			}
+		}
+
+		p2pool::Params params(args);
 
 		if (params.valid()) {
 			return params;
@@ -246,7 +264,7 @@ int main(int argc, char* argv[])
 	}
 
 	for (int i = 1; i < argc; ++i) {
-		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h")) {
+		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h") || !strcmp(argv[i], "/?")) {
 			p2pool_usage();
 			return 0;
 		}
@@ -261,6 +279,19 @@ int main(int argc, char* argv[])
 		}
 	}
 
+#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
+	SymInitialize(GetCurrentProcess(), NULL, TRUE);
+#endif
+
+	__nss_module_disable_loading();
+
+	memory_tracking_start();
+
+	// Create the default libuv loop and initialize libuv here
+	// It will call the important stuff like WSAStartup and many other things
+	// Some P2Pool code will not work without libuv initialized, so the code above this line must be minimal
+	uv_default_loop();
+
 	const p2pool::Params params = get_params(argc, argv);
 
 	if (!params.m_dataDir.empty()) {
@@ -270,17 +301,6 @@ int main(int argc, char* argv[])
 		std::error_code err;
 		std::filesystem::create_directories(params.m_dataDir, err);
 	}
-
-#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
-	SymInitialize(GetCurrentProcess(), NULL, TRUE);
-#endif
-
-	__nss_module_disable_loading();
-
-	memory_tracking_start();
-
-	// Create default loop here
-	uv_default_loop();
 
 	p2pool::log::start(params);
 
