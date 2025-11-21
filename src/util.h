@@ -441,6 +441,8 @@ static FORCEINLINE constexpr hash from_onion_v3_const(const char* address)
 	return result;
 }
 
+std::vector<std::vector<std::string>> parse_config(const std::string& file_name);
+
 } // namespace p2pool
 
 void memory_tracking_start();

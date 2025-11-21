@@ -30,7 +30,7 @@ namespace p2pool {
 static constexpr uint64_t MIN_STRATUM_BAN_TIME = UINT64_C(1);
 static constexpr uint64_t MAX_STRATUM_BAN_TIME = (UINT64_C(1) << 34) - 1;
 
-Params::Params(const std::vector<std::vector<std::string_view>>& args)
+Params::Params(const std::vector<std::vector<std::string>>& args)
 {
 	auto has1 = [](const auto& v) { return (v.size() > 1) && !v[1].empty();};
 	auto has2 = [](const auto& v) { return (v.size() > 2) && !v[2].empty();};
@@ -44,7 +44,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		bool ok = false;
 
 		if ((arg[0] == "host") && has1(arg)) {
-			const char* address = arg[1].data();
+			const char* address = arg[1].c_str();
 
 			if (m_hosts.empty()) {
 				m_hosts.emplace_back();
@@ -63,7 +63,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
+			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
@@ -72,7 +72,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 				m_hosts.emplace_back();
 			}
 
-			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
+			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
@@ -82,7 +82,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if ((arg[0] == "wallet") && has1(arg)) {
-			const char* s = arg[1].data();
+			const char* s = arg[1].c_str();
 
 			if (!m_mainWallet.decode(s)) {
 				LOGERR(1, "Wallet " << s << " failed to decode");
@@ -92,7 +92,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if ((arg[0] == "subaddress") && has1(arg)) {
-			const char* s = arg[1].data();
+			const char* s = arg[1].c_str();
 
 			if (!m_subaddress.decode(s)) {
 				LOGERR(1, "Subaddress " << s << " failed to decode");
@@ -107,7 +107,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if ((arg[0] == "stratum-ban-time") && has1(arg)) {
-			m_stratumBanTime = strtoull(arg[1].data(), nullptr, 10);
+			m_stratumBanTime = strtoull(arg[1].c_str(), nullptr, 10);
 			ok = true;
 		}
 
@@ -122,7 +122,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if ((arg[0] == "loglevel") && has1(arg)) {
-			const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].data(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
+			const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].c_str(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
 			log::GLOBAL_LOG_LEVEL = level;
 			ok = true;
 		}
@@ -170,17 +170,17 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 #endif
 
 		if (((arg[0] == "out-peers") || (arg[0] == "outpeers")) && has1(arg)) {
-			m_maxOutgoingPeers = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 10UL), 450UL);
+			m_maxOutgoingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
 
 		if (((arg[0] == "in-peers") || (arg[0] == "inpeers")) && has1(arg)) {
-			m_maxIncomingPeers = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 10UL), 450UL);
+			m_maxIncomingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
 			ok = true;
 		}
 
 		if ((arg[0] == "start-mining") && has1(arg)) {
-			m_minerThreads = std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 64UL);
+			m_minerThreads = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 64UL);
 			ok = true;
 		}
 
@@ -240,7 +240,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if ((arg[0] == "p2p-external-port") && has1(arg)) {
-			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].data(), nullptr, 10), 1UL), 65535UL));
+			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
 			ok = true;
 		}
 
@@ -301,7 +301,7 @@ Params::Params(const std::vector<std::vector<std::string_view>>& args)
 		}
 
 		if (!ok) {
-			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].data());
+			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].c_str());
 			p2pool_usage();
 			throw std::exception();
 		}

@@ -108,6 +108,7 @@ void p2pool_usage()
 		"--full-validation     Enables full share validation / increases CPU usage\n"
 		"--onion-address       Tell other peers to use this .onion address to connect to this node through TOR\n"
 		"--no-clearnet-p2p     Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs\n"
+		"--params-file         File name to load parameters from. It can't be used together with any other command line parameters\n"
 		"--help                Show this help message\n\n"
 		"Example command line:\n\n"
 		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
@@ -222,10 +223,10 @@ int p2pool_test()
 	return 0;
 }
 
-static p2pool::Params get_params(int argc, char* argv[]) noexcept
+static p2pool::Params get_params(int argc, const char* const argv[]) noexcept
 {
 	try {
-		std::vector<std::vector<std::string_view>> args;
+		std::vector<std::vector<std::string>> args;
 		args.reserve(argc);
 
 		// Group command-line parameters by the pattern "--name [data1 data2 ... data_n]"
@@ -236,7 +237,7 @@ static p2pool::Params get_params(int argc, char* argv[]) noexcept
 			if ((arg.size() > 2) && (arg[0] == '-') && (arg[1] == '-')) {
 				// Store the parameter name without the "--" prefix
 				arg.remove_prefix(2);
-				args.emplace_back(std::vector<std::string_view>(1, std::move(arg)));
+				args.emplace_back(std::vector<std::string>(1, std::string(arg)));
 			}
 			else if (!args.empty()) {
 				args.back().emplace_back(std::move(arg));
@@ -256,12 +257,30 @@ static p2pool::Params get_params(int argc, char* argv[]) noexcept
 	abort();
 }
 
+static p2pool::Params get_params(const std::string& params_file) noexcept
+{
+	try {
+		p2pool::Params params(p2pool::parse_config(params_file));
+
+		if (params.valid()) {
+			return params;
+		}
+	}
+	catch (const std::exception&) {
+	}
+
+	printf("Invalid or missing command line. Try \"p2pool --help\".\n");
+	abort();
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
 		p2pool_usage();
 		return 0;
 	}
+
+	std::string params_file;
 
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h") || !strcmp(argv[i], "/?")) {
@@ -277,6 +296,15 @@ int main(int argc, char* argv[])
 		if (!strcmp(argv[i], "--test")) {
 			return p2pool_test();
 		}
+
+		if (!strcmp(argv[i], "--params-file") && (i + 1 < argc)) {
+			params_file = argv[++i];
+		}
+	}
+
+	if (!params_file.empty() && (argc != 3)) {
+		fprintf(stderr, "--params-file can't be combined with other command line parameters\n");
+		return 1;
 	}
 
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
@@ -292,7 +320,7 @@ int main(int argc, char* argv[])
 	// Some P2Pool code will not work without libuv initialized, so the code above this line must be minimal
 	uv_default_loop();
 
-	const p2pool::Params params = get_params(argc, argv);
+	const p2pool::Params params = params_file.empty() ? get_params(argc, argv) : get_params(params_file);
 
 	if (!params.m_dataDir.empty()) {
 		printf("Using \"%s\" for P2Pool files\n", params.m_dataDir.c_str());

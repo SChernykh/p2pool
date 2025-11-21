@@ -44,12 +44,29 @@
 --full-validation     Enables full share validation / increases CPU usage
 --onion-address       Tell other peers to use this .onion address to connect to this node through TOR
 --no-clearnet-p2p     Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs
+--params-file         File name to load parameters from. It can't be used together with any other command line parameters
 ```
 
 ### Example command line
 
 ```
 p2pool.exe --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:3333 --p2p 0.0.0.0:37889
+```
+
+### Example command line (params file)
+
+```
+p2pool.exe --params-file params.conf
+```
+
+params.conf
+```
+# IP of your node
+host = 127.0.0.1
+wallet = YOUR_WALLET_ADDRESS
+data-api = "/path/to/api/folder" # use quotes if you have spaces in the path
+loglevel = 4
+mini = 1
 ```
 
 ### Example command line (mining to a subaddress)

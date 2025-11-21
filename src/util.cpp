@@ -27,6 +27,7 @@ extern "C" {
 #include <map>
 #include <istream>
 #include <ostream>
+#include <fstream>
 
 #if !defined(_WIN32) && defined(HAVE_SCHED)
 #include <sched.h>
@@ -1031,6 +1032,116 @@ hash from_onion_v3(const std::string& address)
 	}
 
 	return result;
+}
+
+std::vector<std::vector<std::string>> parse_config(const std::string& file_name)
+{
+	std::ifstream f(file_name);
+
+	if (!f.is_open() || !f.good()) {
+		throw std::exception();
+	}
+
+	std::vector<std::vector<std::string>> args;
+
+	auto is_alpha = [](char c) { return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'); };
+	auto is_num = [](char c) { return ('0' <= c && c <= '9'); };
+
+	std::string s;
+
+	while (std::getline(f, s).good()) {
+		if (s.empty()) {
+			continue;
+		}
+
+		bool quoted = false;
+
+		enum {
+			BEFORE_NAME,
+			COMMENT,
+			NAME,
+			AFTER_NAME,
+			VALUE,
+			VALUE_ESCAPE_CHAR,
+		} state = BEFORE_NAME;
+
+		for (const char c : s) {
+			switch (state) {
+				case BEFORE_NAME:
+					if (is_alpha(c)) {
+						state = NAME;
+						args.emplace_back(std::vector<std::string>(1, std::string(1, c)));
+					}
+					else if (c == '#') {
+						state = COMMENT;
+					}
+					break;
+
+				case COMMENT:
+					break;
+
+				case NAME:
+					if (is_alpha(c) || is_num(c) || (c == '-')) {
+						args.back()[0] += c;
+					}
+					else if (c == '#') {
+						state = COMMENT;
+					}
+					else {
+						state = AFTER_NAME;
+					}
+					break;
+
+				case AFTER_NAME:
+					if (c == '#') {
+						state = COMMENT;
+					}
+					else if ((c != '\t') && (c != ' ') && (c != '=')) {
+						state = VALUE;
+						quoted = (c == '"');
+						if (quoted) {
+							args.back().emplace_back(std::string());
+						}
+						else {
+							args.back().emplace_back(std::string(1, c));
+						}
+					}
+					break;
+
+				case VALUE:
+					if (quoted) {
+						if (c == '"') {
+							state = AFTER_NAME;
+						}
+						else if (c == '\\') {
+							state = VALUE_ESCAPE_CHAR;
+						}
+						else {
+							args.back().back() += c;
+						}
+					}
+					else {
+						if (c == ' ') {
+							state = AFTER_NAME;
+						}
+						else if (c == '#') {
+							state = COMMENT;
+						}
+						else {
+							args.back().back() += c;
+						}
+					}
+					break;
+
+				case VALUE_ESCAPE_CHAR:
+					args.back().back() += c;
+					state = VALUE;
+					break;
+			}
+		}
+	}
+
+	return args;
 }
 
 } // namespace p2pool

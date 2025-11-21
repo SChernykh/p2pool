@@ -29,7 +29,7 @@ struct Params
 	FORCEINLINE Params() {}
 #endif
 
-	Params(const std::vector<std::vector<std::string_view>>& args);
+	explicit Params(const std::vector<std::vector<std::string>>& args);
 
 	bool valid() const;
 

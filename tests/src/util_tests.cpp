@@ -247,4 +247,65 @@ TEST(util, onion)
 	ASSERT_TRUE(from_onion_v3("civ5tgldg3yx73ytse6hvvk3nm6q3zctbqvytpszihm35b33ze73kxad.onion").empty());
 }
 
+TEST(util, parse_config)
+{
+	const std::vector<std::vector<std::string>> args = parse_config("test_params.conf");
+
+	ASSERT_EQ(args.size(), 10);
+
+	ASSERT_EQ(args[0].size(), 2);
+	ASSERT_EQ(args[0][0], "param1");
+	ASSERT_EQ(args[0][1], "value1");
+
+	ASSERT_EQ(args[1].size(), 2);
+	ASSERT_EQ(args[1][0], "param2");
+	ASSERT_EQ(args[1][1], "value2");
+
+	ASSERT_EQ(args[2].size(), 2);
+	ASSERT_EQ(args[2][0], "param3");
+	ASSERT_EQ(args[2][1], "value3");
+
+	ASSERT_EQ(args[3].size(), 2);
+	ASSERT_EQ(args[3][0], "param4");
+	ASSERT_EQ(args[3][1], "value with spaces # not a comment");
+
+	ASSERT_EQ(args[4].size(), 2);
+	ASSERT_EQ(args[4][0], "param5");
+	ASSERT_EQ(args[4][1], "spaces and quotes \" and \\ slashes");
+
+	ASSERT_EQ(args[5].size(), 4);
+	ASSERT_EQ(args[5][0], "param6");
+	ASSERT_EQ(args[5][1], "value1");
+	ASSERT_EQ(args[5][2], "value2");
+	ASSERT_EQ(args[5][3], "value3");
+
+	ASSERT_EQ(args[6].size(), 2);
+	ASSERT_EQ(args[6][0], "param7");
+	ASSERT_EQ(args[6][1], "value7");
+
+	ASSERT_EQ(args[7].size(), 1);
+	ASSERT_EQ(args[7][0], "param8");
+
+	ASSERT_EQ(args[8].size(), 1);
+	ASSERT_EQ(args[8][0], "param9");
+
+	ASSERT_EQ(args[9].size(), 2);
+	ASSERT_EQ(args[9][0], "abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789");
+	ASSERT_EQ(args[9][1], "0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefghijklmnopqrstuvwxyz=://");
+
+	bool exception_thrown = false;
+
+	try {
+		parse_config("non_existent_file.conf");
+
+		// Execution shouldn't reach this line
+		FAIL();
+	}
+	catch (const std::exception&) {
+		exception_thrown = true;
+	}
+
+	ASSERT_TRUE(exception_thrown);
+}
+
 }
