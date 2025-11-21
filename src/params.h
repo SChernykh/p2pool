@@ -85,6 +85,8 @@ struct Params
 	std::string m_stratumAddresses;
 	std::string m_p2pAddresses;
 	std::string m_p2pPeerList;
+	std::string m_dataDir;
+	std::string m_logFilePath;
 	std::string m_sidechainConfig;
 	std::string m_apiPath;
 	uint64_t m_stratumBanTime = DEFAULT_STRATUM_BAN_TIME;

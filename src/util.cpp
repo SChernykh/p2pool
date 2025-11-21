@@ -159,9 +159,6 @@ secure_zero_memory(volatile void* data, size_t size)
 
 const uint8_t ED25519_MASTER_PUBLIC_KEY[32] = {51,175,37,73,203,241,188,115,195,255,123,53,218,120,90,74,186,240,82,178,67,139,124,91,180,106,188,181,187,51,236,10};
 
-std::string DATA_DIR;
-std::string LOG_FILE_PATH;
-
 SoftwareID get_software_id(uint32_t value)
 {
 	switch (value) {

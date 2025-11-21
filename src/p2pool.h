@@ -40,7 +40,7 @@ struct PoolBlock;
 class p2pool : public MinerCallbackHandler, public nocopy_nomove
 {
 public:
-	p2pool(int argc, char* argv[]);
+	explicit p2pool(const Params& params);
 	~p2pool() override;
 
 	int run();
@@ -48,13 +48,13 @@ public:
 	bool stopped() const { return m_stopped; }
 	void stop();
 
-	const Params& params() const { return *m_params; }
+	const Params& params() const { return m_params; }
 	BlockTemplate& block_template() { return *m_blockTemplate; }
 	SideChain& side_chain() { return *m_sideChain; }
 
 	FORCEINLINE const Params::Host& current_host() const
 	{
-		const std::vector<Params::Host>& v = m_params->m_hosts;
+		const std::vector<Params::Host>& v = m_params.m_hosts;
 		return v[m_currentHostIndex % v.size()];
 	}
 
@@ -158,7 +158,7 @@ private:
 
 	std::atomic<bool> m_stopped;
 
-	const Params* m_params;
+	const Params& m_params;
 	std::vector<double> m_hostPing;
 
 	std::atomic<uint32_t> m_currentHostIndex;

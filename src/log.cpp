@@ -18,6 +18,7 @@
 #include "common.h"
 #include "uv_util.h"
 #include "wallet.h"
+#include "params.h"
 #include <ctime>
 #include <fstream>
 #include <thread>
@@ -118,7 +119,7 @@ public:
 		BUF_SIZE = SLOT_SIZE * 8192,
 	};
 
-	FORCEINLINE Worker()
+	FORCEINLINE explicit Worker(const Params& p)
 		: m_writePos(0)
 		, m_readPos(0)
 		, m_stopped(false)
@@ -132,7 +133,7 @@ public:
 
 		std::setlocale(LC_ALL, "en_001");
 
-		m_logFilePath = LOG_FILE_PATH.empty() ? (DATA_DIR + log_file_name) : LOG_FILE_PATH;
+		m_logFilePath = p.m_logFilePath.empty() ? (p.m_dataDir + log_file_name) : p.m_logFilePath;
 
 		m_buf.resize(BUF_SIZE);
 
@@ -478,16 +479,23 @@ NOINLINE Writer::~Writer()
 	m_buf[2] = static_cast<char>(static_cast<uint8_t>(size >> 8));
 	m_buf[m_pos] = '\n';
 #ifndef P2POOL_LOG_DISABLE
-	worker->write(m_buf, size);
+	if (worker) {
+		worker->write(m_buf, size);
+	}
+	else {
+		fwrite(m_buf + 3, 1, size - 3, (m_buf[0] == 1) ? stdout : stderr);
+	}
 #endif
 }
 
-void start()
+void start(const Params& p)
 {
 #ifndef P2POOL_LOG_DISABLE
-	worker = new Worker();
+	worker = new Worker(p);
 
 	LOGINFO(0, "started");
+#else
+	(void)p;
 #endif
 }
 

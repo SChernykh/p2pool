@@ -20,6 +20,7 @@
 #include "pool_block.h"
 #include "p2p_server.h"
 #include "side_chain.h"
+#include "params.h"
 
 LOG_CATEGORY(BlockCache)
 
@@ -34,9 +35,9 @@ struct BlockCache::Impl : public nocopy_nomove
 {
 #if defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION) || defined(__MACH__)
 
-	Impl()
+	explicit Impl(const Params& params)
 	{
-		const std::string cache_path = DATA_DIR + cache_name;
+		const std::string cache_path = params.m_dataDir + cache_name;
 
 		m_fd = open(cache_path.c_str(), O_RDWR | O_CREAT, static_cast<mode_t>(0600));
 		if (m_fd == -1) {
@@ -88,8 +89,8 @@ struct BlockCache::Impl : public nocopy_nomove
 
 #elif defined(_WIN32)
 
-	Impl()
-		: m_cachePath(DATA_DIR + cache_name)
+	explicit Impl(const Params& params)
+		: m_cachePath(params.m_dataDir + cache_name)
 		, m_file(CreateFile(m_cachePath.c_str(), GENERIC_ALL, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_HIDDEN, NULL))
 		, m_map(0)
 	{
@@ -157,8 +158,8 @@ struct BlockCache::Impl : public nocopy_nomove
 	uint8_t* m_data = nullptr;
 };
 
-BlockCache::BlockCache()
-	: m_impl(new Impl())
+BlockCache::BlockCache(const Params& params)
+	: m_impl(new Impl(params))
 	, m_flushRunning(0)
 	, m_storeIndex(0)
 	, m_loadingStarted(0)

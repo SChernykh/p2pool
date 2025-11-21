@@ -20,6 +20,7 @@
 namespace p2pool {
 
 class Wallet;
+struct Params;
 
 namespace log {
 
@@ -622,7 +623,7 @@ struct DummyStream
 
 #endif
 
-void start();
+void start(const Params& p);
 void reopen();
 void stop();
 

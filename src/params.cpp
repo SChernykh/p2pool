@@ -19,6 +19,7 @@
 #include "params.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include <fstream>
 
 LOG_CATEGORY(Params)
 
@@ -119,14 +120,12 @@ Params::Params(int argc, char* const argv[])
 		}
 
 		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
-			// Processed in main.cpp
-			++i;
+			m_dataDir = argv[++i];
 			ok = true;
 		}
 
 		if ((strcmp(argv[i], "--log-file") == 0) && (i + 1 < argc)) {
-			// Processed in main.cpp
-			++i;
+			m_logFilePath = argv[++i];
 			ok = true;
 		}
 
@@ -328,6 +327,23 @@ Params::Params(int argc, char* const argv[])
 		m_hosts.emplace_back();
 	}
 
+	const int p2p_port = m_mini ? DEFAULT_P2P_PORT_MINI : (m_nano ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+
+	if (m_noClearnetP2P) {
+		char buf[48] = {};
+		log::Stream s(buf);
+		s << "127.0.0.1:" << p2p_port;
+
+		m_p2pAddresses = buf;
+	}
+	else if (m_p2pAddresses.empty()) {
+		char buf[48] = {};
+		log::Stream s(buf);
+		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port;
+
+		m_p2pAddresses = buf;
+	}
+
 	if (m_stratumAddresses.empty()) {
 		const int stratum_port = DEFAULT_STRATUM_PORT;
 
@@ -364,6 +380,43 @@ Params::Params(int argc, char* const argv[])
 	}
 
 	m_displayWallet.assign(display_wallet_buf, Wallet::ADDRESS_LENGTH);
+
+	for (Params::Host& h : m_hosts) {
+		if (!h.init_display_name(*this)) {
+			throw std::exception();
+		}
+	}
+
+	// If the data directory is not set, check if P2Pool has write access to the current directory
+	// If it doesn't, switch to user's home directory
+	if (m_dataDir.empty()) {
+		std::ofstream f("p2pool.tmp");
+		if (f && f.put(' ')) {
+			f.close();
+			std::remove("p2pool.tmp");
+		}
+		else {
+			char buf[1024];
+			size_t size = sizeof(buf);
+
+			if (uv_os_homedir(buf, &size) == 0) {
+				m_dataDir.assign(buf, size);
+				fixup_path(m_dataDir);
+
+				m_dataDir += ".p2pool/";
+
+				if (m_mini) {
+					m_dataDir += "mini/";
+				}
+				else if (m_nano) {
+					m_dataDir += "nano/";
+				}
+			}
+		}
+	}
+	else {
+		fixup_path(m_dataDir);
+	}
 }
 
 bool Params::valid() const

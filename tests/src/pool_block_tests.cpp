@@ -252,7 +252,7 @@ TEST(pool_block, verify)
 			params.m_miningWallet = Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
 			params.m_subaddress = Wallet("86eQxzSW4AZfvsWRSop755WZUsog6L3x32NRZukeeShnS4mBGVpcqQhS6pCNxj44usPKNwesZ45ooHyjDku6nVZdT3Q9qrz");
 
-			tpl.update(data, mempool, &params);
+			tpl.update(data, mempool, params);
 
 			std::vector<uint8_t> blobs;
 			uint64_t height;

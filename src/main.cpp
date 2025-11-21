@@ -38,7 +38,6 @@
 #endif // WITH_GRPC
 
 #include <filesystem>
-#include <fstream>
 
 #ifdef WITH_RANDOMX
 #include "randomx.h"
@@ -223,15 +222,28 @@ int p2pool_test()
 	return 0;
 }
 
+static p2pool::Params get_params(int argc, char* argv[]) noexcept
+{
+	try {
+		p2pool::Params params(argc, argv);
+
+		if (params.valid()) {
+			return params;
+		}
+	}
+	catch (const std::exception&) {
+	}
+
+	printf("Invalid or missing command line. Try \"p2pool --help\".\n");
+	abort();
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc == 1) {
 		p2pool_usage();
 		return 0;
 	}
-
-	bool is_mini = false;
-	bool is_nano = false;
 
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "/help") || !strcmp(argv[i], "-h") || !strcmp(argv[i], "/h")) {
@@ -247,56 +259,16 @@ int main(int argc, char* argv[])
 		if (!strcmp(argv[i], "--test")) {
 			return p2pool_test();
 		}
-
-		if ((strcmp(argv[i], "--data-dir") == 0) && (i + 1 < argc)) {
-			p2pool::DATA_DIR = argv[++i];
-			p2pool::fixup_path(p2pool::DATA_DIR);
-		}
-
-		if ((strcmp(argv[i], "--log-file") == 0) && (i + 1 < argc)) {
-			p2pool::LOG_FILE_PATH = argv[++i];
-		}
-
-		if (!strcmp(argv[i], "--mini")) is_mini = true;
-		if (!strcmp(argv[i], "--nano")) is_nano = true;
 	}
 
-	// If the data directory is not set, check if P2Pool has write access to the current directory
-	// If it doesn't, switch to user's home directory
-	if (p2pool::DATA_DIR.empty()) {
-		std::ofstream f("p2pool.tmp");
-		if (f && f.put(' ')) {
-			f.close();
-			std::remove("p2pool.tmp");
-		}
-		else {
-			char buf[1024];
-			size_t size = sizeof(buf);
+	const p2pool::Params params = get_params(argc, argv);
 
-			if (uv_os_homedir(buf, &size) == 0) {
-				p2pool::DATA_DIR.assign(buf, size);
-				p2pool::fixup_path(p2pool::DATA_DIR);
+	if (!params.m_dataDir.empty()) {
+		printf("Using \"%s\" for P2Pool files\n", params.m_dataDir.c_str());
 
-				p2pool::DATA_DIR += ".p2pool/";
-
-				if (is_mini) {
-					p2pool::DATA_DIR += "mini/";
-				}
-				else if (is_nano) {
-					p2pool::DATA_DIR += "nano/";
-				}
-			}
-		}
-	}
-
-	if (!p2pool::DATA_DIR.empty()) {
-		printf("Using \"%s\" for P2Pool files\n", p2pool::DATA_DIR.c_str());
-	}
-
-	// Try to create it if it doesn't exist
-	if (!p2pool::DATA_DIR.empty()) {
+		// Try to create it if it doesn't exist
 		std::error_code err;
-		std::filesystem::create_directories(p2pool::DATA_DIR, err);
+		std::filesystem::create_directories(params.m_dataDir, err);
 	}
 
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
@@ -310,7 +282,7 @@ int main(int argc, char* argv[])
 	// Create default loop here
 	uv_default_loop();
 
-	p2pool::log::start();
+	p2pool::log::start(params);
 
 	p2pool::init_crypto_cache();
 
@@ -331,7 +303,7 @@ int main(int argc, char* argv[])
 #endif
 
 	try {
-		p2pool::p2pool pool(argc, argv);
+		p2pool::p2pool pool(params);
 		result = pool.run();
 	}
 	catch (...) {

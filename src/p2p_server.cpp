@@ -66,7 +66,7 @@ static constexpr hash seed_onion_nodes[] = {
 P2PServer::P2PServer(p2pool* pool)
 	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy)
 	, m_pool(pool)
-	, m_cache(pool->params().m_blockCache ? new BlockCache() : nullptr)
+	, m_cache(pool->params().m_blockCache ? new BlockCache(pool->params()) : nullptr)
 	, m_cacheLoaded(false)
 	, m_initialPeerList(pool->params().m_p2pPeerList)
 	, m_cachedBlocks(nullptr)
@@ -561,7 +561,9 @@ void P2PServer::save_peer_list_async()
 
 void P2PServer::save_peer_list()
 {
-	const std::string path = DATA_DIR + saved_peer_list_file_name;
+	const Params& params = m_pool->params();
+
+	const std::string path = params.m_dataDir + saved_peer_list_file_name;
 
 	std::ofstream f(path, std::ios::binary);
 
@@ -606,7 +608,7 @@ void P2PServer::save_peer_list()
 	const SideChain& s = m_pool->side_chain();
 
 	if (s.onion_pubkeys_count() > 0) {
-		const std::string onion_path = DATA_DIR + saved_onion_peer_list_file_name;
+		const std::string onion_path = params.m_dataDir + saved_onion_peer_list_file_name;
 
 		f.open(onion_path, std::ios::binary);
 
@@ -726,7 +728,7 @@ void P2PServer::load_peer_list()
 
 	// Finally load peers from p2pool_peers.txt and p2pool_onion_peers.txt
 	for (size_t i = 0, n = (m_socks5Proxy.empty() ? 1 : 2); i < n; ++i) {
-		const std::string path = DATA_DIR + (i ? saved_onion_peer_list_file_name : saved_peer_list_file_name);
+		const std::string path = m_pool->params().m_dataDir + (i ? saved_onion_peer_list_file_name : saved_peer_list_file_name);
 
 		std::ifstream f(path);
 

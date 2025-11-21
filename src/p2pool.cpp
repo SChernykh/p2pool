@@ -63,8 +63,9 @@ namespace p2pool {
 
 static uint64_t BLOCK_HEADERS_REQUIRED = 720;
 
-p2pool::p2pool(int argc, char* argv[])
+p2pool::p2pool(const Params& params)
 	: m_stopped(false)
+	, m_params(params)
 	, m_updateSeed(true)
 	, m_submitBlockData{}
 	, m_zmqLastActive(0)
@@ -73,49 +74,33 @@ p2pool::p2pool(int argc, char* argv[])
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
-	Params* p = new Params(argc, argv);
-
-	if (!p->valid()) {
-		LOGERR(1, "Invalid or missing command line. Try \"p2pool --help\".");
-		delete p;
-		throw std::exception();
-	}
-
-	m_params = p;
-
 	// P2Pool-nano requires more Monero blocks for the initial sync
-	if (m_params->m_nano) {
+	if (m_params.m_nano) {
 		BLOCK_HEADERS_REQUIRED = 1440;
 	}
 
 	bkg_jobs_tracker = new BackgroundJobTracker();
 
 #ifdef WITH_UPNP
-	if (p->m_upnp) {
+	if (m_params.m_upnp) {
 		init_upnp();
 	}
 #endif
 
-	for (Params::Host& h : p->m_hosts) {
-		if (!h.init_display_name(*p)) {
-			throw std::exception();
-		}
-	}
-
 	m_currentHostIndex = 0;
 
-	m_hostPing.resize(p->m_hosts.size());
+	m_hostPing.resize(m_params.m_hosts.size());
 
 	hash pub, sec, eph_public_key;
 	generate_keys(pub, sec);
 
 	uint8_t view_tag;
-	if (!p->m_miningWallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
+	if (!m_params.m_miningWallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
 		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
 		throw std::exception();
 	}
 
-	const NetworkType type = p->m_miningWallet.type();
+	const NetworkType type = m_params.m_miningWallet.type();
 
 	if (type == NetworkType::Testnet) {
 		LOGWARN(1, "Mining to a testnet wallet address");
@@ -196,34 +181,17 @@ p2pool::p2pool(int argc, char* argv[])
 	}
 	m_timer.data = this;
 
-	m_api = p->m_apiPath.empty() ? nullptr : new p2pool_api(p->m_apiPath, p->m_localStats);
+	m_api = m_params.m_apiPath.empty() ? nullptr : new p2pool_api(m_params.m_apiPath, m_params.m_localStats);
 
-	if (p->m_localStats && !m_api) {
+	if (m_params.m_localStats && !m_api) {
 		LOGERR(1, "--local-api and --stratum-api command line parameters can't be used without --data-api");
 		throw std::exception();
 	}
 
-	m_sideChain = new SideChain(this, type, p->m_mini ? "mini" : (p->m_nano ? "nano" : nullptr));
-
-	const int p2p_port = m_sideChain->is_mini() ? DEFAULT_P2P_PORT_MINI : (m_sideChain->is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
-
-	if (p->m_noClearnetP2P) {
-		char buf[48] = {};
-		log::Stream s(buf);
-		s << "127.0.0.1:" << p2p_port;
-
-		p->m_p2pAddresses = buf;
-	}
-	else if (p->m_p2pAddresses.empty()) {
-		char buf[48] = {};
-		log::Stream s(buf);
-		s << "[::]:" << p2p_port << ",0.0.0.0:" << p2p_port;
-
-		p->m_p2pAddresses = buf;
-	}
+	m_sideChain = new SideChain(this, type, m_params.m_mini ? "mini" : (m_params.m_nano ? "nano" : nullptr));
 
 #ifdef WITH_RANDOMX
-	if (p->m_disableRandomX) {
+	if (m_params.m_disableRandomX) {
 		m_hasher = new RandomX_Hasher_RPC(this);
 	}
 	else {
@@ -252,7 +220,7 @@ p2pool::p2pool(int argc, char* argv[])
 p2pool::~p2pool()
 {
 #ifdef WITH_UPNP
-	if (m_params->m_upnp) {
+	if (m_params.m_upnp) {
 		destroy_upnp();
 	}
 #endif
@@ -295,7 +263,6 @@ p2pool::~p2pool()
 	delete m_hasher;
 	delete m_blockTemplate;
 	delete m_mempool;
-	delete m_params;
 
 	{
 		auto* p = bkg_jobs_tracker;
@@ -318,7 +285,7 @@ void p2pool::update_host_ping(const std::string& display_name, double ping)
 		LOGWARN(1, display_name << " ping is " << ping << " ms, this is too high for an efficient mining. Try to use a different node, or your own local node.");
 	}
 
-	const std::vector<Params::Host>& v = m_params->m_hosts;
+	const std::vector<Params::Host>& v = m_params.m_hosts;
 
 	for (size_t i = 0, n = v.size(); i < n; ++i) {
 		if (v[i].m_displayName == display_name) {
@@ -332,8 +299,8 @@ void p2pool::print_hosts() const
 {
 	const Params::Host& host = current_host();
 
-	for (size_t i = 0, n = m_params->m_hosts.size(); i < n; ++i) {
-		const Params::Host& h = m_params->m_hosts[i];
+	for (size_t i = 0, n = m_params.m_hosts.size(); i < n; ++i) {
+		const Params::Host& h = m_params.m_hosts[i];
 
 		char buf[64] = {};
 		if (m_hostPing[i] > 0.0) {
@@ -417,7 +384,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 	}
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
-	m_blockTemplate->update(miner_data(), *m_mempool, &m_params->m_wallet);
+	m_blockTemplate->update(miner_data(), *m_mempool, &m_params.m_wallet);
 #endif
 
 	m_zmqLastActive = seconds_since_epoch();
@@ -557,7 +524,7 @@ void p2pool::get_missing_heights()
 
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, h](const char* data, size_t size, double)
 		{
 			ChainMain block;
@@ -801,14 +768,14 @@ void p2pool::update_aux_data(const hash& chain_id)
 void p2pool::send_aux_job_donation()
 {
 #ifdef WITH_TLS
-	if (m_params->m_authorKeyFile.empty()) {
+	if (m_params.m_authorKeyFile.empty()) {
 		return;
 	}
 
-	std::ifstream f(m_params->m_authorKeyFile, std::ios::binary | std::ios::ate);
+	std::ifstream f(m_params.m_authorKeyFile, std::ios::binary | std::ios::ate);
 
 	if (!f.good()) {
-		LOGERR(1, "send_aux_job_donation: failed to open " << m_params->m_authorKeyFile);
+		LOGERR(1, "send_aux_job_donation: failed to open " << m_params.m_authorKeyFile);
 		return;
 	}
 
@@ -816,7 +783,7 @@ void p2pool::send_aux_job_donation()
 	ON_SCOPE_LEAVE([&key](){ secure_zero_memory(key); });
 
 	if (f.tellg() != static_cast<std::streampos>(sizeof(key))) {
-		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << " has an invalid size");
+		LOGERR(1, "send_aux_job_donation: " << m_params.m_authorKeyFile << " has an invalid size");
 		return;
 	}
 
@@ -824,21 +791,21 @@ void p2pool::send_aux_job_donation()
 	f.read(reinterpret_cast<char*>(&key), sizeof(key));
 
 	if (!f.good()) {
-		LOGERR(1, "send_aux_job_donation: failed to read data from " << m_params->m_authorKeyFile);
+		LOGERR(1, "send_aux_job_donation: failed to read data from " << m_params.m_authorKeyFile);
 		return;
 	}
 
 	const uint64_t timestamp = time(nullptr);
 
 	if (timestamp >= read_unaligned(reinterpret_cast<uint64_t*>(key.expiration_time))) {
-		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << " is expired");
+		LOGERR(1, "send_aux_job_donation: " << m_params.m_authorKeyFile << " is expired");
 		return;
 	}
 
 	const uint8_t* p = reinterpret_cast<uint8_t*>(&key);
 
 	if (!ED25519_verify(p, sizeof(key.pub_key) + sizeof(key.expiration_time), key.master_key_signature, ED25519_MASTER_PUBLIC_KEY)) {
-		LOGERR(1, "send_aux_job_donation: " << m_params->m_authorKeyFile << ": signature verification failed");
+		LOGERR(1, "send_aux_job_donation: " << m_params.m_authorKeyFile << ": signature verification failed");
 		return;
 	}
 
@@ -1162,7 +1129,7 @@ void p2pool::submit_block() const
 
 	const uint64_t t1 = microseconds_since_epoch();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const char* data, size_t size, double)
 		{
 			rapidjson::Document doc;
@@ -1281,7 +1248,7 @@ void p2pool::download_block_headers1(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
 			ChainMain block;
 			if (parse_block_header(data, size, block)) {
@@ -1314,7 +1281,7 @@ void p2pool::download_block_headers2(uint64_t current_height)
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, seed_height, current_height](const char* data, size_t size, double) {
 			ChainMain block;
 			if (parse_block_header(data, size, block)) {
@@ -1350,7 +1317,7 @@ void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_hei
 		s.m_pos = 0;
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}" << '\0';
 
-		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
 				if (parse_block_headers_range(data, size) == next_height - start_height + 1) {
 					download_block_headers3(next_height + 1, current_height);
@@ -1383,7 +1350,7 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 	s.m_pos = 0;
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}" << '\0';
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, start_height, current_height, host](const char* data, size_t size, double)
 		{
 			if (parse_block_headers_range(data, size) == current_height - start_height) {
@@ -1392,14 +1359,14 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 					m_p2pServer = new P2PServer(this);
 					m_stratumServer = new StratumServer(this);
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
-					if (m_params->m_minerThreads) {
-						start_mining(m_params->m_minerThreads);
+					if (m_params.m_minerThreads) {
+						start_mining(m_params.m_minerThreads);
 					}
 					{
 						WriteLock lock(m_ZMQReaderLock);
 
 						try {
-							m_ZMQReader = new ZMQReader(host.m_address, host.m_zmqPort, m_params->m_socks5Proxy, this);
+							m_ZMQReader = new ZMQReader(host.m_address, host.m_zmqPort, m_params.m_socks5Proxy, this);
 							m_zmqLastActive = seconds_since_epoch();
 						}
 						catch (const std::exception& e) {
@@ -1413,10 +1380,10 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 					get_miner_data();
 
 					// Get ping times for all other hosts
-					for (const Params::Host& h : m_params->m_hosts) {
+					for (const Params::Host& h : m_params.m_hosts) {
 						const std::string& name = h.m_displayName;
 						if (name != host.m_displayName) {
-							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 								[this, name](const char*, size_t, double tcp_ping) { update_host_ping(name, tcp_ping); },
 								[](const char*, size_t, double) {});
 						}
@@ -1424,7 +1391,7 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 
 					std::vector<IMergeMiningClient*> merge_mining_clients;
 
-					for (const auto& h : m_params->m_mergeMiningHosts) {
+					for (const auto& h : m_params.m_mergeMiningHosts) {
 						IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet);
 						if (c) {
 							merge_mining_clients.push_back(c);
@@ -1525,7 +1492,7 @@ void p2pool::get_info()
 {
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this](const char* data, size_t size, double)
 		{
 			parse_get_info_rpc(data, size);
@@ -1549,7 +1516,7 @@ void p2pool::load_found_blocks()
 		return;
 	}
 
-	std::ifstream f(DATA_DIR + FOUND_BLOCKS_FILE);
+	std::ifstream f(m_params.m_dataDir + FOUND_BLOCKS_FILE);
 	if (!f.is_open()) {
 		return;
 	}
@@ -1644,7 +1611,7 @@ void p2pool::get_version()
 {
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this](const char* data, size_t size, double)
 		{
 			parse_get_version_rpc(data, size);
@@ -1721,7 +1688,7 @@ void p2pool::get_miner_data(bool retry)
 
 	const Params::Host& host = current_host();
 
-	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params->m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
+	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, host](const char* data, size_t size, double tcp_ping)
 		{
 			parse_get_miner_data_rpc(data, size);
@@ -2085,7 +2052,7 @@ void p2pool::api_update_block_found(const ChainMain* data, const PoolBlock* bloc
 	difficulty_type diff;
 
 	if (data && get_difficulty_at_height(data->height, diff)) {
-		const std::string path = DATA_DIR + FOUND_BLOCKS_FILE;
+		const std::string path = m_params.m_dataDir + FOUND_BLOCKS_FILE;
 		std::ofstream f(path, std::ios::app);
 		if (f.is_open()) {
 			f << cur_time << ' ' << data->height << ' ' << data->id << ' ' << diff << ' ' << total_hashes << '\n';
@@ -2141,7 +2108,7 @@ void p2pool::on_external_block(const PoolBlock& block)
 
 void p2pool::api_update_aux_data()
 {
-	if (!m_api || !m_params->m_localStats || m_stopped) {
+	if (!m_api || !m_params.m_localStats || m_stopped) {
 		return;
 	}
 
@@ -2291,7 +2258,7 @@ bool p2pool::zmq_running() const
 
 const Params::Host& p2pool::switch_host()
 {
-	const std::vector<Params::Host>& v = m_params->m_hosts;
+	const std::vector<Params::Host>& v = m_params.m_hosts;
 	return v[++m_currentHostIndex % v.size()];
 }
 
@@ -2316,7 +2283,7 @@ void p2pool::reconnect_to_host()
 	m_ZMQReader = nullptr;
 
 	try {
-		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params->m_socks5Proxy, this);
+		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params.m_socks5Proxy, this);
 		m_zmqLastActive = seconds_since_epoch();
 		m_ZMQReader = new_reader;
 	}
@@ -2332,7 +2299,7 @@ void p2pool::reconnect_to_host()
 
 int p2pool::run()
 {
-	if (!m_params->valid()) {
+	if (!m_params.valid()) {
 		LOGERR(1, "Invalid or missing command line. Try \"p2pool --help\".");
 		return 1;
 	}
@@ -2343,8 +2310,8 @@ int p2pool::run()
 	}
 
 #ifdef WITH_TLS
-	if (!m_params->m_tlsCert.empty() && !m_params->m_tlsCertKey.empty()) {
-		if (!ServerTls::load_from_files(m_params->m_tlsCert.c_str(), m_params->m_tlsCertKey.c_str())) {
+	if (!m_params.m_tlsCert.empty() && !m_params.m_tlsCertKey.empty()) {
+		if (!ServerTls::load_from_files(m_params.m_tlsCert.c_str(), m_params.m_tlsCertKey.c_str())) {
 			LOGERR(1, "Failed to load TLS files");
 			return 1;
 		}

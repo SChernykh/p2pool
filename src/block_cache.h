@@ -22,11 +22,12 @@ namespace p2pool {
 struct PoolBlock;
 class SideChain;
 class P2PServer;
+struct Params;
 
 class BlockCache : public nocopy_nomove
 {
 public:
-	BlockCache();
+	explicit BlockCache(const Params& params);
 	~BlockCache();
 
 	void store(const PoolBlock& block);
