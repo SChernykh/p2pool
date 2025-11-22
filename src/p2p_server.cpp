@@ -1297,11 +1297,12 @@ void P2PServer::on_timer()
 		return;
 	}
 
-	++m_timerCounter;
+	const uint64_t t = ++m_timerCounter;
 
-	if (!m_initialPeerList.empty()) {
+	if ((t == 1) && !m_initialPeerList.empty()) {
 		connect_to_peers(m_initialPeerList);
 		m_initialPeerList.clear();
+		return;
 	}
 
 	flush_cache();
