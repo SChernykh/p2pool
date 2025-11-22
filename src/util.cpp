@@ -1049,7 +1049,7 @@ std::vector<std::vector<std::string>> parse_config(const std::string& file_name)
 
 	std::string s;
 
-	while (std::getline(f, s).good()) {
+	while (f.good() && std::getline(f, s)) {
 		if (s.empty()) {
 			continue;
 		}
