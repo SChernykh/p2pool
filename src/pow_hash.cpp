@@ -444,7 +444,7 @@ void RandomX_Hasher_RPC::loop(void* data)
 	LOGINFO(1, "event loop stopped");
 }
 
-bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& /*seed*/, hash& h, bool /*force_light_mode*/)
+bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool /*force_light_mode*/)
 {
 	MutexLock lock(m_requestMutex);
 
@@ -456,7 +456,7 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"calc_pow\",\"params\":{\"major_version\":" << major_version <<
 		",\"height\":" << height <<
 		",\"block_blob\":\"" << log::hex_buf(data, size) << '"' <<
-		",\"seed_hash\":\"\"}}" << '\0';
+		",\"seed_hash\":\"" << seed << "\"}}" << '\0';
 
 	std::atomic<int> result{ 0 };
 	std::atomic<bool> done{ false };
