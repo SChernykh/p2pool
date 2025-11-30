@@ -24,8 +24,8 @@
 --out-peers N         Maximum number of outgoing connections for p2p server (any value between 10 and 450)
 --in-peers N          Maximum number of incoming connections for p2p server (any value between 10 and 450)
 --start-mining N      Start built-in miner using N threads (any value between 1 and 64)
---mini                Connect to p2pool-mini sidechain. Note that it will also change default p2p port from 37889 to 37888
---nano                Connect to p2pool-nano sidechain. Note that it will also change default p2p port from 37889 to 37890
+--mini                Connect to p2pool-mini sidechain. Note that it will also change default p2p port from 37889 to 37888. Cannot be used with --nano.
+--nano                Connect to p2pool-nano sidechain. Note that it will also change default p2p port from 37889 to 37890. Cannot be used with --mini.
 --no-autodiff         Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)
 --rpc-login           Specify username[:password] required for Monero RPC server
 --socks5              Specify IP:port of a SOCKS5 proxy to use for outgoing connections

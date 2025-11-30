@@ -7,10 +7,12 @@ networks:
 
 volumes:
   p2pool: 
-{% if sidechain[0] == 0 %}
-    name: p2pool
-{% else %}
+{% if sidechain[0] == 1 %}
     name: p2pool-mini
+{% elif sidechain[0] == 2 %}
+    name: p2pool-nano
+{% else %}
+    name: p2pool
 {% endif %}
 
 {% if configure_monero == True %}
@@ -55,6 +57,8 @@ services:
       --loglevel {{ p2pool_log_level | int }}
 {% if sidechain[0] == 1 %}
       --mini
+{% elif sidechain[0] == 2 %}
+      --nano
 {% endif %}
 {% if enable_autodiff == False %}
       --no-autodiff

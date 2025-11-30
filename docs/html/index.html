@@ -256,7 +256,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <details><summary>Setup P2Pool node</summary>
 <ul>
 <li>Download the latest P2Pool <a href="https://github.com/SChernykh/p2pool/releases/latest" target="_blank">release</a>
-<li>[Optional] Open port <span>37889</span> (P2Pool port) or <span>37888</span> (P2Pool mini port) in your firewall to ensure better connectivity
+<li>[Optional] Open port <span>37889</span> (P2Pool p2p port) in your firewall to ensure better connectivity
 <li>Run <span>./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS</span>
 <li>It should take no more than 5-10 minutes to synchronize
 </ul></details>
@@ -274,6 +274,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <ul>
 <li>You can enter your wallet address at <a href="https://p2pool.observer/" target="_blank">P2Pool Observer</a>
 <li>P2Pool Observer for P2Pool mini can be found <a href="https://mini.p2pool.observer/" target="_blank">here</a>
+<li>P2Pool Observer for P2Pool nano can be found <a href="https://nano.p2pool.observer/" target="_blank">here</a>
 <li>You will find your wallet's statistics there only after you've mined at least 1 P2Pool share
 </ul>
 </details>
@@ -281,7 +282,7 @@ It's highly recommended to create a new wallet for mining because wallet address
 <details><summary>Help and support</summary>
 P2Pool is a decentralized community, there is no dedicated support. You can reach and get help from other miners on:
 <ul>
-<li>IRC channels: <span>#p2pool-log</span> (<span>#p2pool-mini</span> for P2Pool mini) on <a href="https://libera.chat/" target="_blank">Libera.Chat</a>
+<li>IRC channels: <span>#p2pool-log</span> / <span>#p2pool-mini</span> / <span>#p2pool-nano</span> on <a href="https://libera.chat/" target="_blank">Libera.Chat</a>
 <li>Reddit: <a href="https://reddit.com/r/MoneroMining/" target="_blank">r/MoneroMining</a>
 </ul></details>
 </td></tr></table>
@@ -300,7 +301,7 @@ P2Pool is a decentralized community, there is no dedicated support. You can reac
 <li><span style="font-size:2rem;color:#e09000;">I have been mining for several hours and still got no rewards?</span>
 <ul><li>P2Pool doesn't work exactly like regular pools - there's no "pending balance" here. You need to find a pool share first and then wait for P2Pool to find a Monero block. You'll get a payout to your XMR wallet as soon as a block is found and you have shares in PPLNS window. It can take several days to a week to find a share if your hashrate is low. Type "status" command in P2Pool console or visit <a href="https://p2pool.observer/" target="_blank">P2Pool observer</a> to check your progress.</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I am mining but I can't find any shares</span>
-<ul><li>First check for any warnings and errors in P2Pool console and logs. If everything works fine, you can check the <a href="https://p2pool.observer/calculate-share-time" target="_blank">average share time calculator</a> to get an idea how often you should find a share with your hashrate. If this time is more than 1 day, it's recommended to switch to P2Pool mini by adding <span style="color:#808080;">--mini</span> to P2Pool command line.</ul><br>
+<ul><li>First check for any warnings and errors in P2Pool console and logs. If everything works fine, you can check the <a href="https://p2pool.observer/calculate-share-time" target="_blank">average share time calculator</a> to get an idea how often you should find a share with your hashrate. If this time is more than 1 day, it's recommended to switch to either P2Pool mini or nano by adding <span style="color:#808080;">--mini</span> or <span style="color:#808080;">--nano</span> to P2Pool command line.</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I get an error "monerod RPC ... is incompatible, update to RPC >= v3.8"</span>
 <ul><li>Use monerod v0.18.0.0 or newer</ul><br>
 <li><span style="font-size:2rem;color:#e09000;">I get warnings "peer ... is ahead on mainchain (height ..., your height ...). Is your monerod stuck or lagging?"</span>
