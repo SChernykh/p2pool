@@ -108,7 +108,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 ### GUI for P2Pool
 
-- [Gupax](https://github.com/hinto-janai/gupax) project aims to provide an easy to use cross-platform GUI to configure and run P2Pool & [XMRig](https://github.com/xmrig/xmrig).
+- [Gupax](https://github.com/gupax-io/gupax) project aims to provide an easy to use cross-platform GUI to configure and run P2Pool & [XMRig](https://github.com/xmrig/xmrig).
 
 ### Merge mining
 
