@@ -4,6 +4,9 @@
 //
 // Fixed difficulty for miners that connect to your node must be set in their config.json
 //
+// Note: nano sidechain uses
+//  "block_time": 30
+//	"uncle_penalty": 10
 {
 	"name": "default",
 	"password": "",

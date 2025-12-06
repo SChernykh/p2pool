@@ -37,7 +37,8 @@ class P2PoolHelpBox(HelpBoxBase):
         "P2Pool Sidechain:": [
             "Which P2Pool sidechain to mine on",
             "    use main for faster miners",
-            "    use mini for slower miners",
+            "    use mini for slow miners (>30kH/s)",
+            "    use nano for slower miners (<30kH/s)",
         ],
         "Enable Server Statistics": [
             "Provide access to your P2Pool server statictics via a web interface",
@@ -364,7 +365,7 @@ class P2PoolConfigForm(ConfigFormBase):
         self.sidechain = self.add(
             npyscreen.TitleSelectOne,
             name="P2Pool Sidechain:",
-            values=["main", "mini"],
+            values=["main", "mini", "nano"],
             scroll_exit=True,
             max_height=2,
             value=[
