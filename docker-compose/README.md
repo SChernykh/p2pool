@@ -33,7 +33,7 @@ docker compose up
 ```
 
 #### Optional
-* Open ports 18080 (Monero p2p port) and 37889 (P2Pool p2p port) or 37888 (P2Pool-mini p2p port) in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine
+* Open ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine
 * An XMRig CPU miner is included by default, but you can connect additional miners to this same p2pool node using port 3333 (or alternate if configured) when you set it as "exposed" in the configuration
 * Configure your kernel for maximum mining performance: [XMRig RandomX Optimization Guide](https://xmrig.com/docs/miner/randomx-optimization-guide)
 * Many optional configurations and customizations are available by running './configure'
@@ -54,4 +54,5 @@ Change to p2pool/docker-compose directory <br />
 Stop and remove all containers: ```docker compose down``` <br />
 Remove the p2pool data: ```docker volume rm p2pool``` <br />
 Remove the p2pool-mini data: ```docker volume rm p2pool-mini``` <br />
+Remove the p2pool-nano data: ```docker volume rm p2pool-nano``` <br />
 Remove the monero data: ```docker volume rm monero```

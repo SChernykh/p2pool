@@ -2,7 +2,13 @@
 
 Decentralized pool for Monero mining.
 
-Pool status and monitoring pages can be found at https://p2pool.io/, https://p2pool.io/mini/ and https://p2pool.observer/, https://mini.p2pool.observer/
+Pool status and monitoring pages can be found at:
+
+|P2Pool||
+|-|-|
+|main|https://p2pool.io/ <br> https://p2pool.observer/|
+|mini|https://p2pool.io/mini/ <br> https://mini.p2pool.observer/|
+|nano|https://p2pool.io/nano/ <br> https://nano.p2pool.observer/|
 
 These are 3rd-party pages. If they are down, it doesn't mean there is a problem with P2Pool itself - it keeps mining always thanks to its decentralized nature.
 
@@ -92,8 +98,15 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 - In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the [official Monero binaries](https://www.getmonero.org/downloads/), start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
 - You can mine to a primary wallet address (the one starting with `4`) for mining. If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
-- You can add the `--mini` parameter to your P2Pool command to connect to the **p2pool-mini** sidechain. Note that it will also change the default p2p port from 37889 to 37888.
-- Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
+- You can add the `--mini` or `--nano` parameter to your P2Pool command to connect to the respective sidechain.
+  > [!NOTE]
+  >
+  > You cannot use both `--mini` and `--nano` together
+  >
+  > Using `--mini` will change the p2p port to 37888.
+  >
+  > Using `--nano` will change the p2p port to 37890.
+- Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same P2Pool node. The more the better!
 - The steps below assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. 
 - It is highly recommended to create a new mainnet wallet for P2Pool mining because **wallet addresses are public on P2Pool**.
@@ -152,7 +165,7 @@ Note that Tari will be mined in solo mode (only full Tari blocks can be mined fo
 ```
 sudo sysctl vm.nr_hugepages=3072
 ```
-4. Check that ports 18080 (Monero p2p port) and 37889/37888 (P2Pool/P2Pool mini p2p port) are open in your local firewall to ensure better connectivity. 
+4. Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your local firewall to ensure better connectivity. 
 5. Start `monerod` with the following command/options: 
 ```
 ./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
