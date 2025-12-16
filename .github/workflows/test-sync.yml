@@ -286,6 +286,63 @@ jobs:
           build/*.log
           build/data/
 
+  sync-test-ubuntu-tysan:
+    timeout-minutes: 60
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev
+
+    - name: Install clang
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 21 all
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Build p2pool
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DDEV_TEST_SYNC=ON -DDEV_DEBUG=ON -DDEV_WITH_TYSAN=ON -DCMAKE_C_FLAGS="-fno-omit-frame-pointer -fsanitize=type -O0 -g3" -DCMAKE_CXX_FLAGS="-fno-omit-frame-pointer -fsanitize=type -O0 -g3" -DWITH_LTO=OFF -DWITH_INDEXED_HASHES=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        make -j$(nproc) p2pool
+
+    - name: Run p2pool
+      run: |
+        cd build
+        mkdir data
+        python ../tests/src/stratum_dummy.py 1 &
+        python ../tests/src/stratum_dummy.py 2 &
+        python ../tests/src/stratum_dummy.py 3 &
+        sudo sysctl vm.mmap_rnd_bits=28
+        TYSAN_OPTIONS=print_stacktrace=1 ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6 --light-mode 2> stderr.log
+
+    - name: Check synchronization
+      run: |
+        cd build
+        grep 'Synchronization finished successfully' p2pool.log
+
+    - name: Check p2pool.log for errors
+      run: |
+        cd build
+        ../scripts/workflows/test-sync-check.sh
+
+    - name: Archive p2pool.log
+      if: '!cancelled()'
+      uses: actions/upload-artifact@v4
+      with:
+        name: p2pool_ubuntu_data_tysan
+        path: |
+          build/*.log
+          build/data/
+
   sync-test-macos:
 
     timeout-minutes: 120

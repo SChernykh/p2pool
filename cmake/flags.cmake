@@ -113,6 +113,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769")
 	endif()
 
+	if (DEV_WITH_TYSAN)
+		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=type")
+	endif()
+
 	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wno-unknown-warning-option -Wno-nan-infinity-disabled -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
 
 	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20))
@@ -123,7 +127,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		set(WARNING_FLAGS "-w")
 	endif()
 
-	if (DEV_WITH_MSAN OR DEV_DEBUG OR (CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+	if (DEV_WITH_MSAN OR DEV_WITH_TYSAN OR DEV_DEBUG OR (CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
 		add_definitions(-DDEBUG_BUILD)
 		if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 			set(OPTIMIZATION_FLAGS "-O0")
