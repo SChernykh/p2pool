@@ -117,7 +117,6 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 - [Cake Wallet v4.4.5 and newer](https://cakewallet.com/)
 - [Monero.com by Cake Wallet](https://monero.com/)
 - [Feather Wallet v2.1.0 and newer](https://featherwallet.org/)
-- [MyMonero](https://mymonero.com/)
 
 ### GUI for P2Pool
 
