@@ -319,9 +319,9 @@ bool TCPServer::connect_to_peer(bool is_v6, const raw_ip& ip, int port)
 bool TCPServer::connect_to_peer(const std::string& domain, int port)
 {
 	if (m_socks5Proxy.empty()) {
-        LOGERR(1, "Can't connect to " << domain << ": SOCKS5 proxy is required");
-        return false;
-    }
+		LOGERR(1, "Can't connect to " << domain << ": SOCKS5 proxy is required");
+		return false;
+	}
 
 	if (m_finished.load()) {
 		return false;
@@ -337,7 +337,7 @@ bool TCPServer::connect_to_peer(const std::string& domain, int port)
 	s << domain << ':' << port << '\0';
 
 	if (s.m_spilled) {
-        LOGERR(1, "Can't connect to " << domain << ": too long domain name");
+		LOGERR(1, "Can't connect to " << domain << ": too long domain name");
 		return false;
 	}
 
