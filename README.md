@@ -99,13 +99,10 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
 - You can mine to a primary wallet address (the one starting with `4`) for mining. If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
 - You can add the `--mini` or `--nano` parameter to your P2Pool command to connect to the respective sidechain.
-  > [!NOTE]
-  >
-  > You cannot use both `--mini` and `--nano` together
-  >
-  > Using `--mini` will change the p2p port to 37888.
-  >
-  > Using `--nano` will change the p2p port to 37890.
+> [!NOTE]
+> You cannot use both `--mini` and `--nano` together<br>
+> Using `--mini` will change the p2p port to 37888.<br>
+> Using `--nano` will change the p2p port to 37890.<br>
 - Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same P2Pool node. The more the better!
 - The steps below assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. 
