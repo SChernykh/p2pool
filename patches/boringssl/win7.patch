@@ -1,5 +1,5 @@
 diff --git a/crypto/rand/windows.cc b/crypto/rand/windows.cc
-index 6a93a2d84..f75112b4f 100644
+index ebd0d4afd..65e877f0e 100644
 --- a/crypto/rand/windows.cc
 +++ b/crypto/rand/windows.cc
 @@ -24,6 +24,7 @@
@@ -8,11 +8,11 @@ index 6a93a2d84..f75112b4f 100644
  #include <windows.h>
 +#include <wincrypt.h>
  
- #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) && \
-     !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-@@ -57,16 +58,39 @@ void CRYPTO_sysrand(uint8_t *out, size_t requested) {
+ using namespace bssl;
+ 
+@@ -59,16 +60,39 @@ void bssl::CRYPTO_sysrand(uint8_t *out, size_t requested) {
  // See: https://learn.microsoft.com/en-us/windows/win32/seccng/processprng
- typedef BOOL (WINAPI *ProcessPrngFunction)(PBYTE pbData, SIZE_T cbData);
+ typedef BOOL(WINAPI *ProcessPrngFunction)(PBYTE pbData, SIZE_T cbData);
  static ProcessPrngFunction g_processprng_fn = nullptr;
 +static HCRYPTPROV g_hCryptProv = 0;
 +
@@ -21,7 +21,7 @@ index 6a93a2d84..f75112b4f 100644
 +  return CryptGenRandom(g_hCryptProv, cbData, pbData);
 +}
  
- static void init_processprng(void) {
+ static void init_processprng() {
    HMODULE hmod = LoadLibraryW(L"bcryptprimitives");
 -  if (hmod == nullptr) {
 -    abort();
@@ -54,4 +54,4 @@ index 6a93a2d84..f75112b4f 100644
 +  abort();
  }
  
- void CRYPTO_init_sysrand(void) {
+ void bssl::CRYPTO_init_sysrand() {
