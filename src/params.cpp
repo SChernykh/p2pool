@@ -21,6 +21,11 @@
 #include "p2p_server.h"
 #include <fstream>
 
+#ifdef WITH_GRPC
+#include "merge_mining_client.h"
+#include "merge_mining_client_tari.h"
+#endif
+
 LOG_CATEGORY(Params)
 
 void p2pool_usage();
@@ -475,6 +480,20 @@ bool Params::valid() const
 
 	return true;
 }
+
+#ifdef WITH_GRPC
+bool Params::grpc_needed() const
+{
+	for (const MergeMiningHost& h : m_mergeMiningHosts) {
+		if (h.m_host.find(MergeMiningClientTari::TARI_PREFIX) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+#endif
+
 
 bool Params::Host::init_display_name(const Params& p)
 {

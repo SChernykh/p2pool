@@ -33,6 +33,10 @@ struct Params
 
 	bool valid() const;
 
+#ifdef WITH_GRPC
+	bool grpc_needed() const;
+#endif
+
 	struct Host
 	{
 		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083), m_rpcSSL(false) {}

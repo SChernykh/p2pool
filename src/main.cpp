@@ -343,7 +343,9 @@ int main(int argc, char* argv[])
 	}
 
 #ifdef WITH_GRPC
-	grpc_init();
+	if (params.grpc_needed()) {
+		grpc_init();
+	}
 #endif
 
 #ifdef WITH_TLS
@@ -362,7 +364,9 @@ int main(int argc, char* argv[])
 	}
 
 #ifdef WITH_GRPC
-	grpc_shutdown();
+	if (params.grpc_needed()) {
+		grpc_shutdown();
+	}
 #endif
 
 	curl_global_cleanup();
