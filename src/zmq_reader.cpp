@@ -38,6 +38,13 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		m_proxy.clear();
 	}
 
+	const bool is_v6 = address.find_first_of(':') != std::string::npos;
+
+	if (is_v6) {
+		m_publisher.set(zmq::sockopt::ipv6, 1);
+		m_subscriber.set(zmq::sockopt::ipv6, 1);
+	}
+
 	char addr_buf[log::Stream::BUF_SIZE + 1];
 	addr_buf[0] = '\0';
 
@@ -49,7 +56,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 
 		try {
 			log::Stream s(addr_buf);
-			s << "tcp://127.0.0.1:" << port << '\0';
+			s << (is_v6 ? "tcp://[::1]:" : "tcp://127.0.0.1:") << port << '\0';
 			m_publisher.bind(addr_buf);
 			m_publisherPort = static_cast<uint16_t>(port);
 			break;
@@ -65,11 +72,11 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 		throw zmq::error_t(EFSM);
 	}
 
-	LOGINFO(5, "listening on tcp://127.0.0.1:" << m_publisherPort << " for internal communications");
+	std::string addr(addr_buf);
+	LOGINFO(5, "listening on " << addr << " for internal communications");
 
 	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
 
-	std::string addr(addr_buf);
 	if (!connect(addr, false)) {
 		throw zmq::error_t(EFSM);
 	}
