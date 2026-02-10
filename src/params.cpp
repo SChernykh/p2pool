@@ -514,7 +514,7 @@ bool Params::valid() const
 	}
 
 	if (m_socks5ProxyType == ProxyType::INVALID) {
-		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5 parameter.");
+		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5-proxy-type parameter.");
 		return false;
 	}
 
