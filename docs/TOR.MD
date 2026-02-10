@@ -3,6 +3,7 @@
 P2Pool has several command-line options that should be used for TOR setup:
 
 - `--socks5 IP:port` to specify your TOR proxy address (usually `127.0.0.1:9050` if you installed TOR on the same PC)
+- `--socks5-proxy-type tor` to specify the type of SOCKS5 proxy being used
 - `--no-dns` to disable all DNS queries and prevent DNS leaks. P2Pool only ever makes DNS requests to get a list of seed nodes, to resolve your Monero node's domain (if it's not set as an IP address), and to resolve manually added peers
 - `--no-upnp` to disable UPnP requests (they are sent to your router, so use this option if you are not on your home network)
 - `--onion-address` your hidden service's address (without port number). This address will be broadcast to other peers when you mine a share in P2Pool. This is to prevent address spamming - you have to mine a real share to be able to broadcast your TOR address.
@@ -27,5 +28,5 @@ P2Pool has several command-line options that should be used for TOR setup:
 
 ## Command line example
 ```
-./p2pool --host MONERO_NODE_IP --wallet YOUR_WALLET --socks5 127.0.0.1:9050 --no-dns --no-upnp --onion-address ADDRESS_FROM_HOSTNAME_FILE
+./p2pool --host MONERO_NODE_IP --wallet YOUR_WALLET --socks5 127.0.0.1:9050 --socks5-proxy-type tor --no-dns --no-upnp --onion-address ADDRESS_FROM_HOSTNAME_FILE
 ```
