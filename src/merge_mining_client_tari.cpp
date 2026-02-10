@@ -42,7 +42,7 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	, m_auxWallet(wallet)
 	, m_pool(pool)
 	, m_tariJobParams{}
-	, m_server(new TariServer(pool->params().m_socks5Proxy))
+	, m_server(new TariServer(pool->params().m_socks5Proxy, pool->params().m_socks5ProxyType))
 	, m_hostStr(host)
 	, m_workerStop(0)
 	, m_pushBlockStop(0)
@@ -863,8 +863,8 @@ void MergeMiningClientTari::run()
 // TariServer and TariClient are simply a proxy from a localhost TCP port to the external Tari node
 // This is needed for SOCKS5 proxy support (gRPC library doesn't support it natively)
 
-MergeMiningClientTari::TariServer::TariServer(const std::string& socks5Proxy)
-	: TCPServer(1, MergeMiningClientTari::TariClient::allocate, socks5Proxy)
+MergeMiningClientTari::TariServer::TariServer(const std::string& socks5Proxy, Params::ProxyType socks5ProxyType)
+	: TCPServer(1, MergeMiningClientTari::TariClient::allocate, socks5Proxy, socks5ProxyType)
 	, m_TariNodeIsV6(false)
 	, m_TariNodeHost()
 	, m_TariNodePort(0)

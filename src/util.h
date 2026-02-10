@@ -395,6 +395,18 @@ FORCEINLINE void secure_zero_memory(T& value)
 	secure_zero_memory(&value, sizeof(T));
 }
 
+FORCEINLINE std::string tolower(const std::string& s)
+{
+	std::string result;
+	result.reserve(s.size() + 1);
+
+	for (char c : s) {
+		result.push_back(static_cast<char>(std::tolower(c)));
+	}
+
+	return result;
+}
+
 std::string to_onion_v3(const hash& pubkey);
 hash from_onion_v3(const std::string& address);
 

@@ -83,7 +83,7 @@ private:
 
 	struct TariServer : public TCPServer
 	{
-		explicit TariServer(const std::string& socks5Proxy);
+		TariServer(const std::string& socks5Proxy, Params::ProxyType socks5ProxyType);
 		~TariServer() {}
 
 		[[nodiscard]] bool start();

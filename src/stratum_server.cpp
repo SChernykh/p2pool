@@ -44,7 +44,7 @@ static constexpr int32_t BAN_THRESHOLD_POINTS = -15;
 namespace p2pool {
 
 StratumServer::StratumServer(p2pool* pool)
-	: TCPServer(DEFAULT_BACKLOG, StratumClient::allocate, std::string())
+	: TCPServer(DEFAULT_BACKLOG, StratumClient::allocate, std::string(), Params::ProxyType::INVALID)
 	, m_pool(pool)
 	, m_autoDiff(pool->params().m_autoDiff)
 	, m_enableFullValidation(pool->params().m_enableFullValidation)

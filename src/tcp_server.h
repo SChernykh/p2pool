@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include "params.h"
 
 #ifdef WITH_TLS
 #include "tls.h"
@@ -33,7 +34,7 @@ public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy);
+	TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType);
 	virtual ~TCPServer();
 
 	[[nodiscard]] bool connect_to_peer(bool is_v6, const char* ip, int port);
@@ -191,6 +192,7 @@ protected:
 #endif
 
 	std::string m_socks5Proxy;
+	Params::ProxyType m_socks5ProxyType;
 	bool m_socks5ProxyV6;
 	raw_ip m_socks5ProxyIP;
 	int m_socks5ProxyPort;

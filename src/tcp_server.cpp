@@ -23,7 +23,7 @@ static thread_local const char* log_category_prefix = "TCPServer ";
 
 namespace p2pool {
 
-TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy)
+TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType)
 	: m_allocateNewClient(allocate_new_client)
 	, m_defaultBacklog(default_backlog)
 	, m_loopThread{}
@@ -32,6 +32,7 @@ TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_
 	, m_portMapping(0)
 #endif
 	, m_socks5Proxy(socks5Proxy)
+	, m_socks5ProxyType(socks5ProxyType)
 	, m_socks5ProxyV6(false)
 	, m_socks5ProxyIP{}
 	, m_socks5ProxyPort(-1)

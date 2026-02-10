@@ -64,7 +64,7 @@ static constexpr hash seed_onion_nodes[] = {
 };
 
 P2PServer::P2PServer(p2pool* pool)
-	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy)
+	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy, pool->params().m_socks5ProxyType)
 	, m_pool(pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache(pool->params()) : nullptr)
 	, m_cacheLoaded(false)
@@ -426,14 +426,16 @@ void P2PServer::update_peer_connections()
 
 	uint32_t num_outgoing = m_numConnections - m_numIncomingConnections;
 
-	// Try to have at least N/2 outgoing onion connections
-	if (!m_socks5Proxy.empty()) {
+	// Try to have at least N/2 (or N if clearnet P2P is disabled) outgoing onion connections
+	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::TOR)) {
 		std::vector<hash> pubkeys = m_pool->side_chain().seen_onion_pubkeys();
 
 		// Add seed nodes
 		pubkeys.insert(pubkeys.end(), seed_onion_nodes, seed_onion_nodes + array_size(seed_onion_nodes));
 
-		for (uint32_t i = m_numOnionConnections, n = N / 2; (i < n) && !pubkeys.empty();) {
+		const uint32_t n = m_pool->params().m_noClearnetP2P ? N : (N / 2);
+
+		for (uint32_t i = m_numOnionConnections; (i < n) && !pubkeys.empty();) {
 			const uint64_t k = get_random64() % pubkeys.size();
 			const std::string addr = to_onion_v3(pubkeys[k]);
 
@@ -727,8 +729,21 @@ void P2PServer::load_peer_list()
 	}
 
 	// Finally load peers from p2pool_peers.txt and p2pool_onion_peers.txt
-	for (size_t i = 0, n = (m_socks5Proxy.empty() ? 1 : 2); i < n; ++i) {
-		const std::string path = m_pool->params().m_dataDir + (i ? saved_onion_peer_list_file_name : saved_peer_list_file_name);
+	std::vector<std::string> paths;
+	paths.resize(Params::ProxyType::MAX);
+
+	paths[Params::ProxyType::PLAIN] = saved_peer_list_file_name;
+
+	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::TOR)) {
+		paths[Params::ProxyType::TOR] = saved_onion_peer_list_file_name;
+	}
+
+	for (int i = Params::ProxyType::PLAIN; i < Params::ProxyType::MAX; ++i) {
+		const std::string& path = paths[i];
+
+		if (path.empty()) {
+			continue;
+		}
 
 		std::ifstream f(path);
 
@@ -740,7 +755,7 @@ void P2PServer::load_peer_list()
 				std::getline(f, address);
 
 				if (!address.empty()) {
-					if (i > 0) {
+					if (i == Params::ProxyType::TOR) {
 						const hash h = from_onion_v3(address);
 						if (!h.empty()) {
 							pubkeys.emplace_back(h);
@@ -756,7 +771,7 @@ void P2PServer::load_peer_list()
 			}
 			f.close();
 
-			if (i > 0) {
+			if (i == Params::ProxyType::TOR) {
 				s.add_onion_pubkeys(pubkeys);
 			}
 		}

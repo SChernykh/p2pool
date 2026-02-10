@@ -238,6 +238,18 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 			ok = true;
 		}
 
+		if ((arg[0] == "socks5-proxy-type") && has1(arg)) {
+			const std::string s = tolower(arg[1]);
+
+			m_socks5ProxyType = ProxyType::INVALID;
+
+			if (s == "auto")  m_socks5ProxyType = ProxyType::AUTO;
+			if (s == "plain") m_socks5ProxyType = ProxyType::PLAIN;
+			if (s == "tor")   m_socks5ProxyType = ProxyType::TOR;
+
+			ok = m_socks5ProxyType != ProxyType::INVALID;
+		}
+
 		if (arg[0] == "no-dns") {
 			m_dns = false;
 			disable_resolve_host = true;
@@ -426,6 +438,29 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	else {
 		fixup_path(m_dataDir);
 	}
+
+	// Detect the proxy type
+	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == ProxyType::AUTO)) {
+		m_socks5ProxyType = ProxyType::INVALID;
+
+		const size_t k = m_socks5Proxy.find_last_of(':');
+
+		if ((k != std::string::npos) && (k < m_socks5Proxy.length() - 1)) {
+			const uint32_t port = std::stoul(m_socks5Proxy.substr(k + 1), nullptr, 10);
+
+			if ((port > 0) && (port < 65536)) {
+				switch (port) {
+				case 9050:
+					m_socks5ProxyType = ProxyType::TOR;
+					break;
+
+				default:
+					m_socks5ProxyType = ProxyType::PLAIN;
+					break;
+				}
+			}
+		}
+	}
 }
 
 bool Params::valid() const
@@ -475,6 +510,11 @@ bool Params::valid() const
 
 	if (m_mini && m_nano) {
 		LOGERR(1, "You can't have both --mini and --nano in the command line");
+		return false;
+	}
+
+	if (m_socks5ProxyType == ProxyType::INVALID) {
+		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5 parameter.");
 		return false;
 	}
 

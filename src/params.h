@@ -108,7 +108,17 @@ struct Params
 	bool m_mini = false;
 	bool m_nano = false;
 	bool m_autoDiff = true;
+
 	std::string m_socks5Proxy;
+
+	enum ProxyType {
+		INVALID = -1,
+		AUTO    =  0,
+		PLAIN   =  1,
+		TOR     =  2,
+		MAX     =  3,
+	} m_socks5ProxyType = ProxyType::AUTO;
+
 	bool m_dns = true;
 	int32_t m_p2pExternalPort = 0;
 #ifdef WITH_UPNP
