@@ -105,6 +105,8 @@ void p2pool_usage()
 		"--rpc-ssl             Enable SSL on RPC connections to the Monero node\n"
 		"--rpc-ssl-fingerprint base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)\n"
 #endif
+		"--stratum-proxy-protocol  Enable HAProxy PROXY protocol v2 for incoming Stratum connections (use with HAProxy send-proxy-v2)\n"
+		"--p2p-proxy-protocol      Enable HAProxy PROXY protocol v2 for incoming P2P connections (use with HAProxy send-proxy-v2)\n"
 		"--no-stratum-http     Disable HTTP on Stratum ports\n"
 		"--full-validation     Enables full share validation / increases CPU usage\n"
 		"--onion-address       Tell other peers to use this .onion address to connect to this node through TOR\n"

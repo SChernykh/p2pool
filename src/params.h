@@ -149,6 +149,8 @@ struct Params
 	std::string m_onionAddress;
 	hash m_onionPubkey;
 	bool m_noClearnetP2P = false;
+	bool m_stratumProxyProtocol = false;
+	bool m_p2pProxyProtocol = false;
 };
 
 } // namespace p2pool
