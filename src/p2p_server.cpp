@@ -64,7 +64,7 @@ static constexpr hash seed_onion_nodes[] = {
 };
 
 P2PServer::P2PServer(p2pool* pool)
-	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy, pool->params().m_socks5ProxyType)
+	: TCPServer(DEFAULT_BACKLOG, P2PClient::allocate, pool->params().m_socks5Proxy, pool->params().m_socks5ProxyType, pool->params().m_p2pProxyProtocol)
 	, m_pool(pool)
 	, m_cache(pool->params().m_blockCache ? new BlockCache(pool->params()) : nullptr)
 	, m_cacheLoaded(false)

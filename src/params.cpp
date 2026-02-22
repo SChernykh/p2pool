@@ -317,6 +317,16 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 			ok = true;
 		}
 
+		if (arg[0] == "stratum-proxy-protocol") {
+			m_stratumProxyProtocol = true;
+			ok = true;
+		}
+
+		if (arg[0] == "p2p-proxy-protocol") {
+			m_p2pProxyProtocol = true;
+			ok = true;
+		}
+
 		if (!ok) {
 			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].c_str());
 			p2pool_usage();

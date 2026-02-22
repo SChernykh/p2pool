@@ -34,7 +34,7 @@ public:
 	struct Client;
 	typedef Client* (*allocate_client_callback)();
 
-	TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType);
+	TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType, bool proxyProtocol = false);
 	virtual ~TCPServer();
 
 	[[nodiscard]] bool connect_to_peer(bool is_v6, const char* ip, int port);
@@ -67,6 +67,7 @@ public:
 		[[nodiscard]] virtual bool on_connect() = 0;
 		[[nodiscard]] virtual bool on_read(const char* data, uint32_t size) = 0;
 		[[nodiscard]] bool on_proxy_handshake(const char* data, uint32_t size);
+		[[nodiscard]] bool on_proxy_protocol(const char* data, uint32_t size);
 		virtual void on_connect_failed(int /*err*/) {}
 		virtual void on_read_failed(int /*err*/) {}
 		virtual void on_disconnected() {}
@@ -120,6 +121,12 @@ public:
 			MethodSelectionSent,
 			ConnectRequestSent,
 		} m_socks5ProxyState;
+
+		enum class ProxyProtocolState : uint8_t {
+			None,
+			ExpectingHeader,
+			HeaderReceived,
+		} m_proxyProtocolState;
 
 		std::atomic<uint32_t> m_resetCounter;
 
@@ -196,6 +203,8 @@ protected:
 	bool m_socks5ProxyV6;
 	raw_ip m_socks5ProxyIP;
 	int m_socks5ProxyPort;
+
+	bool m_proxyProtocol;
 
 	std::atomic<int> m_finished;
 	int m_listenPort;

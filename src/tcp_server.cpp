@@ -23,7 +23,7 @@ static thread_local const char* log_category_prefix = "TCPServer ";
 
 namespace p2pool {
 
-TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType)
+TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_client, const std::string& socks5Proxy, Params::ProxyType socks5ProxyType, bool proxyProtocol)
 	: m_allocateNewClient(allocate_new_client)
 	, m_defaultBacklog(default_backlog)
 	, m_loopThread{}
@@ -36,6 +36,7 @@ TCPServer::TCPServer(int default_backlog, allocate_client_callback allocate_new_
 	, m_socks5ProxyV6(false)
 	, m_socks5ProxyIP{}
 	, m_socks5ProxyPort(-1)
+	, m_proxyProtocol(proxyProtocol)
 	, m_finished(0)
 	, m_listenPort(-1)
 	, m_loop{}
@@ -892,45 +893,51 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 
 	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
 
-	if (is_banned(client->isV6(), client->m_addr)) {
-		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
-		client->close();
-		return;
+	if (m_proxyProtocol && client->m_isIncoming) {
+		// Defer ban check and on_connect until real IP is extracted from PROXY protocol header
+		client->m_proxyProtocolState = Client::ProxyProtocolState::ExpectingHeader;
 	}
-
-	TCPServer* owner = client->m_owner;
-
-	if (owner->m_finished.load()) {
-		client->close();
-		return;
-	}
-
-	if (client->m_isIncoming || owner->m_socks5Proxy.empty()) {
-		if (!client->on_connect()) {
+	else {
+		if (is_banned(client->isV6(), client->m_addr)) {
+			LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(client->m_addrString) << log::NoColor() << " is banned, disconnecting");
 			client->close();
 			return;
 		}
-	}
-	else {
-		const bool result = owner->send(client,
-			[](uint8_t* buf, size_t buf_size) -> size_t
-			{
-				if (buf_size < 3) {
-					return 0;
-				}
 
-				buf[0] = 5; // Protocol version (SOCKS5)
-				buf[1] = 1; // NMETHODS
-				buf[2] = 0; // Method 0 (no authentication)
+		TCPServer* owner = client->m_owner;
 
-				return 3;
-			});
+		if (owner->m_finished.load()) {
+			client->close();
+			return;
+		}
 
-		if (result) {
-			client->m_socks5ProxyState = Client::Socks5ProxyState::MethodSelectionSent;
+		if (client->m_isIncoming || owner->m_socks5Proxy.empty()) {
+			if (!client->on_connect()) {
+				client->close();
+				return;
+			}
 		}
 		else {
-			client->close();
+			const bool result = owner->send(client,
+				[](uint8_t* buf, size_t buf_size) -> size_t
+				{
+					if (buf_size < 3) {
+						return 0;
+					}
+
+					buf[0] = 5; // Protocol version (SOCKS5)
+					buf[1] = 1; // NMETHODS
+					buf[2] = 0; // Method 0 (no authentication)
+
+					return 3;
+				});
+
+			if (result) {
+				client->m_socks5ProxyState = Client::Socks5ProxyState::MethodSelectionSent;
+			}
+			else {
+				client->close();
+			}
 		}
 	}
 
@@ -1085,6 +1092,7 @@ TCPServer::Client::Client(char* read_buf, size_t size)
 	, m_port(0)
 	, m_addrString{}
 	, m_socks5ProxyState(Socks5ProxyState::Default)
+	, m_proxyProtocolState(ProxyProtocolState::None)
 	, m_resetCounter{ 0 }
 #ifdef WITH_TLS
 	, m_tlsChecked(false)
@@ -1111,6 +1119,7 @@ void TCPServer::Client::reset()
 	m_port = -1;
 	m_addrString[0] = '\0';
 	m_socks5ProxyState = Socks5ProxyState::Default;
+	m_proxyProtocolState = ProxyProtocolState::None;
 	m_readBuf[0] = '\0';
 	m_readBuf[m_readBufSize - 1] = '\0';
 
@@ -1155,7 +1164,12 @@ void TCPServer::Client::on_read(uv_stream_t* stream, ssize_t nread, const uv_buf
 
 	if (nread > 0) {
 		if (client->m_owner && !client->m_owner->m_finished.load()) {
-			if (client->m_socks5ProxyState == Socks5ProxyState::Default) {
+			if (client->m_proxyProtocolState == ProxyProtocolState::ExpectingHeader) {
+				if (!client->on_proxy_protocol(buf->base, static_cast<uint32_t>(nread))) {
+					client->close();
+				}
+			}
+			else if (client->m_socks5ProxyState == Socks5ProxyState::Default) {
 				if (!client->on_read(buf->base, static_cast<uint32_t>(nread))) {
 					client->close();
 				}
@@ -1309,6 +1323,134 @@ bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 			if (!on_read(m_readBuf, nread)) {
 				return false;
 			}
+		}
+	}
+
+	return true;
+}
+
+bool TCPServer::Client::on_proxy_protocol(const char* data, uint32_t size)
+{
+	// PROXY protocol v2 signature
+	static constexpr uint8_t ppv2_signature[12] = { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+
+	if ((data != m_readBuf + m_numRead) || (data + size > m_readBuf + m_readBufSize)) {
+		LOGERR(1, "peer " << static_cast<char*>(m_addrString) << " invalid data pointer or size in on_proxy_protocol()");
+		return false;
+	}
+	m_numRead += size;
+
+	// Need at least 16 bytes for the fixed header
+	if (m_numRead < 16) {
+		return true;
+	}
+
+	const uint8_t* p = reinterpret_cast<const uint8_t*>(m_readBuf);
+
+	// Validate 12-byte signature
+	if (memcmp(p, ppv2_signature, 12) != 0) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " invalid PROXY protocol v2 signature");
+		return false;
+	}
+
+	// Byte 12: version (high nibble) and command (low nibble)
+	const uint8_t ver_cmd = p[12];
+	const uint8_t version = (ver_cmd >> 4) & 0x0F;
+	const uint8_t command = ver_cmd & 0x0F;
+
+	if (version != 2) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " unsupported PROXY protocol version " << version);
+		return false;
+	}
+
+	if (command > 1) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " invalid PROXY protocol command " << command);
+		return false;
+	}
+
+	// Byte 13: address family (high nibble) and protocol (low nibble)
+	const uint8_t family_proto = p[13];
+
+	// Bytes 14-15: address data length (big-endian), includes address block + optional TLV extensions
+	const uint16_t addr_len = (static_cast<uint16_t>(p[14]) << 8) | static_cast<uint16_t>(p[15]);
+
+	const uint32_t total_header_len = 16 + static_cast<uint32_t>(addr_len);
+
+	if (total_header_len > m_readBufSize) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 header too large (" << total_header_len << " bytes)");
+		return false;
+	}
+
+	// Wait for complete header
+	if (m_numRead < total_header_len) {
+		return true;
+	}
+
+	// PROXY command: extract real client address
+	if (command == 1) {
+		const uint8_t family = (family_proto >> 4) & 0x0F;
+
+		if (family == 1) {
+			// AF_INET: src(4) + dst(4) + sport(2) + dport(2) = 12 bytes minimum, may be larger with TLV extensions
+			if (addr_len < 12) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 IPv4 address data too short (" << addr_len << " bytes)");
+				return false;
+			}
+
+			memcpy(m_addr.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
+			memcpy(m_addr.data + sizeof(raw_ip::ipv4_prefix), p + 16, 4);
+			m_port = (static_cast<int>(p[24]) << 8) | static_cast<int>(p[25]);
+			m_addressType = AddressType::IPv4;
+		}
+		else if (family == 2) {
+			// AF_INET6: src(16) + dst(16) + sport(2) + dport(2) = 36 bytes minimum, may be larger with TLV extensions
+			if (addr_len < 36) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 IPv6 address data too short (" << addr_len << " bytes)");
+				return false;
+			}
+
+			memcpy(m_addr.data, p + 16, 16);
+			m_port = (static_cast<int>(p[48]) << 8) | static_cast<int>(p[49]);
+			m_addressType = AddressType::IPv6;
+		}
+		else {
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 unsupported address family " << family);
+			return false;
+		}
+
+		init_addr_string();
+		LOGINFO(5, "PROXY protocol v2: real address is " << log::Gray() << static_cast<char*>(m_addrString));
+	}
+	// LOCAL command (health checks): keep original address
+
+	// Move remaining data to beginning of buffer
+	m_numRead -= total_header_len;
+	if (m_numRead > 0) {
+		memmove(m_readBuf, m_readBuf + total_header_len, m_numRead);
+	}
+
+	m_proxyProtocolState = ProxyProtocolState::HeaderReceived;
+
+	// Deferred ban check with real IP
+	if (m_owner->is_banned(isV6(), m_addr)) {
+		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " is banned, disconnecting");
+		return false;
+	}
+
+	if (m_owner->m_finished.load()) {
+		return false;
+	}
+
+	if (!on_connect()) {
+		return false;
+	}
+
+	// Pass remaining data to the protocol handler
+	if (m_numRead > 0) {
+		const uint32_t nread = m_numRead;
+		m_numRead = 0;
+		if (!on_read(m_readBuf, nread)) {
+			return false;
 		}
 	}
 
