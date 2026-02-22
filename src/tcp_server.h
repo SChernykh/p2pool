@@ -125,6 +125,7 @@ public:
 		enum class ProxyProtocolState : uint8_t {
 			None,
 			ExpectingHeader,
+			HeaderReceived,
 		} m_proxyProtocolState;
 
 		std::atomic<uint32_t> m_resetCounter;

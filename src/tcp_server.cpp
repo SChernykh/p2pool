@@ -1374,6 +1374,12 @@ bool TCPServer::Client::on_proxy_protocol(const char* data, uint32_t size)
 	// Bytes 14-15: address data length (big-endian)
 	const uint16_t addr_len = (static_cast<uint16_t>(p[14]) << 8) | static_cast<uint16_t>(p[15]);
 
+	// Maximum expected address data: 36 bytes (IPv6: src(16) + dst(16) + sport(2) + dport(2))
+	if (addr_len > 36) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 address data too long (" << addr_len << " bytes)");
+		return false;
+	}
+
 	const uint32_t total_header_len = 16 + static_cast<uint32_t>(addr_len);
 
 	// Wait for complete header
@@ -1386,9 +1392,9 @@ bool TCPServer::Client::on_proxy_protocol(const char* data, uint32_t size)
 		const uint8_t family = (family_proto >> 4) & 0x0F;
 
 		if (family == 1) {
-			// AF_INET: src(4) + dst(4) + sport(2) + dport(2) = 12 bytes minimum
-			if (addr_len < 12) {
-				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 IPv4 address data too short");
+			// AF_INET: src(4) + dst(4) + sport(2) + dport(2) = 12 bytes
+			if (addr_len != 12) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 invalid IPv4 address data length (" << addr_len << " bytes)");
 				return false;
 			}
 
@@ -1398,9 +1404,9 @@ bool TCPServer::Client::on_proxy_protocol(const char* data, uint32_t size)
 			m_addressType = AddressType::IPv4;
 		}
 		else if (family == 2) {
-			// AF_INET6: src(16) + dst(16) + sport(2) + dport(2) = 36 bytes minimum
-			if (addr_len < 36) {
-				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 IPv6 address data too short");
+			// AF_INET6: src(16) + dst(16) + sport(2) + dport(2) = 36 bytes
+			if (addr_len != 36) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " PROXY protocol v2 invalid IPv6 address data length (" << addr_len << " bytes)");
 				return false;
 			}
 
@@ -1424,7 +1430,7 @@ bool TCPServer::Client::on_proxy_protocol(const char* data, uint32_t size)
 		memmove(m_readBuf, m_readBuf + total_header_len, m_numRead);
 	}
 
-	m_proxyProtocolState = ProxyProtocolState::None;
+	m_proxyProtocolState = ProxyProtocolState::HeaderReceived;
 
 	// Deferred ban check with real IP
 	if (m_owner->is_banned(isV6(), m_addr)) {
