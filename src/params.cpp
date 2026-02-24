@@ -456,7 +456,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 		const size_t k = m_socks5Proxy.find_last_of(':');
 
 		if ((k != std::string::npos) && (k < m_socks5Proxy.length() - 1)) {
-			const uint32_t port = std::stoul(m_socks5Proxy.substr(k + 1), nullptr, 10);
+			const unsigned long port = strtoul(m_socks5Proxy.substr(k + 1).c_str(), nullptr, 10);
 
 			if ((port > 0) && (port < 65536)) {
 				switch (port) {
@@ -524,7 +524,7 @@ bool Params::valid() const
 	}
 
 	if (m_socks5ProxyType == ProxyType::INVALID) {
-		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5-proxy-type parameter.");
+		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5 and --socks5-proxy-type parameters.");
 		return false;
 	}
 
