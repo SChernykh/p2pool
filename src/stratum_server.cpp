@@ -480,6 +480,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 
 		update_auto_diff(client, share.m_timestamp, share.m_hashes);
 
+		++client->m_stratumShares;
+
 		// If this share is below sidechain difficulty, process it in this thread because it'll be quick
 		if (!share.m_highEnoughDifficulty && !m_enableFullValidation) {
 			on_share_found(&share.m_req);
@@ -565,6 +567,7 @@ void StratumServer::show_workers()
 			<< log::pad_right("uptime", 20)
 			<< log::pad_right("difficulty", 20)
 			<< log::pad_right("hashrate", 15)
+			<< log::pad_right("shares", 12)
 			<< "name"
 	);
 
@@ -585,11 +588,16 @@ void StratumServer::show_workers()
 		constexpr bool is_tls = false;
 #endif
 
+		char shares_buf[16] = {};
+		log::Stream s(shares_buf);
+		s << c->m_sidechainShares << '/' << c->m_stratumShares << '\0';
+
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
 				<< (is_tls ? "yes    " : "no     ")
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
+				<< log::pad_right(static_cast<const char*>(shares_buf), 12)
 				<< (c->m_rpcId ? c->m_customUser : "not logged in")
 		);
 		++n;
@@ -1058,10 +1066,13 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 	server->check_event_loop_thread(__func__);
 
+	bool share_found = false;
+
 	if (share->m_highEnoughDifficulty) {
 		const char* s = share->m_clientCustomUser;
 		if (share->m_result == SubmittedShare::Result::OK) {
 			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << share->m_mainchainHeight << ", sidechain height " << share->m_sidechainHeight << ", diff " << share->m_sidechainDifficulty << ", client " << static_cast<char*>(share->m_clientAddrString) << (*s ? ", user " : "") << s << ", effort " << share->m_effort << '%');
+			share_found = true;
 		}
 		else {
 			static const char* reason_list[] = {
@@ -1116,6 +1127,10 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 			});
 
 		client->m_score += share->m_score;
+
+		if (share_found) {
+			++client->m_sidechainShares;
+		}
 
 		if (bad_share && (client->m_score <= BAN_THRESHOLD_POINTS)) {
 			client->ban(server->m_banTime);
@@ -1181,6 +1196,8 @@ StratumServer::StratumClient::StratumClient()
 	, m_customUser{}
 	, m_lastJobTarget(0)
 	, m_score(0)
+	, m_stratumShares(0)
+	, m_sidechainShares(0)
 {
 	m_rawReadBuf[0] = '\0';
 	m_stratumReadBuf[0] = '\0';
@@ -1210,6 +1227,9 @@ void StratumServer::StratumClient::reset()
 	m_lastJobTarget = 0;
 
 	m_score = 0;
+
+	m_stratumShares = 0;
+	m_sidechainShares = 0;
 }
 
 bool StratumServer::StratumClient::on_connect()

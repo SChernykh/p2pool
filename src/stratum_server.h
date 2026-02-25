@@ -91,6 +91,9 @@ public:
 		uint64_t m_lastJobTarget;
 
 		int32_t m_score;
+
+		uint32_t m_stratumShares;
+		uint32_t m_sidechainShares;
 	};
 
 	[[nodiscard]] bool on_login(StratumClient* client, uint32_t id, const char* login);
