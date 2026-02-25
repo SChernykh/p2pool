@@ -3,14 +3,14 @@ set -e
 
 # Software versions to install
 
-_7ZIP_VERSION=2501
-BINUTILS_VERSION=2_45_1
+_7ZIP_VERSION=2600
+BINUTILS_VERSION=2_46
 CLANG_VERSION=21.1.8
 CMAKE_VERSION=4.2.3
 FREEBSD_VERSION=12.4
 GCC_VERSION=15.2.0
 GLIBC_VERSION=2.43
-LINUX_HEADERS_VERSION=6.18.8
+LINUX_HEADERS_VERSION=6.19.3
 MACOSX_SDK_VERSION=26.1
 OSXCROSS_VERSION=2bc739ebe45db5d72e176d2a4e1c7dd95464e8e2
 MAKE_VERSION=4.4.1
@@ -18,12 +18,12 @@ MINGW_VERSION=13.0.0
 XZ_VERSION=5.8.2
 TAR_VERSION=1.35
 
-_7ZIP_SHA256="4ca3b7c6f2f67866b92622818b58233dc70367be2f36b498eb0bdeaaa44b53f4"
+_7ZIP_SHA256="c74dc4a48492cde43f5fec10d53fb2a66f520e4a62a69d630c44cb22c477edc6"
 CMAKE_SHA256="5bb505d5e0cca0480a330f7f27ccf52c2b8b5214c5bba97df08899f5ef650c23"
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
 GLIBC_SHA256="d9c86c6b5dbddb43a3e08270c5844fc5177d19442cf5b8df4be7c07cd5fa3831"
-HEADERS_SHA256="37f0c5d5c242c1d604e87d48f08795e861a5a85f725b4ca11d0a538f12ff8cff"
+HEADERS_SHA256="0e474968adfcbee32916fd01a89d8ccfd1168d8d32569e76a5c664c793198ebe"
 MACOSX_SDK_SHA256="beee7212d265a6d2867d0236cc069314b38d5fb3486a6515734e76fa210c784c"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
@@ -33,7 +33,7 @@ echo "Install prerequisites"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get upgrade -yq --no-install-recommends
-apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 file rsync xz-utils gawk gettext patch git gcc g++
+apt-get install -yq --no-install-recommends ca-certificates curl bzip2 flex texinfo bison ninja-build python3 python3-yaml file rsync xz-utils gawk gettext patch git gcc g++
 
 echo "Cloning the P2Pool repository in background"
 
