@@ -31,17 +31,17 @@ struct Params
 
 	explicit Params(const std::vector<std::vector<std::string>>& args);
 
-	bool valid() const;
+	[[nodiscard]] bool valid() const;
 
 #ifdef WITH_GRPC
-	bool grpc_needed() const;
+	[[nodiscard]] bool grpc_needed() const;
 #endif
 
 	struct Host
 	{
 		Host() : m_address("127.0.0.1"), m_rpcPort(18081), m_zmqPort(18083), m_rpcSSL(false) {}
 
-		Host(const char* address, int32_t rpcPort, int32_t zmqPort, const char* rpcLogin)
+		Host(const std::string& address, int32_t rpcPort, int32_t zmqPort, const std::string& rpcLogin)
 			: m_address(address)
 			, m_rpcPort(rpcPort)
 			, m_zmqPort(zmqPort)
@@ -49,9 +49,9 @@ struct Params
 			, m_rpcSSL(false)
 		{}
 
-		bool valid() const { return !m_address.empty() && m_rpcPort && m_zmqPort && (m_rpcPort != m_zmqPort); }
+		[[nodiscard]] bool valid() const { return !m_address.empty() && m_rpcPort && m_zmqPort && (m_rpcPort != m_zmqPort); }
 
-		bool init_display_name(const Params& p);
+		[[nodiscard]] bool init_display_name(const Params& p);
 
 		std::string m_address;
 		int32_t m_rpcPort;
@@ -151,6 +151,12 @@ struct Params
 	bool m_noClearnetP2P = false;
 	bool m_stratumProxyProtocol = false;
 	bool m_p2pProxyProtocol = false;
+
+private:
+	[[nodiscard]] bool process_arg(const std::vector<std::string>& arg);
+
+	[[nodiscard]] static bool has1(const std::vector<std::string>& arg) { return (arg.size() > 1) && !arg[1].empty();}
+	[[nodiscard]] static bool has2(const std::vector<std::string>& arg) { return (arg.size() > 2) && !arg[2].empty();}
 };
 
 } // namespace p2pool

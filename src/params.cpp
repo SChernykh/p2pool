@@ -37,297 +37,13 @@ static constexpr uint64_t MAX_STRATUM_BAN_TIME = (UINT64_C(1) << 34) - 1;
 
 Params::Params(const std::vector<std::vector<std::string>>& args)
 {
-	auto has1 = [](const auto& v) { return (v.size() > 1) && !v[1].empty();};
-	auto has2 = [](const auto& v) { return (v.size() > 2) && !v[2].empty();};
-
 	for (const auto& arg : args) {
 		// Ignore empty parameters
 		if (arg.empty() || arg[0].empty()) {
 			continue;
 		}
 
-		bool ok = false;
-
-		if ((arg[0] == "host") && has1(arg)) {
-			const char* address = arg[1].c_str();
-
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-				m_hosts.back().m_address = address;
-			}
-			else {
-				const Host& h = m_hosts.back();
-				m_hosts.emplace_back(address, h.m_rpcPort, h.m_zmqPort, "");
-			}
-
-			ok = true;
-		}
-
-		if ((arg[0] == "rpc-port") && has1(arg)) {
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-			}
-
-			m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
-			ok = true;
-		}
-
-		if ((arg[0] == "zmq-port") && has1(arg)) {
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-			}
-
-			m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
-			ok = true;
-		}
-
-		if (arg[0] == "light-mode") {
-			m_lightMode = true;
-			ok = true;
-		}
-
-		if ((arg[0] == "wallet") && has1(arg)) {
-			const char* s = arg[1].c_str();
-
-			if (!m_mainWallet.decode(s)) {
-				LOGERR(1, "Wallet " << s << " failed to decode");
-			}
-
-			ok = true;
-		}
-
-		if ((arg[0] == "subaddress") && has1(arg)) {
-			const char* s = arg[1].c_str();
-
-			if (!m_subaddress.decode(s)) {
-				LOGERR(1, "Subaddress " << s << " failed to decode");
-			}
-
-			ok = true;
-		}
-
-		if ((arg[0] == "stratum") && has1(arg)) {
-			m_stratumAddresses = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "stratum-ban-time") && has1(arg)) {
-			m_stratumBanTime = strtoull(arg[1].c_str(), nullptr, 10);
-			ok = true;
-		}
-
-		if ((arg[0] == "p2p") && has1(arg)) {
-			m_p2pAddresses = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "addpeers") && has1(arg)) {
-			m_p2pPeerList = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "loglevel") && has1(arg)) {
-			const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].c_str(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
-			log::GLOBAL_LOG_LEVEL = level;
-			ok = true;
-		}
-
-		if ((arg[0] == "data-dir") && has1(arg)) {
-			m_dataDir = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "log-file") && has1(arg)) {
-			m_logFilePath = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "sidechain-config") && has1(arg)) {
-			m_sidechainConfig = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "data-api") && has1(arg)) {
-			m_apiPath = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "local-api") || (arg[0] == "stratum-api")) {
-			m_localStats = true;
-			ok = true;
-		}
-
-		if (arg[0] == "no-cache") {
-			m_blockCache = false;
-			ok = true;
-		}
-
-		if (arg[0] == "no-color") {
-			log::CONSOLE_COLORS = false;
-			ok = true;
-		}
-
-#ifdef WITH_RANDOMX
-		if (arg[0] == "no-randomx") {
-			m_disableRandomX = true;
-			ok = true;
-		}
-#endif
-
-		if (((arg[0] == "out-peers") || (arg[0] == "outpeers")) && has1(arg)) {
-			m_maxOutgoingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
-			ok = true;
-		}
-
-		if (((arg[0] == "in-peers") || (arg[0] == "inpeers")) && has1(arg)) {
-			m_maxIncomingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
-			ok = true;
-		}
-
-		if ((arg[0] == "start-mining") && has1(arg)) {
-			m_minerThreads = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 64UL);
-			ok = true;
-		}
-
-		if (arg[0] == "mini") {
-			m_mini = true;
-			ok = true;
-		}
-
-		if (arg[0] == "nano") {
-			m_nano = true;
-			ok = true;
-		}
-
-		if (arg[0] == "no-autodiff") {
-			m_autoDiff = false;
-			ok = true;
-		}
-
-		if ((arg[0] == "rpc-login") && has1(arg)) {
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-			}
-
-			m_hosts.back().m_rpcLogin = arg[1];
-			ok = true;
-		}
-
-#ifdef WITH_TLS
-		if (arg[0] == "rpc-ssl") {
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-			}
-
-			m_hosts.back().m_rpcSSL = true;
-			ok = true;
-		}
-
-		if ((arg[0] == "rpc-ssl-fingerprint") && has1(arg)) {
-			if (m_hosts.empty()) {
-				m_hosts.emplace_back();
-			}
-
-			m_hosts.back().m_rpcSSL_Fingerprint = arg[1];
-			ok = true;
-		}
-#endif
-
-		if ((arg[0] == "socks5") && has1(arg)) {
-			m_socks5Proxy = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "socks5-proxy-type") && has1(arg)) {
-			const std::string s = tolower(arg[1]);
-
-			m_socks5ProxyType = ProxyType::INVALID;
-
-			if (s == "auto")  m_socks5ProxyType = ProxyType::AUTO;
-			if (s == "plain") m_socks5ProxyType = ProxyType::PLAIN;
-			if (s == "tor")   m_socks5ProxyType = ProxyType::TOR;
-
-			ok = m_socks5ProxyType != ProxyType::INVALID;
-		}
-
-		if (arg[0] == "no-dns") {
-			m_dns = false;
-			disable_resolve_host = true;
-			ok = true;
-		}
-
-		if ((arg[0] == "p2p-external-port") && has1(arg)) {
-			m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
-			ok = true;
-		}
-
-#ifdef WITH_UPNP
-		if ((arg[0] == "no-upnp") || (arg[0] == "no-igd")) {
-			m_upnp = false;
-			ok = true;
-		}
-
-		if (arg[0] == "upnp-stratum") {
-			m_upnpStratum = true;
-			ok = true;
-		}
-#endif
-
-		if ((arg[0] == "merge-mine") && has1(arg) && has2(arg)) {
-			m_mergeMiningHosts.emplace_back(arg[1], arg[2]);
-			ok = true;
-		}
-
-#ifdef WITH_TLS
-		if ((arg[0] == "tls-cert") && has1(arg)) {
-			m_tlsCert = arg[1];
-			ok = true;
-		}
-
-		if ((arg[0] == "tls-cert-key") && has1(arg)) {
-			m_tlsCertKey = arg[1];
-			ok = true;
-		}
-#endif
-
-		if (arg[0] == "no-stratum-http") {
-			m_enableStratumHTTP = false;
-			ok = true;
-		}
-
-#ifdef WITH_MERGE_MINING_DONATION
-		if ((arg[0] == "adkf") && has1(arg)) {
-			m_authorKeyFile = arg[1];
-			ok = true;
-		}
-#endif
-
-		if (arg[0] == "full-validation") {
-			m_enableFullValidation = true;
-			ok = true;
-		}
-
-		if ((arg[0] == "onion-address") && has1(arg)) {
-			m_onionAddress = arg[1];
-			ok = true;
-		}
-
-		if (arg[0] == "no-clearnet-p2p") {
-			m_noClearnetP2P = true;
-			ok = true;
-		}
-
-		if (arg[0] == "stratum-proxy-protocol") {
-			m_stratumProxyProtocol = true;
-			ok = true;
-		}
-
-		if (arg[0] == "p2p-proxy-protocol") {
-			m_p2pProxyProtocol = true;
-			ok = true;
-		}
-
-		if (!ok) {
+		if (!process_arg(arg)) {
 			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].c_str());
 			p2pool_usage();
 			throw std::exception();
@@ -471,6 +187,295 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 			}
 		}
 	}
+}
+
+bool Params::process_arg(const std::vector<std::string>& arg)
+{
+	if ((arg[0] == "host") && has1(arg)) {
+		const std::string& address = arg[1];
+
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+			m_hosts.back().m_address = address;
+		}
+		else {
+			const Host& h = m_hosts.back();
+
+			int32_t rpc_port = h.m_rpcPort;
+			int32_t zmq_port = h.m_zmqPort;
+
+			// Better not to use "h" here because emplace_back can reallocate
+			m_hosts.emplace_back(address, rpc_port, zmq_port, std::string());
+		}
+
+		return true;
+	}
+
+	if ((arg[0] == "rpc-port") && has1(arg)) {
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+		}
+
+		m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
+		return true;
+	}
+
+	if ((arg[0] == "zmq-port") && has1(arg)) {
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+		}
+
+		m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
+		return true;
+	}
+
+	if (arg[0] == "light-mode") {
+		m_lightMode = true;
+		return true;
+	}
+
+	if ((arg[0] == "wallet") && has1(arg)) {
+		const char* s = arg[1].c_str();
+
+		if (!m_mainWallet.decode(s)) {
+			LOGERR(1, "Wallet " << s << " failed to decode");
+		}
+
+		return true;
+	}
+
+	if ((arg[0] == "subaddress") && has1(arg)) {
+		const char* s = arg[1].c_str();
+
+		if (!m_subaddress.decode(s)) {
+			LOGERR(1, "Subaddress " << s << " failed to decode");
+		}
+
+		return true;
+	}
+
+	if ((arg[0] == "stratum") && has1(arg)) {
+		m_stratumAddresses = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "stratum-ban-time") && has1(arg)) {
+		m_stratumBanTime = strtoull(arg[1].c_str(), nullptr, 10);
+		return true;
+	}
+
+	if ((arg[0] == "p2p") && has1(arg)) {
+		m_p2pAddresses = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "addpeers") && has1(arg)) {
+		m_p2pPeerList = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "loglevel") && has1(arg)) {
+		const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].c_str(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
+		log::GLOBAL_LOG_LEVEL = level;
+		return true;
+	}
+
+	if ((arg[0] == "data-dir") && has1(arg)) {
+		m_dataDir = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "log-file") && has1(arg)) {
+		m_logFilePath = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "sidechain-config") && has1(arg)) {
+		m_sidechainConfig = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "data-api") && has1(arg)) {
+		m_apiPath = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "local-api") || (arg[0] == "stratum-api")) {
+		m_localStats = true;
+		return true;
+	}
+
+	if (arg[0] == "no-cache") {
+		m_blockCache = false;
+		return true;
+	}
+
+	if (arg[0] == "no-color") {
+		log::CONSOLE_COLORS = false;
+		return true;
+	}
+
+#ifdef WITH_RANDOMX
+	if (arg[0] == "no-randomx") {
+		m_disableRandomX = true;
+		return true;
+	}
+#endif
+
+	if (((arg[0] == "out-peers") || (arg[0] == "outpeers")) && has1(arg)) {
+		m_maxOutgoingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
+		return true;
+	}
+
+	if (((arg[0] == "in-peers") || (arg[0] == "inpeers")) && has1(arg)) {
+		m_maxIncomingPeers = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
+		return true;
+	}
+
+	if ((arg[0] == "start-mining") && has1(arg)) {
+		m_minerThreads = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 64UL);
+		return true;
+	}
+
+	if (arg[0] == "mini") {
+		m_mini = true;
+		return true;
+	}
+
+	if (arg[0] == "nano") {
+		m_nano = true;
+		return true;
+	}
+
+	if (arg[0] == "no-autodiff") {
+		m_autoDiff = false;
+		return true;
+	}
+
+	if ((arg[0] == "rpc-login") && has1(arg)) {
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+		}
+
+		m_hosts.back().m_rpcLogin = arg[1];
+		return true;
+	}
+
+#ifdef WITH_TLS
+	if (arg[0] == "rpc-ssl") {
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+		}
+
+		m_hosts.back().m_rpcSSL = true;
+		return true;
+	}
+
+	if ((arg[0] == "rpc-ssl-fingerprint") && has1(arg)) {
+		if (m_hosts.empty()) {
+			m_hosts.emplace_back();
+		}
+
+		m_hosts.back().m_rpcSSL_Fingerprint = arg[1];
+		return true;
+	}
+#endif
+
+	if ((arg[0] == "socks5") && has1(arg)) {
+		m_socks5Proxy = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "socks5-proxy-type") && has1(arg)) {
+		const std::string s = tolower(arg[1]);
+
+		m_socks5ProxyType = ProxyType::INVALID;
+
+		if (s == "auto")  m_socks5ProxyType = ProxyType::AUTO;
+		if (s == "plain") m_socks5ProxyType = ProxyType::PLAIN;
+		if (s == "tor")   m_socks5ProxyType = ProxyType::TOR;
+
+		return m_socks5ProxyType != ProxyType::INVALID;
+	}
+
+	if (arg[0] == "no-dns") {
+		m_dns = false;
+		disable_resolve_host = true;
+		return true;
+	}
+
+	if ((arg[0] == "p2p-external-port") && has1(arg)) {
+		m_p2pExternalPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
+		return true;
+	}
+
+#ifdef WITH_UPNP
+	if ((arg[0] == "no-upnp") || (arg[0] == "no-igd")) {
+		m_upnp = false;
+		return true;
+	}
+
+	if (arg[0] == "upnp-stratum") {
+		m_upnpStratum = true;
+		return true;
+	}
+#endif
+
+	if ((arg[0] == "merge-mine") && has1(arg) && has2(arg)) {
+		m_mergeMiningHosts.emplace_back(arg[1], arg[2]);
+		return true;
+	}
+
+#ifdef WITH_TLS
+	if ((arg[0] == "tls-cert") && has1(arg)) {
+		m_tlsCert = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "tls-cert-key") && has1(arg)) {
+		m_tlsCertKey = arg[1];
+		return true;
+	}
+#endif
+
+	if (arg[0] == "no-stratum-http") {
+		m_enableStratumHTTP = false;
+		return true;
+	}
+
+#ifdef WITH_MERGE_MINING_DONATION
+	if ((arg[0] == "adkf") && has1(arg)) {
+		m_authorKeyFile = arg[1];
+		return true;
+	}
+#endif
+
+	if (arg[0] == "full-validation") {
+		m_enableFullValidation = true;
+		return true;
+	}
+
+	if ((arg[0] == "onion-address") && has1(arg)) {
+		m_onionAddress = arg[1];
+		return true;
+	}
+
+	if (arg[0] == "no-clearnet-p2p") {
+		m_noClearnetP2P = true;
+		return true;
+	}
+
+	if (arg[0] == "stratum-proxy-protocol") {
+		m_stratumProxyProtocol = true;
+		return true;
+	}
+
+	if (arg[0] == "p2p-proxy-protocol") {
+		m_p2pProxyProtocol = true;
+		return true;
+	}
+
+	return false;
 }
 
 bool Params::valid() const
