@@ -70,12 +70,16 @@ StratumServer::StratumServer(p2pool* pool)
 
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
+	uv_mutex_init_checked(&m_resetShareCountersLock);
 	uv_mutex_init_checked(&m_blobsQueueLock);
 	uv_mutex_init_checked(&m_showWorkersLock);
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
 
 	m_extraNonce = get_random32();
+
+	uv_async_init_checked(&m_loop, &m_resetShareCountersAsync, on_reset_share_counters);
+	m_resetShareCountersAsync.data = this;
 
 	uv_async_init_checked(&m_loop, &m_blobsAsync, on_blobs_ready);
 	m_blobsAsync.data = this;
@@ -101,6 +105,7 @@ StratumServer::~StratumServer()
 		}
 	}
 
+	uv_mutex_destroy(&m_resetShareCountersLock);
 	uv_mutex_destroy(&m_blobsQueueLock);
 	uv_mutex_destroy(&m_showWorkersLock);
 	uv_mutex_destroy(&m_rngLock);
@@ -608,6 +613,22 @@ void StratumServer::show_workers()
 
 void StratumServer::reset_share_counters()
 {
+	MutexLock lock(m_resetShareCountersLock);
+
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_resetShareCountersAsync))) {
+		uv_async_send(&m_resetShareCountersAsync);
+	}
+}
+
+void StratumServer::on_reset_share_counters()
+{
+	check_event_loop_thread(__func__);
+
+	for (StratumClient* c = static_cast<StratumClient*>(m_connectedClientsList->m_next); c != m_connectedClientsList; c = static_cast<StratumClient*>(c->m_next)) {
+		c->m_stratumShares = 0;
+		c->m_sidechainShares = 0;
+	}
+
 	WriteLock lock(m_hashrateDataLock);
 
 	m_cumulativeHashesAtLastShare = m_cumulativeHashes;
@@ -1171,6 +1192,10 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 void StratumServer::on_shutdown()
 {
+	{
+		MutexLock lock(m_resetShareCountersLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_resetShareCountersAsync), nullptr);
+	}
 	{
 		MutexLock lock(m_blobsQueueLock);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);

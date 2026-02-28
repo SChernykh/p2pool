@@ -131,6 +131,12 @@ private:
 		hash m_seedHash;
 	};
 
+	uv_mutex_t m_resetShareCountersLock;
+	uv_async_t m_resetShareCountersAsync;
+
+	static void on_reset_share_counters(uv_async_t* handle) { reinterpret_cast<StratumServer*>(handle->data)->on_reset_share_counters(); }
+	void on_reset_share_counters();
+
 	uv_mutex_t m_blobsQueueLock;
 	uv_async_t m_blobsAsync;
 	std::vector<BlobsData*> m_blobsQueue;
