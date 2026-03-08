@@ -155,8 +155,6 @@ struct Params
 	// Raw hash of the destination info; decoded Base32 address with suffix removed
 	hash m_i2pDestinationHash;
 
-	uint16_t m_samPort = 7656;
-
 	bool m_noClearnetP2P = false;
 	bool m_stratumProxyProtocol = false;
 	bool m_p2pProxyProtocol = false;

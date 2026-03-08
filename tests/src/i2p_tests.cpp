@@ -16,11 +16,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string>
-#include <cstdint>
-#include "gtest/gtest.h"
-#include "i2p.h"
 #include "common.h"
+#include "i2p.h"
+#include "gtest/gtest.h"
 
 namespace p2pool {
 

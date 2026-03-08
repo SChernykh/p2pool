@@ -66,7 +66,8 @@ static constexpr hash seed_onion_nodes[] = {
 };
 
 static constexpr hash seed_i2p_nodes[] = {
-	from_i2p_b32_const("mwrwtarc2x6ea2qrzo737nnxv2gg5mo5atk24f5omy3j74xtwkqa")
+	// TODO: add seed node address
+	from_i2p_b32_const("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.b32.i2p")
 };
 
 P2PServer::P2PServer(p2pool* pool)
@@ -1991,12 +1992,10 @@ void P2PServer::P2PClient::reset()
 			server->m_fastestPeer = nullptr;
 		}
 		if ((m_addressType == AddressType::DomainName) && m_connectedTime) {
-			if (m_addressType == AddressType::DomainName) {
-				if (server->m_isI2P == true) {
-					--server->m_numI2PConnections;
-				} else {
-					--server->m_numOnionConnections;
-				}
+			if (server->m_isI2P == true) {
+				--server->m_numI2PConnections;
+			} else {
+				--server->m_numOnionConnections;
 			}
 		}
 	}

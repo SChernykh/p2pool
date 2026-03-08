@@ -16,12 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdexcept>
-#include <curl/curl.h>
-#include <iostream>
-
+#include "common.h"
 #include "i2p.h"
-#include "log.h"
 
 LOG_CATEGORY(I2P)
 

@@ -479,11 +479,6 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		return true;
 	}
 
-	if ((arg[0] == "sam-port") && has1(arg)) {
-		m_samPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
-		return true;
-	}
-
 	if (arg[0] == "no-clearnet-p2p") {
 		m_noClearnetP2P = true;
 		return true;

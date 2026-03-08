@@ -64,7 +64,6 @@ void p2pool_usage()
 		"--host                IP address of your Monero node, default is 127.0.0.1\n"
 		"--rpc-port            monerod RPC API port number, default is 18081\n"
 		"--zmq-port            monerod ZMQ pub port number, default is 18083 (same port as in monerod's \"--zmq-pub\" command line parameter)\n"
-		"--sam-port            I2P router SAM bridge port number, default is 7656\n"
 		"--stratum             Comma-separated list of IP:port for stratum server to listen on\n"
 		"--p2p                 Comma-separated list of IP:port for p2p server to listen on\n"
 		"--addpeers            Comma-separated list of IP:port of other p2pool nodes to connect to\n"
