@@ -33,6 +33,7 @@
 #include "rapidjson_wrapper.h"
 #include "merge_mining_client.h"
 #include "sha256.h"
+#include "i2p.h"
 
 #ifdef WITH_TLS
 #include <openssl/curve25519.h>
@@ -48,6 +49,7 @@ LOG_CATEGORY(P2PServer)
 
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
 static constexpr char saved_onion_peer_list_file_name[] = "p2pool_onion_peers.txt";
+static constexpr char saved_i2p_peer_list_file_name[] = "p2pool_i2p_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "" };
 static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "" };
 static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpeers.net", ""};
@@ -61,6 +63,10 @@ namespace p2pool {
 static constexpr hash seed_onion_nodes[] = {
 	from_onion_v3_const("p2pseeds5qoenuuseyuqxhzzefzxpbhiq4z4h5hfbry5dxd5y2fwudyd.onion"),
 	from_onion_v3_const("p2pseedtwyepi4crkf4akceen4twejcptnsbm6gjmzdfgxua57hiijid.onion")
+};
+
+static constexpr hash seed_i2p_nodes[] = {
+	from_i2p_b32_const("mwrwtarc2x6ea2qrzo737nnxv2gg5mo5atk24f5omy3j74xtwkqa")
 };
 
 P2PServer::P2PServer(p2pool* pool)
@@ -79,6 +85,8 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_seenGoodPeers(false)
 	, m_peerListLastSaved(0)
 	, m_numOnionConnections(0)
+	, m_numI2PConnections(0)
+	, m_isI2P(pool->params().m_socks5ProxyType == Params::ProxyType::I2P)
 	, m_lookForMissingBlocks(true)
 	, m_fastestPeer(nullptr)
 	, m_newP2PoolVersionDetected(false)
@@ -459,6 +467,39 @@ void P2PServer::update_peer_connections()
 		}
 	}
 
+	// Try to have at least N/2 (or N if clearnet P2P is disabled) outgoing I2P connections
+	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::I2P)) {
+		std::vector<hash> dest_hashes = m_pool->side_chain().seen_i2p_dest_hashes();
+
+		// Add seed nodes
+		dest_hashes.insert(dest_hashes.end(), seed_i2p_nodes, seed_i2p_nodes + array_size(seed_i2p_nodes));
+
+		const uint32_t n = m_pool->params().m_noClearnetP2P ? N : (N / 2);
+
+		for (uint32_t i = m_numI2PConnections; (i < n) && !dest_hashes.empty();) {
+			const uint64_t k = get_random64() % dest_hashes.size();
+			const std::string addr = to_i2p_b32(dest_hashes[k]);
+
+			int port = DEFAULT_P2P_PORT_I2P;
+
+			for (const hash& seed_i2p : seed_i2p_nodes) {
+				if (dest_hashes[k] == seed_i2p) {
+					const SideChain& s = m_pool->side_chain();
+					port = s.is_mini() ? DEFAULT_P2P_PORT_MINI : (s.is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+					break;
+				}
+			}
+
+			if ((connected_clients_domain.find(addr) == connected_clients_domain.end()) && connect_to_peer(addr, port)) {
+				++i;
+				++num_outgoing;
+			}
+
+			dest_hashes[k] = dest_hashes.back();
+			dest_hashes.pop_back();
+		}
+	}
+
 	// Try to have at least N outgoing connections (N defaults to 10, can be set via --out-peers command line parameter)
 	if (!m_pool->params().m_noClearnetP2P) {
 		while ((num_outgoing < N) && !peer_list.empty()) {
@@ -631,6 +672,28 @@ void P2PServer::save_peer_list()
 		}
 	}
 
+	if (s.i2p_dest_hashes_count() > 0) {
+		const std::string i2p_path = params.m_dataDir + saved_i2p_peer_list_file_name;
+
+		f.open(i2p_path, std::ios::binary);
+
+		if (!f.is_open()) {
+			LOGERR(1, "failed to save I2P peer list " << i2p_path << ": error " << errno);
+		}
+		else {
+			const std::vector<hash> dest_hashes = s.seen_i2p_dest_hashes();
+
+			for (const hash& h : dest_hashes) {
+				f << to_i2p_b32(h) << '\n';
+			}
+
+			f.flush();
+			f.close();
+
+			LOGINFO(5, "I2P peer list saved (" << dest_hashes.size() << " peers)");
+		}
+	}
+
 	m_peerListLastSaved = seconds_since_epoch();
 }
 
@@ -738,6 +801,10 @@ void P2PServer::load_peer_list()
 		paths[Params::ProxyType::TOR] = saved_onion_peer_list_file_name;
 	}
 
+	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::I2P)) {
+		paths[Params::ProxyType::I2P] = saved_i2p_peer_list_file_name;
+	}
+
 	for (int i = Params::ProxyType::PLAIN; i < Params::ProxyType::MAX; ++i) {
 		const std::string& path = paths[i];
 
@@ -761,6 +828,12 @@ void P2PServer::load_peer_list()
 							pubkeys.emplace_back(h);
 						}
 					}
+					else if (i == Params::ProxyType::I2P) {
+						const hash h = from_i2p_b32(address);
+						if (!h.empty()) {
+							pubkeys.emplace_back(h);
+						}
+					}
 					else {
 						if (!saved_list.empty()) {
 							saved_list += ',';
@@ -773,6 +846,9 @@ void P2PServer::load_peer_list()
 
 			if (i == Params::ProxyType::TOR) {
 				s.add_onion_pubkeys(pubkeys);
+			}
+			else if (i == Params::ProxyType::I2P) {
+				s.add_i2p_dest_hashes(pubkeys);
 			}
 		}
 	}
@@ -1214,13 +1290,17 @@ uint64_t P2PServer::get_random64()
 void P2PServer::print_status()
 {
 	const uint64_t onion_list_size = m_pool->side_chain().onion_pubkeys_count();
+	const uint64_t i2p_list_size = m_pool->side_chain().i2p_dest_hashes_count();
 
 	MutexLock lock(m_peerListLock);
 
 	LOGINFO(0, "status" <<
-		"\nConnections     = " << m_numConnections.load() << " (" << m_numIncomingConnections.load() << " incoming, " << m_numOnionConnections.load() << " onion)"
+		"\nConnections     = " << m_numConnections.load() <<
+		" (" << m_numIncomingConnections.load() <<
+		" incoming, " << m_numOnionConnections.load() << " onion, " << m_numI2PConnections.load() << " I2P)" <<
 		"\nPeer list size  = " << m_peerList.size() <<
 		"\nOnion list size = " << onion_list_size <<
+		"\nI2P list size   = " << i2p_list_size <<
 		"\nUptime          = " << log::Duration(seconds_since_epoch() - m_pool->start_time())
 	);
 }
@@ -1911,7 +1991,13 @@ void P2PServer::P2PClient::reset()
 			server->m_fastestPeer = nullptr;
 		}
 		if ((m_addressType == AddressType::DomainName) && m_connectedTime) {
-			--server->m_numOnionConnections;
+			if (m_addressType == AddressType::DomainName) {
+				if (server->m_isI2P == true) {
+					--server->m_numI2PConnections;
+				} else {
+					--server->m_numOnionConnections;
+				}
+			}
 		}
 	}
 
@@ -1971,7 +2057,11 @@ bool P2PServer::P2PClient::on_connect()
 	}
 
 	if (m_addressType == AddressType::DomainName) {
-		++server->m_numOnionConnections;
+		if (server->m_isI2P == true) {
+			++server->m_numI2PConnections;
+		} else {
+			++server->m_numOnionConnections;
+		}
 	}
 
 	const uint64_t cur_time = seconds_since_epoch();
@@ -3043,7 +3133,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	const time_t cur_time = time(nullptr);
 
 	// Layout of the message:
-	// 
+	//
 	// 32 bytes           | Secondary public key
 	// 8 bytes            | Secondary public key's expiration timestamp
 	// 64 bytes           | Master key signature signing the above 40 bytes
@@ -3062,11 +3152,11 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	}
 
 	// Layout of the data:
-	// 
+	//
 	// 8 bytes  | timestamp
-	// 
+	//
 	// Next come one or multiple data entries:
-	// 
+	//
 	// 32 bytes | aux_id
 	// 32 bytes | aux_hash
 	// 16 bytes | aux_diff
@@ -3262,7 +3352,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 	std::vector<uint8_t> blob;
 	blob.reserve(data.header_size + HASH_SIZE + 2);
-	
+
 	blob.insert(blob.end(), buf, buf + data.header_size);
 	blob.insert(blob.end(), root.h, root.h + HASH_SIZE);
 	writeVarint(num_transactions + 1, blob);

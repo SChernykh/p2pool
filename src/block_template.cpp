@@ -213,7 +213,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	// Block template construction is relatively slow, but it's better to keep the lock the whole time
 	// instead of using temporary variables and making a quick swap in the end
-	// 
+	//
 	// All readers will line up for the new template instead of using the outdated template
 	WriteLock lock(m_lock);
 
@@ -617,7 +617,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
 
 	m_poolBlockTemplate->m_mergeMiningExtra.clear();
-	
+
 	for (const AuxChainData& c : data.aux_chains) {
 		std::vector<uint8_t> v;
 		v.reserve(HASH_SIZE + 16);
@@ -642,6 +642,13 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		memcpy(buf, params.m_onionPubkey.h, HASH_SIZE);
 
 		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_onion_address_v3, std::vector(buf, buf + sizeof(buf)));
+	}
+
+	if (!params.m_i2pDestinationHash.empty()) {
+		uint8_t buf[HASH_SIZE + 2] = {};
+		memcpy(buf, params.m_i2pDestinationHash.h, HASH_SIZE);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_i2p_b32_address, std::vector(buf, buf + sizeof(buf)));
 	}
 
 	init_merge_mining_merkle_proof();
@@ -752,7 +759,7 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 {
 	// Find the maximum possible fee for every weight value and remember which tx leads to this fee/weight
 	// Run time is O(N*W) where N is the number of transactions and W is the maximum block weight
-	// 
+	//
 	// Actual run time is 0.02-0.05 seconds on real full blocks
 	// It's too slow and uses too much memory to be practical
 
@@ -975,7 +982,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		LOGINFO(4, "increased EXTRA_NONCE from " << EXTRA_NONCE_SIZE << " to " << corrected_extra_nonce_size << " bytes to maintain miner tx weight");
 	}
 	writeVarint(corrected_extra_nonce_size, m_minerTxExtra);
-	
+
 	uint64_t extraNonceOffsetInMinerTx = m_minerTxExtra.size();
 	m_minerTxExtra.insert(m_minerTxExtra.end(), corrected_extra_nonce_size, 0);
 
@@ -1406,7 +1413,7 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 		uint32_t path2 = 0;
 
 		const bool result2 = get_merkle_proof(tree, h, proof2, path2);
-		
+
 		if ((result2 != result) || (proof2 != proof) || (path2 != path)) {
 			LOGERR(1, "get_aux_proof: merkle_hash_with_proof and get_merkle_proof returned different results. Fix the code!");
 		}

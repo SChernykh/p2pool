@@ -15,7 +15,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-if (${CMAKE_VERSION} VERSION_GREATER "3.5.2") 
+if (${CMAKE_VERSION} VERSION_GREATER "3.5.2")
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT p2pool_tests)
 endif()
 
@@ -60,6 +60,7 @@ set(SOURCES
 	src/sha256_tests.cpp
 	src/util_tests.cpp
 	src/wallet_tests.cpp
+	src/i2p_tests.cpp
 	../external/src/crypto/sha256.c
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
@@ -84,6 +85,7 @@ set(SOURCES
 	../src/tcp_server.cpp
 	../src/util.cpp
 	../src/wallet.cpp
+	../src/i2p.cpp
 )
 
 if (WITH_INDEXED_HASHES)
@@ -185,7 +187,9 @@ endif()
 add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
+find_package(CURL REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} ${LIBS})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${CURL_LIBRARIES})
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/crypto_tests.txt" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/block.dat" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/src/sidechain_dump.dat.xz" $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>)

@@ -37,6 +37,7 @@ static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 static constexpr int DEFAULT_P2P_PORT_NANO = 37890;
 
 static constexpr int DEFAULT_P2P_PORT_ONION = 28722;
+static constexpr int DEFAULT_P2P_PORT_I2P = 28723;
 
 static constexpr uint32_t PROTOCOL_VERSION_1_0 = 0x00010000UL;
 static constexpr uint32_t PROTOCOL_VERSION_1_1 = 0x00010001UL;
@@ -95,9 +96,9 @@ public:
 		// Both peers send handshake challenge immediately after a connection is established
 		// Both peers must have the same consensus ID for handshake to succeed
 		// Consensus ID is never sent over the network
-		// 
+		//
 		// Handshake sequence:
-		// 
+		//
 		// - Both peers send 8-byte random challenges (and 8 bytes of peer ID) to each other
 		// - Each peer receives 8-byte challenge, chooses 8-byte random SALT and calculates H = KECCAK(CHALLENGE|CONSENSUS_ID|SALT)
 		// - Both peers send their H and SALT, calculate H of the other peer and check if it matches with what other peer calculated
@@ -291,6 +292,8 @@ private:
 	std::atomic<uint64_t> m_peerListLastSaved;
 
 	std::atomic<uint32_t> m_numOnionConnections;
+	std::atomic<uint32_t> m_numI2PConnections;
+	bool m_isI2P;
 
 	uv_mutex_t m_broadcastLock;
 	uv_async_t m_broadcastAsync;

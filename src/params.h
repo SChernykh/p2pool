@@ -116,7 +116,8 @@ struct Params
 		AUTO    =  0,
 		PLAIN   =  1,
 		TOR     =  2,
-		MAX     =  3,
+		I2P     =  3,
+		MAX     =  4,
 	} m_socks5ProxyType = ProxyType::AUTO;
 
 	bool m_dns = true;
@@ -148,6 +149,14 @@ struct Params
 
 	std::string m_onionAddress;
 	hash m_onionPubkey;
+
+	// Hidden service address provided by the user
+	std::string m_i2pAddress;
+	// Raw hash of the destination info; decoded Base32 address with suffix removed
+	hash m_i2pDestinationHash;
+
+	uint16_t m_samPort = 7656;
+
 	bool m_noClearnetP2P = false;
 	bool m_stratumProxyProtocol = false;
 	bool m_p2pProxyProtocol = false;

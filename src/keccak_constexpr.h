@@ -25,14 +25,14 @@ namespace ConstexprKeccak
 template<int ROUNDS>
 static FORCEINLINE constexpr void keccakf(std::array<uint64_t, 25>& st)
 {
-	constexpr uint64_t round_constants[24] = 
+	constexpr uint64_t round_constants[24] =
 	{
 		0x0000000000000001, 0x0000000000008082, 0x800000000000808a,
 		0x8000000080008000, 0x000000000000808b, 0x0000000080000001,
 		0x8000000080008081, 0x8000000000008009, 0x000000000000008a,
 		0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
 		0x000000008000808b, 0x800000000000008b, 0x8000000000008089,
-		0x8000000000008003, 0x8000000000008002, 0x8000000000000080, 
+		0x8000000000008003, 0x8000000000008002, 0x8000000000000080,
 		0x000000000000800a, 0x800000008000000a, 0x8000000080008081,
 		0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 	};
@@ -107,6 +107,7 @@ static constexpr hash keccak(const char (&input)[len])
 constexpr hash keccak_0x00 = keccak("\0");
 constexpr hash keccak_subaddress_viewpub = keccak("subaddress_viewpub");
 constexpr hash keccak_onion_address_v3 = keccak("onion_address_v3");
+constexpr hash keccak_i2p_b32_address = keccak("i2p_b32_address");
 
 static_assert(keccak_0x00.u64<0>() == 0x14281E7A9E7836BCULL, "constexpr keccak code check failed");
 

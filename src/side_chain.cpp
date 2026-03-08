@@ -702,6 +702,13 @@ bool SideChain::add_block(const PoolBlock& block)
 			m_seenOnionPubkeys[h] = new_block->m_localTimestamp;
 		}
 
+		auto it2 = new_block->m_mergeMiningExtra.find(keccak_i2p_b32_address);
+		if ((it2 != new_block->m_mergeMiningExtra.end()) && (it2->second.size() >= HASH_SIZE)) {
+			hash h;
+			memcpy(h.h, it2->second.data(), HASH_SIZE);
+			m_seenI2PDestHashes[h] = new_block->m_localTimestamp;
+		}
+
 		prune_seen_data();
 	}
 
@@ -1156,7 +1163,7 @@ void SideChain::prune_seen_data()
 {
 	const uint64_t cur_time = seconds_since_epoch();
 
-	// Every 5 minutes, delete wallets that weren't seen for more than 72 hours and onion pubkeys that weren't seen for more than 12 hours
+	// Every 5 minutes, delete wallets that haven't been seen for more than 72 hours and onion/I2P identifiers that haven't been seen for more than 12 hours
 	if (m_seenWalletsLastPruneTime + 5ul * 60ul <= cur_time) {
 		auto prune = [cur_time](auto& data, uint64_t timeout) {
 			for (auto it = data.begin(); it != data.end();) {
@@ -1173,6 +1180,7 @@ void SideChain::prune_seen_data()
 
 		prune(m_seenWallets, 72 * hour);
 		prune(m_seenOnionPubkeys, 12 * hour);
+		prune(m_seenI2PDestHashes, 12 * hour);
 
 		m_seenWalletsLastPruneTime = cur_time;
 	}
@@ -1397,6 +1405,38 @@ void SideChain::add_onion_pubkeys(const std::vector<hash>& pubkeys)
 	for (const hash& h : pubkeys) {
 		if (!h.empty()) {
 			m_seenOnionPubkeys[h] = cur_time;
+		}
+	}
+}
+
+std::vector<hash> SideChain::seen_i2p_dest_hashes() const
+{
+	std::vector<hash> result;
+
+	ReadLock lock(m_seenDataLock);
+
+	result.reserve(m_seenI2PDestHashes.size());
+
+	for (const auto& it : m_seenI2PDestHashes) {
+		result.push_back(it.first);
+	}
+
+	return result;
+}
+
+void SideChain::add_i2p_dest_hashes(const std::vector<hash>& dest_hashes)
+{
+	if (dest_hashes.empty()) {
+		return;
+	}
+
+	const uint64_t cur_time = seconds_since_epoch();
+
+	WriteLock lock(m_seenDataLock);
+
+	for (const hash& h : dest_hashes) {
+		if (!h.empty()) {
+			m_seenI2PDestHashes[h] = cur_time;
 		}
 	}
 }
@@ -2445,7 +2485,7 @@ void SideChain::precalc_worker()
 
 	do {
 		const PoolBlock* job;
-		
+
 		{
 			MutexLock lock(m_precalcJobsMutex);
 

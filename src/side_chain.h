@@ -76,6 +76,7 @@ public:
 	[[nodiscard]] uint64_t block_time() const { return m_targetBlockTime; }
 	[[nodiscard]] FORCEINLINE uint64_t miner_count() const { ReadLock lock(m_seenDataLock); return m_seenWallets.size(); }
 	[[nodiscard]] FORCEINLINE uint64_t onion_pubkeys_count() const { ReadLock lock(m_seenDataLock); return m_seenOnionPubkeys.size(); }
+	[[nodiscard]] FORCEINLINE uint64_t i2p_dest_hashes_count() const { ReadLock lock(m_seenDataLock); return m_seenI2PDestHashes.size(); }
 	[[nodiscard]] uint64_t last_updated() const;
 	[[nodiscard]] bool is_default() const;
 	[[nodiscard]] bool is_mini() const;
@@ -89,6 +90,9 @@ public:
 
 	[[nodiscard]] std::vector<hash> seen_onion_pubkeys() const;
 	void add_onion_pubkeys(const std::vector<hash>& pubkeys);
+
+	[[nodiscard]] std::vector<hash> seen_i2p_dest_hashes() const;
+	void add_i2p_dest_hashes(const std::vector<hash>& dest_hashes);
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
@@ -129,6 +133,7 @@ private:
 	mutable ReadWriteLock m_seenDataLock;
 	unordered_map<hash, uint64_t> m_seenWallets;
 	unordered_map<hash, uint64_t> m_seenOnionPubkeys;
+	unordered_map<hash, uint64_t> m_seenI2PDestHashes;
 	uint64_t m_seenWalletsLastPruneTime;
 
 	// Used to quickly cut off multiple broadcasts of the same block by different peers. Only the first broadcast will be processed.

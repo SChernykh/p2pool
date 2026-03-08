@@ -19,6 +19,7 @@
 #include "params.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include "i2p.h"
 #include <fstream>
 
 #ifdef WITH_GRPC
@@ -55,6 +56,15 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 
 		if (m_onionPubkey.empty()) {
 			LOGERR(1, "Failed to parse \"" << m_onionAddress << '"');
+			throw std::exception();
+		}
+	}
+
+	if (!m_i2pAddress.empty()) {
+		m_i2pDestinationHash = from_i2p_b32(m_i2pAddress);
+
+		if (m_i2pDestinationHash.empty()) {
+			LOGERR(1, "Failed to parse \"" << m_i2pAddress << '"');
 			throw std::exception();
 		}
 	}
@@ -178,6 +188,10 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 				switch (port) {
 				case 9050:
 					m_socks5ProxyType = ProxyType::TOR;
+					break;
+
+				case 4447:
+					m_socks5ProxyType = ProxyType::I2P;
 					break;
 
 				default:
@@ -457,6 +471,16 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 
 	if ((arg[0] == "onion-address") && has1(arg)) {
 		m_onionAddress = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "i2p-address") && has1(arg)) {
+		m_i2pAddress = arg[1];
+		return true;
+	}
+
+	if ((arg[0] == "sam-port") && has1(arg)) {
+		m_samPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
 		return true;
 	}
 

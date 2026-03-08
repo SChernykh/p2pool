@@ -89,7 +89,7 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	s << "127.0.0.1:" << m_server->external_listen_port();
 
 	m_channelArgs.SetInt(GRPC_ARG_INITIAL_RECONNECT_BACKOFF_MS, 1000);
-	
+
 	m_channelArgs.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, 1000);
 	m_channelArgs.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS, 10000);
 
@@ -248,7 +248,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	for (const auto& i : block.m_mergeMiningExtra) {
 		// Filter aux chain data only
-		if ((i.first == keccak_subaddress_viewpub) || (i.first == keccak_onion_address_v3)) {
+		if ((i.first == keccak_subaddress_viewpub) || (i.first == keccak_onion_address_v3) || (i.first == keccak_i2p_b32_address)) {
 			continue;
 		}
 		++mm_extra_size;
@@ -352,7 +352,7 @@ void MergeMiningClientTari::on_external_block(const PoolBlock& block)
 
 	std::vector<uint8_t> coinbase_merkle_proof;
 	coinbase_merkle_proof.reserve(proof.size() * HASH_SIZE);
-	
+
 	for (const hash& h : proof) {
 		coinbase_merkle_proof.insert(coinbase_merkle_proof.end(), h.h, h.h + HASH_SIZE);
 	}

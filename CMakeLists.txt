@@ -131,6 +131,7 @@ set(HEADERS
 	src/uv_util.h
 	src/wallet.h
 	src/zmq_reader.h
+	src/i2p.h
 )
 
 set(SOURCES
@@ -164,6 +165,7 @@ set(SOURCES
 	src/util.cpp
 	src/wallet.cpp
 	src/zmq_reader.cpp
+	src/i2p.cpp
 )
 
 if (AMD64)

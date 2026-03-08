@@ -66,7 +66,7 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * Advanced mempool picking algorithm, it creates blocks with better reward than what monerod solo mining does
 * Password protected private pools
 * Highly reliable configurations are supported (multiple P2Pool nodes mining to the same wallet, each P2Pool node can use multiple Monero nodes and switch on the fly if an issue is detected)
-* Mining through [TOR](docs/TOR.MD) is fully supported
+* Mining through [TOR](docs/TOR.MD) and [I2P](docs/I2P.MD) are fully supported
 
 ## How payouts work in P2Pool
 
@@ -96,7 +96,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 ### General Considerations
 
 - In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the [official Monero binaries](https://www.getmonero.org/downloads/), start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
-- It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities. 
+- It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities.
 - You can mine to a primary wallet address (the one starting with `4`) for mining. If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
 - You can add the `--mini` or `--nano` parameter to your P2Pool command to connect to the respective sidechain.
 > [!NOTE]
@@ -105,7 +105,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 > Using `--nano` will change the p2p port to 37890.<br>
 - Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your firewall to ensure better connectivity. If you're mining from a computer behind NAT (like a router) you could consider forwarding the ports to your local machine.
 - You can connect multiple miners to the same P2Pool node. The more the better!
-- The steps below assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup. 
+- The steps below assume that you run everything on the same machine. If it's not the case, change `127.0.0.1` to appropriate IP addresses for your setup.
 - It is highly recommended to create a new mainnet wallet for P2Pool mining because **wallet addresses are public on P2Pool**.
 
 **Wallet software compatible with P2Pool payouts**
@@ -157,15 +157,15 @@ Note that Tari will be mined in solo mode (only full Tari blocks can be mined fo
 1. Download the latest P2Pool binaries [here](https://github.com/SChernykh/p2pool/releases/latest).
    -  Alternatively, grab the latest source code for P2Pool and [build it](#build-instructions).
 2. Download the latest XMRig (linux-static-x64) binary [here](https://github.com/xmrig/xmrig/releases/latest).
-3. Prepare enough huge pages (each of monerod/P2Pool/XMRig needs them): 
+3. Prepare enough huge pages (each of monerod/P2Pool/XMRig needs them):
 ```
 sudo sysctl vm.nr_hugepages=3072
 ```
-4. Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your local firewall to ensure better connectivity. 
-5. Start `monerod` with the following command/options: 
+4. Check that ports 18080 (Monero p2p port) and 37889/37888/37890 (P2Pool default/mini/nano p2p port) are open in your local firewall to ensure better connectivity.
+5. Start `monerod` with the following command/options:
 ```
 ./monerod --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
-``` 
+```
 **Note:**
 The `--zmq-pub` option is required for P2Pool to work properly.
 
@@ -187,16 +187,16 @@ The `--zmq-pub` option is required for P2Pool to work properly.
  ```
  ./xmrig -o 127.0.0.1:3333
  ```
-   - Note that you don't need to specify your wallet address for XMRig. **Wallet addresses set in XMRig config will be ignored!** 
-   - To set a custom fixed difficulty for your miner (for example, 10000), instead start XMRig with the following options: 
+   - Note that you don't need to specify your wallet address for XMRig. **Wallet addresses set in XMRig config will be ignored!**
+   - To set a custom fixed difficulty for your miner (for example, 10000), instead start XMRig with the following options:
    ```
    ./xmrig -u x+10000 -o 127.0.0.1:3333
    ```
 9. XMRig should connect and start mining!
 
-**Additional Information:** 
+**Additional Information:**
 - For a more in-depth beginner friendly walk-through with the option of using Docker, please see SethForPrivacy's guide at: https://sethforprivacy.com/guides/run-a-p2pool-node/
-- You can check the p2pool.log for any warnings or errors using the following command: 
+- You can check the p2pool.log for any warnings or errors using the following command:
 ```
 grep -E 'WARNING|ERROR' p2pool.log
 ```
@@ -213,7 +213,7 @@ nocreate
 }
  ```
 
-### Windows 
+### Windows
 
 **Note:** *Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then click "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
 
@@ -221,8 +221,8 @@ nocreate
     - Alternatively, grab the latest source code for P2Pool and [build it](#build-instructions).
 2. Download the latest XMRig binary [here](https://github.com/xmrig/xmrig/releases/latest).
 3. Expand the P2Pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
-4. Expand XMRig binary into an appropriate location (the same folder as P2Pool is fine). 
-5. Prepare huge pages to work properly (each of monerod/P2Pool/XMRig needs them): 
+4. Expand XMRig binary into an appropriate location (the same folder as P2Pool is fine).
+5. Prepare huge pages to work properly (each of monerod/P2Pool/XMRig needs them):
    - On Windows 10 or above, run XMRig at least once as Administrator (right-click Run As Administrator)
    - On earlier versions of Windows, you'll need to run XMRig as Administrator at least once per login.
 6. Create "Monero" folder inside extracted P2Pool folder and copy Monero binaries there.
@@ -230,7 +230,7 @@ nocreate
 
 **Note:** *When running the below commands, Windows Firewall may prompt to allow connections, click "Allow" if prompted.*
 
-8. Start `monerod` with the following command/options: 
+8. Start `monerod` with the following command/options:
 ```
 .\Monero\monerod.exe --zmq-pub tcp://127.0.0.1:18083 --out-peers 32 --in-peers 64 --add-priority-node=p2pmd.xmrvsbeast.com:18080 --add-priority-node=nodes.hashvault.pro:18080 --enforce-dns-checkpointing --enable-dns-blocklist
 ```
@@ -254,8 +254,8 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 ```
 .\xmrig.exe -o 127.0.0.1:3333
 ```
-   - Note that you don't need to specify your wallet address for XMRig. **Wallet addresses set in XMRig config will be ignored!** 
-   - To set a custom fixed difficulty for your miner (for example, 10000), instead start XMRig with the following options: 
+   - Note that you don't need to specify your wallet address for XMRig. **Wallet addresses set in XMRig config will be ignored!**
+   - To set a custom fixed difficulty for your miner (for example, 10000), instead start XMRig with the following options:
      ```
      xmrig.exe -u x+10000 -o 127.0.0.1:3333
      ```
@@ -299,7 +299,7 @@ pacman -S p2pool
 
 ### [Nix/NixOS](https://nixos.org)
 
-This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install P2Pool. 
+This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install P2Pool.
 The commands below use the new flake specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
 
 Because this project has submodules which are not fixed in _nixUnstable_ yet you have to use the `nix/master` branch:
@@ -330,7 +330,7 @@ cmake .. -G "Visual Studio 16 2019"
 ```
 then open generated build\p2pool.sln in Visual Studio and build it there
 
-Alternatively, you can select "Clone a repository" within the GUI, then select "Build" from the menu. 
+Alternatively, you can select "Clone a repository" within the GUI, then select "Build" from the menu.
 
 ### macOS
 
