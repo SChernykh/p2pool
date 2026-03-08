@@ -986,7 +986,7 @@ std::string to_onion_v3(const hash& pubkey)
 
 		while (bit_size >= 5) {
 			bit_size -= 5;
-			result += "abcdefghijklmnopqrstuvwxyz234567"[(data >> bit_size) & 31];
+			result += base32_alphabet[(data >> bit_size) & 31];
 		}
 	}
 

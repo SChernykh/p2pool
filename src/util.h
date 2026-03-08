@@ -407,6 +407,8 @@ FORCEINLINE std::string tolower(const std::string& s)
 	return result;
 }
 
+constexpr char base32_alphabet[] = "abcdefghijklmnopqrstuvwxyz234567";
+
 std::string to_onion_v3(const hash& pubkey);
 hash from_onion_v3(const std::string& address);
 

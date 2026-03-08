@@ -42,7 +42,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_C_FLAGS='-fsanitize=thread -Og -fno-omit-frame-pointer -g' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_C_FLAGS='-fsanitize=thread -Og -fno-omit-frame-pointer -g' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF -DENABLE_CLANG_TIDY=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -133,7 +133,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-21 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -O0 -fno-omit-frame-pointer -g3' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-21 -DCMAKE_C_FLAGS='-fsanitize=memory -fsanitize-recover -fsanitize-memory-track-origins -O0 -fno-omit-frame-pointer -g3' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF -DENABLE_CLANG_TIDY=OFF
         make -j$(nproc)
 
     - name: Build libzmq
@@ -372,7 +372,7 @@ jobs:
         cd external/src/libuv
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@18)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@18)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@18)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF
+        cmake .. -DCMAKE_C_COMPILER="$(brew --prefix llvm@18)/bin/clang" -DCMAKE_AR="$(brew --prefix llvm@18)/bin/llvm-ar" -DCMAKE_RANLIB="$(brew --prefix llvm@18)/bin/llvm-ranlib" -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DBUILD_TESTING=OFF -DLIBUV_BUILD_SHARED=OFF -DENABLE_CLANG_TIDY=OFF
         make -j4
 
     - name: Build libzmq

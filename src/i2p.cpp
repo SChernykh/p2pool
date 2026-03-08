@@ -17,6 +17,7 @@
  */
 
 #include "common.h"
+#include "util.h"
 #include "i2p.h"
 
 LOG_CATEGORY(I2P)
@@ -35,9 +36,7 @@ hash from_i2p_b32(const std::string& address)
 		return {};
 	}
 
-	size_t pos = address.find('.');
-	const std::string dest_hash = address.substr(0, pos);
-	const hash result = from_i2p_b32_const(dest_hash.c_str());
+	const hash result = from_i2p_b32_const(address.c_str());
 
 	if (result.empty()) {
 		LOGWARN(3, "Invalid I2P address \"" << address << "\": has invalid character(s)");
@@ -65,7 +64,7 @@ std::string to_i2p_b32(const hash& dest_hash)
 
 		while (bit_size >= 5) {
 			bit_size -= 5;
-			result += "abcdefghijklmnopqrstuvwxyz234567"[(data >> bit_size) & 31];
+			result += base32_alphabet[(data >> bit_size) & 31];
 		}
 	}
 
