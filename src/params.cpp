@@ -408,6 +408,7 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		if (s == "auto")  m_socks5ProxyType = ProxyType::AUTO;
 		if (s == "plain") m_socks5ProxyType = ProxyType::PLAIN;
 		if (s == "tor")   m_socks5ProxyType = ProxyType::TOR;
+		if (s == "i2p")   m_socks5ProxyType = ProxyType::I2P;
 
 		return m_socks5ProxyType != ProxyType::INVALID;
 	}

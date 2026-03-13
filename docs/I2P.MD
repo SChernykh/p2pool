@@ -13,7 +13,7 @@ P2Pool has several command-line options that should be used for I2P setup:
 ## Setting up I2P tunnels for P2Pool (i2pd on Linux)
 
 Follow [these instructions](https://docs.i2pd.website/en/latest/user-guide/install/) to install i2pd on your system.
-First, ensure both the SOCKS proxy and SAM bridge tunnels are enabled (as they should be by default). See [here](https://docs.i2pd.website/en/latest/user-guide/configuration/) for more information.
+First, ensure the SOCKS proxy tunnel is enabled (as it should be by default). See [here](https://docs.i2pd.website/en/latest/user-guide/configuration/) for more information.
 
 You will need to modify some lines in the `tunnels.conf` file, usually located in `/var/lib/i2pd/tunnels.conf` on Linux.
 Add a server tunnel to allow inbound connections from peers:
