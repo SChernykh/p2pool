@@ -66,8 +66,7 @@ static constexpr hash seed_onion_nodes[] = {
 };
 
 static constexpr hash seed_i2p_nodes[] = {
-	// TODO: add seed node address
-	from_i2p_b32_const("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.b32.i2p")
+	from_i2p_b32_const("h6jrh53yvlvzqqyy7abzjp2t4kidtheee7e7nfbynecroc7yvbjq.b32.i2p")
 };
 
 P2PServer::P2PServer(p2pool* pool)
