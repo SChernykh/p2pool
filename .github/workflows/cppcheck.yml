@@ -21,7 +21,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -48,14 +48,14 @@ jobs:
 
     - name: Archive full error list
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: errors_full-linux
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: checkers_report-linux
         path: cppcheck/checkers_report.txt
@@ -67,7 +67,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -96,14 +96,14 @@ jobs:
 
     - name: Archive full error list
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: errors_full-windows
         path: cppcheck/errors_full.txt
 
     - name: Archive checkers report
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: checkers_report-windows
         path: cppcheck/checkers_report.txt

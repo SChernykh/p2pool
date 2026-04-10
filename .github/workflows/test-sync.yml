@@ -27,7 +27,7 @@ jobs:
         sudo apt install -y git build-essential cmake gcc-12 g++-12
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -82,7 +82,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_ubuntu_data_tsan
         path: |
@@ -118,7 +118,7 @@ jobs:
         cp -r lib /tmp/libcxx_msan
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -173,7 +173,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_ubuntu_data_msan
         path: |
@@ -193,7 +193,7 @@ jobs:
         sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -226,7 +226,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_ubuntu_data_ubsan
         path: |
@@ -246,7 +246,7 @@ jobs:
         sudo apt install -y git build-essential cmake libuv1-dev libzmq3-dev libgss-dev libcurl4-openssl-dev libidn2-0-dev gcc-12 g++-12
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -279,7 +279,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_ubuntu_data_asan
         path: |
@@ -304,7 +304,7 @@ jobs:
         sudo ./llvm.sh 22 all
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -337,7 +337,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_ubuntu_data_tysan
         path: |
@@ -357,7 +357,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -411,7 +411,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_${{ matrix.config.os }}_data
         path: |
@@ -425,7 +425,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -457,7 +457,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_windows_data_debug_asan
         path: |
@@ -471,7 +471,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -502,7 +502,7 @@ jobs:
 
     - name: Archive p2pool.log
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool_windows_data_leaks
         path: |

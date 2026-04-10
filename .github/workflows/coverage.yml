@@ -29,7 +29,7 @@ jobs:
         sudo ./llvm.sh 22 all
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
@@ -63,7 +63,7 @@ jobs:
         genhtml --demangle-cpp -o coverage coverage.info
 
     - name: Checkout GitHub Pages repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: SChernykh/SChernykh.github.io
         token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
@@ -85,7 +85,7 @@ jobs:
 
     - name: Archive coverage data
       if: '!cancelled()'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: p2pool-coverage
         path: tests/build/coverage

@@ -24,7 +24,7 @@ jobs:
         clang-tidy-22 --verify-config
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
