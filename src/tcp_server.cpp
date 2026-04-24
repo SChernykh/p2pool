@@ -128,7 +128,7 @@ void TCPServer::parse_address_list_internal(const std::string& address_list, con
 				}
 			}
 
-			const uint32_t port = std::stoul(address.substr(k2 + 1), nullptr, 10);
+			const uint32_t port = strtoul(address.c_str() + k2 + 1, nullptr, 10);
 			if ((port > 0) && (port < 65536)) {
 				callback(is_v6, address, ip, static_cast<int>(port));
 			}
@@ -340,6 +340,7 @@ bool TCPServer::connect_to_peer(const std::string& domain, int port)
 
 	if (s.m_spilled) {
 		LOGERR(1, "Can't connect to " << domain << ": too long domain name");
+		return_client(client);
 		return false;
 	}
 
@@ -429,6 +430,7 @@ bool TCPServer::connect_to_peer(Client* client)
 		}
 		else {
 			LOGWARN(5, "failed to initiate tcp connection to " << static_cast<const char*>(client->m_addrString) << ": domain name is unresolved and SOCKS5 proxy is not enabled");
+			uv_close(reinterpret_cast<uv_handle_t*>(&client->m_socket), on_connection_error);
 			return false;
 		}
 	}
@@ -582,6 +584,11 @@ bool TCPServer::send_internal(Client* client, const Callback<size_t, uint8_t*, s
 		return true;
 	}
 
+	if (m_callbackBuf.empty()) {
+		LOGERR(1, "callback buf is not initialized");
+		return false;
+	}
+
 	const size_t bytes_written = callback(m_callbackBuf.data(), m_callbackBuf.size());
 
 	if (bytes_written > m_callbackBuf.size()) {
@@ -613,7 +620,7 @@ bool TCPServer::send_internal(Client* client, const Callback<size_t, uint8_t*, s
 
 		uv_buf_t bufs[1];
 		bufs[0].base = reinterpret_cast<char*>(buf->m_data);
-		bufs[0].len = static_cast<int>(size);
+		bufs[0].len = static_cast<uint32_t>(size);
 
 		const int err = uv_write(&buf->m_write, reinterpret_cast<uv_stream_t*>(&client->m_socket), bufs, 1, Client::on_write);
 		if (err) {
@@ -937,6 +944,7 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 			}
 			else {
 				client->close();
+				return;
 			}
 		}
 	}
@@ -1258,7 +1266,8 @@ bool TCPServer::Client::on_proxy_handshake(const char* data, uint32_t size)
 				m_socks5ProxyState = Socks5ProxyState::ConnectRequestSent;
 			}
 			else {
-				close();
+				LOGWARN(5, "Failed to send SOCKS5 proxy connect request");
+				return false;
 			}
 		}
 		break;
@@ -1465,6 +1474,13 @@ void TCPServer::Client::on_write(uv_write_t* req, int status)
 
 	if (server) {
 		server->return_write_buffer(buf);
+	}
+	else {
+		// no server to return buf to, so just delete it
+		if (buf->m_data) {
+			free_hook(buf->m_data);
+		}
+		delete buf;
 	}
 
 	if (status != 0) {

@@ -232,7 +232,16 @@ bool ServerTls::on_read_internal(const char* data, uint32_t size, const ReadCall
 		return false;
 	}
 
-	if (!BIO_write_all(SSL_get_rbio(ssl), data, size)) {
+	BIO* rbio = SSL_get_rbio(ssl);
+	if (!rbio) {
+		return false;
+	}
+
+	if (!BIO_write_all(rbio, data, size)) {
+		return false;
+	}
+
+	if (BIO_ctrl_pending(rbio) > 32768u) {
 		return false;
 	}
 
@@ -266,9 +275,12 @@ bool ServerTls::on_read_internal(const char* data, uint32_t size, const ReadCall
 			}
 		}
 
-		if ((result < 0) && (SSL_get_error(ssl, result) == SSL_ERROR_WANT_READ)) {
-			// Continue handshake, nothing to read yet
-			return true;
+		if (result < 0) {
+			const int err = SSL_get_error(ssl, result);
+			if ((err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE)) {
+				// Continue handshake, nothing to read yet
+				return true;
+			}
 		}
 
 		if (result == 1) {
@@ -289,11 +301,16 @@ bool ServerTls::on_read_internal(const char* data, uint32_t size, const ReadCall
 		}
 	}
 
-	return true;
+	const int err = SSL_get_error(ssl, bytes_read);
+	return (err == SSL_ERROR_WANT_READ) || (err == SSL_ERROR_WANT_WRITE);
 }
 
 bool ServerTls::on_write_internal(const uint8_t* data, size_t size, const WriteCallback::Base& write_callback)
 {
+	if (size > static_cast<size_t>(std::numeric_limits<int>::max())) {
+		return false;
+	}
+
 	SSL* ssl = m_ssl.get();
 	if (!ssl) {
 		return false;
