@@ -172,7 +172,7 @@ struct alignas(uint64_t) hash
 		}
 	}
 
-	constexpr hash(const char (&s)[HASH_SIZE * 2 + 1]) : h{} {
+	explicit constexpr hash(const char (&s)[HASH_SIZE * 2 + 1]) : h{} {
 		for (size_t i = 0; i < HASH_SIZE * 2; ++i) {
 			char c = s[i];
 

@@ -34,9 +34,9 @@ TEST(hash, constructor)
 	h = {};
 	ASSERT_EQ(memcmp(h.h, buf, HASH_SIZE), 0);
 
-	h = { "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" };
+	hash h2{ "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" };
 	for (uint8_t i = 0; i < HASH_SIZE; ++i) {
-		ASSERT_EQ(h.h[i], i);
+		ASSERT_EQ(h2.h[i], i);
 	}
 }
 
