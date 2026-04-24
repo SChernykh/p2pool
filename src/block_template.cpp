@@ -1560,7 +1560,8 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 	}
 
 	root_hash root;
-	if (!merkle_hash_with_proof(hashes, aux_slot, m_poolBlockTemplate->m_merkleProof, m_poolBlockTemplate->m_merkleProofPath, root)) {
+	uint32_t merkle_proof_path;
+	if (!merkle_hash_with_proof(hashes, aux_slot, m_poolBlockTemplate->m_merkleProof, merkle_proof_path, root)) {
 		LOGERR(1, "init_merge_mining_merkle_proof: merkle_hash_with_proof failed. Fix the code!");
 		return;
 	}
@@ -1577,7 +1578,7 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 			return;
 		}
 
-		if ((proof != m_poolBlockTemplate->m_merkleProof) || (path != m_poolBlockTemplate->m_merkleProofPath)) {
+		if ((proof != m_poolBlockTemplate->m_merkleProof) || (path != merkle_proof_path)) {
 			LOGERR(1, "init_merge_mining_merkle_proof: merkle_hash_with_proof and get_merkle_proof returned different results. Fix the code!");
 		}
 	}

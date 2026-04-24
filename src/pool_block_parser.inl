@@ -79,11 +79,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		uint64_t unlock_height;
 		READ_VARINT(unlock_height);
+		if (unlock_height > CRYPTONOTE_MAX_BLOCK_NUMBER) return __LINE__;
 
 		EXPECT_BYTE(1);
 		EXPECT_BYTE(TXIN_GEN);
 
 		READ_VARINT(m_txinGenHeight);
+		if (m_txinGenHeight > CRYPTONOTE_MAX_BLOCK_NUMBER) return __LINE__;
 		if (m_majorVersion != sidechain.network_major_version(m_txinGenHeight)) return __LINE__;
 		if (unlock_height != m_txinGenHeight + MINER_REWARD_UNLOCK_TIME) return __LINE__;
 
@@ -99,8 +101,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		if (num_outputs > 0) {
 			// Outputs are in the buffer, just read them
 			// Each output is at least 34 bytes, exit early if there's not enough data left
-			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key
-			constexpr uint64_t MIN_OUTPUT_SIZE = 34;
+			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key, 1 byte for view_tag
+			constexpr uint64_t MIN_OUTPUT_SIZE = 35;
 
 			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < num_outputs * MIN_OUTPUT_SIZE) return __LINE__;
@@ -123,6 +125,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				}
 
 				t.m_reward = reward;
+
+				if (total_reward + reward < total_reward) return __LINE__;
 				total_reward += reward;
 
 				EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
@@ -269,6 +273,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const int transactions_blob_size = static_cast<int>(num_transactions) * HASH_SIZE;
 		const int transactions_blob_size_diff = transactions_blob_size - transactions_actual_blob_size;
 
+		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
+
+		if (data_size > static_cast<int>(MAX_BLOCK_SIZE)) {
+			return __LINE__;
+		}
+
 #if POOL_BLOCK_DEBUG
 		m_mainChainDataDebug.reserve((data - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
 		m_mainChainDataDebug.assign(data_begin, data_begin + outputs_offset);
@@ -413,9 +423,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
 
 				std::vector<uint8_t> t;
-				t.resize(n);
 
-				READ_BUF(t.data(), n);
+				if (n > 0) {
+					t.resize(n);
+					READ_BUF(t.data(), n);
+				}
 
 				m_mergeMiningExtra.emplace(chain_id, std::move(t));
 			}
@@ -449,11 +461,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
-		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
-
-		if (data_size > static_cast<int>(MAX_BLOCK_SIZE)) {
-			return __LINE__;
-		}
 
 		keccak_custom(
 			[nonce_offset, extra_nonce_offset, mm_root_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t

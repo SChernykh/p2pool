@@ -51,7 +51,6 @@ PoolBlock::PoolBlock()
 	, m_difficulty{}
 	, m_cumulativeDifficulty{}
 	, m_merkleProof{}
-	, m_merkleProofPath(0)
 	, m_mergeMiningExtra{}
 	, m_sidechainExtraBuf{}
 	, m_sidechainId{}
@@ -108,7 +107,6 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_difficulty = b.m_difficulty;
 	m_cumulativeDifficulty = b.m_cumulativeDifficulty;
 	m_merkleProof = b.m_merkleProof;
-	m_merkleProofPath = b.m_merkleProofPath;
 	m_mergeMiningExtra = b.m_mergeMiningExtra;
 	memcpy(m_sidechainExtraBuf, b.m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 	m_sidechainId = b.m_sidechainId;
@@ -200,7 +198,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 	}
 
 	*(p++) = TX_EXTRA_NONCE;
-	*(p++) = static_cast<uint8_t>(extra_nonce_size);
+	writeVarint(extra_nonce_size, [&p](uint8_t value) { *(p++) = value; });
 
 	if (!extra_nonce) {
 		extra_nonce = &m_extraNonce;

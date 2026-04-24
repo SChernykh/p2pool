@@ -94,14 +94,14 @@ MergeMiningClientTari::MergeMiningClientTari(p2pool* pool, std::string host, con
 	uv_mutex_init_checked(&m_workerLock);
 	uv_cond_init_checked(&m_workerCond);
 
+	uv_mutex_init_checked(&m_pushBlockLock);
+	uv_cond_init_checked(&m_pushBlockCond);
+
 	int err = uv_thread_create(&m_worker, run_wrapper, this);
 	if (err) {
 		LOGERR(1, "failed to start worker thread, error " << uv_err_name(err));
 		throw std::exception();
 	}
-
-	uv_mutex_init_checked(&m_pushBlockLock);
-	uv_cond_init_checked(&m_pushBlockCond);
 
 	std::ifstream f("tari_nodes.txt");
 
@@ -851,6 +851,8 @@ void MergeMiningClientTari::push_blocks_to(const std::string& node_address)
 		LOGINFO(4, node_address << " is at block height " << tip_info.metadata().best_block_height());
 	}
 
+	std::string prev_header_hash;
+
 	while (!m_pushBlockStop) {
 		Block block;
 		{
@@ -865,6 +867,13 @@ void MergeMiningClientTari::push_blocks_to(const std::string& node_address)
 		}
 
 		const std::string& h = block.header().hash();
+
+		// Don't push the same block twice
+		if (h == prev_header_hash) {
+			continue;
+		}
+		prev_header_hash = h;
+
 		LOGINFO(4, "Pushing block " << log::hex_buf(h.data(), h.size()) << " to " << node_address);
 
 		grpc::ClientContext ctx;

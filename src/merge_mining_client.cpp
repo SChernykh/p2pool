@@ -125,13 +125,13 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 		{
 			const std::vector<uint8_t>& v = i.second;
 
-			const uint8_t* p = v.data();
-			const uint8_t* e = v.data() + v.size();
-
-			if (p + HASH_SIZE > e) {
+			if (v.size() < HASH_SIZE) {
 				LOGWARN(3, "on_external_block: sanity check failed - invalid merge mining extra data " << '1');
 				return;
 			}
+
+			const uint8_t* p = v.data();
+			const uint8_t* e = v.data() + v.size();
 
 			memcpy(data.h, p, HASH_SIZE);
 			p += HASH_SIZE;

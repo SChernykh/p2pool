@@ -41,6 +41,13 @@ MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::st
 	const size_t k = host.find_last_of(':');
 	if (k != std::string::npos) {
 		m_host = host.substr(0, k);
+
+		// Handle IPv6 addresses
+		if ((m_host.length() > 2) && (m_host.find_first_of(':') != std::string::npos) && (m_host.front() == '[') && (m_host.back() == ']')) {
+			m_host.erase(m_host.begin());
+			m_host.pop_back();
+		}
+
 		m_port = static_cast<int32_t>(std::stol(host.substr(k + 1), nullptr, 10));
 	}
 

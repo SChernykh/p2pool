@@ -38,6 +38,11 @@ TEST(hash, constructor)
 	for (uint8_t i = 0; i < HASH_SIZE; ++i) {
 		ASSERT_EQ(h2.h[i], i);
 	}
+
+	hash h3{ "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F" };
+	for (uint8_t i = 0; i < HASH_SIZE; ++i) {
+		ASSERT_EQ(h3.h[i], i);
+	}
 }
 
 TEST(hash, compare)
