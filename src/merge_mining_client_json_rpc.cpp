@@ -29,12 +29,9 @@ LOG_CATEGORY(MergeMiningClientJSON_RPC)
 namespace p2pool {
 
 MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet)
-	: m_host(host)
+	: MergeMiningClientShared(pool, wallet)
+	, m_host(host)
 	, m_port(80)
-	, m_chainParamsTimestamp(0)
-	, m_auxWallet(wallet)
-	, m_ping(0.0)
-	, m_pool(pool)
 	, m_loop{}
 	, m_loopThread{}
 	, m_timer{}
@@ -77,8 +74,6 @@ MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::st
 	}
 	m_timer.data = this;
 
-	uv_rwlock_init_checked(&m_lock);
-
 	err = uv_thread_create(&m_loopThread, loop, this);
 	if (err) {
 		LOGERR(1, "failed to start event loop thread, error " << uv_err_name(err));
@@ -93,8 +88,6 @@ MergeMiningClientJSON_RPC::~MergeMiningClientJSON_RPC()
 {
 	uv_async_send(&m_shutdownAsync);
 	uv_thread_join(&m_loopThread);
-
-	uv_rwlock_destroy(&m_lock);
 
 	LOGINFO(1, "stopped");
 }
@@ -115,15 +108,14 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 
 	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
 		[this](const char* data, size_t size, double ping) {
-			WriteLock lock(m_lock);
+			WriteLock lock(m_chainParamsLock);
 
 			if (parse_merge_mining_get_chain_id(data, size)) {
-				if (ping > 0.0) {
-					m_ping = ping;
-				}
-
 				LOGINFO(1, m_host << ':' << m_port << " uses chain_id " << log::LightCyan() << m_chainParams.aux_id);
-				LOGINFO(1, m_host << ':' << m_port << " ping is " << m_ping << " ms");
+
+				if (ping > 0.0) {
+					LOGINFO(1, m_host << ':' << m_port << " ping is " << ping << " ms");
+				}
 
 				// Chain ID received successfully, we can start polling for new mining jobs now
 				const int err = uv_timer_start(&m_timer, on_timer, 0, 500);
@@ -191,7 +183,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 
 	hash aux_hash;
 	{
-		ReadLock lock(m_lock);
+		ReadLock lock(m_chainParamsLock);
 		aux_hash = m_chainParams.aux_hash;
 	}
 
@@ -207,14 +199,29 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 			bool changed = false;
 			hash chain_id;
 
+			hash prev_aux_hash;
+			std::vector<uint8_t> prev_aux_blob;
 			{
-				WriteLock lock(m_lock);
+				WriteLock lock(m_chainParamsLock);
+
+				prev_aux_hash = m_chainParams.aux_hash;
+				prev_aux_blob = m_chainParams.aux_blob;
+
 				if (parse_merge_mining_get_aux_block(data, size, changed)) {
 					chain_id = m_chainParams.aux_id;
 				}
 			}
 
 			if (changed && !chain_id.empty()) {
+				{
+					WriteLock lock(m_chainParamsLock);
+
+					const uint32_t index = (m_previousAuxHashesIndex++) % NUM_PREVIOUS_HASHES;
+
+					m_previousAuxHashes[index] = prev_aux_hash;
+					m_previousAuxBlobs[index] = prev_aux_blob;
+				}
+
 				m_pool->update_aux_data(chain_id);
 			}
 		},
@@ -293,14 +300,19 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* dat
 
 void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*coinbase_merkle_proof*/, const uint8_t (&/*hashing_blob*/)[128], size_t /*nonce_offset*/, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path)
 {
-	ReadLock lock(m_lock);
+	ReadLock lock(m_chainParamsLock);
 
-	std::vector<char> buf((m_chainParams.aux_blob.size() + HASH_SIZE + blob.size()) * 2 + merkle_proof.size() * (HASH_SIZE * 2 + 3) + 256);
+	const uint32_t index = m_previousAuxHashesFoundIndex.exchange(std::numeric_limits<uint32_t>::max());
+
+	const std::vector<uint8_t>& aux_blob = (index < NUM_PREVIOUS_HASHES) ? m_previousAuxBlobs[index] : m_chainParams.aux_blob;
+	const hash& aux_hash = (index < NUM_PREVIOUS_HASHES) ? m_previousAuxHashes[index] : m_chainParams.aux_hash;
+
+	std::vector<char> buf((aux_blob.size() + HASH_SIZE + blob.size()) * 2 + merkle_proof.size() * (HASH_SIZE * 2 + 3) + 256);
 	log::Stream s(buf.data(), buf.size());
 
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_submit_solution\",\"params\":{"
-		<< "\"aux_blob\":\"" << log::hex_buf(m_chainParams.aux_blob.data(), m_chainParams.aux_blob.size()) << '"'
-		<< ",\"aux_hash\":\"" << m_chainParams.aux_hash << '"'
+		<< "\"aux_blob\":\"" << log::hex_buf(aux_blob.data(), aux_blob.size()) << '"'
+		<< ",\"aux_hash\":\"" << aux_hash << '"'
 		<< ",\"blob\":\"" << log::hex_buf(blob.data(), blob.size()) << '"'
 		<< ",\"merkle_proof\":[";
 
@@ -329,7 +341,7 @@ void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*co
 
 void MergeMiningClientJSON_RPC::print_status() const
 {
-	ReadLock lock(m_lock);
+	ReadLock lock(m_chainParamsLock);
 
 	LOGINFO(0, "status" <<
 		"\nHost       = " << m_host << ':' << m_port <<
@@ -340,7 +352,7 @@ void MergeMiningClientJSON_RPC::print_status() const
 
 void MergeMiningClientJSON_RPC::api_status(log::Stream& s) const
 {
-	ReadLock lock(m_lock);
+	ReadLock lock(m_chainParamsLock);
 
 	s << '{'
 		<< "\"api\":\"JSON RPC\","
@@ -356,7 +368,7 @@ bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const
 {
 	const uint64_t t = seconds_since_epoch();
 
-	ReadLock lock(m_lock);
+	ReadLock lock(m_chainParamsLock);
 
 	if (m_chainParams.aux_id.empty() || m_chainParams.aux_diff.empty()) {
 		return false;
@@ -446,6 +458,11 @@ void MergeMiningClientJSON_RPC::on_shutdown()
 {
 	uv_timer_stop(&m_timer);
 	uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
+}
+
+const char* MergeMiningClientJSON_RPC::get_log_category() const
+{
+	return log_category_prefix;
 }
 
 } // namespace p2pool

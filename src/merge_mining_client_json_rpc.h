@@ -24,18 +24,19 @@ namespace p2pool {
 class p2pool;
 struct PoolBlock;
 
-class MergeMiningClientJSON_RPC : public IMergeMiningClient
+class MergeMiningClientJSON_RPC : public MergeMiningClientShared
 {
 public:
 	MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet);
 	~MergeMiningClientJSON_RPC() override;
 
 	bool get_params(ChainParameters& out_params) const override;
-	void on_external_block(const PoolBlock& /*block*/) override {}
 	void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
 
 	void print_status() const override;
 	void api_status(log::Stream&) const override;
+
+	const char* get_log_category() const override;
 
 private:
 	static void loop(void* data);
@@ -51,19 +52,10 @@ private:
 
 	bool parse_merge_mining_submit_solution(const char* data, size_t size) const;
 
+	std::vector<uint8_t> m_previousAuxBlobs[NUM_PREVIOUS_HASHES];
+
 	std::string m_host;
 	int32_t m_port;
-
-	mutable uv_rwlock_t m_lock;
-	ChainParameters m_chainParams;
-
-	uint64_t m_chainParamsTimestamp;
-
-	std::string m_auxWallet;
-
-	double m_ping;
-
-	p2pool* m_pool;
 
 	uv_loop_t m_loop;
 	uv_thread_t m_loopThread;

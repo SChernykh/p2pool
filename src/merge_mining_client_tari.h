@@ -25,7 +25,7 @@ namespace p2pool {
 class p2pool;
 struct PoolBlock;
 
-class MergeMiningClientTari : public IMergeMiningClient, public nocopy_nomove
+class MergeMiningClientTari : public MergeMiningClientShared
 {
 public:
 	MergeMiningClientTari(p2pool* pool, std::string host, const std::string& wallet);
@@ -34,32 +34,17 @@ public:
 	static constexpr char TARI_PREFIX[] = "tari://";
 
 	bool get_params(ChainParameters& out_params) const override;
-	void on_external_block(const PoolBlock& block) override;
 	void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
 
 	void print_status() const override;
 	void api_status(log::Stream&) const override;
 
+	const char* get_log_category() const override;
+
 private:
-	mutable uv_rwlock_t m_chainParamsLock;
-	ChainParameters m_chainParams;
-
-	uint64_t m_chainParamsTimestamp;
-
-	enum {
-		NUM_PREVIOUS_HASHES = 8,
-	};
-
-	uint64_t m_previousAuxHashes[NUM_PREVIOUS_HASHES];
 	tari::rpc::Block m_previousTariBlocks[NUM_PREVIOUS_HASHES];
-	uint32_t m_previousAuxHashesIndex;
-
-	std::atomic<uint32_t> m_previousAuxHashesFoundIndex;
 
 	tari::rpc::Block m_tariBlock;
-
-	std::string m_auxWallet;
-	p2pool* m_pool;
 
 	struct TariJobParams
 	{

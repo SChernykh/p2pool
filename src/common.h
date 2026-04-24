@@ -172,6 +172,22 @@ struct alignas(uint64_t) hash
 		}
 	}
 
+	constexpr hash(const char (&s)[HASH_SIZE * 2 + 1]) : h{} {
+		for (size_t i = 0; i < HASH_SIZE * 2; ++i) {
+			char c = s[i];
+
+			if ('0' <= c && c <= '9') {
+				c -= '0';
+			} else if ('a' <= c && c <= 'f') {
+				c = (c - 'a') + 10;
+			} else if ('A' <= c && c <= 'F') {
+				c = (c - 'A') + 10;
+			}
+
+			h[i / 2] = (h[i / 2] << 4) | static_cast<uint8_t>(c);
+		}
+	}
+
 	FORCEINLINE bool operator<(const hash& other) const
 	{
 		const uint64_t* a = u64();

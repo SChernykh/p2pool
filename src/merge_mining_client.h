@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "uv_util.h"
+
 namespace p2pool {
 
 class p2pool;
@@ -51,6 +53,36 @@ public:
 
 	virtual void print_status() const = 0;
 	virtual void api_status(log::Stream&) const = 0;
+};
+
+class MergeMiningClientShared : public IMergeMiningClient, public nocopy_nomove
+{
+public:
+	MergeMiningClientShared(p2pool* pool, const std::string& wallet);
+	~MergeMiningClientShared() override;
+
+	void on_external_block(const PoolBlock& block) override;
+
+	virtual const char* get_log_category() const = 0;
+
+protected:
+	mutable uv_rwlock_t m_chainParamsLock;
+	ChainParameters m_chainParams;
+
+	uint64_t m_chainParamsTimestamp;
+
+	std::string m_auxWallet;
+
+	p2pool* m_pool;
+
+	enum {
+		NUM_PREVIOUS_HASHES = 8,
+	};
+
+	hash m_previousAuxHashes[NUM_PREVIOUS_HASHES];
+	uint32_t m_previousAuxHashesIndex;
+
+	std::atomic<uint32_t> m_previousAuxHashesFoundIndex;
 };
 
 } // namespace p2pool
