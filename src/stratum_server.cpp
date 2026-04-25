@@ -148,12 +148,14 @@ void StratumServer::on_block(const BlockTemplate& block)
 		delete blobs_data;
 		return;
 	}
-	else if (blobs_data->m_blobs.size() != blobs_data->m_blobSize * num_connections) {
+
+	if (blobs_data->m_blobs.size() != blobs_data->m_blobSize * num_connections) {
 		LOGERR(1, "internal error: get_hashing_blobs returned wrong amount of data");
 		delete blobs_data;
 		return;
 	}
-	else if (pool_block_debug() && (num_connections > 1)) {
+
+	if (pool_block_debug() && (num_connections > 1)) {
 		std::vector<uint64_t> blob_hashes;
 		blob_hashes.reserve(num_connections);
 
