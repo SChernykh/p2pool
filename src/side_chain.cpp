@@ -2212,8 +2212,8 @@ void SideChain::update_depths(PoolBlock* block)
 
 void SideChain::prune_old_blocks()
 {
-	// Leave 2 minutes worth of spare blocks in addition to 2xPPLNS window for lagging nodes which need to sync
-	const uint64_t prune_distance = (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH * 2 + MONERO_BLOCK_TIME / m_targetBlockTime;
+	// Leave >2 minutes worth of spare blocks in addition to 2xPPLNS window for lagging nodes which need to sync
+	const uint64_t prune_distance = (m_chainWindowSize - 1) * 2 + UNCLE_BLOCK_DEPTH * 2 + MONERO_BLOCK_TIME / m_targetBlockTime + 1;
 
 	// Remove old blocks from alternative unconnected chains after long enough time
 	const uint64_t cur_time = seconds_since_epoch();
@@ -2229,14 +2229,14 @@ void SideChain::prune_old_blocks()
 
 	std::vector<PoolBlock*> blocks_to_prune;
 
-	for (auto it = m_blocksByHeight.begin(); (it != m_blocksByHeight.end()) && (it->first <= h);) {
+	for (auto it = m_blocksByHeight.begin(); (it != m_blocksByHeight.end()) && (it->first < h);) {
 		const uint64_t height = it->first;
 		std::vector<PoolBlock*>& v = it->second;
 
 		v.erase(std::remove_if(v.begin(), v.end(),
 			[this, prune_distance, cur_time, prune_delay, &blocks_to_prune, height](PoolBlock* block)
 			{
-				if ((block->m_depth >= prune_distance) || (cur_time >= block->m_localTimestamp + prune_delay)) {
+				if ((block->m_depth > prune_distance) || (cur_time >= block->m_localTimestamp + prune_delay)) {
 					blocks_to_prune.push_back(block);
 
 					auto it2 = m_blocksById.find(block->m_sidechainId);
@@ -2269,7 +2269,7 @@ void SideChain::prune_old_blocks()
 	}
 
 	if (!blocks_to_prune.empty()) {
-		LOGINFO(4, "pruned " << blocks_to_prune.size() << " old blocks at heights <= " << h);
+		LOGINFO(4, "pruned " << blocks_to_prune.size() << " old blocks at heights < " << h);
 
 		// If side-chain started pruning blocks it means the initial sync is complete
 		// It's now safe to delete cached blocks
