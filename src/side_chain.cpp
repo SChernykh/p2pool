@@ -623,6 +623,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << block.m_powHash << " != " << pow_hash2 << " (sidechain id = " << block.m_sidechainId << ')');
 			if (block.m_difficulty.check_pow(pow_hash2)) {
 				LOGINFO(3, "add_external_block second result has enough PoW for height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId);
+				block.m_powHash = pow_hash2;
 				not_enough_pow = false;
 			}
 		}
@@ -1374,7 +1375,7 @@ bool SideChain::p2pool_update_available() const
 	}
 
 	// Assume that a new version is out if >= 20% of hashrate is using it already
-	return newer_p2pool_diff * 5 >= total_p2pool_diff;
+	return !total_p2pool_diff.empty() && (newer_p2pool_diff * 5 >= total_p2pool_diff);
 }
 
 std::vector<hash> SideChain::seen_onion_pubkeys() const
@@ -2220,7 +2221,7 @@ void SideChain::prune_old_blocks()
 
 	const PoolBlock* tip = m_chainTip;
 
-	if (tip->m_sidechainHeight < prune_distance) {
+	if (!tip || (tip->m_sidechainHeight < prune_distance)) {
 		return;
 	}
 
@@ -2236,10 +2237,11 @@ void SideChain::prune_old_blocks()
 			[this, prune_distance, cur_time, prune_delay, &blocks_to_prune, height](PoolBlock* block)
 			{
 				if ((block->m_depth >= prune_distance) || (cur_time >= block->m_localTimestamp + prune_delay)) {
+					blocks_to_prune.push_back(block);
+
 					auto it2 = m_blocksById.find(block->m_sidechainId);
 					if (it2 != m_blocksById.end()) {
 						m_blocksById.erase(it2);
-						blocks_to_prune.push_back(block);
 					}
 					else {
 						LOGERR(1, "m_blocksByHeight and m_blocksById are inconsistent at height " << height << ". Fix the code!");
