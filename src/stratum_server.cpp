@@ -40,6 +40,7 @@ static constexpr uint64_t AUTODIFF_START = std::numeric_limits<uint64_t>::max() 
 static constexpr int32_t BAD_SHARE_POINTS = -5;
 static constexpr int32_t GOOD_SHARE_POINTS = 1;
 static constexpr int32_t BAN_THRESHOLD_POINTS = -15;
+static constexpr int32_t MAX_SCORE = 1000;
 
 namespace p2pool {
 
@@ -144,9 +145,13 @@ void StratumServer::on_block(const BlockTemplate& block)
 	// Integrity checks
 	if (blobs_data->m_blobSize < 76) {
 		LOGERR(1, "internal error: get_hashing_blobs returned too small blobs (" << blobs_data->m_blobSize << " bytes)");
+		delete blobs_data;
+		return;
 	}
 	else if (blobs_data->m_blobs.size() != blobs_data->m_blobSize * num_connections) {
 		LOGERR(1, "internal error: get_hashing_blobs returned wrong amount of data");
+		delete blobs_data;
+		return;
 	}
 	else if (pool_block_debug() && (num_connections > 1)) {
 		std::vector<uint64_t> blob_hashes;
@@ -166,7 +171,8 @@ void StratumServer::on_block(const BlockTemplate& block)
 		for (uint32_t i = 1; i < num_connections; ++i) {
 			if (blob_hashes[i - 1] == blob_hashes[i]) {
 				LOGERR(1, "internal error: get_hashing_blobs returned two identical blobs");
-				break;
+				delete blobs_data;
+				return;
 			}
 		}
 	}
@@ -317,13 +323,14 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	}
 	client->m_lastJobTarget = target;
 
-	const bool result = send(client,
-		[client, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](uint8_t* buf, size_t buf_size)
-		{
-			do {
-				client->m_rpcId = static_cast<StratumServer*>(client->m_owner)->get_random32();
-			} while (!client->m_rpcId);
+	uint32_t rpc_id;
+	do {
+		rpc_id = static_cast<StratumServer*>(client->m_owner)->get_random32();
+	} while (!rpc_id);
 
+	const bool result = send(client,
+		[rpc_id, id, &hashing_blob, job_id, blob_size, target, height, &seed_hash](uint8_t* buf, size_t buf_size)
+		{
 			log::hex_buf target_hex(&target);
 
 			if (target >= TARGET_4_BYTES_LIMIT) {
@@ -333,7 +340,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 
 			log::Stream s(buf, buf_size);
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"result\":{\"id\":\"";
-			s << log::Hex(client->m_rpcId) << "\",\"job\":{\"blob\":\"";
+			s << log::Hex(rpc_id) << "\",\"job\":{\"blob\":\"";
 			s << log::hex_buf(hashing_blob, blob_size) << "\",\"job_id\":\"";
 			s << log::Hex(job_id) << "\",\"target\":\"";
 			s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
@@ -341,6 +348,10 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 			s << seed_hash << "\"},\"extensions\":[\"algo\"],\"status\":\"OK\"}}\n";
 			return s.m_pos;
 		});
+
+	if (result) {
+		client->m_rpcId = rpc_id;
+	}
 
 	return result;
 }
@@ -971,14 +982,14 @@ void StratumServer::on_share_found(uv_work_t* req)
 	SubmittedShare* share = reinterpret_cast<SubmittedShare*>(req->data);
 	StratumServer* server = share->m_server;
 
+	if (share->m_allocated) {
+		BACKGROUND_JOB_START(StratumServer::on_share_found);
+	}
+
 	if (server->is_banned(share->m_clientIPv6, share->m_clientAddr)) {
 		share->m_highEnoughDifficulty = false;
 		share->m_result = SubmittedShare::Result::BANNED;
 		return;
-	}
-
-	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
-		BACKGROUND_JOB_START(StratumServer::on_share_found);
 	}
 
 	p2pool* pool = server->m_pool;
@@ -1111,10 +1122,6 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		}
 	}
 
-	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
-		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
-	}
-
 	const bool bad_share = (share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW);
 
 	StratumClient* client = share->m_client;
@@ -1147,7 +1154,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				return s.m_pos;
 			});
 
-		client->m_score += share->m_score;
+		client->m_score = std::min(client->m_score + share->m_score, MAX_SCORE);
 
 		if (share_found) {
 			++client->m_sidechainShares;
@@ -1187,6 +1194,8 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		}
 
 		LOGINFO(5, "on_after_share_found: pending share checks count = " << server->m_pendingShareChecks.size());
+
+		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}
 }
 
