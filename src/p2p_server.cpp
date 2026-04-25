@@ -101,8 +101,10 @@ P2PServer::P2PServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	m_peerId = m_rng();
-	m_peerId_TOR = m_rng();
+	// Make sure peer IDs are not 0
+	do { m_peerId     = m_rng(); } while (!m_peerId);
+	do { m_peerId_TOR = m_rng(); } while (!m_peerId_TOR);
+	do { m_peerId_I2P = m_rng(); } while (!m_peerId_I2P);
 
 	const Params& params = pool->params();
 
@@ -795,14 +797,16 @@ void P2PServer::load_peer_list()
 	std::vector<std::string> paths;
 	paths.resize(Params::ProxyType::MAX);
 
-	paths[Params::ProxyType::PLAIN] = saved_peer_list_file_name;
+	const Params& params = m_pool->params();
+
+	paths[Params::ProxyType::PLAIN] = params.m_dataDir + saved_peer_list_file_name;
 
 	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::TOR)) {
-		paths[Params::ProxyType::TOR] = saved_onion_peer_list_file_name;
+		paths[Params::ProxyType::TOR] = params.m_dataDir + saved_onion_peer_list_file_name;
 	}
 
 	if (!m_socks5Proxy.empty() && (m_socks5ProxyType == Params::ProxyType::I2P)) {
-		paths[Params::ProxyType::I2P] = saved_i2p_peer_list_file_name;
+		paths[Params::ProxyType::I2P] = params.m_dataDir + saved_i2p_peer_list_file_name;
 	}
 
 	for (int i = Params::ProxyType::PLAIN; i < Params::ProxyType::MAX; ++i) {
@@ -2102,7 +2106,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 		const MessageId id = static_cast<MessageId>(buf[0]);
 
 		// Peer must complete the handshake challenge before sending any other messages
-		if (!m_handshakeComplete && (id != m_expectedMessage)) {
+		if ((!m_handshakeComplete || m_handshakeInvalid) && (id != m_expectedMessage)) {
 			LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " didn't send handshake messages first");
 			ban(DEFAULT_BAN_TIME);
 			server->remove_peer_from_list(this);
@@ -2396,7 +2400,18 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 				k >>= 8;
 			}
 
-			k = owner->get_peerId((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:")));
+			bool is_tor = false;
+
+			if ((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:"))) {
+				// We're connecting to an .onion address
+				is_tor = true;
+			}
+			else if (!owner->m_pool->params().m_onionPubkey.empty() && m_isIncoming && (m_addressType != AddressType::DomainName) && m_addr.is_localhost()) {
+				// We published our .onion address, and it's an incoming connection on localhost interface, so it's likely an incoming tor connection
+				is_tor = true;
+			}
+
+			k = owner->get_peerId(is_tor, owner->m_isI2P);
 			memcpy(p, &k, sizeof(uint64_t));
 			p += sizeof(uint64_t);
 
@@ -2589,7 +2604,7 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 	uint64_t peer_id;
 	memcpy(&peer_id, buf + CHALLENGE_SIZE, sizeof(uint64_t));
 
-	if ((peer_id == server->get_peerId(false)) || (peer_id == server->get_peerId(true))) {
+	if ((peer_id == server->m_peerId) || (peer_id == server->m_peerId_TOR) || (peer_id == server->m_peerId_I2P)) {
 		LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
 		return false;
 	}
@@ -2687,7 +2702,7 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 	int32_t port;
 	memcpy(&port, buf, sizeof(port));
 
-	if ((port < 0) || (port >= 65536)) {
+	if ((port <= 0) || (port >= 65536)) {
 		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent an invalid listen port number");
 		return false;
 	}
@@ -3201,6 +3216,11 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	p += sizeof(int64_t);
 
 	// Ignore outdated messages
+	if (data_timestamp > std::numeric_limits<int64_t>::max() - AUX_JOB_TIMEOUT) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an invalid AUX_JOB_DONATION message (timestamp = " << data_timestamp << ')');
+		return false;
+	}
+
 	if (cur_time >= data_timestamp + AUX_JOB_TIMEOUT) {
 		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an outdated AUX_JOB_DONATION message ("  << cur_time << " >= " << data_timestamp << " + " << static_cast<int>(AUX_JOB_TIMEOUT) << ')');
 		return true;
@@ -3208,7 +3228,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 
 	if ((data_end - p) % DATA_ENTRY_SIZE) {
 		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an invalid AUX_JOB_DONATION message (" << (data_end - p) << " is not a multiple of " << DATA_ENTRY_SIZE << ')');
-		return true;
+		return false;
 	}
 
 	hash digest;
