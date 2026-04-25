@@ -2,3 +2,4 @@ unmatchedSuppression
 missingIncludeSystem
 unusedFunction
 useStlAlgorithm
+funcArgNamesDifferentUnnamed

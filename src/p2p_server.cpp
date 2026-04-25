@@ -2402,12 +2402,11 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 
 			bool is_tor = false;
 
-			if ((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:"))) {
-				// We're connecting to an .onion address
-				is_tor = true;
-			}
-			else if (!owner->m_pool->params().m_onionPubkey.empty() && m_isIncoming && (m_addressType != AddressType::DomainName) && m_addr.is_localhost()) {
-				// We published our .onion address, and it's an incoming connection on localhost interface, so it's likely an incoming tor connection
+			if (((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:"))) ||
+			    (!owner->m_pool->params().m_onionPubkey.empty() && m_isIncoming && (m_addressType != AddressType::DomainName) && m_addr.is_localhost()))
+			{
+				// 1) We're connecting to an .onion address
+				// 2) We published our .onion address, and it's an incoming connection on localhost interface, so it's likely an incoming tor connection
 				is_tor = true;
 			}
 
