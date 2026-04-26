@@ -32,7 +32,7 @@ FORCEINLINE void call(const std::string& address, int port, const std::string& r
 	typedef Callback<void, const char*, size_t, double>::Derived<T> CallbackT;
 	typedef Callback<void, const char*, size_t, double>::Derived<U> CallbackU;
 
-	Call(address, port, req, auth, proxy, ssl, ssl_fingerprint, new CallbackT(std::move(cb)), new CallbackU(std::move(close_cb)), loop);
+	Call(address, port, req, auth, proxy, ssl, ssl_fingerprint, new CallbackT(std::forward<T>(cb)), new CallbackU(std::forward<U>(close_cb)), loop);
 }
 
 } // namespace JSONRPCRequest

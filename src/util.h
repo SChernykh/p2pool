@@ -361,7 +361,7 @@ struct Callback
 	template<typename T>
 	struct Derived : public Base
 	{
-		explicit FORCEINLINE Derived(T&& cb) : m_cb(std::move(cb)) {}
+		explicit FORCEINLINE Derived(T&& cb) : m_cb(std::forward<T>(cb)) {}
 		R operator()(Args... args) const override { return m_cb(args...); }
 
 	private:

@@ -41,7 +41,7 @@ struct CurlContext : public nocopy_nomove
 		return reinterpret_cast<CurlContext*>(ctx)->on_timer(multi, timeout_ms);
 	}
 
-	static size_t write_func(const void* buffer, size_t size, size_t count, void* ctx)
+	static size_t write_func(char* buffer, size_t size, size_t count, void* ctx)
 	{
 		return reinterpret_cast<CurlContext*>(ctx)->on_write(buffer, size, count);
 	}
@@ -49,14 +49,12 @@ struct CurlContext : public nocopy_nomove
 	int on_socket(CURL* easy, curl_socket_t s, int action);
 	int on_timer(CURLM* multi, long timeout_ms);
 
-	static void on_timeout(uv_handle_t* req);
+	static void on_timeout(uv_timer_t* req);
 
-	size_t on_write(const void* buffer, size_t size, size_t count);
+	size_t on_write(const char* buffer, size_t size, size_t count);
 
 	static void curl_perform(uv_poll_t* req, int status, int events);
 	void check_multi_info();
-
-	static void on_close(uv_handle_t* h);
 
 	void shutdown();
 
@@ -66,7 +64,7 @@ struct CurlContext : public nocopy_nomove
 	CallbackBase* m_closeCallback;
 
 	uv_loop_t* m_loop;
-	uv_timer_t m_timer;
+	uv_timer_t* m_timer;
 	CURLM* m_multiHandle;
 	CURL* m_handle;
 
@@ -88,7 +86,7 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	: m_callback(cb)
 	, m_closeCallback(close_cb)
 	, m_loop(loop)
-	, m_timer{}
+	, m_timer(nullptr)
 	, m_multiHandle(nullptr)
 	, m_handle(nullptr)
 	, m_req(req)
@@ -97,8 +95,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	, m_connectedTime(0)
 	, m_proxy(proxy)
 {
-	BACKGROUND_JOB_START(CurlContext);
-
 	m_pollHandles.reserve(2);
 
 	{
@@ -132,18 +128,10 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		m_url = buf;
 	}
 
-	int err = uv_timer_init(m_loop, &m_timer);
-	if (err) {
-		LOGERR(1, "uv_timer_init failed, error " << uv_err_name(err));
-		throw std::runtime_error("uv_timer_init failed");
-	}
-	m_timer.data = this;
-
 	m_multiHandle = curl_multi_init();
 	if (!m_multiHandle) {
 		static constexpr char msg[] = "curl_multi_init() failed";
 		LOGERR(1, msg);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error(msg);
 	}
 
@@ -153,6 +141,7 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		if (r != CURLM_OK) { \
 			static constexpr char msg[] = "curl_multi_setopt(" #__VA_ARGS__ ") failed"; \
 			LOGERR(1, msg << ": " << curl_multi_strerror(r)); \
+			curl_multi_cleanup(m_multiHandle); \
 			throw std::runtime_error(msg); \
 		} \
 	} while (0)
@@ -168,7 +157,6 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		static constexpr char msg[] = "curl_easy_init() failed";
 		LOGERR(1, msg);
 		curl_multi_cleanup(m_multiHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
 		throw std::runtime_error(msg);
 	}
 
@@ -178,6 +166,9 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 		if (r != CURLE_OK) { \
 			static constexpr char msg[] = "curl_easy_setopt(" #__VA_ARGS__ ") failed"; \
 			LOGERR(1, msg << ": " << curl_easy_strerror(r)); \
+			curl_easy_cleanup(m_handle); \
+			curl_multi_cleanup(m_multiHandle); \
+			curl_slist_free_all(m_headers); \
 			throw std::runtime_error(msg); \
 		} \
 	} while (0)
@@ -194,7 +185,11 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 #endif
 
 	curl_easy_setopt_checked(m_handle, CURLOPT_URL, m_url.c_str());
-	curl_easy_setopt_checked(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());
+
+	if (!m_req.empty()) {
+		curl_easy_setopt_checked(m_handle, CURLOPT_POSTFIELDS, m_req.c_str());
+	}
+
 	curl_easy_setopt_checked(m_handle, CURLOPT_CONNECTTIMEOUT, timeout);
 	curl_easy_setopt_checked(m_handle, CURLOPT_TIMEOUT, timeout * 10);
 
@@ -223,7 +218,7 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	curl_easy_setopt_checked(m_handle, CURLOPT_SSL_VERIFYHOST, 0L);
 
 	if (!ssl_fingerprint.empty()) {
-		char buf[64] = {};
+		char buf[128] = {};
 
 		log::Stream s(buf);
 		s << "sha256//" << ssl_fingerprint;
@@ -232,14 +227,31 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	}
 #endif
 
+	m_timer = new uv_timer_t{};
+
+	const int err = uv_timer_init(m_loop, m_timer);
+	if (err) {
+		LOGERR(1, "uv_timer_init failed, error " << uv_err_name(err));
+		delete m_timer;
+		curl_easy_cleanup(m_handle);
+		curl_multi_cleanup(m_multiHandle);
+		curl_slist_free_all(m_headers);
+		throw std::runtime_error("uv_timer_init failed");
+	}
+
+	m_timer->data = this;
+
 	CURLMcode curl_err = curl_multi_add_handle(m_multiHandle, m_handle);
 	if (curl_err != CURLM_OK) {
 		LOGERR(1, "curl_multi_add_handle failed: " << curl_multi_strerror(curl_err));
 		curl_easy_cleanup(m_handle);
 		curl_multi_cleanup(m_multiHandle);
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), nullptr);
+		curl_slist_free_all(m_headers);
+		uv_close(reinterpret_cast<uv_handle_t*>(m_timer), [](uv_handle_t* h) { delete reinterpret_cast<uv_timer_t*>(h); });
 		throw std::runtime_error("curl_multi_add_handle failed");
 	}
+
+	BACKGROUND_JOB_START(CurlContext);
 
 	m_startTime = microseconds_since_epoch();
 }
@@ -251,7 +263,12 @@ CurlContext::~CurlContext()
 	if (m_error.empty() && !m_response.empty()) {
 		const uint64_t t = (m_proxy.empty() && m_connectedTime) ? m_connectedTime : microseconds_since_epoch();
 		tcp_ping = static_cast<double>(t - m_startTime) / 1000.0;
-		(*m_callback)(m_response.data(), m_response.size(), tcp_ping);
+
+		try {
+			(*m_callback)(m_response.data(), m_response.size(), tcp_ping);
+		}
+		catch (...) {
+		}
 	}
 	delete m_callback;
 
@@ -264,10 +281,13 @@ CurlContext::~CurlContext()
 		}
 	}
 
-	(*m_closeCallback)(m_error.c_str(), m_error.length(), tcp_ping);
-	delete m_closeCallback;
+	try {
+		(*m_closeCallback)(m_error.c_str(), m_error.length(), tcp_ping);
+	}
+	catch (...) {
+	}
 
-	curl_slist_free_all(m_headers);
+	delete m_closeCallback;
 
 	BACKGROUND_JOB_STOP(CurlContext);
 }
@@ -348,12 +368,17 @@ int CurlContext::on_socket(CURL* /*easy*/, curl_socket_t s, int action)
 
 int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 {
+	if (!m_timer) {
+		LOGERR(1, "on_timer: timer is not initialized/already destroyed");
+		return -1;
+	}
+
 	if (timeout_ms < 0) {
-		uv_timer_stop(&m_timer);
+		uv_timer_stop(m_timer);
 		return 0;
 	}
 
-	const int result = uv_timer_start(&m_timer, reinterpret_cast<uv_timer_cb>(on_timeout), timeout_ms, 0);
+	const int result = uv_timer_start(m_timer, on_timeout, timeout_ms, 0);
 	if (result < 0) {
 		LOGERR(1, "uv_timer_start failed with error " << uv_err_name(result));
 		return -1;
@@ -362,7 +387,7 @@ int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 	return 0;
 }
 
-void CurlContext::on_timeout(uv_handle_t* req)
+void CurlContext::on_timeout(uv_timer_t* req)
 {
 	CurlContext* ctx = reinterpret_cast<CurlContext*>(req->data);
 
@@ -379,15 +404,14 @@ void CurlContext::on_timeout(uv_handle_t* req)
 	}
 }
 
-size_t CurlContext::on_write(const void* buffer, size_t size, size_t count)
+size_t CurlContext::on_write(const char* buffer, size_t size, size_t count)
 {
 	if (!m_connectedTime) {
 		m_connectedTime = microseconds_since_epoch();
 	}
 
 	const size_t realsize = size * count;
-	const char* p = reinterpret_cast<const char*>(buffer);
-	m_response.insert(m_response.end(), p, p + realsize);
+	m_response.insert(m_response.end(), buffer, buffer + realsize);
 	return realsize;
 }
 
@@ -452,21 +476,13 @@ void CurlContext::check_multi_info()
 			curl_multi_remove_handle(m_multiHandle, m_handle);
 			curl_easy_cleanup(m_handle);
 			curl_multi_cleanup(m_multiHandle);
+
+			m_handle = nullptr;
+			m_multiHandle = nullptr;
+
 			return;
 		}
 	}
-}
-
-void CurlContext::on_close(uv_handle_t* h)
-{
-	CurlContext* ctx = reinterpret_cast<CurlContext*>(h->data);
-	h->data = nullptr;
-
-	if (ctx->m_timer.data) {
-		return;
-	}
-
-	delete ctx;
 }
 
 void CurlContext::shutdown()
@@ -477,8 +493,27 @@ void CurlContext::shutdown()
 	}
 	m_pollHandles.clear();
 
-	if (m_timer.data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_timer))) {
-		uv_close(reinterpret_cast<uv_handle_t*>(&m_timer), on_close);
+	if (m_timer->data && !uv_is_closing(reinterpret_cast<uv_handle_t*>(m_timer))) {
+		if (m_handle) {
+			if (m_multiHandle) {
+				curl_multi_remove_handle(m_multiHandle, m_handle);
+			}
+			curl_easy_cleanup(m_handle);
+			m_handle = nullptr;
+		}
+
+		if (m_multiHandle) {
+			curl_multi_cleanup(m_multiHandle);
+			m_multiHandle = nullptr;
+		}
+
+		curl_slist_free_all(m_headers);
+
+		uv_close(reinterpret_cast<uv_handle_t*>(m_timer), [](uv_handle_t* h) {
+			CurlContext* ctx = reinterpret_cast<CurlContext*>(h->data);
+			delete reinterpret_cast<uv_timer_t*>(h);
+			delete ctx;
+		});
 	}
 }
 
@@ -496,7 +531,11 @@ void Call(const std::string& address, int port, const std::string& req, const st
 			}
 			catch (const std::exception& e) {
 				const char* msg = e.what();
-				(*close_cb)(msg, strlen(msg), 0.0);
+				try {
+					(*close_cb)(msg, strlen(msg), 0.0);
+				}
+				catch (...) {
+				}
 				delete cb;
 				delete close_cb;
 			}
