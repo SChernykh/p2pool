@@ -149,6 +149,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_blockHeader.clear();
 	m_minerTxExtra.clear();
 	m_transactionHashes.clear();
+	m_transactionHashesSet.clear();
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
@@ -521,8 +522,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
-	m_finalReward = final_reward;
-
 	const int create_miner_tx_result = create_miner_tx(data, m_shares, max_reward_amounts_weight, false);
 	if (create_miner_tx_result < 0) {
 		if (create_miner_tx_result == -3) {
@@ -577,6 +576,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		use_old_template();
 		return;
 	}
+
+	m_finalReward = final_reward;
 
 	m_blockTemplateBlob = m_blockHeader;
 	m_extraNonceOffsetInTemplate += m_blockHeader.size();
