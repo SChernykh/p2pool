@@ -41,6 +41,7 @@ struct CurlContext : public nocopy_nomove
 		return reinterpret_cast<CurlContext*>(ctx)->on_timer(multi, timeout_ms);
 	}
 
+	// cppcheck-suppress constParameterCallback
 	static size_t write_func(char* buffer, size_t size, size_t count, void* ctx)
 	{
 		return reinterpret_cast<CurlContext*>(ctx)->on_write(buffer, size, count);
