@@ -119,15 +119,17 @@ indexed_hash::indexed_hash(const hash& h)
 		p2.second = 1;
 	}
 	else {
-		if (n > INDEX_MASK) {
+		const uint32_t index = (bucket << BUCKET_SHIFT) | n;
+
+		if ((n > INDEX_MASK) || (index == std::numeric_limits<uint32_t>::max())) {
 			LOGERR(0, "fatal error: storage overflow");
 			PANIC_STOP();
 		}
 
-		m_index = (bucket << BUCKET_SHIFT) | n;
+		m_index = index;
 
 		if (n == d1.capacity()) {
-			const uint32_t new_capacity = static_cast<uint32_t>(std::min<size_t>(n + ((n + 3) / 4), INDEX_MASK + 1));
+			const uint32_t new_capacity = static_cast<uint32_t>(std::min<size_t>(n + (n / 4) + 1, INDEX_MASK + 1));
 			d1.reserve(new_capacity);
 			d2.reserve(new_capacity);
 		}
@@ -142,7 +144,7 @@ indexed_hash::~indexed_hash()
 	decref(m_index);
 }
 
-indexed_hash::indexed_hash(const indexed_hash& h)
+indexed_hash::indexed_hash(const indexed_hash& h) noexcept
 {
 	const uint32_t i = h.m_index;
 
@@ -150,7 +152,7 @@ indexed_hash::indexed_hash(const indexed_hash& h)
 	incref(i);
 }
 
-indexed_hash& indexed_hash::operator=(const indexed_hash& h)
+indexed_hash& indexed_hash::operator=(const indexed_hash& h) noexcept
 {
 	if (this == &h) {
 		return *this;
@@ -171,7 +173,7 @@ indexed_hash& indexed_hash::operator=(const indexed_hash& h)
 	return *this;
 }
 
-indexed_hash& indexed_hash::operator=(indexed_hash&& h)
+indexed_hash& indexed_hash::operator=(indexed_hash&& h) noexcept
 {
 	if (this == &h) {
 		return *this;
@@ -219,6 +221,13 @@ hash indexed_hash::get(uint32_t index)
 
 bool indexed_hash::is_same(uint32_t index, uint32_t bucket, const hash& h)
 {
+#ifdef P2POOL_DEBUGGING
+	if ((index >> BUCKET_SHIFT) != bucket) {
+		LOGERR(0, "fatal error: bucket doesn't match index");
+		PANIC_STOP();
+	}
+#endif
+
 	const auto& d1 = storage1[bucket];
 	index &= INDEX_MASK;
 

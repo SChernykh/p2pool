@@ -162,9 +162,9 @@ struct alignas(uint64_t) hash
 {
 	uint8_t h[HASH_SIZE];
 
-	FORCEINLINE constexpr hash() : h{} {}
+	FORCEINLINE constexpr hash() noexcept : h{} {}
 
-	constexpr hash(std::initializer_list<uint8_t> l) : h{} {
+	constexpr hash(std::initializer_list<uint8_t> l) noexcept : h{} {
 		auto it = l.begin();
 
 		for (size_t i = 0; (i < HASH_SIZE) && (it != l.end()); ++i, ++it) {
@@ -172,7 +172,7 @@ struct alignas(uint64_t) hash
 		}
 	}
 
-	explicit constexpr hash(const char (&s)[HASH_SIZE * 2 + 1]) : h{} {
+	explicit constexpr hash(const char (&s)[HASH_SIZE * 2 + 1]) noexcept : h{} {
 		for (size_t i = 0; i < HASH_SIZE * 2; ++i) {
 			char c = s[i];
 
@@ -417,18 +417,18 @@ struct indexed_hash
 		BUCKET_SHIFT = 32 - BUCKET_BITS,
 	};
 
-	static_assert((BUCKET_BITS > 0) && (BUCKET_BITS < 32), "Invalid bucket bit size");
+	static_assert((BUCKET_BITS > 0) && (BUCKET_BITS < 32) && (BUCKET_BITS + BUCKET_SHIFT == 32), "Invalid bucket bit size");
 
-	FORCEINLINE indexed_hash() : m_index(std::numeric_limits<uint32_t>::max()) {}
+	FORCEINLINE indexed_hash() noexcept : m_index(std::numeric_limits<uint32_t>::max()) {}
 
 	explicit indexed_hash(const hash& h);
 	~indexed_hash();
 
-	indexed_hash(const indexed_hash& h);
-	FORCEINLINE indexed_hash(indexed_hash&& h) : m_index(h.m_index) { h.m_index = std::numeric_limits<uint32_t>::max(); }
+	indexed_hash(const indexed_hash& h) noexcept;
+	FORCEINLINE indexed_hash(indexed_hash&& h) noexcept : m_index(h.m_index) { h.m_index = std::numeric_limits<uint32_t>::max(); }
 
-	indexed_hash& operator=(const indexed_hash& h);
-	indexed_hash& operator=(indexed_hash&& h);
+	indexed_hash& operator=(const indexed_hash& h) noexcept;
+	indexed_hash& operator=(indexed_hash&& h) noexcept;
 
 	FORCEINLINE indexed_hash& operator=(const hash& h)
 	{
