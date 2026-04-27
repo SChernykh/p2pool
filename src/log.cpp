@@ -124,6 +124,8 @@ public:
 		, m_readPos(0)
 		, m_stopped(false)
 		, m_needReopen(false)
+		, m_logFileLastStatTime(0)
+		, m_workerWaiting(false)
 	{
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
@@ -131,14 +133,23 @@ public:
 
 		set_main_thread();
 
-		std::setlocale(LC_ALL, "en_001");
+		std::setlocale(LC_ALL, "C");
 
 		m_logFilePath = p.m_logFilePath.empty() ? (p.m_dataDir + log_file_name) : p.m_logFilePath;
 
 		m_buf.resize(BUF_SIZE);
 
-		uv_cond_init(&m_cond);
-		uv_mutex_init(&m_mutex);
+		int err = uv_cond_init(&m_cond);
+		if (err) {
+			fprintf(stderr, "failed to init m_cond in the logger thread (%s), aborting\n", uv_err_name(err));
+			abort();
+		}
+
+		err = uv_mutex_init(&m_mutex);
+		if (err) {
+			fprintf(stderr, "failed to init m_mutex in the logger thread (%s), aborting\n", uv_err_name(err));
+			abort();
+		}
 
 #ifdef _WIN32
 		SetConsoleMode(hStdIn, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS);
@@ -156,7 +167,7 @@ public:
 
 		init_uv_threadpool();
 
-		const int err = uv_thread_create(&m_worker, run_wrapper, this);
+		err = uv_thread_create(&m_worker, run_wrapper, this);
 		if (err) {
 			fprintf(stderr, "failed to start logger thread (%s), aborting\n", uv_err_name(err));
 			abort();
@@ -193,29 +204,30 @@ public:
 
 	FORCEINLINE void write(const char* buf, uint32_t size)
 	{
-		if (m_writePos.load() - m_readPos > BUF_SIZE - SLOT_SIZE * 16) {
-			// Buffer is full, can't log normally
-			if (size > 3) {
-				fwrite(buf + 3, 1, size - 3, stderr);
-			}
-			return;
-		}
+		uint32_t writePos = m_writePos.load(std::memory_order_relaxed);
 
-		const uint32_t writePos = m_writePos.fetch_add(SLOT_SIZE);
+		do {
+			if (writePos - m_readPos.load(std::memory_order_relaxed) > BUF_SIZE - SLOT_SIZE) {
+				// Buffer is full, can't log normally
+				if (size > 3) {
+					fwrite(buf + 3, 1, size - 3, stderr);
+				}
+				return;
+			}
+		} while (!m_writePos.compare_exchange_weak(writePos, writePos + SLOT_SIZE, std::memory_order_acq_rel, std::memory_order_relaxed));
+
 		char* p = m_buf.data() + (writePos % BUF_SIZE);
 
 		memcpy(p + 1, buf + 1, size - 1);
 
-		// Ensure memory order in the writer thread
-#ifndef DEV_WITH_TSAN
-		std::atomic_thread_fence(std::memory_order_seq_cst);
-#endif
-
 		// Mark that everything is written into this log slot
-		p[0] = static_cast<char>(buf[0] + 1);
+		std::atomic<char>* severity = reinterpret_cast<std::atomic<char>*>(p);
+		severity->store(static_cast<char>(buf[0] + 1), std::memory_order_release);
 
 		// Signal the worker thread
-		uv_cond_signal(&m_cond);
+		if (m_workerWaiting.load(std::memory_order_relaxed)) {
+			uv_cond_signal(&m_cond);
+		}
 	}
 
 	const std::string& log_file_path() const { return m_logFilePath; }
@@ -223,7 +235,11 @@ public:
 	FORCEINLINE void schedule_reopen()
 	{
 		m_needReopen = true;
-		uv_cond_signal(&m_cond);
+
+		// Signal the worker thread
+		if (m_workerWaiting.load(std::memory_order_relaxed)) {
+			uv_cond_signal(&m_cond);
+		}
 	}
 
 private:
@@ -288,16 +304,19 @@ private:
 		}
 
 		do {
-			uv_mutex_lock(&m_mutex);
-			if (m_readPos == m_writePos.load()) {
-				// Nothing to do, wait for the signal or exit if stopped
-				if (m_stopped) {
-					uv_mutex_unlock(&m_mutex);
-					return;
+			{
+				MutexLock lock(m_mutex);
+
+				if (m_readPos.load(std::memory_order_relaxed) == m_writePos.load(std::memory_order_acquire)) {
+					if (m_stopped) {
+						return;
+					}
+
+					m_workerWaiting.store(true, std::memory_order_relaxed);
+					uv_cond_wait(&m_cond, &m_mutex);
+					m_workerWaiting.store(false, std::memory_order_relaxed);
 				}
-				uv_cond_wait(&m_cond, &m_mutex);
 			}
-			uv_mutex_unlock(&m_mutex);
 
 			bool expected = true;
 			if (m_needReopen.compare_exchange_strong(expected, false)) {
@@ -307,22 +326,19 @@ private:
 				}
 			}
 
-			for (uint32_t writePos = m_writePos.load(); m_readPos != writePos; writePos = m_writePos.load()) {
+			for (uint32_t writePos = m_writePos.load(std::memory_order_acquire); m_readPos.load(std::memory_order_relaxed) != writePos; writePos = m_writePos.load(std::memory_order_acquire)) {
 				// We have at least one log slot pending, possibly more than one
 				// Process everything in a loop before reading m_writePos again
 				do {
-					char* p = m_buf.data() + (m_readPos % BUF_SIZE);
+					char* p = m_buf.data() + (m_readPos.load(std::memory_order_relaxed) % BUF_SIZE);
 
 					// Wait until everything is written into this log slot
-					volatile char& severity = p[0];
-					while (!severity) {
+					std::atomic<char>* severity_ptr = reinterpret_cast<std::atomic<char>*>(p);
+
+					char severity;
+					while (!(severity = severity_ptr->load(std::memory_order_acquire))) {
 						std::this_thread::yield();
 					}
-
-					// Ensure memory order in the reader thread
-#ifndef DEV_WITH_TSAN
-					std::atomic_thread_fence(std::memory_order_seq_cst);
-#endif
 
 					uint32_t size = static_cast<uint8_t>(p[2]);
 					size = (size << 8) + static_cast<uint8_t>(p[1]);
@@ -360,10 +376,10 @@ private:
 					}
 
 					// Mark this log slot empty
-					severity = '\0';
+					severity_ptr->store('\0', std::memory_order_relaxed);
 
-					m_readPos += SLOT_SIZE;
-				} while (m_readPos != writePos);
+					m_readPos.fetch_add(SLOT_SIZE, std::memory_order_relaxed);
+				} while (m_readPos.load(std::memory_order_relaxed) != writePos);
 			}
 
 			// Flush the log file only after all pending log lines have been written
@@ -374,14 +390,23 @@ private:
 				// no longer exists or it is now a different
 				// regular file; this detects manual moving or
 				// recreating of the file
-				struct stat buf;
-				if (stat(m_logFilePath.c_str(), &buf) == 0) {
-					if(log_file_st.st_dev && log_file_st.st_ino && S_ISREG(buf.st_mode) &&
-					   (buf.st_dev != log_file_st.st_dev || buf.st_ino != log_file_st.st_ino)) {
+
+				// Throttle this check to once per 500 ms
+				const uint64_t now = microseconds_since_epoch();
+
+				if (now >= m_logFileLastStatTime + 500'000) {
+					m_logFileLastStatTime = now;
+
+					struct stat buf;
+					if (stat(m_logFilePath.c_str(), &buf) == 0) {
+						if (log_file_st.st_dev && log_file_st.st_ino && S_ISREG(buf.st_mode) &&
+							(buf.st_dev != log_file_st.st_dev || buf.st_ino != log_file_st.st_ino)) {
+							reopen(log_file_st);
+						}
+					}
+					else if (errno == ENOENT) {
 						reopen(log_file_st);
 					}
-				} else if(errno == ENOENT) {
-					reopen(log_file_st);
 				}
 			}
 
@@ -430,6 +455,9 @@ private:
 
 	std::ofstream m_logFile;
 	std::string m_logFilePath;
+	uint64_t m_logFileLastStatTime;
+
+	std::atomic<bool> m_workerWaiting;
 };
 
 static Worker* worker = nullptr;
@@ -503,10 +531,13 @@ void reopen()
 {
 	// This will trigger the worker thread which will then reopen log file if it's been moved
 #ifndef P2POOL_LOG_DISABLE
-	worker->schedule_reopen();
+	if (worker) {
+		worker->schedule_reopen();
+	}
 #endif
 }
 
+// Called from main() after everything else is already shut down and destroyed, so no thread races here
 void stop()
 {
 #ifndef P2POOL_LOG_DISABLE

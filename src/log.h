@@ -83,9 +83,9 @@ struct Stream
 		const bool negative = is_negative(data);
 		std::make_unsigned_t<T> udata = abs(data);
 
-		char buf[32];
+		char buf[80];
 		size_t k = sizeof(buf);
-		int w = m_numberWidth;
+		int w = std::min<int>(m_numberWidth, static_cast<int>(sizeof(buf)));
 
 		do {
 			buf[--k] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"[udata % base];
@@ -278,7 +278,7 @@ template<> struct Stream::Entry<difficulty_type>
 	{
 		char buf[40];
 		size_t k = sizeof(buf);
-		int w = wrapper->m_numberWidth;
+		int w = std::min<int>(wrapper->m_numberWidth, sizeof(buf));
 
 		uint64_t a = data.lo;
 		uint64_t b = data.hi;
