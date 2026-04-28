@@ -31,6 +31,10 @@ jobs:
     name: Analyze
     timeout-minutes: 240
     runs-on: windows-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout repository
