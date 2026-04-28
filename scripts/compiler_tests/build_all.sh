@@ -16,7 +16,7 @@ do
 	gcc/build.sh $1 $i
 done
 
-for i in 17 21;
+for i in 17 22;
 do
 	clang/build.sh $1 $i
 done

@@ -1,6 +1,4 @@
 #!/bin/sh
-set -e
-
 cd /p2pool
 mkdir build && cd build
 
