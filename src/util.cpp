@@ -950,6 +950,34 @@ void set_thread_name(const char* name)
 #endif
 }
 
+void init_uv()
+{
+	// Creates the default loop if it doesn't exist yet
+	uv_default_loop();
+
+#ifdef _MSC_VER
+#define putenv _putenv
+#endif
+
+	const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), 4U), 8U);
+
+	static char buf[40] = {};
+	log::Stream s(buf);
+	s << "UV_THREADPOOL_SIZE=" << N << '\0';
+
+	int err = putenv(buf);
+	if (err != 0) {
+		err = errno;
+		fprintf(stderr, "Couldn't set UV thread pool size to %u threads, putenv returned error %d\n", N, err);
+	}
+
+	static uv_work_t dummy;
+	err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
+	if (err) {
+		fprintf(stderr, "init_uv_threadpool: uv_queue_work failed, error %s\n", uv_err_name(err));
+	}
+}
+
 std::string to_onion_v3(const hash& pubkey)
 {
 	static constexpr uint8_t prefix[] = ".onion checksum";

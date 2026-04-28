@@ -304,6 +304,22 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		return true;
 	}
 
+	if ((arg[0] == "no-console-log")) {
+		m_consoleLogEnabled = false;
+		return true;
+	}
+
+	if ((arg[0] == "no-log-file")) {
+		m_logFileEnabled = false;
+		return true;
+	}
+
+	if ((arg[0] == "disable-log")) {
+		m_consoleLogEnabled = false;
+		m_logFileEnabled = false;
+		return true;
+	}
+
 	if ((arg[0] == "sidechain-config") && has1(arg)) {
 		m_sidechainConfig = arg[1];
 		return true;

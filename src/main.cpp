@@ -72,6 +72,9 @@ void p2pool_usage()
 		"--loglevel            Verbosity of the log, integer number between 0 and %d\n"
 		"--data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory\n"
 		"--log-file            Path to the log file, default is \"p2pool.log\" in p2pool's working directory\n"
+		"--no-console-log      Disable logging to the console\n"
+		"--no-log-file         Disable logging to the file\n"
+		"--disable-log         Equivalent to --no-console-log --no-log-file, disables logging entirely and saves ~8 MB of memory\n"
 		"--sidechain-config    Name of the p2pool sidechain parameters file (only use it if you run your own sidechain)\n"
 		"--data-api            Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!\n"
 		"--local-api           Enable /local/ path in api path for Stratum Server and built-in miner statistics\n"
@@ -311,6 +314,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	p2pool::set_main_thread();
+
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 	SymInitialize(GetCurrentProcess(), NULL, TRUE);
 #endif
@@ -325,7 +330,7 @@ int main(int argc, char* argv[])
 	// Create the default libuv loop and initialize libuv here
 	// It will call the important stuff like WSAStartup and many other things
 	// Some P2Pool code will not work without libuv initialized, so the code above this line must be minimal
-	uv_default_loop();
+	p2pool::init_uv();
 
 	const p2pool::Params params = params_file.empty() ? get_params(argc, argv) : get_params(params_file);
 
@@ -337,7 +342,12 @@ int main(int argc, char* argv[])
 		std::filesystem::create_directories(params.m_dataDir, err);
 	}
 
-	p2pool::log::start(params);
+	if (params.m_consoleLogEnabled || params.m_logFileEnabled) {
+		p2pool::log::start(params);
+	}
+	else {
+		p2pool::log::GLOBAL_LOG_LEVEL = -1;
+	}
 
 	p2pool::init_crypto_cache();
 
@@ -381,7 +391,9 @@ int main(int argc, char* argv[])
 	p2pool::indexed_hash::cleanup_storage();
 #endif
 
-	p2pool::log::stop();
+	if (params.m_consoleLogEnabled || params.m_logFileEnabled) {
+		p2pool::log::stop();
+	}
 
 	uv_loop_close(uv_default_loop());
 

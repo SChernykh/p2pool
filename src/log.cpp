@@ -124,14 +124,14 @@ public:
 		, m_readPos(0)
 		, m_stopped(false)
 		, m_needReopen(false)
+		, m_consoleLogEnabled(p.m_consoleLogEnabled)
+		, m_logFileEnabled(p.m_logFileEnabled)
 		, m_logFileLastStatTime(0)
 		, m_workerWaiting(false)
 	{
 #if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
 #endif
-
-		set_main_thread();
 
 		std::setlocale(LC_ALL, "C");
 
@@ -165,8 +165,6 @@ public:
 			CONSOLE_COLORS = false;
 		}
 
-		init_uv_threadpool();
-
 		err = uv_thread_create(&m_worker, run_wrapper, this);
 		if (err) {
 			fprintf(stderr, "failed to start logger thread (%s), aborting\n", uv_err_name(err));
@@ -199,7 +197,9 @@ public:
 		uv_cond_destroy(&m_cond);
 		uv_mutex_destroy(&m_mutex);
 
-		m_logFile.close();
+		if (m_logFileEnabled) {
+			m_logFile.close();
+		}
 	}
 
 	FORCEINLINE void write(const char* buf, uint32_t size)
@@ -209,7 +209,7 @@ public:
 		do {
 			if (writePos - m_readPos.load(std::memory_order_relaxed) > BUF_SIZE - SLOT_SIZE) {
 				// Buffer is full, can't log normally
-				if (size > 3) {
+				if ((size > 3) && m_consoleLogEnabled) {
 					fwrite(buf + 3, 1, size - 3, stderr);
 				}
 				return;
@@ -243,33 +243,12 @@ public:
 	}
 
 private:
-	static void init_uv_threadpool()
-	{
-#ifdef _MSC_VER
-#define putenv _putenv
-#endif
-
-		const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), 4U), 8U);
-
-		static char buf[40] = {};
-		log::Stream s(buf);
-		s << "UV_THREADPOOL_SIZE=" << N << '\0';
-
-		int err = putenv(buf);
-		if (err != 0) {
-			err = errno;
-			fprintf(stderr, "Couldn't set UV thread pool size to %u threads, putenv returned error %d\n", N, err);
-		}
-
-		static uv_work_t dummy;
-		err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
-		if (err) {
-			fprintf(stderr, "init_uv_threadpool: uv_queue_work failed, error %s\n", uv_err_name(err));
-		}
-	}
-
 	bool reopen(struct stat& st)
 	{
+		if (!m_logFileEnabled) {
+			return true;
+		}
+
 		st = {};
 
 		if (m_logFile.is_open()) {
@@ -290,7 +269,6 @@ private:
 		return true;
 	}
 
-private:
 	static void run_wrapper(void* arg) { reinterpret_cast<Worker*>(arg)->run(); }
 
 	NOINLINE void run()
@@ -299,7 +277,7 @@ private:
 
 		struct stat log_file_st;
 
-		if (!reopen(log_file_st)) {
+		if (!reopen(log_file_st) && m_consoleLogEnabled) {
 			fprintf(stderr, "failed to open %s: error %d\n", m_logFilePath.c_str(), errno);
 		}
 
@@ -354,9 +332,11 @@ private:
 							strip_colors(p, size);
 						}
 
-						fwrite(p, 1, size, (severity == 1) ? stdout : stderr);
+						if (m_consoleLogEnabled) {
+							fwrite(p, 1, size, (severity == 1) ? stdout : stderr);
+						}
 
-						if (m_logFile.is_open()) {
+						if (m_logFileEnabled && m_logFile.is_open()) {
 							if (c) {
 								strip_colors(p, size);
 							}
@@ -378,12 +358,12 @@ private:
 					// Mark this log slot empty
 					severity_ptr->store('\0', std::memory_order_relaxed);
 
-					m_readPos.fetch_add(SLOT_SIZE, std::memory_order_relaxed);
-				} while (m_readPos.load(std::memory_order_relaxed) != writePos);
+				// fetch_add returns the pre-increment value; "+ SLOT_SIZE" gives us the new m_readPos
+				} while (m_readPos.fetch_add(SLOT_SIZE, std::memory_order_relaxed) + SLOT_SIZE != writePos);
 			}
 
 			// Flush the log file only after all pending log lines have been written
-			if (m_logFile.is_open()) {
+			if (m_logFileEnabled && m_logFile.is_open()) {
 				m_logFile.flush();
 
 				// Automatically reopen the file if either it
@@ -455,6 +435,8 @@ private:
 
 	std::ofstream m_logFile;
 	std::string m_logFilePath;
+	bool m_consoleLogEnabled;
+	bool m_logFileEnabled;
 	uint64_t m_logFileLastStatTime;
 
 	std::atomic<bool> m_workerWaiting;
@@ -509,9 +491,6 @@ NOINLINE Writer::~Writer()
 #ifndef P2POOL_LOG_DISABLE
 	if (worker) {
 		worker->write(m_buf, size);
-	}
-	else {
-		fwrite(m_buf + 3, 1, size - 3, (m_buf[0] == 1) ? stdout : stderr);
 	}
 #endif
 }

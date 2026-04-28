@@ -14,6 +14,9 @@
 --loglevel            Verbosity of the log, integer number between 0 and 6
 --data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory
 --log-file            Path to the log file, default is "p2pool.log" in p2pool's working directory
+--no-console-log      Disable logging to the console
+--no-log-file         Disable logging to the file
+--disable-log         Equivalent to --no-console-log --no-log-file, disables logging entirely and saves ~8 MB of memory
 --sidechain-config    Name of the p2pool sidechain parameters file (only use it if you run your own sidechain)
 --data-api            Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!
 --local-api           Enable /local/ path in api path for Stratum Server and built-in miner statistics
