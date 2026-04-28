@@ -358,7 +358,7 @@ private:
 		uint32_t m_viewTags1[2] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 		std::vector<uint32_t> m_viewTags2;
 		// cppcheck-suppress unusedStructMember
-		uint32_t m_timestamp;
+		uint32_t m_timestamp = 0;
 
 		FORCEINLINE bool find_view_tag(size_t output_index, uint8_t& view_tag) const
 		{
@@ -410,7 +410,7 @@ private:
 	{
 		indexed_hash m_key;
 		// cppcheck-suppress unusedStructMember
-		uint32_t m_timestamp;
+		uint32_t m_timestamp = 0;
 	};
 
 	struct TxKeyEntry
@@ -418,7 +418,7 @@ private:
 		hash m_pub;
 		hash m_sec;
 		// cppcheck-suppress unusedStructMember
-		uint32_t m_timestamp;
+		uint32_t m_timestamp = 0;
 	};
 
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> DerivationsMap;
