@@ -66,6 +66,8 @@ static constexpr hash seed_onion_nodes[] = {
 };
 
 static constexpr hash seed_i2p_nodes[] = {
+	from_i2p_b32_const("p2pseeds2ggmpw62wdua6ll27awcndorshcg7nsbinc5xlhp6tqa.b32.i2p"),
+	from_i2p_b32_const("p2pse3irgfuks5eazbcwkcijsv6u3qtffl6zudct4t4kn2sinotq.b32.i2p"),
 	from_i2p_b32_const("h6jrh53yvlvzqqyy7abzjp2t4kidtheee7e7nfbynecroc7yvbjq.b32.i2p")
 };
 
@@ -895,6 +897,10 @@ void P2PServer::load_peer_list()
 
 void P2PServer::load_monerod_peer_list()
 {
+	if (m_pool->params().m_noClearnetP2P) {
+		return;
+	}
+
 	const Params::Host& host = m_pool->current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
