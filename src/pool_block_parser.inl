@@ -161,6 +161,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 			// Required by sidechain.get_outputs_blob() to speed up repeated broadcasts from different peers
 			READ_BUF(m_sidechainId.h, HASH_SIZE);
+
+			if (m_sidechainId.empty()) {
+				return __LINE__;
+			}
 		}
 
 		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
