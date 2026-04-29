@@ -137,6 +137,11 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
+	if (m_transactions.empty()) {
+		LOGERR(1, "Trying to serialize an uninitialized block, fix the code!");
+		return {};
+	}
+
 	std::vector<uint8_t> data;
 	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + m_transactions.size() * HASH_SIZE, 131072));
 
@@ -341,6 +346,11 @@ void PoolBlock::reset_offchain_data()
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)
 {
+	if (m_transactions.empty()) {
+		LOGERR(1, "Trying to calculate PoW hash of an uninitialized block, fix the code!");
+		return false;
+	}
+
 	// Calculate the coinbase tx hash, then the merkle root of all transactions in the block - this merkle root is what goes into the hashing blob
 
 	// Monero transactions are hashed in 3 separate parts, the resulting 3 hashes are then hashed together to get the final result

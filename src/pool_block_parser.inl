@@ -66,11 +66,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BYTE(m_minorVersion);
 		if (m_minorVersion < m_majorVersion) return __LINE__;
+		if (m_minorVersion > 127) return __LINE__;
 
 		READ_VARINT(m_timestamp);
 		READ_BUF(m_prevId.h, HASH_SIZE);
-
-		if (m_minorVersion > 127) return __LINE__;
 
 		const int nonce_offset = static_cast<int>(data - data_begin);
 		READ_BUF(&m_nonce, NONCE_SIZE);
@@ -100,7 +99,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		if (num_outputs > 0) {
 			// Outputs are in the buffer, just read them
-			// Each output is at least 34 bytes, exit early if there's not enough data left
+			// Each output is at least 35 bytes, exit early if there's not enough data left
 			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key, 1 byte for view_tag
 			constexpr uint64_t MIN_OUTPUT_SIZE = 35;
 
@@ -377,6 +376,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_cumulativeDifficulty.hi);
 
 		if (m_cumulativeDifficulty > MAX_CUMULATIVE_DIFFICULTY) {
+			return __LINE__;
+		}
+
+		// m_cumulativeDifficulty is the sum of all m_difficulty values
+		// for this and preceding blocks, so this one must be impossible
+		if (m_difficulty > m_cumulativeDifficulty) {
 			return __LINE__;
 		}
 
