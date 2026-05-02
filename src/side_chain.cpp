@@ -1079,7 +1079,11 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 		our_uncles_in_window_chart += ']';
 	}
 
+	const std::string version = p2pool_version();
+	const std::string version_line = version.substr(0, version.find('\n'));
+
 	LOGINFO(0, "status" <<
+		"\nP2Pool version            = " << version_line <<
 		"\nMonero node               = " << m_pool->current_host().m_displayName <<
 		"\nMain chain height         = " << m_pool->block_template().height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
