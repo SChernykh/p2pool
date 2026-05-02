@@ -23,10 +23,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")
 	endif()
 
-	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15))
-		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-cpp")
-	endif()
-
 	if (DISABLE_WARNINGS)
 		set(WARNING_FLAGS "-w")
 	endif()
@@ -40,6 +36,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		endif()
 		set(OPTIMIZATION_FLAGS "${OPTIMIZATION_FLAGS} -g3 -ftrapv")
 	else()
+		# Looks like this warning is a false positive on GCC 16.1 (mingw) at -O2/-O3 optimization level
+		if (MINGW AND (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)))
+			set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-array-bounds")
+		endif()
+
 		set(OPTIMIZATION_FLAGS "-O3 -ffast-math -s")
 	endif()
 
