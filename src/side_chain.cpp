@@ -1247,8 +1247,15 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 		w += shares[i].m_weight;
 
 		const difficulty_type next_value = w * reward / total_weight;
-		rewards.emplace_back(next_value.lo - reward_given);
+		const uint64_t r = next_value.lo - reward_given;
 		reward_given = next_value.lo;
+
+		if (r > MAX_OUTPUT_VALUE) {
+			LOGERR(1, "Reward of " << log::XMRAmount(reward) << " is too big for the current split.");
+			return false;
+		}
+
+		rewards.emplace_back(r);
 	}
 
 	// Double check that we gave out the exact amount

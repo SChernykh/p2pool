@@ -119,7 +119,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				READ_VARINT(reward);
 
 				// TxOutput max value check
-				if (reward >= (1ULL << 56)) {
+				if (reward > MAX_OUTPUT_VALUE) {
 					return __LINE__;
 				}
 
