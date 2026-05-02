@@ -2216,6 +2216,14 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+
+				if (block_size > MAX_BLOCK_SIZE) {
+					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big BLOCK_RESPONSE");
+					ban(DEFAULT_BAN_TIME);
+					server->remove_peer_from_list(this);
+					return false;
+				}
+
 				if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 					bytes_read = 1 + sizeof(uint32_t) + block_size;
 
@@ -2239,6 +2247,14 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 				if (bytes_left >= 1 + sizeof(uint32_t)) {
 					const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+
+					if (block_size > MAX_BLOCK_SIZE) {
+						LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big " << (compact ? "BLOCK_BROADCAST_COMPACT" : "BLOCK_BROADCAST"));
+						ban(DEFAULT_BAN_TIME);
+						server->remove_peer_from_list(this);
+						return false;
+					}
+
 					if (bytes_left >= 1 + sizeof(uint32_t) + block_size) {
 						bytes_read = 1 + sizeof(uint32_t) + block_size;
 						if (!on_block_broadcast(buf + 1 + sizeof(uint32_t), block_size, compact)) {
@@ -2309,6 +2325,14 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+
+				if (msg_size > MAX_BLOCK_SIZE) {
+					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big AUX_JOB_DONATION");
+					ban(DEFAULT_BAN_TIME);
+					server->remove_peer_from_list(this);
+					return false;
+				}
+
 				if (bytes_left >= 1 + sizeof(uint32_t) + msg_size) {
 					bytes_read = 1 + sizeof(uint32_t) + msg_size;
 
@@ -2326,6 +2350,14 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
+
+				if (msg_size > MAX_BLOCK_SIZE) {
+					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big MONERO_BLOCK_BROADCAST");
+					ban(DEFAULT_BAN_TIME);
+					server->remove_peer_from_list(this);
+					return false;
+				}
+
 				if (bytes_left >= 1 + sizeof(uint32_t) + msg_size) {
 					bytes_read = 1 + sizeof(uint32_t) + msg_size;
 
@@ -3037,7 +3069,8 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 						m_protocolVersion = PROTOCOL_VERSION_1_0;
 					}
 					else {
-						m_protocolVersion = std::min(version, SUPPORTED_PROTOCOL_VERSION);
+						// Don't allow version downgrades
+						m_protocolVersion = std::max(m_protocolVersion, std::min(version, SUPPORTED_PROTOCOL_VERSION));
 					}
 
 					m_SoftwareVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
@@ -3109,8 +3142,16 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			return;
 		}
 
-		if (!server->m_blockNotifyRequests.insert(*id.u64()).second || !server->m_missingBlockRequests.emplace(m_peerId, *id.u64()).second) {
+		const uint64_t id64 = *id.u64();
+
+		// First check these two, then update them only after a successful send
+		if (server->m_blockNotifyRequests.find(id64) != server->m_blockNotifyRequests.end()) {
 			LOGINFO(6, "BLOCK_REQUEST for id = " << id << " was already sent");
+			return;
+		}
+
+		if (server->m_missingBlockRequests.find(std::make_pair(m_peerId, id64)) != server->m_missingBlockRequests.end()) {
+			LOGINFO(6, "BLOCK_REQUEST for id = " << id << " was already sent to this peer");
 			return;
 		}
 
@@ -3134,7 +3175,10 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			});
 
 		if (result) {
-			m_blockPendingRequests.push_back(*id.u64());
+			server->m_blockNotifyRequests.insert(id64);
+			server->m_missingBlockRequests.emplace(m_peerId, id64);
+
+			m_blockPendingRequests.push_back(id64);
 		}
 	}
 }

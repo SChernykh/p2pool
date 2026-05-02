@@ -236,7 +236,7 @@ struct alignas(uint64_t) hash
 		uint64_t k = 0;
 
 		for (size_t i = 0; i < sizeof(uint64_t); ++i) {
-			k |= static_cast<uint64_t>(h[index * sizeof(uint64_t) + i]) << (i * sizeof(uint64_t));
+			k |= static_cast<uint64_t>(h[index * sizeof(uint64_t) + i]) << (i * 8);
 		}
 
 		return k;
