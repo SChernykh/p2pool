@@ -16,12 +16,12 @@ Follow [these instructions](https://docs.i2pd.website/en/latest/user-guide/insta
 First, ensure the SOCKS proxy tunnel is enabled (as it should be by default). See [here](https://docs.i2pd.website/en/latest/user-guide/configuration/) for more information.
 
 You will need to modify some lines in the `tunnels.conf` file, usually located in `/var/lib/i2pd/tunnels.conf` on Linux.
-Add a server tunnel to allow inbound connections from peers:
+Add a server tunnel to allow inbound connections from peers and use port number 37888 for p2pool-mini, 37890 for p2pool-nano:
 ```ini
 [p2pool]
 type = server
 host = 127.0.0.1
-port = 28723
+port = 37889
 keys = p2pool.dat
 ```
 This will create a hidden service key in `/var/lib/i2pd/p2pool.dat`; you may want to back this up.
@@ -34,7 +34,7 @@ sudo systemctl restart i2pd.service
 
 Get the hostname of your hidden service:
 ```bash
-curl -s http://127.0.0.1:7070/?page=i2p_tunnels | grep -Eo "[a-zA-Z0-9./?=_%:-]*" | grep "28723"
+curl -s http://127.0.0.1:7070/?page=i2p_tunnels | grep -Eo "[a-zA-Z0-9./?=_%:-]*" | grep "37889"
 ```
 
 The resulting `.b32.i2p` address should then be used for the `--i2p-address` command-line parameter.
