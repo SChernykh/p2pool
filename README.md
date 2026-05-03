@@ -35,25 +35,25 @@ These are 3rd-party pages. If they are down, it doesn't mean there is a problem 
   - [General Considerations](#general-considerations)
   - [GUI for P2Pool](#gui-for-p2pool)
   - [Merge mining](#merge-mining)
-  - [GNU/Linux](#gnulinux)
-  - [Windows](#windows)
+  - [Mining on GNU/Linux](#gnulinux)
+  - [Mining on Windows](#windows)
 - [Build instructions](#build-instructions)
 - [Reproducible builds](#reproducible-builds)
 - [Donations](#donations)
 
 ## Pool mining vs Solo mining vs P2Pool mining
 
-Here's the comparison table of the different ways of mining. While pool mining is the easiest to setup, it centralizes Monero network and pool admin gets full power over your hashrate and your unpaid funds. Solo mining is 100% independent and the best for the network. P2Pool mining has all the advantages of solo mining, but also makes regular payouts possible.
+Here's the comparison table of the different ways of mining. While pool mining is the easiest to set up, it centralizes the Monero network and the pool admin gets full power over your hashrate and your unpaid funds. Solo mining is 100% independent and the best for the network. P2Pool mining has all the advantages of solo mining, but also makes regular payouts possible.
 
 |Pool type|Payouts|Fee|Min. payout|Centralized?|Stability|Control|Setup
 |-|-|-|-|-|-|-|-|
-|Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|Pool admin controls your mined funds, what you mine and can execute network attacks|Only miner software is required
+|Centralized pool|Regular|0-3%|0.001-0.01 XMR|Yes|Less stable due to pool server outages|The pool admin controls your mined funds and what you mine, and can execute attacks against the network|Only miner software is required
 |Solo|Rare|0%|0.6 XMR or more|No|As stable as your Monero node|100% under your control|Monero node + optional miner
 |**P2Pool**|Regular|0%|~0.00027 XMR|No|Very stable: node failover and multiple Monero nodes are supported|100% under your control|Monero node(s) + P2Pool node(s) + optional miner(s)
 
 ## Features
 
-* Decentralized: no central server that can be shutdown/blocked. P2Pool uses a separate blockchain to merge mine with Monero. Pool admin can't go rogue or be pressured to do an attack on the network because there is no pool admin!
+* Decentralized: no central server that can be shut down/blocked. P2Pool uses a separate blockchain to merge mine with Monero. Pool admin can't go rogue or be pressured to do an attack on the network because there is no pool admin!
 * Permissionless: there is no one to decide who can mine on the pool and who can't.
 * Trustless: there is no pool wallet, funds are never in custody. All pool blocks pay out to miners directly.
 * PPLNS payout scheme
@@ -63,14 +63,14 @@ Here's the comparison table of the different ways of mining. While pool mining i
 * Fast block times, down to 1 second
 * Uncle blocks are supported to avoid orphans - all your shares will be accounted for!
 * Configurable PPLNS window size and block time
-* Advanced mempool picking algorithm, it creates blocks with better reward than what monerod solo mining does
+* Advanced mempool picking algorithm: it creates blocks with better rewards than what monerod solo mining does
 * Password protected private pools
 * Highly reliable configurations are supported (multiple P2Pool nodes mining to the same wallet, each P2Pool node can use multiple Monero nodes and switch on the fly if an issue is detected)
-* Mining through [TOR](docs/TOR.MD) and [I2P](docs/I2P.MD) are fully supported
+* Mining through [TOR](docs/TOR.MD) and [I2P](docs/I2P.MD) is fully supported
 
 ## How payouts work in P2Pool
 
-First you need to find a pool share. This share will stay in [PPLNS](https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares) window for up to 2160 pool blocks (6 hours, auto adjustable to balance payout sizes and frequency). The moment P2Pool finds a Monero block and you have at least 1 pool share in PPLNS window, you'll get a payout! Monero block reward is split between all miner wallets in PPLNS window. Each miner gets a part of block reward proportional to the total difficulty of his/her shares in PPLNS window.
+First you need to find a pool share. This share will stay in [PPLNS](https://en.wikipedia.org/wiki/Mining_pool#Pay-per-last-N-shares) window for up to 2160 pool blocks (6 hours, auto adjustable to balance payout sizes and frequency). The moment P2Pool finds a Monero block and you have at least 1 pool share in PPLNS window, you'll get a payout! Monero block reward is split between all miner wallets in PPLNS window. Each miner gets a part of the block reward proportional to the total difficulty of his/her shares in PPLNS window.
 
 **NOTE** If P2Pool doesn't have enough hashrate to find Monero blocks faster than every 6 hours on average (~15 MH/s), **not all your pool shares will result in a payout**. Even if pool hashrate is higher, bad luck can sometimes result in a share going through PPLNS window without a payout. But in the long run it will be compensated by other shares receiving multiple payouts - your payouts will average out to what you'd get with regular pool mining.
 
@@ -89,7 +89,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 |Monero protocol version|Required Monero software version|Required P2Pool version
 |-|-|-|
-|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.4.2 is recommended|v4.0 or newer
+|v15, v16 (active after August 13th, 2022)|v0.18.0.0 or newer, v0.18.4.6 or newer is recommended|v4.0 or newer
 
 ## How to mine on P2Pool
 
@@ -97,7 +97,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 - In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the [official Monero binaries](https://www.getmonero.org/downloads/), start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities.
-- You can mine to a primary wallet address (the one starting with `4`) for mining. If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
+- You can mine to a primary wallet address (the one starting with `4`). If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
 - You can add the `--mini` or `--nano` parameter to your P2Pool command to connect to the respective sidechain.
 > [!NOTE]
 > You cannot use both `--mini` and `--nano` together<br>
@@ -124,7 +124,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 Merge mining is available in P2Pool since the fork that happened on October 12th, 2024. Version 4.0 or newer is required to use it.
 
 Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api):
-- [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
+- [Townforge](https://townforge.net/) supports merge mining (but Townforge is still in testnet phase)
 - [DarkFi](https://dark.fi/) supports it in their [testnet](https://dark.fi/book/testnet/merge-mining.html)
 ```
 p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
@@ -144,7 +144,7 @@ TARI_NODE_IP is 127.0.0.1 if you run both on the same machine (recommended).
 
 Merge mining is available on Tari's mainnet:
 - Download [Tari suite](https://github.com/tari-project/tari/releases/latest) for your OS
-- Run Minotari node and wait until in synchronizes
+- Run Minotari node and wait until it synchronizes
 - Run Minotari console wallet to create a Tari wallet
 - Copy the "Tari Address one-sided" from the "Receive" tab of the wallet
 - Paste it into the P2Pool command line above
@@ -152,7 +152,7 @@ Merge mining is available on Tari's mainnet:
 
 Note that Tari will be mined in solo mode (only full Tari blocks can be mined for now). This doesn't affect P2Pool payouts - they will stay the same.
 
-### GNU/Linux
+### Mining on GNU/Linux
 
 1. Download the latest P2Pool binaries [here](https://github.com/SChernykh/p2pool/releases/latest).
    -  Alternatively, grab the latest source code for P2Pool and [build it](#build-instructions).
@@ -180,7 +180,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 
 6. Start P2Pool with the following command/options:
 ```
-./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS
+./p2pool --host 127.0.0.1 --wallet YOUR_WALLET_ADDRESS --mini
 ```
 7. Wait until the initial P2Pool sync is finished (shouldn't take more than 5-10 minutes).
 8. Start XMRig with the following command/options:
@@ -195,7 +195,7 @@ The `--zmq-pub` option is required for P2Pool to work properly.
 9. XMRig should connect and start mining!
 
 **Additional Information:**
-- For a more in-depth beginner friendly walk-through with the option of using Docker, please see SethForPrivacy's guide at: https://sethforprivacy.com/guides/run-a-p2pool-node/
+- For a more in-depth beginner-friendly walk-through with the option of using Docker, please see SethForPrivacy's guide at: https://sethforprivacy.com/guides/run-a-p2pool-node/
 - You can check the p2pool.log for any warnings or errors using the following command:
 ```
 grep -E 'WARNING|ERROR' p2pool.log
@@ -213,9 +213,9 @@ nocreate
 }
  ```
 
-### Windows
+### Mining on Windows
 
-**Note:** *Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then click "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
+**Note:** *Windows SmartScreen may block incoming connections by files that are "Downloaded from the Internet". You can allow 'p2pool.exe' and 'monerod.exe' by double-clicking them, clicking "More Info", then clicking "Run Anyway" and then closing them immediately so you can run them from the command line. Advanced users can use the PowerShell cmdlet `Unblock-File` to remove this flag.*
 
 1. Download the latest P2Pool binaries [here](https://github.com/SChernykh/p2pool/releases/latest).
     - Alternatively, grab the latest source code for P2Pool and [build it](#build-instructions).
@@ -223,7 +223,7 @@ nocreate
 3. Expand the P2Pool binaries into an appropriate location (`%USERPROFILE%/bin` or `C:/bin/` are good options)
 4. Expand XMRig binary into an appropriate location (the same folder as P2Pool is fine).
 5. Prepare huge pages to work properly (each of monerod/P2Pool/XMRig needs them):
-   - On Windows 10 or above, run XMRig at least once as Administrator (right-click Run As Administrator)
+   - On Windows 10 or above, run XMRig at least once as Administrator (right-click, "Run As Administrator")
    - On earlier versions of Windows, you'll need to run XMRig as Administrator at least once per login.
 6. Create "Monero" folder inside extracted P2Pool folder and copy Monero binaries there.
 7. Open a command prompt and navigate to the folder where you extracted P2Pool.
@@ -273,11 +273,11 @@ PAUSE
 ```
 
 ## Build instructions
-Only 64-bit builds are supported, in particular ARMv7 or older CPUs are not supported. The reason is that RandomX hashing algorithm is too slow in 32-bit mode, and P2Pool needs to check new blocks very fast to keep up with other nodes.
+Only 64-bit builds are supported. In particular, ARMv7 and older CPUs are not supported. The reason is that RandomX hashing algorithm is too slow in 32-bit mode, and P2Pool needs to check new blocks very fast to keep up with other nodes.
 
 ### Prerequisites
 - cmake >= 3.10
-- C++ compiler with C++17 support. GCC-8, Clang-13 and MSVC-2019 have been tested and confirmed to work, older compilers may fail to build P2Pool.
+- C++ compiler with C++17 support. GCC-8, Clang-13 and MSVC-2019 have been tested and confirmed to work. Older compilers may fail to build P2Pool.
 
 ### Ubuntu 20.04
 
@@ -300,7 +300,7 @@ pacman -S p2pool
 ### [Nix/NixOS](https://nixos.org)
 
 This is a flake only project. So you have to use [nixUnstable with nix flakes](https://nixos.wiki/wiki/Flakes) to build or install P2Pool.
-The commands below use the new flake specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
+The commands below use the new flake-specific reference-format, so be sure to also set `ca-references` in `--experimental-features`.
 
 Because this project has submodules which are not fixed in _nixUnstable_ yet you have to use the `nix/master` branch:
 ```
@@ -378,18 +378,20 @@ Anyone can run the same build script on the same source code, and get the same r
 
 Prerequisites: Ubuntu with Docker and Git installed.
 
-Example of building v4.9 release binaries:
+Example of building v4.15 release binaries:
 
 ```
-git clone --branch v4.9 --recursive https://github.com/SChernykh/p2pool
-p2pool/scripts/release/build_all.sh v4.9
+git clone --branch v4.15 --recursive https://github.com/SChernykh/p2pool
+p2pool/scripts/release/build_all.sh v4.15
 ```
-The binaries will be created in `p2pool/scripts/release` folder. First time you run it, it will take up to several hours to first build the Docker image with all the necessary tools in it. Wait until all builds are finished and then run
+The binaries will be created in `p2pool/scripts/release` folder. The first time you run it, it will take up to several hours to first build the Docker image with all the necessary tools in it. Wait until all builds are finished and then run
 ```
 cd p2pool/scripts/release
 ./gen_sums.sh
 ```
 to generate the hash sums and compare them with the official release's hash sums.
+
+Reproducible builds of (almost) all commits are available [here](https://p2pool.io/builds/). These builds use the release build scripts, so they can act as a "latest release" for all means and purposes, but they might be less stable than the official releases.
 
 ## Donations
 
@@ -399,7 +401,7 @@ If you'd like to support further development of Monero P2Pool, you're welcome to
 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg
 ```
 
-Starting from v4.6, P2Pool will also have an ability to merge mine donations for the author.
+Starting from v4.6, P2Pool also has an ability to merge mine donations for the author.
 
 Note that this will not affect your hashrate or payouts in any way. P2Pool will always (100% of the time) keep mining to your configured Monero wallet address, but it might also use the available merge mining capacity to donate to the author.
 
@@ -407,4 +409,4 @@ If you merge mine yourself, your settings will take priority.
 
 The merge mining donation runs without a donation server - there is no "phoning home" to a server, everything is done through the P2Pool's network in a decentralized way.
 
-To opt out of this, build P2Pool with `-DWITH_MERGE_MINING_DONATION=OFF` in cmake command line. Due to the architecture of the decentralized P2Pool network, your node will still relay donation messages to other nodes even if you opted out (but it will not process them).
+To opt out of this, build P2Pool with `-DWITH_MERGE_MINING_DONATION=OFF` in the cmake command line. Due to the architecture of the decentralized P2Pool network, your node will still relay donation messages to other nodes even if you opted out (but it will not process them).
