@@ -8,7 +8,7 @@ BINUTILS_VERSION=2_46
 CLANG_VERSION=21.1.8
 CMAKE_VERSION=4.3.2
 FREEBSD_VERSION=12.4
-GCC_VERSION=15.2.0
+GCC_VERSION=16.1.0
 GLIBC_VERSION=2.43
 LINUX_HEADERS_VERSION=6.19.14
 MACOSX_SDK_VERSION=26.1
@@ -269,7 +269,7 @@ echo "Install GCC for aarch64-linux-gnu"
 cd /root
 
 mkdir gcc_build_aarch64 && cd gcc_build_aarch64
-../gcc/configure --target=aarch64-linux-gnu --enable-languages=c,c++ --disable-multilib
+../gcc/configure --target=aarch64-linux-gnu --enable-languages=c,c++ --disable-multilib --disable-libatomic
 make -j$(nproc) all-gcc
 make install-gcc
 
@@ -321,7 +321,7 @@ echo "Install GCC for riscv64-linux-gnu"
 cd /root
 
 mkdir gcc_build_riscv64 && cd gcc_build_riscv64
-../gcc/configure --target=riscv64-linux-gnu --enable-languages=c,c++ --disable-multilib
+../gcc/configure --target=riscv64-linux-gnu --enable-languages=c,c++ --disable-multilib --disable-libatomic
 make -j$(nproc) all-gcc
 make install-gcc
 
@@ -380,7 +380,7 @@ echo "Install GCC for x86_64-w64-mingw32"
 cd /root
 
 mkdir gcc_build_w64 && cd gcc_build_w64
-../gcc/configure --target=x86_64-w64-mingw32 --enable-languages=c,c++ --disable-multilib
+../gcc/configure --target=x86_64-w64-mingw32 --enable-languages=c,c++ --disable-multilib --disable-libatomic
 make -j$(nproc) all-gcc
 make install-gcc
 

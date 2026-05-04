@@ -120,6 +120,20 @@ mkdir build && cd build
 make -j$(nproc)
 make install
 
+echo "Installing GCC 16.1.0"
+
+cd /root
+
+git clone --depth 1 --branch releases/gcc-16.1.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-16
+
+cd gcc-16
+contrib/download_prerequisites
+
+mkdir build && cd build
+../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-16
+make -j$(nproc)
+make install
+
 echo "Installing clang"
 
 cd /root
