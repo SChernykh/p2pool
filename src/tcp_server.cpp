@@ -415,7 +415,9 @@ bool TCPServer::connect_to_peer(Client* client)
 
 	sockaddr_storage addr{};
 
-	if (m_socks5Proxy.empty()) {
+	const bool no_proxy = (client->m_addressType != Client::AddressType::DomainName) && client->m_addr.is_localhost();
+
+	if (no_proxy || m_socks5Proxy.empty()) {
 		if (client->m_addressType == Client::AddressType::IPv6) {
 			sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
 			addr6->sin6_family = AF_INET6;
@@ -918,7 +920,9 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 			return;
 		}
 
-		if (client->m_isIncoming || owner->m_socks5Proxy.empty()) {
+		const bool no_proxy = (client->m_addressType != Client::AddressType::DomainName) && client->m_addr.is_localhost();
+
+		if (client->m_isIncoming || no_proxy || owner->m_socks5Proxy.empty()) {
 			if (!client->on_connect()) {
 				client->close();
 				return;

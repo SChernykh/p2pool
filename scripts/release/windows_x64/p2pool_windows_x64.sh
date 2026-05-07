@@ -4,7 +4,7 @@ set -e
 cd /p2pool
 git fetch --jobs=$(nproc)
 git checkout $2
-git submodule update --recursive --jobs $(nproc)
+git submodule update --init --recursive --force --jobs $(nproc)
 
 export TZ=UTC0
 

@@ -4,7 +4,7 @@ set -e
 cd /p2pool
 git fetch --jobs=$(nproc)
 git checkout $2
-git submodule update --recursive --jobs $(nproc)
+git submodule update --init --recursive --force --jobs $(nproc)
 
 export TZ=UTC0
 
@@ -50,6 +50,6 @@ chmod -R 0664 $1
 chmod 0775 $1
 chmod 0775 $1/p2pool
 
-tar cvf $1.tar --format=pax --pax-option='exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime' --sort=name --owner=0 --group=0 --mtime="$CURRENT_DATE $CURRENT_TIME" $1
+tar cvf $1.tar --format=pax --pax-option='exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime' --sort=name --owner=0 --group=0 --numeric-owner --mtime="$CURRENT_DATE $CURRENT_TIME" $1
 touch -t $TOUCH_DATE $1.tar
 7z a -tgzip -mx9 -mfb256 -mpass15 -stl $1.tar.gz $1.tar

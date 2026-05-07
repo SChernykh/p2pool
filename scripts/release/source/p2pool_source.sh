@@ -4,7 +4,7 @@ set -e
 cd /p2pool
 git fetch --jobs=$(nproc)
 git checkout $1
-git submodule update --recursive --jobs $(nproc)
+git submodule update --init --recursive --force --jobs $(nproc)
 
 export TZ=UTC0
 
@@ -15,7 +15,7 @@ TOUCH_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y%m%d%H%M.%S")
 
 cd /
 
-tar --format=pax --pax-option='exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime' --sort=name --owner=0 --group=0 --mtime="$CURRENT_DATE $CURRENT_TIME" --exclude=".git" -f p2pool_source-$1.tar -c p2pool
+tar --format=pax --pax-option='exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime' --sort=name --owner=0 --group=0 --numeric-owner --mtime="$CURRENT_DATE $CURRENT_TIME" --exclude=".git" -f p2pool_source-$1.tar -c p2pool
 touch -t $TOUCH_DATE p2pool_source-$1.tar
 
 xz --version
