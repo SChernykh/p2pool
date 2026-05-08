@@ -27,6 +27,7 @@
 #define ROBIN_HOOD_FREE(ptr) p2pool::free_hook(ptr)
 
 #include "robin_hood.h"
+#include "tor.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -411,49 +412,6 @@ constexpr char base32_alphabet[] = "abcdefghijklmnopqrstuvwxyz234567";
 
 std::string to_onion_v3(const hash& pubkey);
 hash from_onion_v3(const std::string& address);
-
-static FORCEINLINE constexpr hash from_onion_v3_const(const char* address)
-{
-	uint8_t buf[HASH_SIZE + 4] = {};
-	uint8_t* p = buf;
-
-	uint64_t data = 0;
-	uint64_t bit_size = 0;
-
-	for (size_t i = 0; i < 56; ++i) {
-		const char c = address[i];
-		uint64_t digit = 0;
-
-		if ('a' <= c && c <= 'z') {
-			digit = static_cast<uint64_t>(c - 'a');
-		}
-		else if ('A' <= c && c <= 'Z') {
-			digit = static_cast<uint64_t>(c - 'A');
-		}
-		else if ('2' <= c && c <= '7') {
-			digit = static_cast<uint64_t>(c - '2') + 26;
-		}
-		else {
-			return {};
-		}
-
-		data = (data << 5) | digit;
-		bit_size += 5;
-
-		while (bit_size >= 8) {
-			bit_size -= 8;
-			*(p++) = static_cast<uint8_t>(data >> bit_size);
-		}
-	}
-
-	hash result;
-
-	for (size_t i = 0; i < HASH_SIZE; ++i) {
-		result.h[i] = buf[i];
-	}
-
-	return result;
-}
 
 std::vector<std::vector<std::string>> parse_config(const std::string& file_name);
 

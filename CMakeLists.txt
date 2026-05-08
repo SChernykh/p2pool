@@ -127,6 +127,7 @@ set(HEADERS
 	src/side_chain.h
 	src/stratum_server.h
 	src/tcp_server.h
+	src/tor.h
 	src/util.h
 	src/uv_util.h
 	src/wallet.h
