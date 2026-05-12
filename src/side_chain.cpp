@@ -2375,9 +2375,11 @@ bool SideChain::load_config(const std::string& filename)
 		return false;
 	}
 
-	rapidjson::Document doc;
-	rapidjson::IStreamWrapper s(f);
-	if (doc.ParseStream<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(s).HasParseError()) {
+	using namespace rapidjson;
+
+	Document doc;
+	IStreamWrapper s(f);
+	if (doc.ParseStream<RAPIDJSON_PARSE_DEFAULT_FLAGS | kParseCommentsFlag>(s).HasParseError()) {
 		LOGERR(1, "failed to parse JSON data in " << filename);
 		return false;
 	}

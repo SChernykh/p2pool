@@ -401,7 +401,7 @@ if (HAVE_GLIBC)
 	add_definitions(-DHAVE_GLIBC)
 endif()
 
-add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag")
+add_definitions("-DRAPIDJSON_PARSE_DEFAULT_FLAGS=kParseTrailingCommasFlag|kParseIterativeFlag")
 
 if (WIN32 AND (CMAKE_BUILD_TYPE STREQUAL "Release"))
 	add_definitions(-DNDEBUG)
