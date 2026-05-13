@@ -63,7 +63,7 @@ jobs:
   cppcheck-windows:
 
     timeout-minutes: 120
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
     - name: Checkout repository
@@ -78,7 +78,7 @@ jobs:
     - name: Build cppcheck
       run: |
         cd cppcheck-main
-        & "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe" -v:m /m /p:Configuration=Release /p:Platform=x64
+        & "C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe" -v:m /m /p:Configuration=Release /p:Platform=x64
 
     - name: Setup cmake
       uses: lukka/get-cmake@latest
@@ -87,7 +87,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -G "Visual Studio 18 2026" -DSTATIC_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
 
     - name: Run cppcheck
       run: |

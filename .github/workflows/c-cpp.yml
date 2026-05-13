@@ -421,11 +421,12 @@ jobs:
     strategy:
       matrix:
         config:
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "ON", upnp: "ON", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "ON", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "ON"}
-          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "OFF"}
+          - {vs: Visual Studio 18 2026, os: 2025-vs2026, vspath: "C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise", win7: "OFF", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", win7: "ON", rx: "ON", upnp: "ON", grpc: "ON", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", win7: "ON", rx: "ON", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", win7: "ON", rx: "OFF", upnp: "ON", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", win7: "ON", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "ON"}
+          - {vs: Visual Studio 17 2022, os: 2022, vspath: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise", win7: "ON", rx: "OFF", upnp: "OFF", grpc: "OFF", tls: "OFF"}
 
     steps:
     - name: Checkout repository
@@ -444,10 +445,11 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }} -DWITH_GRPC=${{ matrix.config.grpc }} -DWITH_TLS=${{ matrix.config.tls }} -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -G "${{ matrix.config.vs }}" -DCMAKE_SYSTEM_VERSION="10.0" -DWITH_RANDOMX=${{ matrix.config.rx }} -DWITH_UPNP=${{ matrix.config.upnp }} -DWITH_GRPC=${{ matrix.config.grpc }} -DWITH_TLS=${{ matrix.config.tls }} -DOPENSSL_NO_ASM=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
         & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release p2pool.vcxproj
 
     - name: Check Windows 7 compatibility
+      if: matrix.config.win7 == 'ON'
       shell: cmd
       run: |
         call "${{ matrix.config.vspath }}\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64
