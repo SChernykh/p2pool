@@ -62,7 +62,7 @@ jobs:
 
   cppcheck-windows:
 
-    timeout-minutes: 120
+    timeout-minutes: 240
     runs-on: windows-2025-vs2026
 
     steps:
