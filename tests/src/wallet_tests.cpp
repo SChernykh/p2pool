@@ -92,7 +92,7 @@ TEST(wallet, input_output)
 		// Test Wallet::decode()
 		Wallet w(address);
 		ASSERT_TRUE(w.valid());
-		ASSERT_EQ(w.type(), t);
+		ASSERT_EQ(w.get_type(), t);
 		ASSERT_EQ(w.is_subaddress(), subaddress);
 		ASSERT_EQ(w.prefix(), prefix);
 		ASSERT_EQ(w.checksum(), checksum);
@@ -114,18 +114,18 @@ TEST(wallet, input_output)
 		ASSERT_EQ(w1.spend_public_key(), w.spend_public_key());
 		ASSERT_EQ(w1.view_public_key(),  w.view_public_key());
 		ASSERT_EQ(w1.checksum(),         w.checksum());
-		ASSERT_EQ(w1.type(),             w.type());
+		ASSERT_EQ(w1.get_type(),         w.get_type());
 		ASSERT_EQ(w1.is_subaddress(),    w.is_subaddress());
 
 		// Test Wallet::assign()
 		Wallet w2(nullptr);
-		ASSERT_TRUE(w2.assign(w.spend_public_key(), w.view_public_key(), w.type(), w.is_subaddress()));
+		ASSERT_TRUE(w2.assign(w.spend_public_key(), w.view_public_key(), w.get_type(), w.is_subaddress()));
 
 		ASSERT_EQ(w2.prefix(),           w.prefix());
 		ASSERT_EQ(w2.spend_public_key(), w.spend_public_key());
 		ASSERT_EQ(w2.view_public_key(),  w.view_public_key());
 		ASSERT_EQ(w2.checksum(),         w.checksum());
-		ASSERT_EQ(w2.type(),             w.type());
+		ASSERT_EQ(w2.get_type(),         w.get_type());
 		ASSERT_EQ(w2.is_subaddress(),    w.is_subaddress());
 
 		// Test Wallet::encode()

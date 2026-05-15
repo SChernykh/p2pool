@@ -37,7 +37,7 @@ public:
 
 		static Client* allocate() { return new ConsoleClient(); }
 
-		size_t size() const override { return sizeof(ConsoleClient); }
+		size_t get_size() const override { return sizeof(ConsoleClient); }
 
 		bool on_connect() override { return true; };
 		bool on_read(const char* data, uint32_t size) override { static_cast<ConsoleCommands*>(m_owner)->process_input(m_command, data, size, true); return true; };

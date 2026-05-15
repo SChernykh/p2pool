@@ -57,7 +57,7 @@ public:
 	[[nodiscard]] FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
 	[[nodiscard]] FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
 	[[nodiscard]] FORCEINLINE uint32_t checksum() const { return m_checksum; }
-	[[nodiscard]] FORCEINLINE NetworkType type() const { return m_type; }
+	[[nodiscard]] FORCEINLINE NetworkType get_type() const { return m_type; }
 	[[nodiscard]] FORCEINLINE bool is_subaddress() const { return m_subaddress; }
 	[[nodiscard]] bool torsion_check() const;
 

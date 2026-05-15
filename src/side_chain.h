@@ -81,7 +81,7 @@ public:
 	[[nodiscard]] bool is_default() const;
 	[[nodiscard]] bool is_mini() const;
 	[[nodiscard]] bool is_nano() const;
-	[[nodiscard]] uint64_t bottom_height(const PoolBlock* tip) const;
+	[[nodiscard]] uint64_t get_bottom_height(const PoolBlock* tip) const;
 
 	[[nodiscard]] const PoolBlock* chainTip() const { return m_chainTip; }
 	[[nodiscard]] bool precalcFinished() const { return m_precalcFinished.load(); }

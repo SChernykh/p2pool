@@ -34,7 +34,7 @@ public:
 	static constexpr char TARI_PREFIX[] = "tari://";
 
 	bool get_params(ChainParameters& out_params) const override;
-	void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
+	void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[HASHING_BLOB_MAX_SIZE], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) override;
 
 	void print_status() const override;
 	void api_status(log::Stream&) const override;
@@ -97,7 +97,7 @@ private:
 		~TariClient() override {}
 
 		static Client* allocate() { return new TariClient(); }
-		virtual size_t size() const override { return sizeof(TariClient); }
+		virtual size_t get_size() const override { return sizeof(TariClient); }
 
 		void reset() override;
 		[[nodiscard]] bool on_connect() override;

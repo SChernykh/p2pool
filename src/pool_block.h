@@ -72,6 +72,9 @@ static constexpr uint64_t CRYPTONOTE_MAX_BLOCK_NUMBER = 500000000ULL;
 static constexpr uint64_t MERGE_MINING_MAX_CHAINS = 256;
 static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
 
+static constexpr uint64_t HASHING_BLOB_MIN_SIZE = 76;
+static constexpr uint64_t HASHING_BLOB_MAX_SIZE = 128;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}

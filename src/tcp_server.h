@@ -61,7 +61,7 @@ public:
 		Client(char* read_buf, size_t size);
 		virtual ~Client() {}
 
-		virtual size_t size() const = 0;
+		virtual size_t get_size() const = 0;
 
 		virtual void reset();
 		[[nodiscard]] virtual bool on_connect() = 0;

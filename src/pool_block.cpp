@@ -366,7 +366,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 	uint64_t count;
 
-	uint8_t blob[128];
+	uint8_t blob[HASHING_BLOB_MAX_SIZE];
 	size_t blob_size = 0;
 
 	{

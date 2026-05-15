@@ -100,7 +100,7 @@ p2pool::p2pool(const Params& params)
 		throw std::exception();
 	}
 
-	const NetworkType type = m_params.m_miningWallet.type();
+	const NetworkType type = m_params.m_miningWallet.get_type();
 
 	if (type == NetworkType::Testnet) {
 		LOGWARN(1, "Mining to a testnet wallet address");
@@ -945,12 +945,17 @@ void p2pool::submit_aux_block() const
 
 		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
-		uint8_t hashing_blob[128] = {};
+		uint8_t hashing_blob[HASHING_BLOB_MAX_SIZE] = {};
 		uint64_t height = 0;
 		difficulty_type diff, aux_diff, sidechain_diff;
 		hash seed_hash;
 
-		m_blockTemplate->get_hashing_blob(template_id, extra_nonce, hashing_blob, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset);
+		const uint32_t hashing_blob_size = m_blockTemplate->get_hashing_blob(template_id, extra_nonce, hashing_blob, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset);
+
+		if ((hashing_blob_size < HASHING_BLOB_MIN_SIZE) || (hashing_blob_size > HASHING_BLOB_MAX_SIZE)) {
+			LOGWARN(3, "submit_aux_block: invalid hashing_blob_size (" << hashing_blob_size << " bytes)");
+			return;
+		}
 
 		if (blob.empty()) {
 			LOGWARN(3, "submit_aux_block: block template blob not found");
@@ -1054,8 +1059,8 @@ void p2pool::submit_block() const
 		submit_data = m_submitBlockData;
 	}
 
-	const uint64_t height = m_blockTemplate->height();
-	const difficulty_type diff = m_blockTemplate->difficulty();
+	const uint64_t height = m_blockTemplate->get_height();
+	const difficulty_type diff = m_blockTemplate->get_difficulty();
 
 	size_t nonce_offset = 0;
 	size_t extra_nonce_offset = 0;
@@ -1902,7 +1907,7 @@ void p2pool::api_update_pool_stats()
 	}
 
 	const PoolBlock* tip = m_sideChain->chainTip();
-	const uint64_t bottom_height = m_sideChain->bottom_height(tip);
+	const uint64_t bottom_height = m_sideChain->get_bottom_height(tip);
 	const uint64_t pplns_window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + 1U) : m_sideChain->chain_window_size();
 
 	uint64_t t;
@@ -1912,7 +1917,7 @@ void p2pool::api_update_pool_stats()
 	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
-	const auto& s = m_blockTemplate->shares();
+	const auto& s = m_blockTemplate->get_shares();
 	const difficulty_type pplns_weight = std::accumulate(s.begin(), s.end(), difficulty_type(), [](const auto& a, const auto& b) { return a + b.m_weight; });
 
 	time_t last_block_found_time = 0;

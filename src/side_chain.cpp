@@ -1081,7 +1081,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 
 	LOGINFO(0, "status" <<
 		"\nMonero node               = " << m_pool->current_host().m_displayName <<
-		"\nMain chain height         = " << m_pool->block_template().height() <<
+		"\nMain chain height         = " << m_pool->block_template().get_height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : (is_nano() ? "nano" : m_consensusIdDisplayStr.c_str()))) <<
 		"\nSide chain height         = " << tip_height + 1 <<
@@ -1208,7 +1208,7 @@ bool SideChain::is_nano() const
 	return (memcmp(m_consensusId.data(), nano_consensus_id, HASH_SIZE) == 0);
 }
 
-uint64_t SideChain::bottom_height(const PoolBlock* tip) const
+uint64_t SideChain::get_bottom_height(const PoolBlock* tip) const
 {
 	if (!tip) {
 		return 0;

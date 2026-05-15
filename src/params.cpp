@@ -122,7 +122,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	char display_wallet_buf[Wallet::ADDRESS_LENGTH] = {};
 
 	if (m_mainWallet.valid() && m_subaddress.valid()) {
-		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.type(), false)) {
+		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.get_type(), false)) {
 			LOGERR(1, "Failed to configure the mining wallet, falling back to " << m_mainWallet);
 			m_miningWallet = m_mainWallet;
 			m_mainWallet.encode(display_wallet_buf);
@@ -531,7 +531,7 @@ bool Params::valid() const
 			LOGERR(1, "Subaddress must start with 8... Try \"p2pool --help\".");
 			return false;
 		}
-		if (m_subaddress.type() != m_mainWallet.type()) {
+		if (m_subaddress.get_type() != m_mainWallet.get_type()) {
 			LOGERR(1, "Subaddress must belong to the same network type as the main wallet address. Try \"p2pool --help\".");
 			return false;
 		}

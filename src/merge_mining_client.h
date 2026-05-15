@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include "pool_block.h"
 
 namespace p2pool {
 
@@ -49,7 +50,7 @@ public:
 
 	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;
 	virtual void on_external_block(const PoolBlock& block) = 0;
-	virtual void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[128], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) = 0;
+	virtual void submit_solution(const std::vector<uint8_t>& coinbase_merkle_proof, const uint8_t (&hashing_blob)[HASHING_BLOB_MAX_SIZE], size_t nonce_offset, const hash& seed_hash, const std::vector<uint8_t>& blob, const std::vector<hash>& merkle_proof, uint32_t merkle_proof_path) = 0;
 
 	virtual void print_status() const = 0;
 	virtual void api_status(log::Stream&) const = 0;

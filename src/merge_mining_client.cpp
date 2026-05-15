@@ -233,7 +233,7 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 
 	// hashing_blob
 
-	uint8_t hashing_blob[128] = {};
+	uint8_t hashing_blob[HASHING_BLOB_MAX_SIZE] = {};
 	memcpy(hashing_blob, block.m_hashingBlob.data(), block.m_hashingBlob.size());
 
 	// nonce_offset and blob

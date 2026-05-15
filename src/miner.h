@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include "pool_block.h"
 #include <chrono>
 
 namespace p2pool {
@@ -65,7 +66,7 @@ private:
 
 	struct Job
 	{
-		uint8_t m_blob[128] = {};
+		uint8_t m_blob[HASHING_BLOB_MAX_SIZE] = {};
 		uint32_t m_blobSize = 0;
 		uint32_t m_templateId = 0;
 		difficulty_type m_diff = {};

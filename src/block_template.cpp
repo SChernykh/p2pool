@@ -1220,7 +1220,7 @@ bool BlockTemplate::get_difficulties(const uint32_t template_id, uint64_t& heigh
 	return false;
 }
 
-uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const
+uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[HASHING_BLOB_MAX_SIZE], uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const
 {
 	ReadLock lock(m_lock);
 
@@ -1244,7 +1244,7 @@ uint32_t BlockTemplate::get_hashing_blob(const uint32_t template_id, uint32_t ex
 	return 0;
 }
 
-uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
+uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[HASHING_BLOB_MAX_SIZE], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
 {
 	ReadLock lock(m_lock);
 
@@ -1308,18 +1308,15 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 	nonce_offset = m_nonceOffset;
 	template_id = m_templateId;
 
-	constexpr size_t MIN_BLOB_SIZE = 76;
-	constexpr size_t MAX_BLOB_SIZE = 128;
-
-	blobs.resize(MAX_BLOB_SIZE);
+	blobs.resize(HASHING_BLOB_MAX_SIZE);
 	const uint32_t blob_size = get_hashing_blob_nolock(extra_nonce_start, blobs.data());
 
-	if (blob_size > MAX_BLOB_SIZE) {
-		LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << blob_size << ", expected <= " << MAX_BLOB_SIZE);
+	if (blob_size > HASHING_BLOB_MAX_SIZE) {
+		LOGERR(1, "internal error: get_hashing_blob_nolock returned too large blob size " << blob_size << ", expected <= " << HASHING_BLOB_MAX_SIZE);
 		PANIC_STOP();
 	}
-	else if (blob_size < MIN_BLOB_SIZE) {
-		LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << blob_size << ", expected >= " << MIN_BLOB_SIZE);
+	else if (blob_size < HASHING_BLOB_MIN_SIZE) {
+		LOGERR(1, "internal error: get_hashing_blob_nolock returned too little blob size " << blob_size << ", expected >= " << HASHING_BLOB_MIN_SIZE);
 	}
 
 	blobs.resize(static_cast<size_t>(blob_size) * count);

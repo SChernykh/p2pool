@@ -115,7 +115,7 @@ StratumServer::~StratumServer()
 
 void StratumServer::on_block(const BlockTemplate& block)
 {
-	LOGINFO(4, "new block template at height " << block.height());
+	LOGINFO(4, "new block template at height " << block.get_height());
 
 	const uint32_t num_connections = m_numConnections;
 	if (num_connections == 0) {
@@ -143,8 +143,8 @@ void StratumServer::on_block(const BlockTemplate& block)
 	blobs_data->m_blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, aux_diff, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
 
 	// Integrity checks
-	if (blobs_data->m_blobSize < 76) {
-		LOGERR(1, "internal error: get_hashing_blobs returned too small blobs (" << blobs_data->m_blobSize << " bytes)");
+	if ((blobs_data->m_blobSize < HASHING_BLOB_MIN_SIZE) || (blobs_data->m_blobSize > HASHING_BLOB_MAX_SIZE)) {
+		LOGERR(1, "internal error: get_hashing_blobs returned wrong sized blobs (" << blobs_data->m_blobSize << " bytes)");
 		delete blobs_data;
 		return;
 	}
@@ -285,7 +285,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 
 	const uint32_t extra_nonce = m_extraNonce.fetch_add(1);
 
-	uint8_t hashing_blob[128];
+	uint8_t hashing_blob[HASHING_BLOB_MAX_SIZE];
 	uint64_t height, sidechain_height;
 	difficulty_type difficulty;
 	difficulty_type aux_diff;
@@ -1004,7 +1004,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 			LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
 		}
 
-		uint8_t blob[128];
+		uint8_t blob[HASHING_BLOB_MAX_SIZE];
 		uint64_t height;
 		difficulty_type difficulty;
 		difficulty_type aux_diff;

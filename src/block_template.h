@@ -18,6 +18,7 @@
 #pragma once
 
 #include "uv_util.h"
+#include "pool_block.h"
 
 #define TEST_MEMPOOL_PICKING_ALGORITHM 0
 
@@ -41,32 +42,32 @@ public:
 	BlockTemplate& operator=(const BlockTemplate& b);
 
 	void update(const MinerData& data, const Mempool& mempool, const Params& params);
-	uint64_t last_updated() const { return m_lastUpdated.load(); }
+	[[nodiscard]] uint64_t last_updated() const { return m_lastUpdated.load(); }
 
-	bool get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty) const;
-	uint32_t get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const;
+	[[nodiscard]] bool get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty) const;
+	[[nodiscard]] uint32_t get_hashing_blob(const uint32_t template_id, uint32_t extra_nonce, uint8_t (&blob)[HASHING_BLOB_MAX_SIZE], uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset) const;
 
-	uint32_t get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[128], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
-	uint32_t get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
+	[[nodiscard]] uint32_t get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[HASHING_BLOB_MAX_SIZE], uint64_t& height, uint64_t& sidechain_height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
+	[[nodiscard]] uint32_t get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const;
 
-	std::vector<AuxChainData> get_aux_chains(const uint32_t template_id) const;
-	bool get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof, uint32_t& path) const;
+	[[nodiscard]] std::vector<AuxChainData> get_aux_chains(const uint32_t template_id) const;
+	[[nodiscard]] bool get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof, uint32_t& path) const;
 
-	std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const;
+	[[nodiscard]] std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const;
 
-	FORCEINLINE uint64_t height() const { return m_height; }
-	FORCEINLINE difficulty_type difficulty() const { return m_difficulty; }
+	[[nodiscard]] FORCEINLINE uint64_t get_height() const { return m_height; }
+	[[nodiscard]] FORCEINLINE difficulty_type get_difficulty() const { return m_difficulty; }
 
-	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	[[nodiscard]] bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
 
-	FORCEINLINE const std::vector<MinerShare>& shares() const { return m_shares; }
-	FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
+	[[nodiscard]] FORCEINLINE const std::vector<MinerShare>& get_shares() const { return m_shares; }
+	[[nodiscard]] FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
 
-	FORCEINLINE std::vector<uint8_t> get_coinbase_merkle_proof() const { ReadLock lock(m_lock); return m_merkleTreeMainBranch; }
+	[[nodiscard]] FORCEINLINE std::vector<uint8_t> get_coinbase_merkle_proof() const { ReadLock lock(m_lock); return m_merkleTreeMainBranch; }
 
 #ifdef P2POOL_UNIT_TESTS
-	FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
-	FORCEINLINE std::mt19937_64& rng() { return m_rng; }
+	[[nodiscard]] FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
+	[[nodiscard]] FORCEINLINE std::mt19937_64& rng() { return m_rng; }
 #endif
 
 private:
@@ -75,12 +76,12 @@ private:
 
 private:
 	void select_mempool_transactions(const Mempool& mempool);
-	int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
-	hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
-	hash calc_miner_tx_hash(uint32_t extra_nonce) const;
+	[[nodiscard]] int create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run);
+	[[nodiscard]] hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
+	[[nodiscard]] hash calc_miner_tx_hash(uint32_t extra_nonce) const;
 	void calc_merkle_tree_main_branch();
 
-	uint32_t get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* blob) const;
+	[[nodiscard]] uint32_t get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* blob) const;
 
 	mutable uv_rwlock_t m_lock;
 
