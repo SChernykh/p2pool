@@ -87,7 +87,7 @@ struct CurlContext : public nocopy_nomove
 	}
 
 	CURLcode on_ssl_ctx(CURL *curl, void *data);
-	void on_cert(X509* cert);
+	void on_cert(const X509* cert);
 #endif
 
 	int on_socket(CURL* easy, curl_socket_t s, int action);
@@ -465,16 +465,17 @@ size_t CurlContext::on_write(const char* buffer, size_t size, size_t count)
 CURLcode CurlContext::on_ssl_ctx(CURL*, void *data)
 {
 	SSL_CTX* ssl_ctx = static_cast<SSL_CTX*>(data);
-	SSL_CTX_set_app_data(ssl_ctx, this);
+	// cppcheck-suppress cstyleCast
+	SSL_CTX_set_app_data(ssl_ctx, reinterpret_cast<char*>(this));
 
 	SSL_CTX_set_info_callback(ssl_ctx, info_func);
 
 	return CURLE_OK;
 }
 
-void CurlContext::on_cert(X509* cert)
+void CurlContext::on_cert(const X509* cert)
 {
-	X509_PUBKEY* pubkey = X509_get_X509_PUBKEY(cert);
+	const X509_PUBKEY* pubkey = X509_get_X509_PUBKEY(cert);
 	if (!pubkey) {
 		return;
 	}

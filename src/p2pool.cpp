@@ -1397,7 +1397,18 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 						const std::string& name = h.m_displayName;
 						if (name != host.m_displayName) {
 							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-								[this, name](const JSONRPCRequest::CallbackData& data) { update_host_ping(name, data.m_ping); },
+								[this, name
+#ifdef WITH_TLS
+									, host
+#endif
+								](const JSONRPCRequest::CallbackData& data) {
+									update_host_ping(name, data.m_ping);
+#ifdef WITH_TLS
+									if (!data.m_spkiFingerprint.empty()) {
+										LOGINFO(1, host.m_displayName << " fingerprint is " << log::LightCyan() << data.m_spkiFingerprint);
+									}
+#endif
+								},
 								[](const JSONRPCRequest::CallbackData&) {});
 						}
 					}
@@ -1512,32 +1523,13 @@ void p2pool::get_info()
 		},
 		[this, host](const JSONRPCRequest::CallbackData& data)
 		{
-			bool next_host = false;
-
 			if (!data.m_error.empty()) {
 				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: " << data.m_error << ", trying again in 1 second");
-				next_host = true;
-			}
-#ifdef WITH_TLS
-			else if (!data.m_spkiFingerprint.empty()) {
-				LOGINFO(1, host.m_displayName << " fingerprint is " << log::LightCyan() << data.m_spkiFingerprint);
-
-				if (!host.m_rpcSSL_Fingerprint.empty() && (host.m_rpcSSL_Fingerprint != data.m_spkiFingerprint)) {
-					LOGERR(1, "RPC SSL fingerprint didn't match for host " << host.m_displayName << ": expected " << host.m_rpcSSL_Fingerprint << ", got " << data.m_spkiFingerprint);
-					next_host = true;
+				if (!m_stopped) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					switch_host();
+					get_info();
 				}
-			}
-#endif
-
-			if (!next_host) {
-#ifdef WITH_TLS
-				set_current_host_fingerprint(data.m_spkiFingerprint);
-#endif
-			}
-			else if (!m_stopped) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				switch_host();
-				get_info();
 			}
 		});
 }
@@ -1737,10 +1729,15 @@ void p2pool::get_miner_data(bool retry)
 					return;
 				}
 			}
-			m_getMinerDataPending = false;
+
 #ifdef WITH_TLS
+			if (!data.m_spkiFingerprint.empty()) {
+				LOGINFO(1, host.m_displayName << " fingerprint is " << log::LightCyan() << data.m_spkiFingerprint);
+			}
 			set_current_host_fingerprint(data.m_spkiFingerprint);
 #endif
+
+			m_getMinerDataPending = false;
 		});
 }
 
