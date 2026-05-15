@@ -151,6 +151,10 @@ p2pool::p2pool(const Params& params)
 	}
 	m_getMissingHeightsAsync.data = this;
 
+#ifdef WITH_TLS
+	uv_rwlock_init_checked(&m_currentHostFingerprintLock);
+#endif
+
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
 #ifndef P2POOL_UNIT_TESTS
@@ -234,6 +238,10 @@ p2pool::~p2pool()
 	for (const IMergeMiningClient* c : merge_mining_clients) {
 		delete c;
 	}
+
+#ifdef WITH_TLS
+	uv_rwlock_destroy(&m_currentHostFingerprintLock);
+#endif
 
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
@@ -525,10 +533,10 @@ void p2pool::get_missing_heights()
 	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this, h](const char* data, size_t size, double)
+		[this, h](const JSONRPCRequest::CallbackData& data)
 		{
 			ChainMain block;
-			if (!parse_block_header(data, size, block)) {
+			if (!parse_block_header(data.m_response.data(), data.m_response.size(), block)) {
 				LOGERR(1, "couldn't download block header for height " << h);
 
 				MutexLock lock(m_missingHeightsLock);
@@ -536,10 +544,10 @@ void p2pool::get_missing_heights()
 			}
 			get_missing_heights();
 		},
-		[this, h](const char* data, size_t size, double)
+		[this, h](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGERR(1, "couldn't download block header for height " << h << ", error " << log::const_buf(data, size));
+			if (!data.m_error.empty()) {
+				LOGERR(1, "couldn't download block header for height " << h << ", error " << data.m_error);
 
 				MutexLock lock(m_missingHeightsLock);
 				m_missingHeights.push_back(h);
@@ -1135,10 +1143,10 @@ void p2pool::submit_block() const
 	const uint64_t t1 = microseconds_since_epoch();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, request, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const char* data, size_t size, double)
+		[height, diff, template_id, nonce, extra_nonce, merge_mining_root, is_external](const JSONRPCRequest::CallbackData& data)
 		{
 			rapidjson::Document doc;
-			if (doc.Parse(data, size).HasParseError() || !doc.IsObject()) {
+			if (doc.Parse(data.m_response.data(), data.m_response.size()).HasParseError() || !doc.IsObject()) {
 				LOGERR(0, "submit_block: invalid JSON response from daemon");
 				return;
 			}
@@ -1177,16 +1185,16 @@ void p2pool::submit_block() const
 				}
 			}
 
-			LOGWARN(0, "submit_block: daemon sent unrecognizable reply: " << log::const_buf(data, size));
+			LOGWARN(0, "submit_block: daemon sent unrecognizable reply: " << log::const_buf(data.m_response.data(), data.m_response.size()));
 		},
-		[is_external, t1](const char* data, size_t size, double)
+		[is_external, t1](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
+			if (!data.m_error.empty()) {
 				if (is_external) {
-					LOGWARN(3, "submit_block (external blob): RPC request failed, error " << log::const_buf(data, size));
+					LOGWARN(3, "submit_block (external blob): RPC request failed, error " << data.m_error);
 				}
 				else {
-					LOGERR(0, "submit_block: RPC request failed, error " << log::const_buf(data, size));
+					LOGERR(0, "submit_block: RPC request failed, error " << data.m_error);
 				}
 			}
 			else {
@@ -1254,9 +1262,9 @@ void p2pool::download_block_headers1(uint64_t current_height)
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
+		[this, prev_seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
 			ChainMain block;
-			if (parse_block_header(data, size, block)) {
+			if (parse_block_header(data.m_response.data(), data.m_response.size(), block)) {
 				// Do it synchronously to make sure stratum and p2p don't start before it's finished
 				m_hasher->set_old_seed(block.id);
 				download_block_headers2(current_height);
@@ -1266,9 +1274,9 @@ void p2pool::download_block_headers1(uint64_t current_height)
 				download_block_headers1(current_height);
 			}
 		},
-		[this, prev_seed_height, current_height](const char* data, size_t size, double) {
-			if (size > 0) {
-				LOGERR(1, "fatal error: couldn't download block header for seed height " << prev_seed_height << ", error " << log::const_buf(data, size));
+		[this, prev_seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
+			if (!data.m_error.empty()) {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << prev_seed_height << ", error " << data.m_error);
 				download_block_headers1(current_height);
 			}
 		});
@@ -1287,9 +1295,9 @@ void p2pool::download_block_headers2(uint64_t current_height)
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this, seed_height, current_height](const char* data, size_t size, double) {
+		[this, seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
 			ChainMain block;
-			if (parse_block_header(data, size, block)) {
+			if (parse_block_header(data.m_response.data(), data.m_response.size(), block)) {
 				const uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
 				download_block_headers3(start_height, current_height);
 			}
@@ -1298,9 +1306,9 @@ void p2pool::download_block_headers2(uint64_t current_height)
 				download_block_headers2(current_height);
 			}
 		},
-		[this, seed_height, current_height](const char* data, size_t size, double) {
-			if (size > 0) {
-				LOGERR(1, "fatal error: couldn't download block header for seed height " << seed_height << ", error " << log::const_buf(data, size));
+		[this, seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
+			if (!data.m_error.empty()) {
+				LOGERR(1, "fatal error: couldn't download block header for seed height " << seed_height << ", error " << data.m_error);
 				download_block_headers2(current_height);
 			}
 		});
@@ -1323,8 +1331,8 @@ void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_hei
 		s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << next_height << "}}" << '\0';
 
 		JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
-				if (parse_block_headers_range(data, size) == next_height - start_height + 1) {
+			[this, start_height, next_height, current_height](const JSONRPCRequest::CallbackData& data) {
+				if (parse_block_headers_range(data.m_response.data(), data.m_response.size()) == next_height - start_height + 1) {
 					download_block_headers3(next_height + 1, current_height);
 				}
 				else {
@@ -1332,9 +1340,9 @@ void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_hei
 					download_block_headers3(start_height, current_height);
 				}
 			},
-			[this, start_height, next_height, current_height](const char* data, size_t size, double) {
-				if (size > 0) {
-					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height << ", error " << log::const_buf(data, size));
+			[this, start_height, next_height, current_height](const JSONRPCRequest::CallbackData& data) {
+				if (!data.m_error.empty()) {
+					LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << next_height << ", error " << data.m_error);
 					download_block_headers3(start_height, current_height);
 				}
 			}
@@ -1356,9 +1364,9 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_headers_range\",\"params\":{\"start_height\":" << start_height << ",\"end_height\":" << current_height - 1 << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this, start_height, current_height, host](const char* data, size_t size, double)
+		[this, start_height, current_height, host](const JSONRPCRequest::CallbackData& data)
 		{
-			if (parse_block_headers_range(data, size) == current_height - start_height) {
+			if (parse_block_headers_range(data.m_response.data(), data.m_response.size()) == current_height - start_height) {
 				update_median_timestamp();
 				if (m_serversStarted.exchange(1) == 0) {
 					m_p2pServer = new P2PServer(this);
@@ -1389,8 +1397,8 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 						const std::string& name = h.m_displayName;
 						if (name != host.m_displayName) {
 							JSONRPCRequest::call(h.m_address, h.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", h.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-								[this, name](const char*, size_t, double tcp_ping) { update_host_ping(name, tcp_ping); },
-								[](const char*, size_t, double) {});
+								[this, name](const JSONRPCRequest::CallbackData& data) { update_host_ping(name, data.m_ping); },
+								[](const JSONRPCRequest::CallbackData&) {});
 						}
 					}
 
@@ -1416,10 +1424,10 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 				download_block_headers4(start_height, current_height);
 			}
 		},
-		[this, start_height, current_height](const char* data, size_t size, double)
+		[this, start_height, current_height](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << log::const_buf(data, size));
+			if (!data.m_error.empty()) {
+				LOGERR(1, "Couldn't download block headers for heights " << start_height << " - " << current_height - 1 << ", error " << data.m_error);
 				download_block_headers4(start_height, current_height);
 			}
 		});
@@ -1498,19 +1506,38 @@ void p2pool::get_info()
 	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_info\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this](const char* data, size_t size, double)
+		[this](const JSONRPCRequest::CallbackData& data)
 		{
-			parse_get_info_rpc(data, size);
+			parse_get_info_rpc(data.m_response.data(), data.m_response.size());
 		},
-		[this, host](const char* data, size_t size, double)
+		[this, host](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: " << log::const_buf(data, size) << ", trying again in 1 second");
-				if (!m_stopped) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					switch_host();
-					get_info();
+			bool next_host = false;
+
+			if (!data.m_error.empty()) {
+				LOGWARN(1, "get_info RPC request to host " << host.m_displayName << " failed: " << data.m_error << ", trying again in 1 second");
+				next_host = true;
+			}
+#ifdef WITH_TLS
+			else if (!data.m_spkiFingerprint.empty()) {
+				LOGINFO(1, host.m_displayName << " fingerprint is " << log::LightCyan() << data.m_spkiFingerprint);
+
+				if (!host.m_rpcSSL_Fingerprint.empty() && (host.m_rpcSSL_Fingerprint != data.m_spkiFingerprint)) {
+					LOGERR(1, "RPC SSL fingerprint didn't match for host " << host.m_displayName << ": expected " << host.m_rpcSSL_Fingerprint << ", got " << data.m_spkiFingerprint);
+					next_host = true;
 				}
+			}
+#endif
+
+			if (!next_host) {
+#ifdef WITH_TLS
+				set_current_host_fingerprint(data.m_spkiFingerprint);
+#endif
+			}
+			else if (!m_stopped) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				switch_host();
+				get_info();
 			}
 		});
 }
@@ -1617,14 +1644,14 @@ void p2pool::get_version()
 	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this](const char* data, size_t size, double)
+		[this](const JSONRPCRequest::CallbackData& data)
 		{
-			parse_get_version_rpc(data, size);
+			parse_get_version_rpc(data.m_response.data(), data.m_response.size());
 		},
-		[this](const char* data, size_t size, double)
+		[this](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGWARN(1, "get_version RPC request failed: " << log::const_buf(data, size) << ", trying again in 1 second");
+			if (!data.m_error.empty()) {
+				LOGWARN(1, "get_version RPC request failed: " << data.m_error << ", trying again in 1 second");
 				if (!m_stopped) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					get_version();
@@ -1694,15 +1721,15 @@ void p2pool::get_miner_data(bool retry)
 	const Params::Host& host = current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_miner_data\"}", host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this, host](const char* data, size_t size, double tcp_ping)
+		[this, host](const JSONRPCRequest::CallbackData& data)
 		{
-			parse_get_miner_data_rpc(data, size);
-			update_host_ping(host.m_displayName, tcp_ping);
+			parse_get_miner_data_rpc(data.m_response.data(), data.m_response.size());
+			update_host_ping(host.m_displayName, data.m_ping);
 		},
-		[this, host, retry](const char* data, size_t size, double)
+		[this, host, retry](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGWARN(1, "get_miner_data RPC request to host " << host.m_displayName << " failed: " << log::const_buf(data, size) << (retry ? ", trying again in 1 second" : ""));
+			if (!data.m_error.empty()) {
+				LOGWARN(1, "get_miner_data RPC request to host " << host.m_displayName << " failed: " << data.m_error << (retry ? ", trying again in 1 second" : ""));
 				if (!m_stopped && retry) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;
@@ -1711,6 +1738,9 @@ void p2pool::get_miner_data(bool retry)
 				}
 			}
 			m_getMinerDataPending = false;
+#ifdef WITH_TLS
+			set_current_host_fingerprint(data.m_spkiFingerprint);
+#endif
 		});
 }
 

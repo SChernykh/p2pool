@@ -107,7 +107,8 @@ std::string p2pool_version()
 		<< " - grpc " << GRPC_CPP_VERSION_STRING << '\n'
 #endif
 #ifndef P2POOL_UNIT_TESTS
-		<< " - libcurl " << (curl_version_data ? curl_version_data->version : "unknown") << '\n'
+		<< " - libcurl " << (curl_version_data ? curl_version_data->version : "unknown")
+		<< ", SSL library: " << (curl_version_data ? curl_version_data->ssl_version : "unknown") << '\n'
 #endif
 		<< " - libuv " << uv_version_string() << '\n'
 		<< " - libzmq " << zmq_major << '.' << zmq_minor << '.' << zmq_patch << '\n'

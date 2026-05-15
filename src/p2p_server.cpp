@@ -904,14 +904,14 @@ void P2PServer::load_monerod_peer_list()
 	const Params::Host& host = m_pool->current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, "/get_peer_list", host.m_rpcLogin, m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[this](const char* data, size_t size, double)
+		[this](const JSONRPCRequest::CallbackData& data)
 		{
 #define ERR_STR "/get_peer_list RPC request returned invalid JSON "
 
 			using namespace rapidjson;
 
 			Document doc;
-			if (doc.Parse(data, size).HasParseError()) {
+			if (doc.Parse(data.m_response.data(), data.m_response.size()).HasParseError()) {
 				LOGWARN(4, ERR_STR "(parse error)");
 				return;
 			}
@@ -971,10 +971,10 @@ void P2PServer::load_monerod_peer_list()
 
 			LOGINFO(4, "monerod peer list loaded (" << m_peerListMonero.size() << " peers)");
 		},
-		[](const char* data, size_t size, double)
+		[](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGWARN(4, "/get_peer_list RPC request failed: error " << log::const_buf(data, size));
+			if (!data.m_error.empty()) {
+				LOGWARN(4, "/get_peer_list RPC request failed: error " << data.m_error);
 			}
 		}, &m_loop);
 }
@@ -1882,10 +1882,10 @@ void P2PServer::submit_monero_blocks()
 		host.m_rpcSSL,
 		host.m_rpcSSL_Fingerprint,
 		JSONRPCRequest::dummy_callback,
-		[this, t1](const char* data, size_t size, double)
+		[this, t1](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGERR(3, "submit_monero_blocks: submit_block RPC request failed, error " << log::const_buf(data, size));
+			if (!data.m_error.empty()) {
+				LOGERR(3, "submit_monero_blocks: submit_block RPC request failed, error " << data.m_error);
 			}
 			else {
 				LOGINFO(4, "submit_monero_blocks: submit_block RPC completed in " << static_cast<double>(microseconds_since_epoch() - t1) / 1e3 << " ms");

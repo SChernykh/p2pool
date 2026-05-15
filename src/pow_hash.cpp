@@ -465,20 +465,20 @@ bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t h
 	const Params::Host& host = m_pool->current_host();
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
-		[&result, &h](const char* data, size_t size, double)
+		[&result, &h](const JSONRPCRequest::CallbackData& data)
 		{
 			rapidjson::Document doc;
-			if (doc.Parse(data, size).HasParseError() || !parseValue(doc, "result", h)) {
+			if (doc.Parse(data.m_response.data(), data.m_response.size()).HasParseError() || !parseValue(doc, "result", h)) {
 				LOGWARN(3, "RPC calc_pow: invalid JSON response (parse error)");
 				result = -1;
 				return;
 			}
 			result = 1;
 		},
-		[this, &result, &done](const char* data, size_t size, double)
+		[this, &result, &done](const JSONRPCRequest::CallbackData& data)
 		{
-			if (size > 0) {
-				LOGWARN(3, "RPC calc_pow: server returned error " << log::const_buf(data, size));
+			if (!data.m_error.empty()) {
+				LOGWARN(3, "RPC calc_pow: server returned error " << data.m_error);
 				result = -1;
 			}
 

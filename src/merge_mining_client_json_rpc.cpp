@@ -114,14 +114,14 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 	const std::string req = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_chain_id\"}";
 
 	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
-		[this](const char* data, size_t size, double ping) {
+		[this](const JSONRPCRequest::CallbackData& data) {
 			WriteLock lock(m_chainParamsLock);
 
-			if (parse_merge_mining_get_chain_id(data, size)) {
+			if (parse_merge_mining_get_chain_id(data.m_response.data(), data.m_response.size())) {
 				LOGINFO(1, m_host << ':' << m_port << " uses chain_id " << log::LightCyan() << m_chainParams.aux_id);
 
-				if (ping > 0.0) {
-					LOGINFO(1, m_host << ':' << m_port << " ping is " << ping << " ms");
+				if (data.m_ping > 0.0) {
+					LOGINFO(1, m_host << ':' << m_port << " ping is " << data.m_ping << " ms");
 				}
 
 				// Chain ID received successfully, we can start polling for new mining jobs now
@@ -131,9 +131,9 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 				}
 			}
 		},
-		[this](const char* data, size_t size, double) {
-			if (size > 0) {
-				LOGERR(1, "couldn't get merge mining id from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
+		[this](const JSONRPCRequest::CallbackData& data) {
+			if (!data.m_error.empty()) {
+				LOGERR(1, "couldn't get merge mining id from " << m_host << ':' << m_port << ", error " << data.m_error);
 			}
 		}, &m_loop);
 }
@@ -202,7 +202,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 	  << "}}";
 
 	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
-		[this](const char* data, size_t size, double) {
+		[this](const JSONRPCRequest::CallbackData& data) {
 			bool changed = false;
 			hash chain_id;
 
@@ -214,7 +214,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 				prev_aux_hash = m_chainParams.aux_hash;
 				prev_aux_blob = m_chainParams.aux_blob;
 
-				if (parse_merge_mining_get_aux_block(data, size, changed)) {
+				if (parse_merge_mining_get_aux_block(data.m_response.data(), data.m_response.size(), changed)) {
 					chain_id = m_chainParams.aux_id;
 				}
 			}
@@ -232,9 +232,9 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 				m_pool->update_aux_data(chain_id);
 			}
 		},
-		[this](const char* data, size_t size, double) {
-			if (size > 0) {
-				LOGERR(3, "couldn't get merge mining job from " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
+		[this](const JSONRPCRequest::CallbackData& data) {
+			if (!data.m_error.empty()) {
+				LOGERR(3, "couldn't get merge mining job from " << m_host << ':' << m_port << ", error " << data.m_error);
 			}
 			m_getJobRunning = false;
 		}, &m_loop);
@@ -334,12 +334,12 @@ void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*co
 		<< ",\"seed_hash\":\"" << seed_hash << "\"}}";
 
 	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
-		[this](const char* data, size_t size, double) {
-			parse_merge_mining_submit_solution(data, size);
+		[this](const JSONRPCRequest::CallbackData& data) {
+			parse_merge_mining_submit_solution(data.m_response.data(), data.m_response.size());
 		},
-		[this](const char* data, size_t size, double) {
-			if (size > 0) {
-				LOGERR(3, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << log::const_buf(data, size));
+		[this](const JSONRPCRequest::CallbackData& data) {
+			if (!data.m_error.empty()) {
+				LOGERR(3, "couldn't submit merge mining solution to " << m_host << ':' << m_port << ", error " << data.m_error);
 			}
 			// Get new mining job
 			on_timer();

@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	set_main_thread();
 	p2pool_usage();
 	IMergeMiningClient::create({}, {}, {});
-	JSONRPCRequest::call({}, 0, {}, {}, {}, false, {}, [](const char*, size_t, double){}, [](const char*, size_t, double){});
+	JSONRPCRequest::call({}, 0, {}, {}, {}, false, {}, JSONRPCRequest::dummy_callback, JSONRPCRequest::dummy_callback);
 
 	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
 

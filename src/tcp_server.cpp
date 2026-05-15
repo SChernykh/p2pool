@@ -730,7 +730,7 @@ void TCPServer::loop(void* data)
 
 	for (Client* c : server->m_preallocatedClients) {
 		ASAN_UNPOISON_MEMORY_REGION(c, sizeof(Client));
-		ASAN_UNPOISON_MEMORY_REGION(c, c->size());
+		ASAN_UNPOISON_MEMORY_REGION(c, c->get_size());
 		delete c;
 	}
 	server->m_preallocatedClients.clear();
@@ -1072,7 +1072,7 @@ TCPServer::Client* TCPServer::get_client()
 		c = m_preallocatedClients.back();
 		m_preallocatedClients.pop_back();
 		ASAN_UNPOISON_MEMORY_REGION(c, sizeof(Client));
-		ASAN_UNPOISON_MEMORY_REGION(c, c->size());
+		ASAN_UNPOISON_MEMORY_REGION(c, c->get_size());
 		c->reset();
 	}
 	else {
@@ -1558,7 +1558,7 @@ void TCPServer::Client::asan_poison_this() const
 	const uint8_t* begin = reinterpret_cast<const uint8_t*>(this);
 	const uint8_t* counter_begin = reinterpret_cast<const uint8_t*>(&m_resetCounter);
 	const uint8_t* counter_end = counter_begin + sizeof(m_resetCounter);
-	const uint8_t* end = begin + size();
+	const uint8_t* end = begin + get_size();
 
 	ASAN_POISON_MEMORY_REGION(begin, counter_begin - begin);
 	ASAN_POISON_MEMORY_REGION(counter_end, end - counter_end);

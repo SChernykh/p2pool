@@ -140,6 +140,10 @@ public:
 
 	bool startup_finished() const { return m_startupFinished.load(); }
 
+#ifdef WITH_TLS
+	FORCEINLINE std::string get_current_host_fingerprint() const { ReadLock lock(m_currentHostFingerprintLock); return m_currentHostFingerprint; }
+#endif
+
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
@@ -162,6 +166,17 @@ private:
 	std::vector<double> m_hostPing;
 
 	std::atomic<uint32_t> m_currentHostIndex;
+
+#ifdef WITH_TLS
+	mutable uv_rwlock_t m_currentHostFingerprintLock;
+	std::string m_currentHostFingerprint;
+
+	void set_current_host_fingerprint(const std::string& fingerprint)
+	{
+		WriteLock lock(m_currentHostFingerprintLock);
+		m_currentHostFingerprint = fingerprint;
+	}
+#endif
 
 	p2pool_api* m_api;
 	SideChain* m_sideChain;

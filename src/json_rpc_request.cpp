@@ -20,6 +20,11 @@
 #include "json_rpc_request.h"
 #include <curl/curl.h>
 
+#ifdef WITH_TLS
+#include <openssl/ssl.h>
+#include <openssl/x509.h>
+#endif
+
 LOG_CATEGORY(JSONRPCRequest)
 
 namespace p2pool {
@@ -47,6 +52,44 @@ struct CurlContext : public nocopy_nomove
 		return reinterpret_cast<CurlContext*>(ctx)->on_write(buffer, size, count);
 	}
 
+#ifdef WITH_TLS
+	static CURLcode ssl_ctx_func(CURL *curl, void *ssl_ctx, void *ctx)
+	{
+		return reinterpret_cast<CurlContext*>(ctx)->on_ssl_ctx(curl, ssl_ctx);
+	}
+
+	static void info_func(const SSL* ssl, int type, int /*value*/)
+	{
+		if (!(type & SSL_CB_HANDSHAKE_DONE)) {
+			return;
+		}
+
+		CurlContext* pThis = static_cast<CurlContext*>(SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl)));
+
+		if (!pThis || !pThis->m_callbackData.m_spkiFingerprint.empty()) {
+			return;
+		}
+
+		const STACK_OF(CRYPTO_BUFFER)* chain = SSL_get0_peer_certificates(ssl);
+
+		if (!chain || sk_CRYPTO_BUFFER_num(chain) == 0) {
+			return;
+		}
+
+		const CRYPTO_BUFFER* cbuf = sk_CRYPTO_BUFFER_value(chain, 0);
+		const uint8_t* der = CRYPTO_BUFFER_data(cbuf);
+		X509* cert = d2i_X509(nullptr, &der, static_cast<long>(CRYPTO_BUFFER_len(cbuf)));
+
+		if (cert) {
+			pThis->on_cert(cert);
+			X509_free(cert);
+		}
+	}
+
+	CURLcode on_ssl_ctx(CURL *curl, void *data);
+	void on_cert(X509* cert);
+#endif
+
 	int on_socket(CURL* easy, curl_socket_t s, int action);
 	int on_timer(CURLM* multi, long timeout_ms);
 
@@ -72,8 +115,7 @@ struct CurlContext : public nocopy_nomove
 	std::string m_url;
 	std::string m_req;
 
-	std::vector<char> m_response;
-	std::string m_error;
+	CallbackData m_callbackData;
 
 	curl_slist* m_headers;
 
@@ -226,7 +268,12 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 
 		curl_easy_setopt_checked(m_handle, CURLOPT_PINNEDPUBLICKEY, buf);
 	}
-#endif
+
+#ifdef P2POOL_STATIC_LIBS
+	curl_easy_setopt_checked(m_handle, CURLOPT_SSL_CTX_FUNCTION, ssl_ctx_func);
+	curl_easy_setopt_checked(m_handle, CURLOPT_SSL_CTX_DATA, this);
+#endif // P2POOL_STATIC_LIBS
+#endif // WITH_TLS
 
 	m_timer = new uv_timer_t{};
 
@@ -259,31 +306,29 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 
 CurlContext::~CurlContext()
 {
-	double tcp_ping = 0.0;
-
-	if (m_error.empty() && !m_response.empty()) {
+	if (m_callbackData.m_error.empty() && !m_callbackData.m_response.empty()) {
 		const uint64_t t = (m_proxy.empty() && m_connectedTime) ? m_connectedTime : microseconds_since_epoch();
-		tcp_ping = static_cast<double>(t - m_startTime) / 1000.0;
+		m_callbackData.m_ping = static_cast<double>(t - m_startTime) / 1000.0;
 
 		try {
-			(*m_callback)(m_response.data(), m_response.size(), tcp_ping);
+			(*m_callback)(m_callbackData);
 		}
 		catch (...) {
 		}
 	}
 	delete m_callback;
 
-	if (m_response.empty()) {
-		if (m_error.empty()) {
-			m_error = "empty response";
+	if (m_callbackData.m_response.empty()) {
+		if (m_callbackData.m_error.empty()) {
+			m_callbackData.m_error = "empty response";
 		}
 		else {
-			m_error += " (empty response)";
+			m_callbackData.m_error += " (empty response)";
 		}
 	}
 
 	try {
-		(*m_closeCallback)(m_error.c_str(), m_error.length(), tcp_ping);
+		(*m_closeCallback)(m_callbackData);
 	}
 	catch (...) {
 	}
@@ -412,9 +457,49 @@ size_t CurlContext::on_write(const char* buffer, size_t size, size_t count)
 	}
 
 	const size_t realsize = size * count;
-	m_response.insert(m_response.end(), buffer, buffer + realsize);
+	m_callbackData.m_response.insert(m_callbackData.m_response.end(), buffer, buffer + realsize);
 	return realsize;
 }
+
+#ifdef WITH_TLS
+CURLcode CurlContext::on_ssl_ctx(CURL*, void *data)
+{
+	SSL_CTX* ssl_ctx = static_cast<SSL_CTX*>(data);
+	SSL_CTX_set_app_data(ssl_ctx, this);
+
+	SSL_CTX_set_info_callback(ssl_ctx, info_func);
+
+	return CURLE_OK;
+}
+
+void CurlContext::on_cert(X509* cert)
+{
+	X509_PUBKEY* pubkey = X509_get_X509_PUBKEY(cert);
+	if (!pubkey) {
+		return;
+	}
+
+	uint8_t* der = nullptr;
+	const int der_len  = i2d_X509_PUBKEY(pubkey, &der);
+
+	if (der_len <= 0 || !der) {
+		return;
+	}
+
+	uint8_t hash[EVP_MAX_MD_SIZE];
+	uint32_t hash_len = 0;
+
+	const int result = EVP_Digest(der, static_cast<size_t>(der_len), hash, &hash_len, EVP_sha256(), nullptr);
+	OPENSSL_free(der);
+
+	if (result == 1) {
+		m_callbackData.m_spkiFingerprint.resize(((hash_len + 2) / 3) * 4 + 1);
+
+		const size_t n = EVP_EncodeBlock(reinterpret_cast<uint8_t*>(m_callbackData.m_spkiFingerprint.data()), hash, hash_len);
+		m_callbackData.m_spkiFingerprint.resize(n);
+	}
+}
+#endif
 
 void CurlContext::curl_perform(uv_poll_t* req, int status, int events)
 {
@@ -457,7 +542,7 @@ void CurlContext::check_multi_info()
 	while (CURLMsg* message = curl_multi_info_read(m_multiHandle, &pending)) {
 		if (message->msg == CURLMSG_DONE) {
 			if (message->data.result != CURLE_OK) {
-				m_error = curl_easy_strerror(message->data.result);
+				m_callbackData.m_error = curl_easy_strerror(message->data.result);
 			}
 			else {
 				long http_code = 0;
@@ -467,10 +552,10 @@ void CurlContext::check_multi_info()
 					char buf[32] = {};
 					log::Stream s(buf);
 					s << "HTTP error " << static_cast<int>(http_code) << '\0';
-					m_error = buf;
+					m_callbackData.m_error = buf;
 				}
-				else if (m_response.empty()) {
-					m_error = "empty response";
+				else if (m_callbackData.m_response.empty()) {
+					m_callbackData.m_error = "empty response";
 				}
 			}
 
@@ -533,7 +618,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 			catch (const std::exception& e) {
 				const char* msg = e.what();
 				try {
-					(*close_cb)(msg, strlen(msg), 0.0);
+					(*close_cb)(CallbackData{ {}, msg });
 				}
 				catch (...) {
 				}
@@ -545,7 +630,7 @@ void Call(const std::string& address, int port, const std::string& req, const st
 	if (!result) {
 		static constexpr char err[] = "CallOnLoop failed";
 		LOGERR(1, err);
-		(*close_cb)(err, sizeof(err) - 1, 0.0);
+		(*close_cb)(CallbackData{ {}, err });
 		delete cb;
 		delete close_cb;
 	}
