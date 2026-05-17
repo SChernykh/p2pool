@@ -2462,15 +2462,15 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 
 	struct Work
 	{
-		uv_work_t req;
-		P2PClient* client;
-		P2PServer* server;
-		uint32_t reset_counter;
-		bool is_incoming;
+		uv_work_t req = {};
+		P2PClient* client = nullptr;
+		P2PServer* server = nullptr;
+		uint32_t reset_counter = 0;
+		bool is_incoming = false;
 
-		uint8_t challenge[CHALLENGE_SIZE];
-		uint64_t salt;
-		uint8_t solution_salt[CHALLENGE_SIZE];
+		uint8_t challenge[CHALLENGE_SIZE] = {};
+		uint64_t salt = 0;
+		uint8_t solution_salt[CHALLENGE_SIZE] = {};
 		hash solution;
 	};
 
@@ -3426,25 +3426,25 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 	struct Work
 	{
-		uv_work_t req;
+		uv_work_t req = {};
 
-		P2PServer* server;
-		P2PClient* client;
+		P2PServer* server = nullptr;
+		P2PClient* client = nullptr;
 
-		uint32_t reset_counter;
-		bool is_v6;
+		uint32_t reset_counter = 0;
+		bool is_v6 = false;
 		raw_ip addr;
 
-		RandomX_Hasher_Base* hasher;
+		RandomX_Hasher_Base* hasher = nullptr;
 
 		std::vector<uint8_t> blob;
-		uint64_t height;
+		uint64_t height = 0;
 		hash seed;
 		difficulty_type diff;
 
 		std::vector<uint8_t> message;
 
-		bool pow_check_passed;
+		bool pow_check_passed = false;
 	};
 
 	Work* work = new Work{ {}, server, this, m_resetCounter, isV6(), m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
@@ -3591,15 +3591,15 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 
 	struct Work
 	{
-		uv_work_t req;
+		uv_work_t req = {};
 		PoolBlock block;
-		P2PClient* client;
-		P2PServer* server;
-		uint32_t client_reset_counter;
-		bool client_isV6;
+		P2PClient* client = nullptr;
+		P2PServer* server = nullptr;
+		uint32_t client_reset_counter = 0;
+		bool client_isV6 = false;
 		raw_ip client_ip;
 		std::vector<hash> missing_blocks;
-		bool result;
+		bool result = false;
 	};
 
 	Work* work = new Work{ {}, *block, this, server, m_resetCounter.load(), isV6(), m_addr, {}, true };

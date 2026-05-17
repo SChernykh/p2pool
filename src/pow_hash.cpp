@@ -129,10 +129,10 @@ void RandomX_Hasher::set_seed_async(const hash& seed)
 
 	struct Work
 	{
-		p2pool* pool;
-		RandomX_Hasher* hasher;
+		p2pool* pool = nullptr;
+		RandomX_Hasher* hasher = nullptr;
 		hash seed;
-		uv_work_t req;
+		uv_work_t req = {};
 	};
 
 	Work* work = new Work{ m_pool, this, seed, {} };

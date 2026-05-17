@@ -198,7 +198,7 @@ void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
 
 	struct Work
 	{
-		uv_work_t req;
+		uv_work_t req = {};
 		std::shared_ptr<Callback> cb;
 	};
 

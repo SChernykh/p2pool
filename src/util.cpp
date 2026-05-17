@@ -792,9 +792,9 @@ void DeleteLoopUserData(uv_loop_t* loop)
 #ifdef WITH_UPNP
 static struct UPnP_Discover
 {
-	uv_mutex_t lock;
-	int error;
-	UPNPDev* devlist;
+	uv_mutex_t lock = {};
+	int error = 0;
+	UPNPDev* devlist = nullptr;
 } upnp_discover;
 
 void init_upnp()

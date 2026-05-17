@@ -54,7 +54,7 @@ MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::st
 	const size_t k = m_host.find_last_of(':');
 	if (k != std::string::npos) {
 		m_port = static_cast<int32_t>(strtoul(m_host.c_str() + k + 1, nullptr, 10));
-		m_host = m_host.substr(0, k);
+		m_host.resize(k);
 
 		// Handle IPv6 addresses
 		if ((m_host.length() > 2) && (m_host.find_first_of(':') != std::string::npos) && (m_host.front() == '[') && (m_host.back() == ']')) {
@@ -136,9 +136,11 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 					LOGINFO(1, m_host << ':' << m_port << " ping is " << data.m_ping << " ms");
 				}
 
+#ifdef WITH_TLS
 				if (!data.m_spkiFingerprint.empty()) {
 					LOGINFO(1, m_host << ':' << m_port << " fingerprint is " << data.m_spkiFingerprint);
 				}
+#endif
 
 				// Chain ID received successfully, we can start polling for new mining jobs now
 				const int err = uv_timer_start(&m_timer, on_timer, 0, 500);

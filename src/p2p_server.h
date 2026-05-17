@@ -280,11 +280,11 @@ private:
 	{
 		void normalize();
 
-		bool m_isV6;
+		bool m_isV6 = false;
 		raw_ip m_addr;
-		int m_port;
-		uint32_t m_numFailedConnections;
-		uint64_t m_lastSeen;
+		int m_port = 0;
+		uint32_t m_numFailedConnections = 0;
+		uint64_t m_lastSeen = 0;
 	};
 
 	std::atomic<bool> m_seenGoodPeers;

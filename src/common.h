@@ -591,7 +591,7 @@ enum class NetworkType {
 
 struct raw_ip
 {
-	alignas(8) uint8_t data[16];
+	alignas(8) uint8_t data[16] = {};
 
 	FORCEINLINE bool operator<(const raw_ip& other) const
 	{

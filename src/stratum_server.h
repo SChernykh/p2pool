@@ -121,13 +121,13 @@ private:
 	bool m_enableFullValidation;
 	struct BlobsData
 	{
-		uint32_t m_extraNonceStart;
+		uint32_t m_extraNonceStart = 0;
 		std::vector<uint8_t> m_blobs;
-		size_t m_blobSize;
-		uint64_t m_target;
-		uint32_t m_numClientsExpected;
-		uint32_t m_templateId;
-		uint64_t m_height;
+		size_t m_blobSize = 0;
+		uint64_t m_target = 0;
+		uint32_t m_numClientsExpected = 0;
+		uint32_t m_templateId = 0;
+		uint64_t m_height = 0;
 		hash m_seedHash;
 	};
 
@@ -157,40 +157,41 @@ private:
 
 	struct SubmittedShare
 	{
-		uv_work_t m_req;
-		bool m_allocated;
+		uv_work_t m_req = {};
+		bool m_allocated = false;
 
-		StratumServer* m_server;
-		StratumClient* m_client;
-		bool m_clientIPv6;
+		StratumServer* m_server = nullptr;
+		StratumClient* m_client = nullptr;
+		bool m_clientIPv6 = false;
 		raw_ip m_clientAddr;
-		char m_clientAddrString[Client::ADDR_STRING_SIZE];
-		char m_clientCustomUser[StratumClient::CUSTOM_USER_SIZE];
-		uint32_t m_clientResetCounter;
-		uint32_t m_rpcId;
-		uint32_t m_id;
-		uint32_t m_templateId;
-		uint32_t m_nonce;
-		uint32_t m_extraNonce;
-		uint64_t m_target;
+		char m_clientAddrString[Client::ADDR_STRING_SIZE] = {};
+		char m_clientCustomUser[StratumClient::CUSTOM_USER_SIZE] = {};
+		uint32_t m_clientResetCounter = 0;
+		uint32_t m_rpcId = 0;
+		uint32_t m_id = 0;
+		uint32_t m_templateId = 0;
+		uint32_t m_nonce = 0;
+		uint32_t m_extraNonce = 0;
+		uint64_t m_target = 0;
 		hash m_resultHash;
 		difficulty_type m_sidechainDifficulty;
-		uint64_t m_mainchainHeight;
-		uint64_t m_sidechainHeight;
-		double m_effort;
-		uint64_t m_timestamp;
-		uint64_t m_hashes;
-		bool m_highEnoughDifficulty;
-		int32_t m_score;
+		uint64_t m_mainchainHeight = 0;
+		uint64_t m_sidechainHeight = 0;
+		double m_effort = 0.0;
+		uint64_t m_timestamp = 0;
+		uint64_t m_hashes = 0;
+		bool m_highEnoughDifficulty = false;
+		int32_t m_score = 0;
 
 		enum class Result {
+			NONE,
 			STALE,
 			COULDNT_CHECK_POW,
 			LOW_DIFF,
 			INVALID_POW,
 			BANNED,
 			OK
-		} m_result;
+		} m_result = Result::NONE;
 	};
 
 	struct HashrateData

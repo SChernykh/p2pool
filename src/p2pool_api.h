@@ -46,8 +46,8 @@ private:
 	static void on_dump_to_file(uv_async_t* async) { reinterpret_cast<p2pool_api*>(async->data)->dump_to_file(); }
 
 	struct DumpFileWork {
-		uv_fs_t req;
-		int fd;
+		uv_fs_t req = {};
+		int fd = -1;
 
 		std::string name;
 		std::string tmp_name;

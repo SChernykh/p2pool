@@ -44,10 +44,10 @@ private:
 
 	struct WorkerData
 	{
-		Miner* m_miner;
-		uint32_t m_index;
-		uint32_t m_count;
-		uv_thread_t m_worker;
+		Miner* m_miner = nullptr;
+		uint32_t m_index = 0;
+		uint32_t m_count = 0;
+		uv_thread_t m_worker = {};
 	};
 
 	std::vector<WorkerData*> m_minerThreads;

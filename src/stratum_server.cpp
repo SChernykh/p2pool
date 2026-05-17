@@ -1110,6 +1110,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		}
 		else {
 			static const char* reason_list[] = {
+				"none",
 				"stale share",
 				"couldn't check PoW",
 				"low difficulty",
@@ -1134,6 +1135,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 			{
 				log::Stream s(buf, buf_size);
 				switch (share->m_result) {
+				case SubmittedShare::Result::NONE:
+					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"none\"}}\n";
+					break;
 				case SubmittedShare::Result::STALE:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Stale share\"}}\n";
 					break;
