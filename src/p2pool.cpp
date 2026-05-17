@@ -1416,7 +1416,7 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 					std::vector<IMergeMiningClient*> merge_mining_clients;
 
 					for (const auto& h : m_params.m_mergeMiningHosts) {
-						IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet);
+						IMergeMiningClient* c = IMergeMiningClient::create(this, h.m_host, h.m_wallet, h.m_spkiFingerprint);
 						if (c) {
 							merge_mining_clients.push_back(c);
 						}

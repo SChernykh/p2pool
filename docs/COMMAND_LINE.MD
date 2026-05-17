@@ -38,7 +38,9 @@
 --no-upnp             Disable UPnP port forwarding
 --no-igd              An alias for --no-upnp
 --upnp-stratum        Port forward Stratum port (it's not forwarded by default)
---merge-mine          IP:port and wallet address for another blockchain to merge mine with
+--merge-mine          [https://]IP:port and wallet address for another blockchain to merge mine with.
+                      Prefix the host with https:// to connect over TLS (requires a TLS-enabled build).
+                      An optional base64-encoded SPKI fingerprint can be added as a third value for certificate pinning
 --version             Print p2pool's version and build details
 --tls-cert file       Load TLS certificate chain from "file" in the PEM format
 --tls-cert-key file   Load TLS certificate private key from "file" in the PEM format
@@ -99,11 +101,16 @@ p2pool.exe --host 127.0.0.1 --host node.monerodevs.org --rpc-port 18089 --zmq-po
 Merge mining is available in P2Pool since the fork that happened on October 12th, 2024. Version 4.0 or newer is required to use it.
 
 - Blockchains that will support [Merge mining RPC API](https://github.com/SChernykh/p2pool/blob/master/docs/MERGE_MINING.MD#proposed-rpc-api)
-  - [Townforge](https://townforge.net/) supports it in their [tmp-mm branch](https://git.townforge.net/townforge/townforge/src/branch/tmp-mm) (not released yet)
-  - [DarkFi](https://dark.fi/) is going to support it, but it's [not ready yet](https://github.com/darkrenaissance/darkfi/issues/244)
+  - [Townforge](https://townforge.net/) supports merge mining (but Townforge is still in testnet phase)
+  - [DarkFi](https://dark.fi/) supports it in their [testnet](https://dark.fi/book/testnet/merge-mining.html)
   ```
-  p2pool.exe --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
+  ./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN
   ```
+  or
+  ```
+  ./p2pool --wallet YOUR_MONERO_WALLET_ADDRESS --merge-mine https://IP:port YOUR_WALLET_ADDRESS_ON_ANOTHER_BLOCKCHAIN [BASE64_ENCODED_SPKI_FINGERPRINT]
+  ```
+  The fingerprint is optional - without it, TLS is still used but the certificate is not pinned. P2Pool prints the merged mining node's fingerprint when it connects to it, but this fingerprint value can only be trusted if you're 100% sure you're not being MiTM'ed.
 
 ### Tari merge mining
 
@@ -151,6 +158,7 @@ openssl x509 -in rpc_ssl.crt -pubkey -noout -inform pem | openssl pkey -pubin -o
 
 By default, `rpc_ssl.crt` can be found in Monero data directory: `/home/username/.bitmonero/rpc_ssl.crt` on Linux and `C:\ProgramData\bitmonero\rpc_ssl.crt` on Windows.
 
+P2Pool prints the Monero node's fingerprint when it connects to it, but this fingerprint value can only be trusted if you're 100% sure you're not being MiTM'ed.
 
 ### Full validation
 

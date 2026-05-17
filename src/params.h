@@ -69,11 +69,15 @@ struct Params
 
 	struct MergeMiningHost
 	{
-		template<typename T>
-		FORCEINLINE MergeMiningHost(const T& host, const T& wallet) : m_host(host), m_wallet(wallet) {}
+		FORCEINLINE MergeMiningHost(const std::string& host, const std::string& wallet, const std::string& spkiFingerprint)
+			: m_host(host)
+			, m_wallet(wallet)
+			, m_spkiFingerprint(spkiFingerprint)
+		{}
 
 		std::string m_host;
 		std::string m_wallet;
+		std::string m_spkiFingerprint;
 	};
 
 	std::vector<MergeMiningHost> m_mergeMiningHosts;
@@ -166,6 +170,7 @@ private:
 
 	[[nodiscard]] static bool has1(const std::vector<std::string>& arg) { return (arg.size() > 1) && !arg[1].empty();}
 	[[nodiscard]] static bool has2(const std::vector<std::string>& arg) { return (arg.size() > 2) && !arg[2].empty();}
+	[[nodiscard]] static bool has3(const std::vector<std::string>& arg) { return (arg.size() > 3) && !arg[3].empty();}
 };
 
 } // namespace p2pool

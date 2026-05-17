@@ -36,7 +36,7 @@ namespace p2pool {
 
 static constexpr hash Tari_ChainID{ "01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990" };
 
-IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& host, const std::string& wallet) noexcept
+IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& host, const std::string& wallet, const std::string& spkiFingerprint) noexcept
 {
 	try {
 #if defined(WITH_GRPC) && !defined(P2POOL_UNIT_TESTS)
@@ -44,7 +44,7 @@ IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& 
 			return new MergeMiningClientTari(pool, host, wallet);
 		}
 #endif
-		return new MergeMiningClientJSON_RPC(pool, host, wallet);
+		return new MergeMiningClientJSON_RPC(pool, host, wallet, spkiFingerprint);
 	}
 	catch (...) {
 		LOGERR(1, "Failed to create merge mining client for " << host);

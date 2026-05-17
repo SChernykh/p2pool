@@ -27,7 +27,7 @@ void p2pool_usage() {}
 
 namespace p2pool {
 
-IMergeMiningClient* IMergeMiningClient::create(p2pool*, const std::string&, const std::string&) noexcept { return nullptr; }
+IMergeMiningClient* IMergeMiningClient::create(p2pool*, const std::string&, const std::string&, const std::string&) noexcept { return nullptr; }
 
 namespace JSONRPCRequest {
 	void Call(const std::string&, int, const std::string&, const std::string&, const std::string&, bool, const std::string&, CallbackBase*, CallbackBase*, uv_loop_t*) {}
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 {
 	set_main_thread();
 	p2pool_usage();
-	IMergeMiningClient::create({}, {}, {});
+	IMergeMiningClient::create({}, {}, {}, {});
 	JSONRPCRequest::call({}, 0, {}, {}, {}, false, {}, JSONRPCRequest::dummy_callback, JSONRPCRequest::dummy_callback);
 
 	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();

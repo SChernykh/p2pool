@@ -45,7 +45,7 @@ public:
 	};
 
 public:
-	static IMergeMiningClient* create(p2pool* pool, const std::string& host, const std::string& wallet) noexcept;
+	static IMergeMiningClient* create(p2pool* pool, const std::string& host, const std::string& wallet, const std::string& spkiFingerprint) noexcept;
 	virtual ~IMergeMiningClient() {}
 
 	[[nodiscard]] virtual bool get_params(ChainParameters& out_params) const = 0;

@@ -453,7 +453,7 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 #endif
 
 	if ((arg[0] == "merge-mine") && has1(arg) && has2(arg)) {
-		m_mergeMiningHosts.emplace_back(arg[1], arg[2]);
+		m_mergeMiningHosts.emplace_back(arg[1], arg[2], has3(arg) ? arg[3] : std::string());
 		return true;
 	}
 

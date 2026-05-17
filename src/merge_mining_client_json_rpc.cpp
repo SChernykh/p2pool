@@ -28,9 +28,11 @@ LOG_CATEGORY(MergeMiningClientJSON_RPC)
 
 namespace p2pool {
 
-MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet)
+MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::string& host, const std::string& wallet, const std::string& spkiFingerprint)
 	: MergeMiningClientShared(pool, wallet)
 	, m_host(host)
+	, m_tls(false)
+	, m_spkiFingerprint(spkiFingerprint)
 	, m_port(80)
 	, m_loop{}
 	, m_loopThread{}
@@ -38,17 +40,27 @@ MergeMiningClientJSON_RPC::MergeMiningClientJSON_RPC(p2pool* pool, const std::st
 	, m_getJobRunning(false)
 	, m_shutdownAsync{}
 {
-	const size_t k = host.find_last_of(':');
+	if (m_host.find(HTTPS_PREFIX) == 0) {
+#ifdef WITH_TLS
+		m_host.erase(0, sizeof(HTTPS_PREFIX) - 1);
+		m_tls = true;
+		m_port = 443;
+#else
+		LOGERR(1, "P2Pool was built without TLS support, can't connect to " << host);
+		throw std::exception();
+#endif
+	}
+
+	const size_t k = m_host.find_last_of(':');
 	if (k != std::string::npos) {
-		m_host = host.substr(0, k);
+		m_port = static_cast<int32_t>(strtoul(m_host.c_str() + k + 1, nullptr, 10));
+		m_host = m_host.substr(0, k);
 
 		// Handle IPv6 addresses
 		if ((m_host.length() > 2) && (m_host.find_first_of(':') != std::string::npos) && (m_host.front() == '[') && (m_host.back() == ']')) {
 			m_host.erase(m_host.begin());
 			m_host.pop_back();
 		}
-
-		m_port = static_cast<int32_t>(std::stol(host.substr(k + 1), nullptr, 10));
 	}
 
 	if (m_host.empty() || (m_port <= 0) || (m_port >= 65536)) {
@@ -113,7 +125,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 {
 	const std::string req = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"merge_mining_get_chain_id\"}";
 
-	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
+	JSONRPCRequest::call(m_host, m_port, req, std::string(), m_pool->params().m_socks5Proxy, m_tls, m_spkiFingerprint,
 		[this](const JSONRPCRequest::CallbackData& data) {
 			WriteLock lock(m_chainParamsLock);
 
@@ -122,6 +134,10 @@ void MergeMiningClientJSON_RPC::merge_mining_get_chain_id()
 
 				if (data.m_ping > 0.0) {
 					LOGINFO(1, m_host << ':' << m_port << " ping is " << data.m_ping << " ms");
+				}
+
+				if (!data.m_spkiFingerprint.empty()) {
+					LOGINFO(1, m_host << ':' << m_port << " fingerprint is " << data.m_spkiFingerprint);
 				}
 
 				// Chain ID received successfully, we can start polling for new mining jobs now
@@ -201,7 +217,7 @@ void MergeMiningClientJSON_RPC::merge_mining_get_aux_block(uint64_t height, cons
 	  << ",\"prev_id\":\"" << prev_id << '"'
 	  << "}}";
 
-	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
+	JSONRPCRequest::call(m_host, m_port, std::string(buf, s.m_pos), std::string(), m_pool->params().m_socks5Proxy, m_tls, m_spkiFingerprint,
 		[this](const JSONRPCRequest::CallbackData& data) {
 			bool changed = false;
 			hash chain_id;
@@ -333,7 +349,7 @@ void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*co
 	s << "],\"path\":" << merkle_proof_path
 		<< ",\"seed_hash\":\"" << seed_hash << "\"}}";
 
-	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy, false, std::string(),
+	JSONRPCRequest::call(m_host, m_port, std::string(buf.data(), s.m_pos), std::string(), m_pool->params().m_socks5Proxy, m_tls, m_spkiFingerprint,
 		[this](const JSONRPCRequest::CallbackData& data) {
 			parse_merge_mining_submit_solution(data.m_response.data(), data.m_response.size());
 		},
