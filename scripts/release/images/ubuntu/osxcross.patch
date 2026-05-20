@@ -1,0 +1,49 @@
+diff --git a/build_clang.sh b/build_clang.sh
+index c6873fc..1db27b3 100755
+--- a/build_clang.sh
++++ b/build_clang.sh
+@@ -19,7 +19,7 @@ mkdir -p $BUILD_DIR
+ source $BASE_DIR/tools/trap_exit.sh
+ 
+ if [ -z "$CLANG_VERSION" ]; then
+-  CLANG_VERSION=20.1.8
++  CLANG_VERSION=22.1.6
+ fi
+ 
+ if [ -z "$INSTALLPREFIX" ]; then
+@@ -61,6 +61,7 @@ function set_package_link()
+     CLANG_VERSION_PARTS=(${CLANG_VERSION//./ })
+     case ${CLANG_VERSION_PARTS[0]} in
+       next) CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/next.zip" ;;
++      22)   CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/stable/20260427.zip" ;;
+       21)   CLANG_LLVM_PKG="https://github.com/apple/llvm-project/archive/refs/heads/stable/20250402.zip" ;;
+       # Can't find a stable branch for 20.
+       19)   CLANG_LLVM_PKG="https://github.com/apple/llvm-project/archive/refs/heads/stable/20240723.zip" ;;
+diff --git a/build_compiler_rt.sh b/build_compiler_rt.sh
+index 5ce8697..16f09bd 100755
+--- a/build_compiler_rt.sh
++++ b/build_compiler_rt.sh
+@@ -61,8 +61,9 @@ case $CLANG_VERSION in
+   19.* ) BRANCH=release/19.x;    USE_CMAKE=1; ;;
+   20.* ) BRANCH=release/20.x;    USE_CMAKE=1; ;;
+   21.* ) BRANCH=release/21.x;    USE_CMAKE=1; ;;
+-  22.* ) BRANCH=main;            USE_CMAKE=1; ;;
+-     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 22.x" 1>&2; exit 1;
++  22.* ) BRANCH=release/22.x;    USE_CMAKE=1; ;;
++  23.* ) BRANCH=main;            USE_CMAKE=1; ;;
++     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 23.x" 1>&2; exit 1;
+ esac
+ 
+ if [ $(osxcross-cmp $CLANG_VERSION ">=" 3.5) -eq 1 ]; then
+@@ -262,6 +263,11 @@ if [ $f_res -eq 1 ]; then
+       arch1=$(echo $ARCHS | awk '{print $1}')
+ 
+       for file in $(ls build_$arch1/lib/darwin/); do
++        case $file in
++          *.a|*.dylib) ;;
++          *) continue ;;
++        esac
++
+         libs=""
+ 
+         for arch in $ARCHS; do

@@ -4,16 +4,16 @@ set -e
 
 # Software versions to install
 
-APT_SNAPSHOT=20260507T000000Z
+APT_SNAPSHOT=20260520T000000Z
 _7ZIP_VERSION_MAJOR=26
 _7ZIP_VERSION_MINOR=01
 BINUTILS_VERSION=2_46
-CLANG_VERSION=21.1.8
+CLANG_VERSION=22.1.6
 CMAKE_VERSION=4.3.2
 FREEBSD_VERSION=12.4
 GCC_VERSION=16.1.0
 GLIBC_VERSION=2.43
-LINUX_HEADERS_VERSION=6.19.14
+LINUX_HEADERS_VERSION=6.18.32
 MACOSX_SDK_VERSION=26.1
 OSXCROSS_VERSION=2bc739ebe45db5d72e176d2a4e1c7dd95464e8e2
 MAKE_VERSION=4.4.1
@@ -26,7 +26,7 @@ CMAKE_SHA256="791ae3604841ca03cb3889a3ad89165346e4b180ae3448efd4b0caa9ef46d245"
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
 GLIBC_SHA256="d9c86c6b5dbddb43a3e08270c5844fc5177d19442cf5b8df4be7c07cd5fa3831"
-HEADERS_SHA256="cde8bf6739be4a0777fedbbba5330b8188c55680c45a922a4dfa289cbec6f185"
+HEADERS_SHA256="067dadd445578284ea6158f312f7970d8940fed3e094dbe49cff66d188d3bda4"
 MACOSX_SDK_SHA256="beee7212d265a6d2867d0236cc069314b38d5fb3486a6515734e76fa210c784c"
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
 TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
@@ -440,6 +440,9 @@ echo "Build MacOSX cross compilers"
 cd /root/osxcross
 git checkout ${OSXCROSS_VERSION}
 
+mv /osxcross.patch .
+git apply --verbose --ignore-whitespace osxcross.patch
+
 TARGET_DIR=/usr/local OSX_VERSION_MIN=10.15 UNATTENDED=1 ./build.sh
 ./build_compiler_rt.sh
 
@@ -493,7 +496,10 @@ wait $P2POOL_CLONE_PID
 
 echo "Deleting temporary files"
 
+apt-get remove -yq curl bzip2 flex texinfo bison ninja-build python3 python3-yaml file rsync gawk gettext patch
+apt-get autoremove -yq --purge
 apt-get clean
+
 rm -rf /var/lib/apt/lists/*
 rm -rf /root/*
 rm -rf /tmp/*
