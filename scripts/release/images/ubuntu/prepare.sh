@@ -1,40 +1,65 @@
-#!/bin/sh
+#!/bin/bash
+
+# Fail early if something goes wrong
+
 set -u
 set -e
+set -o pipefail
 
 # Software versions to install
 
-APT_SNAPSHOT=20260520T000000Z
+APT_SNAPSHOT=20260521T000000Z
+
 _7ZIP_VERSION_MAJOR=26
 _7ZIP_VERSION_MINOR=01
-BINUTILS_VERSION=2_46
-CLANG_VERSION=22.1.6
-CMAKE_VERSION=4.3.2
-FREEBSD_VERSION=12.4
-GCC_VERSION=16.1.0
-GLIBC_VERSION=2.43
-LINUX_HEADERS_VERSION=6.18.32
-MACOSX_SDK_VERSION=26.1
-OSXCROSS_VERSION=2bc739ebe45db5d72e176d2a4e1c7dd95464e8e2
-MAKE_VERSION=4.4.1
-MINGW_VERSION=14.0.0
-XZ_VERSION=5.8.3
-TAR_VERSION=1.35
-
 _7ZIP_SHA256="8ea0fc8a135e7b848e80a4116fe22dff56c8c4518dde1f43cce67f4e340b437a"
+
+BINUTILS_VERSION=2_46
+BINUTILS_COMMIT_HASH=49d4d3fafa4ec4ff5a3460d91d5b1ed5286487db
+
+CLANG_VERSION=22.1.6
+CLANG_COMMIT_HASH=fc4aad7b5db3fff421df9a9637605b9ca5667881
+
+CMAKE_VERSION_MAJOR=4.3
+CMAKE_VERSION=4.3.2
 CMAKE_SHA256="791ae3604841ca03cb3889a3ad89165346e4b180ae3448efd4b0caa9ef46d245"
+
+FREEBSD_VERSION=12.4
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
+
+GCC_VERSION=16.1.0
+GCC_COMMIT_HASH=6afcc4f6da931eb93f3ab001a0dd9650ea71d1ea
+
+GLIBC_VERSION=2.43
 GLIBC_SHA256="d9c86c6b5dbddb43a3e08270c5844fc5177d19442cf5b8df4be7c07cd5fa3831"
-HEADERS_SHA256="067dadd445578284ea6158f312f7970d8940fed3e094dbe49cff66d188d3bda4"
+
+LINUX_HEADERS_VERSION=5.10.256
+HEADERS_SHA256="f1e9dac8ec41e5bd7b1811158c7b72269696ce1c37fbdd17a898b293b54d8e5f"
+
+MACOSX_SDK_VERSION=26.1
 MACOSX_SDK_SHA256="beee7212d265a6d2867d0236cc069314b38d5fb3486a6515734e76fa210c784c"
+
+OSXCROSS_VERSION=2.0-llvm-based
+OSXCROSS_COMMIT_HASH=2bc739ebe45db5d72e176d2a4e1c7dd95464e8e2
+
+MAKE_VERSION=4.4.1
 MAKE_SHA256="dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
+
+MINGW_VERSION=14.0.0
+MINGW_COMMIT_HASH=9b3dd0125792fe94d16cacdc596dbd42fca1b369
+
+XZ_VERSION=5.8.3
+XZ_COMMIT_HASH=4b73f2ec19a99ef465282fbce633e8deb33691b3
+
+TAR_VERSION=1.35
 TAR_SHA256="4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
 
 echo "Install prerequisites"
 
 export DEBIAN_FRONTEND=noninteractive
 
+# Install ca-certificates normally because APT snapshots require HTTPS
 apt-get update
 apt-get install -yq --no-install-recommends ca-certificates
 
@@ -46,6 +71,7 @@ apt-get install -yq --no-install-recommends curl bzip2 flex texinfo bison ninja-
 echo "Cloning the P2Pool repository in background"
 
 cd /
+# Get the repository in the image, so it can be quickly switched to a specific commit when building P2Pool releases
 git clone --recursive --jobs $(nproc) https://github.com/SChernykh/p2pool &
 P2POOL_CLONE_PID=$!
 
@@ -74,11 +100,11 @@ TAR_FILE=tar-$TAR_VERSION.tar.xz
 mkdir /usr/local/cross-freebsd-x86_64
 mkdir /usr/local/cross-freebsd-aarch64
 
-curl -L -Z \
+curl -fL -Z --fail-early --retry 10 --retry-all-errors \
 -O https://ftpmirror.gnu.org/make/$MAKE_FILE \
 -O https://github.com/ip7z/7zip/releases/download/$_7ZIP_VERSION_MAJOR.$_7ZIP_VERSION_MINOR/$_7ZIP_FILE \
 -O https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/$CMAKE_FILE \
--O https://www.kernel.org/pub/linux/kernel/v6.x/$HEADERS_FILE \
+-O https://www.kernel.org/pub/linux/kernel/v5.x/$HEADERS_FILE \
 -O https://ftpmirror.gnu.org/glibc/$GLIBC_FILE \
 -O https://github.com/joseluisq/macosx-sdks/releases/download/$MACOSX_SDK_VERSION/$MACOSX_SDK_FILE \
 -o /usr/local/cross-freebsd-x86_64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
@@ -161,15 +187,37 @@ fi
 echo "Cloning repositories"
 
 cd /root
+git clone --branch releases/gcc-$GCC_VERSION https://gcc.gnu.org/git/gcc.git
+cd gcc
+git checkout $GCC_COMMIT_HASH
 
-git clone --depth 1 --branch releases/gcc-$GCC_VERSION https://gcc.gnu.org/git/gcc.git
-git clone --depth 1 --branch binutils-$BINUTILS_VERSION https://sourceware.org/git/binutils-gdb.git
-git clone --depth 1 --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm-project.git
-git clone --depth=1 --branch v$MINGW_VERSION https://git.code.sf.net/p/mingw-w64/mingw-w64 mingw-w64-v$MINGW_VERSION
-git clone --branch 2.0-llvm-based https://github.com/tpoechtrager/osxcross
-git clone --depth=1 --branch v$XZ_VERSION https://github.com/tukaani-project/xz
+cd /root
+git clone --branch binutils-$BINUTILS_VERSION https://sourceware.org/git/binutils-gdb.git
+cd binutils-gdb
+git checkout $BINUTILS_COMMIT_HASH
 
-mv /root/$MACOSX_SDK_FILE osxcross/tarballs
+cd /root
+git clone --branch llvmorg-$CLANG_VERSION https://github.com/llvm/llvm-project.git
+cd llvm-project
+git checkout $CLANG_COMMIT_HASH
+
+cd /root
+git clone --branch v$MINGW_VERSION https://git.code.sf.net/p/mingw-w64/mingw-w64 mingw-w64-v$MINGW_VERSION
+cd mingw-w64-v$MINGW_VERSION
+git checkout $MINGW_COMMIT_HASH
+
+cd /root
+git clone --branch $OSXCROSS_VERSION https://github.com/tpoechtrager/osxcross
+cd osxcross
+git checkout $OSXCROSS_COMMIT_HASH
+
+cd /root
+git clone --branch v$XZ_VERSION https://github.com/tukaani-project/xz
+cd xz
+git checkout $XZ_COMMIT_HASH
+
+cd /root
+mv /root/$MACOSX_SDK_FILE osxcross/tarballs/
 
 echo "Install make"
 
@@ -236,7 +284,7 @@ cd /root
 
 tar xvf $CMAKE_FILE
 cp $CMAKE_NAME/bin/* /usr/local/bin
-cp -r $CMAKE_NAME/share/cmake-4.3 /usr/local/share
+cp -r $CMAKE_NAME/share/cmake-$CMAKE_VERSION_MAJOR /usr/local/share
 
 echo "Install clang"
 
@@ -438,8 +486,6 @@ make install
 echo "Build MacOSX cross compilers"
 
 cd /root/osxcross
-git checkout ${OSXCROSS_VERSION}
-
 mv /osxcross.patch .
 git apply --verbose --ignore-whitespace osxcross.patch
 
@@ -484,23 +530,25 @@ FORCE_UNSAFE_CONFIGURE=1 CFLAGS='-O2' ./configure
 make -j$(nproc)
 make install
 
-echo "Deleting system glibc files to force our glibc"
-
-rm /usr/lib/x86_64-linux-gnu/crt1.o
-rm /usr/lib/x86_64-linux-gnu/crti.o
-rm /usr/lib/x86_64-linux-gnu/crtn.o
-rm /usr/lib/x86_64-linux-gnu/libc.a
-
-echo "Waiting for P2Pool git clone to finish"
-wait $P2POOL_CLONE_PID
-
-echo "Deleting temporary files"
+echo "Cleaning up APT packages"
 
 apt-get remove -yq curl bzip2 flex texinfo bison ninja-build python3 python3-yaml file rsync gawk gettext patch
 apt-get autoremove -yq --purge
 apt-get clean
-
 rm -rf /var/lib/apt/lists/*
+
+echo "Waiting for P2Pool git clone to finish"
+wait $P2POOL_CLONE_PID
+
+echo "Deleting system glibc files to force our glibc"
+
+rm -f /usr/lib/x86_64-linux-gnu/crt1.o
+rm -f /usr/lib/x86_64-linux-gnu/crti.o
+rm -f /usr/lib/x86_64-linux-gnu/crtn.o
+rm -f /usr/lib/x86_64-linux-gnu/libc.a
+
+echo "Deleting temporary files"
+
 rm -rf /root/*
 rm -rf /tmp/*
 
