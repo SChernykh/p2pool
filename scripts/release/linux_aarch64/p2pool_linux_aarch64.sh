@@ -13,7 +13,7 @@ CURRENT_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y-%m-%d")
 CURRENT_TIME=$(date -u -d @$BUILD_TIMESTAMP +"%H:%M:%S")
 TOUCH_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y%m%d%H%M.%S")
 
-flags_size="-ffunction-sections -fdata-sections -Wl,-s -Wl,--gc-sections"
+flags_size="-ffunction-sections -fdata-sections -Wl,-s -Wl,--gc-sections -Wl,--icf=safe"
 flags_datetime="-D__DATE__=\"\\\"$CURRENT_DATE\\\"\" -D__TIME__=\"\\\"$CURRENT_TIME\\\"\" -Wno-builtin-macro-redefined"
 
 flags_libs="--target=aarch64-linux-gnu -Os -flto -fuse-ld=lld -w $flags_size $flags_datetime"
