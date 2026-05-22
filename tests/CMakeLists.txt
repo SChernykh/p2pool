@@ -22,6 +22,11 @@ endif()
 set(BUILD_GMOCK OFF CACHE BOOL "Builds the googlemock subproject" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "Enable installation of googletest. (Projects embedding googletest may want to turn this OFF.)" FORCE)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /fsanitize=address")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address")
+endif()
+
 add_subdirectory(googletest)
 set(LIBS gtest)
 
