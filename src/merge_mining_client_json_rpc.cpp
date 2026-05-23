@@ -395,7 +395,7 @@ struct CoinAmount
 		, m_value(value)
 		, m_width(0)
 	{
-		if (denomination.value_or(0) >= 10) {
+		if (denomination.has_value() && (denomination.value() >= 10)) {
 			int k = 1;
 
 			for (uint64_t n = 10; (k < 19) && (n < denomination.value()); n *= 10) {
@@ -420,7 +420,7 @@ template<> struct log::Stream::Entry<CoinAmount>
 		if (!amount.m_value.has_value()) {
 			*wrapper << "N/A";
 		}
-		else if (amount.m_denomination.value_or(0) >= 10) {
+		else if (amount.m_denomination.has_value() && (amount.m_denomination.value() >= 10)) {
 			const int w = wrapper->getNumberWidth();
 
 			wrapper->setNumberWidth(1);
