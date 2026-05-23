@@ -191,6 +191,25 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_chain_id(const char* data
 		return err("invalid chain_id");
 	}
 
+	parseValue(result, "ticker", m_auxTicker);
+	parseValue(result, "denomination", m_auxDenomination);
+
+	if (m_auxDenomination.has_value()) {
+		bool is_power_of_10 = false;
+
+		for (uint64_t n = 1, i = 0; i <= 19; ++i, n *= 10) {
+			if (n == m_auxDenomination.value()) {
+				is_power_of_10 = true;
+				break;
+			}
+		}
+
+		if (!is_power_of_10) {
+			LOGWARN(3, m_host << " set an invalid coin denomination value of " << m_auxDenomination.value());
+			m_auxDenomination.reset();
+		}
+	}
+
 	return true;
 }
 
@@ -316,6 +335,10 @@ bool MergeMiningClientJSON_RPC::parse_merge_mining_get_aux_block(const char* dat
 	m_chainParams.aux_diff.hi = 0;
 	m_chainParams.last_updated = seconds_since_epoch();
 
+	parseValue(result, "aux_height", m_auxHeight);
+	parseValue(result, "aux_reward", m_auxReward);
+	parseValue(result, "aux_fees",   m_auxFees);
+
 	m_chainParamsTimestamp = time(nullptr);
 
 	changed = true;
@@ -364,6 +387,60 @@ void MergeMiningClientJSON_RPC::submit_solution(const std::vector<uint8_t>& /*co
 		}, &m_loop);
 }
 
+struct CoinAmount
+{
+	FORCEINLINE CoinAmount(const std::optional<std::string>& ticker, const std::optional<uint64_t>& denomination, const std::optional<uint64_t>& value)
+		: m_ticker(ticker)
+		, m_denomination(denomination)
+		, m_value(value)
+		, m_width(0)
+	{
+		if (denomination.value_or(0) >= 10) {
+			int k = 1;
+
+			for (uint64_t n = 10; (k < 19) && (n < denomination.value()); n *= 10) {
+				++k;
+			}
+
+			m_width = k;
+		}
+	}
+
+	std::optional<std::string> m_ticker;
+	std::optional<uint64_t> m_denomination;
+	std::optional<uint64_t> m_value;
+
+	int m_width;
+};
+
+template<> struct log::Stream::Entry<CoinAmount>
+{
+	static NOINLINE void put(const CoinAmount& amount, Stream* wrapper)
+	{
+		if (!amount.m_value.has_value()) {
+			*wrapper << "N/A";
+		}
+		else if (amount.m_denomination.value_or(0) >= 10) {
+			const int w = wrapper->getNumberWidth();
+
+			wrapper->setNumberWidth(1);
+			*wrapper << amount.m_value.value() / amount.m_denomination.value() << '.';
+
+			wrapper->setNumberWidth(amount.m_width);
+			*wrapper << amount.m_value.value() % amount.m_denomination.value();
+
+			wrapper->setNumberWidth(w);
+		}
+		else {
+			*wrapper << amount.m_value.value();
+		}
+
+		if (amount.m_ticker.has_value()) {
+			*wrapper << ' ' << amount.m_ticker;
+		}
+	}
+};
+
 void MergeMiningClientJSON_RPC::print_status() const
 {
 	ReadLock lock(m_chainParamsLock);
@@ -371,7 +448,10 @@ void MergeMiningClientJSON_RPC::print_status() const
 	LOGINFO(0, "status" <<
 		"\nHost       = " << m_host << ':' << m_port <<
 		"\nWallet     = " << m_auxWallet <<
-		"\nDifficulty = " << m_chainParams.aux_diff
+		"\nHeight     = " << m_auxHeight <<
+		"\nDifficulty = " << m_chainParams.aux_diff <<
+		"\nReward     = " << CoinAmount(m_auxTicker, m_auxDenomination, m_auxReward) <<
+		"\nFees       = " << CoinAmount(m_auxTicker, m_auxDenomination, m_auxFees)
 	);
 }
 
@@ -379,14 +459,33 @@ void MergeMiningClientJSON_RPC::api_status(log::Stream& s) const
 {
 	ReadLock lock(m_chainParamsLock);
 
-	s << '{'
-		<< "\"api\":\"JSON RPC\","
-		<< "\"id\":\"" << m_chainParams.aux_id << "\","
-		<< "\"host\":\"" << m_host << ':' << m_port << "\","
-		<< "\"wallet\":\"" << m_auxWallet << "\","
-		<< "\"difficulty\":" << m_chainParams.aux_diff << ","
-		<< "\"timestamp\":" << m_chainParamsTimestamp
-		<< '}';
+	s << '{' << "\"api\":\"JSON RPC\"," << "\"id\":\"" << m_chainParams.aux_id << "\",";
+
+	if (m_auxTicker.has_value()) {
+		s << "\"ticker\":\"" << m_auxTicker.value() << "\",";
+	}
+
+	if (m_auxDenomination.has_value()) {
+		s << "\"denomination\":" << m_auxDenomination.value() << ",";
+	}
+
+	s << "\"host\":\"" << m_host << ':' << m_port << "\"," << "\"wallet\":\"" << m_auxWallet << "\",";
+
+	if (m_auxHeight.has_value()) {
+		s << "\"height\":" << m_auxHeight.value() << ",";
+	}
+
+	s << "\"difficulty\":" << m_chainParams.aux_diff << ",";
+
+	if (m_auxReward.has_value()) {
+		s << "\"reward\":" << m_auxReward.value() << ",";
+	}
+
+	if (m_auxFees.has_value()) {
+		s << "\"fees\":" << m_auxFees.value() << ",";
+	}
+
+	s << "\"timestamp\":" << m_chainParamsTimestamp << '}';
 }
 
 bool MergeMiningClientJSON_RPC::get_params(ChainParameters& out_params) const

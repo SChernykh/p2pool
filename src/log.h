@@ -539,6 +539,20 @@ struct log::Stream::Entry<PadRight<T>>
 template<> struct log::Stream::Entry<raw_ip> { static NOINLINE void put(const raw_ip& value, Stream* wrapper); };
 template<> struct log::Stream::Entry<Wallet> { static NOINLINE void put(const Wallet& w, Stream* wrapper); };
 
+template<typename T>
+struct log::Stream::Entry<std::optional<T>>
+{
+	static NOINLINE void put(const std::optional<T>& data, Stream* wrapper)
+	{
+		if (data.has_value()) {
+			*wrapper << data.value();
+		}
+		else {
+			*wrapper << "N/A";
+		}
+	}
+};
+
 namespace {
 	template<log::Severity severity>
 	FORCEINLINE void apply_severity(log::Stream& s)

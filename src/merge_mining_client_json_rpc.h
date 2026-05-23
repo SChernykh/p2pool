@@ -54,6 +54,13 @@ private:
 
 	bool parse_merge_mining_submit_solution(const char* data, size_t size) const;
 
+	std::optional<std::string> m_auxTicker;
+	std::optional<uint64_t> m_auxDenomination;
+
+	std::optional<uint64_t> m_auxHeight;
+	std::optional<uint64_t> m_auxReward;
+	std::optional<uint64_t> m_auxFees;
+
 	std::vector<uint8_t> m_previousAuxBlobs[NUM_PREVIOUS_HASHES];
 
 	std::string m_host;

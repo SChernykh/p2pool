@@ -56,8 +56,10 @@ Response: a JSON containing these fields:
 Field|Description
 -|-
 `chain_id`|A unique 32-byte hex-encoded value that identifies this merge mined chain.
+`ticker` (optional)|A string that has a coin ticker name for this chain
+`denomination` (optional)|A number that defines how many atomic units are in one coin (must be a power of 10)
 
-Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"0f28c4960d96647e77e7ab6d13b85bd16c7ca56f45df802cdc763a5e5c0c7863"}}`
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"chain_id":"0f28c4960d96647e77e7ab6d13b85bd16c7ca56f45df802cdc763a5e5c0c7863","ticker":"ABC","denomination":1000000}}`
 
 Example response 2: `{"jsonrpc":"2.0","id":"0","error":"something went wrong"}`
 
@@ -81,10 +83,13 @@ Field|Description
 `aux_blob`|A hex-encoded blob of data. Merge mined chain defines the contents of this blob. It's opaque to P2Pool and will not be changed by it.
 `aux_diff`|Mining difficulty (decimal number).
 `aux_hash`|A 32-byte hex-encoded hash of the `aux_blob`. Merge mined chain defines how exactly this hash is calculated. It's opaque to P2Pool.
+`aux_height` (optional)|An integer - merge mined chain's height
+`aux_reward` (optional)|An integer - merge mined block's reward (without fees) in atomic units
+`aux_fees` (optional)|An integer - merge mined block's fees in atomic units
 
 If `aux_hash` is the same as in the request, all other fields will be ignored by P2Pool, so they don't have to be included in the response. Moreover, empty response will be interpreted as a response having the same `aux_hash` as in the request. This enables an efficient polling.
 
-Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"aux_blob":"4c6f72656d20697073756d","aux_diff":123456,"aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f"}}`
+Example response 1: `{"jsonrpc":"2.0","id":"0","result":{"aux_blob":"4c6f72656d20697073756d","aux_diff":123456,"aux_hash":"f6952d6eef555ddd87aca66e56b91530222d6e318414816f3ba7cf5bf694bf0f","aux_height":123,"aux_reward":123456789,"aux_fees":123}}`
 
 Example response 2: `{"jsonrpc":"2.0","id":"0","result":{}}`
 

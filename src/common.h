@@ -58,6 +58,7 @@
 #include <atomic>
 #include <chrono>
 #include <random>
+#include <optional>
 
 #include <signal.h>
 
