@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef __cppcheck__
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #pragma warning(disable : 4866)
@@ -28,3 +30,5 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+#endif // __cppcheck__
