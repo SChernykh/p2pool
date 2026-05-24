@@ -30,6 +30,7 @@ LOG_CATEGORY(StratumServer)
 
 static constexpr int DEFAULT_BACKLOG = 128;
 static constexpr uint64_t MIN_DIFF = 1000;
+static constexpr uint64_t MAX_TARGET = (std::numeric_limits<uint64_t>::max() / MIN_DIFF) + 1;
 static constexpr uint64_t AUTO_DIFF_TARGET_TIME = 30;
 
 // Use short target format (4 bytes) for diff <= 4 million
@@ -182,6 +183,8 @@ void StratumServer::on_block(const BlockTemplate& block)
 	blobs_data->m_target = std::max(difficulty.target(), sidechain_difficulty.target());
 	blobs_data->m_target = std::max(blobs_data->m_target, aux_diff.target());
 
+	blobs_data->m_target = std::min(blobs_data->m_target, MAX_TARGET);
+
 	{
 		MutexLock lock(m_blobsQueueLock);
 
@@ -307,6 +310,8 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		// Limit autodiff to 4000000 for maximum compatibility
 		target = std::max(target, std::max(AUTODIFF_START, TARGET_4_BYTES_LIMIT));
 	}
+
+	target = std::min(target, MAX_TARGET);
 
 	if (get_custom_user(login, client->m_customUser)) {
 		const char* s = client->m_customUser;
@@ -869,13 +874,13 @@ void StratumServer::on_blobs_ready()
 				target = std::max(target, AUTODIFF_START);
 
 				const uint64_t num_halvings = (cur_time - client->m_connectedTime) / 16;
-				constexpr uint64_t max_target = (std::numeric_limits<uint64_t>::max() / MIN_DIFF) + 1;
-				for (uint64_t i = 0; (i < num_halvings) && (target < max_target); ++i) {
+				for (uint64_t i = 0; (i < num_halvings) && (target < MAX_TARGET); ++i) {
 					target *= 2;
 				}
-				target = std::min<uint64_t>(target, max_target);
 			}
 		}
+
+		target = std::min(target, MAX_TARGET);
 
 		uint32_t job_id;
 		{
