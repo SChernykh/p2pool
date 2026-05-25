@@ -53,12 +53,12 @@ private:
 	std::vector<WorkerData*> m_minerThreads;
 	std::atomic<bool> m_stopped;
 
-	std::chrono::high_resolution_clock::time_point m_startTimestamp;
+	std::chrono::steady_clock::time_point m_startTimestamp;
 
 	std::mt19937_64 m_rng;
 
 	std::atomic<uint64_t> m_fullNonce;
-	std::chrono::high_resolution_clock::time_point m_nonceTimestamp;
+	std::chrono::steady_clock::time_point m_nonceTimestamp;
 
 	std::atomic<uint64_t> m_totalHashes;
 	std::atomic<uint32_t> m_sharesFound;

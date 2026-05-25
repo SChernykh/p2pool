@@ -102,8 +102,13 @@ void p2pool_api::create_dir(const std::string& path, bool is_restricted)
 
 void p2pool_api::on_stop()
 {
-	MutexLock lock(m_dumpDataLock);
-	uv_close(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync), nullptr);
+	{
+		MutexLock lock(m_dumpDataLock);
+		uv_close(reinterpret_cast<uv_handle_t*>(&m_dumpToFileAsync), nullptr);
+	}
+
+	// Dump all data in case there was an m_dumpToFileAsync request in-flight that we just killed
+	dump_to_file();
 }
 
 void p2pool_api::dump_to_file_async_internal(Category category, const char* filename, const Callback<void, log::Stream&>::Base& callback)

@@ -38,7 +38,7 @@ Miner::Miner(p2pool* pool, uint32_t threads)
 	: m_pool(pool)
 	, m_threads(threads)
 	, m_stopped{ false }
-	, m_startTimestamp(high_resolution_clock::now())
+	, m_startTimestamp(steady_clock::now())
 	, m_rng(RandomDeviceSeed::instance)
 	, m_fullNonce(std::numeric_limits<uint64_t>::max())
 	, m_nonceTimestamp(m_startTimestamp)
@@ -75,13 +75,27 @@ Miner::~Miner()
 		uv_thread_join(&data->m_worker);
 		delete data;
 	}
+
+	if (m_pool->api() && m_pool->params().m_localStats && !m_pool->stopped()) {
+		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner", [this](log::Stream& s) {
+			s << "{\"current_hashrate\":0"
+				<< ",\"total_hashes\":" << m_totalHashes.load()
+				<< ",\"time_running\":0"
+				<< ",\"shares_found\":" << m_sharesFound.load()
+				<< ",\"shares_failed\":" << m_sharesFailed.load()
+				<< ",\"block_reward_share_percent\":" << m_pool->side_chain().get_reward_share(m_pool->params().m_miningWallet) * 100.0
+				<< ",\"threads\":0"
+				<< ",\"timestamp\":" << time(nullptr)
+				<< "}";
+		});
+	}
 }
 
 void Miner::print_status()
 {
 	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.load());
 
-	const double dt = static_cast<double>(duration_cast<nanoseconds>(high_resolution_clock::now() - m_nonceTimestamp).count()) / 1e9;
+	const double dt = static_cast<double>(duration_cast<nanoseconds>(steady_clock::now() - m_nonceTimestamp).count()) / 1e9;
 	const uint64_t hr = (dt > 0.0) ? static_cast<uint64_t>(hash_count / dt) : 0;
 
 	char shares_failed_buf[64] = {};
@@ -114,7 +128,7 @@ void Miner::on_block(const BlockTemplate& block)
 	const uint32_t hash_count = std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.exchange(next_full_nonce));
 	m_jobIndex = next_index;
 
-	const auto cur_ts = high_resolution_clock::now();
+	const auto cur_ts = steady_clock::now();
 	const double dt = static_cast<double>(duration_cast<nanoseconds>(cur_ts - m_nonceTimestamp).count()) / 1e9;
 
 	m_nonceTimestamp = cur_ts;
@@ -136,6 +150,7 @@ void Miner::on_block(const BlockTemplate& block)
 					<< ",\"shares_failed\":" << m_sharesFailed.load()
 					<< ",\"block_reward_share_percent\":" << block_reward_share_percent
 					<< ",\"threads\":" << m_threads
+					<< ",\"timestamp\":" << time(nullptr)
 					<< "}";
 			});
 	}

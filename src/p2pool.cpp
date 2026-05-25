@@ -2180,7 +2180,10 @@ void p2pool::start_mining(uint32_t threads)
 	stop_mining();
 
 	MutexLock lock(m_minerLock);
-	m_miner = new Miner(this, threads);
+
+	if (!m_miner) {
+		m_miner = new Miner(this, threads);
+	}
 }
 
 void p2pool::stop_mining()
@@ -2271,6 +2274,12 @@ bool init_signals(p2pool* pool, bool init)
 
 void p2pool::stop()
 {
+#if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
+	// Must be called from here, or the miner api won't be updated because m_pool->stopped() == true
+	// It's thread-safe anyway
+	stop_mining();
+#endif
+
 	// Can be called only once
 	if (m_stopped.exchange(true) == false) {
 		uv_async_send(&m_stopAsync);
