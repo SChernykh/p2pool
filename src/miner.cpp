@@ -78,8 +78,10 @@ Miner::~Miner()
 
 	if (m_pool->api() && m_pool->params().m_localStats && !m_pool->stopped()) {
 		m_pool->api()->set(p2pool_api::Category::LOCAL, "miner", [this](log::Stream& s) {
+			const uint64_t total_hashes = m_totalHashes.load() + (std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(m_fullNonce.load()));
+
 			s << "{\"current_hashrate\":0"
-				<< ",\"total_hashes\":" << m_totalHashes.load()
+				<< ",\"total_hashes\":" << total_hashes
 				<< ",\"time_running\":0"
 				<< ",\"shares_found\":" << m_sharesFound.load()
 				<< ",\"shares_failed\":" << m_sharesFailed.load()
