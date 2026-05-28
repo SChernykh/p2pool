@@ -39,14 +39,14 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	}
 
 	const bool is_v6 = address.find_first_of(':') != std::string::npos;
+	const bool add_brackets = is_v6 && (address.front() != '[') && (address.back() != ']');
 
 	if (is_v6) {
 		m_publisher.set(zmq::sockopt::ipv6, 1);
 		m_subscriber.set(zmq::sockopt::ipv6, 1);
 	}
 
-	char addr_buf[log::Stream::BUF_SIZE + 1];
-	addr_buf[0] = '\0';
+	char addr_buf[320] = {};
 
 	std::random_device rd;
 	std::mt19937_64 rng(rd());
@@ -76,6 +76,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	LOGINFO(5, "listening on " << addr << " for internal communications");
 
 	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
+	m_subscriber.set(zmq::sockopt::handshake_ivl, 1000);
 
 	if (!connect(addr, false)) {
 		throw zmq::error_t(EFSM);
@@ -86,7 +87,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	}
 
 	log::Stream s(addr_buf);
-	s << "tcp://" << address << ':' << m_zmqPort << '\0';
+	s << "tcp://" << (add_brackets ? "[" : "") << address << (add_brackets ? "]" : "") << ':' << m_zmqPort << '\0';
 	addr.assign(addr_buf);
 
 	if (!connect(addr, true)) {
@@ -100,8 +101,11 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	m_subscriber.set(zmq::sockopt::subscribe, "json-full-miner_data");
 	m_subscriber.set(zmq::sockopt::subscribe, "json-minimal-txpool_add");
 
+	m_workerThreadRunning = true;
+
 	const int err = uv_thread_create(&m_worker, run_wrapper, this);
 	if (err) {
+		m_workerThreadRunning = false;
 		LOGERR(1, "failed to start ZMQ worker thread, error " << uv_err_name(err));
 		throw zmq::error_t(EMTHREAD);
 	}
@@ -113,8 +117,6 @@ ZMQReader::~ZMQReader()
 
 	stop();
 	uv_thread_join(&m_worker);
-
-	delete m_monitor;
 
 	LOGINFO(1, "stopped");
 }
@@ -158,7 +160,6 @@ void ZMQReader::run_wrapper(void* arg)
 
 void ZMQReader::run()
 {
-	m_workerThreadRunning = true;
 	ON_SCOPE_LEAVE([this]() { m_workerThreadRunning = false; });
 
 	set_thread_name("ZMQ worker");
@@ -218,24 +219,22 @@ void ZMQReader::Monitor::on_event_disconnected(const zmq_event_t&, const char* a
 
 bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 {
-	static uint64_t id = 0;
+	static std::atomic<uint64_t> id = 0;
 
 	if (!id) {
 		std::random_device rd;
-		id = (static_cast<uint64_t>(rd()) << 32) | static_cast<uint32_t>(rd());
-		id >>= 1; // to avoid MAX_UINT64 case
+		id = (static_cast<uint64_t>(rd() & 0x7FFFFFFFUL) << 32) | static_cast<uint32_t>(rd());
 	}
 
 	char buf[64];
 	// cppcheck-suppress uninitvar
 	log::Stream s(buf);
-	s << "inproc://p2pool-connect-mon-" << id << '\0';
-	++id;
+	s << "inproc://p2pool-connect-mon-" << id.fetch_add(1) << '\0';
 
 	using namespace std::chrono;
 	const auto start_time = steady_clock::now();
 
-	Monitor* monitor = new Monitor();
+	std::unique_ptr<Monitor> monitor(new Monitor());
 	monitor->init(m_subscriber, buf);
 	m_subscriber.connect(address);
 
@@ -245,16 +244,17 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 		}
 		if (duration_cast<milliseconds>(steady_clock::now() - start_time).count() >= 1000) {
 			LOGERR(1, "failed to connect to " << address);
-			delete monitor;
 			return false;
 		}
 	}
 
-	if (keep_monitor) {
-		m_monitor = monitor;
+	if (!monitor->m_connected) {
+		LOGERR(1, "failed to connect to " << address);
+		return false;
 	}
-	else {
-		delete monitor;
+
+	if (keep_monitor) {
+		m_monitor = std::move(monitor);
 	}
 
 	return true;
@@ -295,6 +295,11 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 		return empty_blob;
 	}
 
+	if (unlock_height < MINER_REWARD_UNLOCK_TIME) {
+		LOGWARN(3, "construct_monero_block_blob: invalid unlock_height " << unlock_height);
+		return empty_blob;
+	}
+
 	std::string extra;
 	if (!parseValue(miner_tx->value, "extra", extra)) {
 		LOGWARN(3, "construct_monero_block_blob: extra not found");
@@ -312,6 +317,11 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	if ((tx_hashes == value->MemberEnd()) || !tx_hashes->value.IsArray()) {
 		LOGWARN(3, "construct_monero_block_blob: tx_hashes not found or is not an array");
+		return empty_blob;
+	}
+
+	if (tx_hashes->value.GetArray().Size() > 65536) {
+		LOGWARN(3, "construct_monero_block_blob: tx_hashes is too big (" << tx_hashes->value.GetArray().Size() << ')');
 		return empty_blob;
 	}
 
@@ -349,6 +359,11 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	if (arr.Empty()) {
 		LOGWARN(3, "construct_monero_block_blob: outputs array is empty");
+		return empty_blob;
+	}
+
+	if (arr.Size() > 10000) {
+		LOGWARN(3, "construct_monero_block_blob: outputs array is too big (" << arr.Size() << ')');
 		return empty_blob;
 	}
 
@@ -510,6 +525,12 @@ void ZMQReader::parse(char* data, size_t size)
 		m_minerData.tx_backlog.clear();
 
 		const SizeType n = tx_backlog.Size();
+
+		if (n > 65536) {
+			LOGWARN(1, "'tx_backlog' is too big (" << n << "), skipping it");
+			return;
+		}
+
 		m_minerData.tx_backlog.reserve(n);
 
 		for (SizeType i = 0; i < n; ++i) {
@@ -533,6 +554,12 @@ void ZMQReader::parse(char* data, size_t size)
 		auto arr = doc.GetArray();
 
 		std::vector<std::vector<uint8_t>> blobs;
+
+		if (arr.Size() > 1000) {
+			LOGWARN(1, "json-full-chain_main too many blobs (" << arr.Size() << "), skipping it");
+			return;
+		}
+
 		blobs.reserve(arr.Size());
 
 		for (auto* i = arr.begin(); i != arr.end(); ++i) {

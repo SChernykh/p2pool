@@ -59,6 +59,7 @@
 #include <chrono>
 #include <random>
 #include <optional>
+#include <memory>
 
 #include <signal.h>
 

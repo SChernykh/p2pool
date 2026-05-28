@@ -38,7 +38,9 @@ private:
 		void on_event_disconnected(const zmq_event_t&, const char* address) ZMQ_OVERRIDE;
 
 		std::atomic<bool> m_connected;
-	} *m_monitor;
+	};
+
+	std::unique_ptr<Monitor> m_monitor;
 
 	static void monitor_thread(void* arg);
 
