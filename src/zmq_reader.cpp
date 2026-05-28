@@ -118,6 +118,8 @@ ZMQReader::~ZMQReader()
 	stop();
 	uv_thread_join(&m_worker);
 
+	m_monitor.reset();
+
 	LOGINFO(1, "stopped");
 }
 
