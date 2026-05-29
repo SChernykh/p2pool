@@ -229,6 +229,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		uint64_t num_transactions;
 		READ_VARINT(num_transactions);
+		if (num_transactions > MAX_BLOCK_SIZE / HASH_SIZE) return __LINE__;
 
 		const int transactions_offset = static_cast<int>(data - data_begin);
 
@@ -259,7 +260,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 		}
 		else {
-			if (num_transactions > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < num_transactions * HASH_SIZE) return __LINE__;
 
 			transactions.reserve(num_transactions + 1);
