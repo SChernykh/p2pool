@@ -332,6 +332,46 @@ TEST(merkle, tree)
 	check_full_tree();
 }
 
+TEST(merkle, malformed_tree)
+{
+	hash input[4];
+	uint8_t data[] = "data 0";
+
+	for (size_t i = 0; i < 4; ++i, ++data[sizeof(data) - 2]) {
+		keccak(data, sizeof(data) - 1, input[i].h);
+	}
+
+	std::vector<hash> proof;
+	uint32_t path;
+
+	// Every level above the leaves is missing (tree.size() == 1).
+	{
+		const std::vector<hash> leaves = { input[0], input[1], input[2] };
+
+		std::vector<std::vector<hash>> good;
+		merkle_hash_full_tree(leaves, good);
+		ASSERT_TRUE(get_merkle_proof(good, input[2], proof, path));
+
+		std::vector<std::vector<hash>> bad(1);
+		bad[0] = leaves;
+		ASSERT_FALSE(get_merkle_proof(bad, input[2], proof, path));
+	}
+
+	// The right number of levels, but level 1 is truncated.
+	{
+		const std::vector<hash> leaves = { input[0], input[1], input[2], input[3] };
+
+		std::vector<std::vector<hash>> good;
+		merkle_hash_full_tree(leaves, good);
+		ASSERT_GE(good.size(), 2);
+		ASSERT_TRUE(get_merkle_proof(good, input[3], proof, path));
+
+		std::vector<std::vector<hash>> bad = good;
+		bad[1].resize(2);
+		ASSERT_FALSE(get_merkle_proof(bad, input[3], proof, path));
+	}
+}
+
 TEST(merkle, aux_slot)
 {
 	hash id;
