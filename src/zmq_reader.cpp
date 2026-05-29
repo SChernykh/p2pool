@@ -25,8 +25,7 @@ LOG_CATEGORY(ZMQReader)
 namespace p2pool {
 
 ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::string& proxy, MinerCallbackHandler* handler)
-	: m_monitor(nullptr)
-	, m_zmqPort(zmq_port)
+	: m_zmqPort(zmq_port)
 	, m_proxy(proxy)
 	, m_handler(handler)
 	, m_tx()
@@ -39,7 +38,8 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	}
 
 	const bool is_v6 = address.find_first_of(':') != std::string::npos;
-	const bool add_brackets = is_v6 && (address.front() != '[') && (address.back() != ']');
+	const char* left_bracket = (is_v6 && (address.front() != '[')) ? "[" : "";
+	const char* right_bracket = (is_v6 && (address.back() != ']')) ? "]" : "";
 
 	if (is_v6) {
 		m_publisher.set(zmq::sockopt::ipv6, 1);
@@ -77,6 +77,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 
 	m_subscriber.set(zmq::sockopt::connect_timeout, 1000);
 	m_subscriber.set(zmq::sockopt::handshake_ivl, 1000);
+	m_subscriber.set(zmq::sockopt::maxmsgsize, static_cast<int64_t>(32 * 1024 * 1024));
 
 	if (!connect(addr, false)) {
 		throw zmq::error_t(EFSM);
@@ -87,7 +88,7 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	}
 
 	log::Stream s(addr_buf);
-	s << "tcp://" << (add_brackets ? "[" : "") << address << (add_brackets ? "]" : "") << ':' << m_zmqPort << '\0';
+	s << "tcp://" << left_bracket << address << right_bracket << ':' << m_zmqPort << '\0';
 	addr.assign(addr_buf);
 
 	if (!connect(addr, true)) {
@@ -117,9 +118,10 @@ ZMQReader::~ZMQReader()
 
 	stop();
 	uv_thread_join(&m_worker);
+}
 
-	m_monitor.reset();
-
+ZMQReader::StoppedMsg::~StoppedMsg()
+{
 	LOGINFO(1, "stopped");
 }
 
@@ -436,10 +438,12 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 	for (auto* i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString()) {
 			LOGWARN(3, "construct_monero_block_blob: tx_hash is not a string");
+			out_transaction_hashes.clear();
 			return empty_blob;
 		}
 		if (!from_hex(i->GetString(), i->GetStringLength(), h)) {
 			LOGWARN(3, "construct_monero_block_blob: invalid tx_hash " << i->GetString());
+			out_transaction_hashes.clear();
 			return empty_blob;
 		}
 		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);

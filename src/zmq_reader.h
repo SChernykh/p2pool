@@ -30,6 +30,9 @@ public:
 	bool is_running() const { return m_workerThreadRunning.load(); }
 
 private:
+	// This destructor will be called last from ~ZMQReader()
+	struct StoppedMsg { ~StoppedMsg(); } m_stoppedMsg{};
+
 	struct Monitor : public zmq::monitor_t {
 		Monitor() : m_connected(false) {}
 		Monitor(const Monitor&) = delete;
@@ -40,13 +43,10 @@ private:
 		std::atomic<bool> m_connected;
 	};
 
-	std::unique_ptr<Monitor> m_monitor;
-
 	static void monitor_thread(void* arg);
 
 	uv_thread_t m_monitorThread{};
 
-private:
 	void stop();
 
 	static void run_wrapper(void* arg);
@@ -64,6 +64,8 @@ private:
 	zmq::context_t m_context{ 1 };
 	zmq::socket_t m_publisher{ m_context, ZMQ_PUB };
 	zmq::socket_t m_subscriber{ m_context, ZMQ_SUB };
+	std::unique_ptr<Monitor> m_monitor;
+
 	uint16_t m_publisherPort = 0;
 	std::atomic<bool> m_stopped{ false };
 	std::atomic<bool> m_workerThreadRunning{ false };
