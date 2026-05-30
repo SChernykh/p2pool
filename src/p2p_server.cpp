@@ -80,6 +80,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_cachedBlocks(nullptr)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_block(new PoolBlock())
+	, m_blockDeserializeBufCompact(false)
 	, m_blockDeserializeResult(0)
 	, m_timer{}
 	, m_timerCounter(0)
@@ -1371,13 +1372,14 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 {
 	int result;
 
-	if ((m_blockDeserializeBuf.size() == size) && (memcmp(m_blockDeserializeBuf.data(), buf, size) == 0)) {
+	if ((m_blockDeserializeBuf.size() == size) && (m_blockDeserializeBufCompact == compact) && (memcmp(m_blockDeserializeBuf.data(), buf, size) == 0)) {
 		m_block->reset_offchain_data();
 		result = m_blockDeserializeResult;
 	}
 	else {
 		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact);
 		m_blockDeserializeBuf.assign(buf, buf + size);
+		m_blockDeserializeBufCompact = compact;
 		m_blockDeserializeResult = result;
 		m_lookForMissingBlocks = true;
 	}
@@ -2746,7 +2748,10 @@ bool P2PServer::P2PClient::on_listen_port(const uint8_t* buf)
 
 	m_listenPort = port;
 
-	static_cast<P2PServer*>(m_owner)->update_peer_in_list(isV6(), m_addr, port);
+	if (m_addressType != AddressType::DomainName) {
+		static_cast<P2PServer*>(m_owner)->update_peer_in_list(isV6(), m_addr, port);
+	}
+
 	return true;
 }
 
@@ -2768,17 +2773,26 @@ bool P2PServer::P2PClient::on_block_request(const uint8_t* buf)
 	}
 
 	// Notifications about parent and uncle blocks to speed up syncing
+	// Only notify about blocks we actually have: a peer relies on these hashes to decide whether it
+	// can send us pruned/compact blocks, and we'd ban it if it sent one referencing a block we lack.
 	std::vector<hash> notify_blocks;
 
 	if (block && (m_protocolVersion >= PROTOCOL_VERSION_1_2)) {
 		notify_blocks.reserve(block->m_uncles.size() + 2);
 
-		notify_blocks.push_back(block->m_parent);
-		notify_blocks.insert(notify_blocks.end(), block->m_uncles.begin(), block->m_uncles.end());
-
-		block = sidechain.find_block(block->m_parent);
-		if (block) {
+		const PoolBlock* parent = sidechain.find_block(block->m_parent);
+		if (parent) {
 			notify_blocks.push_back(block->m_parent);
+		}
+
+		for (const hash& uncle : block->m_uncles) {
+			if (sidechain.find_block(uncle)) {
+				notify_blocks.push_back(uncle);
+			}
+		}
+
+		if (parent && sidechain.find_block(parent->m_parent)) {
+			notify_blocks.push_back(parent->m_parent);
 		}
 	}
 
@@ -3457,6 +3471,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 			Work* work = reinterpret_cast<Work*>(req->data);
 
+			if (work->server->is_banned(work->is_v6, work->addr)) {
+				return;
+			}
+
 			hash pow_hash;
 			if (!work->hasher->calculate(work->blob.data(), work->blob.size(), work->height, work->seed, pow_hash, false)) {
 				LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash for height = " << work->height);
@@ -3506,7 +3524,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 					server->submit_monero_blocks();
 				}
 			}
-			else {
+			else if (!server->is_banned(work->is_v6, work->addr)) {
 				P2PClient* client = work->client;
 
 				if (client->m_resetCounter == work->reset_counter) {
@@ -3610,6 +3628,11 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		{
 			BACKGROUND_JOB_START(P2PServer::handle_incoming_block_async);
 			Work* work = reinterpret_cast<Work*>(req->data);
+
+			if (work->server->is_banned(work->client_isV6, work->client_ip)) {
+				return;
+			}
+
 			work->client->handle_incoming_block(work->server->m_pool, work->block, work->missing_blocks, work->result);
 		},
 		[](uv_work_t* req, int /*status*/)
