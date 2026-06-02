@@ -233,6 +233,10 @@ SideChain::~SideChain()
 		delete it.second;
 	}
 
+	for (const auto& it : m_blocksToDelete) {
+		delete it.second;
+	}
+
 	s_networkType = NetworkType::Invalid;
 }
 
@@ -2243,6 +2247,13 @@ void SideChain::prune_old_blocks()
 		return;
 	}
 
+	// Free blocks that were pruned at least 1 minute ago. By now any raw pointer to them that another
+	// thread might have grabbed (via find_block()/get_block_blob() without m_sidechainLock) is long gone.
+	while (!m_blocksToDelete.empty() && (cur_time >= m_blocksToDelete.front().first + 60)) {
+		delete m_blocksToDelete.front().second;
+		m_blocksToDelete.pop_front();
+	}
+
 	const uint64_t h = tip->m_sidechainHeight - prune_distance;
 
 	std::vector<PoolBlock*> blocks_to_prune;
@@ -2298,9 +2309,10 @@ void SideChain::prune_old_blocks()
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
 
-		// We can only delete old blocks after the precalc is stopped because it can still use some of them
-		for (const PoolBlock* b : blocks_to_prune) {
-			delete b;
+		// These blocks have already been unlinked from m_blocksById/m_blocksByHeight/m_blocksByMerkleRoot
+		// above, so no new lookup can return them. Place them in a queue for deletion 1 minute later.
+		for (PoolBlock* b : blocks_to_prune) {
+			m_blocksToDelete.emplace_back(cur_time, b);
 		}
 
 #ifdef DEV_TEST_SYNC
