@@ -724,6 +724,8 @@ MergeMiningClientTari::TariClient::TariClient()
 
 void MergeMiningClientTari::TariClient::reset()
 {
+	Client::reset();
+
 	m_pendingData.clear();
 	m_connectionPending = false;
 

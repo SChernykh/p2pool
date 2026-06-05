@@ -500,9 +500,6 @@ void TCPServer::close_sockets(bool listen_sockets)
 	size_t numClosed = 0;
 
 	for (Client* c = m_connectedClientsList->m_next; c != m_connectedClientsList; c = c->m_next) {
-		if (c->m_isClosing) {
-			continue;
-		}
 		c->m_isClosing = true;
 
 		uv_handle_t* h = reinterpret_cast<uv_handle_t*>(&c->m_socket);
