@@ -276,6 +276,7 @@ private:
 	uint64_t m_peerId_I2P;
 
 	mutable uv_mutex_t m_peerListLock;
+	uv_mutex_t m_peerListSaveLock;
 
 	struct Peer
 	{

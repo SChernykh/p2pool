@@ -116,6 +116,7 @@ P2PServer::P2PServer(p2pool* pool)
 
 	uv_mutex_init_checked(&m_blockLock);
 	uv_mutex_init_checked(&m_peerListLock);
+	uv_mutex_init_checked(&m_peerListSaveLock);
 	uv_mutex_init_checked(&m_broadcastLock);
 	uv_rwlock_init_checked(&m_cachedBlocksLock);
 	uv_mutex_init_checked(&m_connectToPeersLock);
@@ -193,6 +194,7 @@ P2PServer::~P2PServer()
 
 	uv_mutex_destroy(&m_blockLock);
 	uv_mutex_destroy(&m_peerListLock);
+	uv_mutex_destroy(&m_peerListSaveLock);
 	uv_mutex_destroy(&m_broadcastLock);
 
 	clear_cached_blocks();
@@ -609,6 +611,9 @@ void P2PServer::save_peer_list_async()
 
 void P2PServer::save_peer_list()
 {
+	// This can run both from libuv worker threads and from P2PServer event loop (when shutting down), so make sure it's serialized
+	MutexLock save_lock(m_peerListSaveLock);
+
 	const Params& params = m_pool->params();
 
 	const std::string path = params.m_dataDir + saved_peer_list_file_name;

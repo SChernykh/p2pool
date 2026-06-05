@@ -225,7 +225,7 @@ void BlockCache::load_all(const SideChain& side_chain, P2PServer& server)
 
 void BlockCache::flush()
 {
-	if (m_flushRunning.exchange(1)) {
+	if (m_flushRunning.exchange(1) == 0) {
 		m_impl->flush();
 		m_flushRunning.store(0);
 	}
