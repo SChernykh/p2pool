@@ -1003,7 +1003,7 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 		}
 	}
 
-	if (!is_banned(peer.m_isV6, peer.m_addr)) {
+	if (!is_banned(peer.m_isV6, peer.m_addr) && !ip.is_localhost()) {
 		m_peerList.push_back(peer);
 	}
 }
@@ -1746,9 +1746,11 @@ void P2PServer::broadcast_aux_job_donation_async(const uint8_t* data, uint32_t d
 	m_AuxJobBroadcast.job.assign(data, data + data_size);
 	m_AuxJobBroadcast.timestamp = timestamp;
 
-	const int err = uv_async_send(&m_AuxJobBroadcastAsync);
-	if (err) {
-		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_AuxJobBroadcastAsync))) {
+		const int err = uv_async_send(&m_AuxJobBroadcastAsync);
+		if (err) {
+			LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+		}
 	}
 }
 
@@ -1915,9 +1917,11 @@ void P2PServer::broadcast_monero_block_async(std::vector<std::vector<uint8_t>>&&
 
 	m_MoneroBlocksToBroadcast = std::move(blobs);
 
-	const int err = uv_async_send(&m_MoneroBlocksToBroadcastAsync);
-	if (err) {
-		LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_MoneroBlocksToBroadcastAsync))) {
+		const int err = uv_async_send(&m_MoneroBlocksToBroadcastAsync);
+		if (err) {
+			LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+		}
 	}
 }
 
@@ -2974,7 +2978,7 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 		uint32_t n = 0;
 
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			if (!client->is_good() || (client->m_addr == m_addr)) {
+			if (!client->is_good() || (client->m_addr == m_addr) || (client->m_addressType == AddressType::DomainName)) {
 				continue;
 			}
 
@@ -3075,8 +3079,8 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 		if (!is_v6) {
 			const uint32_t b = ip.data[12];
-			if ((b == 0) || (b >= 224)) {
-				// Ignore 0.0.0.0/8 (special-purpose range for "this network") and 224.0.0.0/3 (IP multicast and reserved ranges)
+			if ((b == 0) || (b >= 224) || ip.is_localhost()) {
+				// Ignore 0.0.0.0/8 (special-purpose range for "this network"), 224.0.0.0/3 (IP multicast and reserved ranges) and localhost
 
 				// Check for protocol version message
 				if ((*reinterpret_cast<uint32_t*>(ip.data + sizeof(raw_ip::ipv4_prefix)) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
