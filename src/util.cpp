@@ -1056,6 +1056,12 @@ hash from_onion_v3(const std::string& address)
 		return {};
 	}
 
+	// Version validation
+	if (std::tolower(static_cast<unsigned char>(address[55])) != 'd') {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": invalid version");
+		return {};
+    }
+
 	return result;
 }
 

@@ -242,6 +242,7 @@ TEST(util, onion)
 	ASSERT_TRUE(from_onion_v3("inval1dcharacter777777777777777777777777777777777777777d.onion").empty());
 	ASSERT_TRUE(from_onion_v3("wrongchecksum777777777777777777777777777777777777777777d.onion").empty());
 	ASSERT_TRUE(from_onion_v3("yucmgsbw7nknw7oi3bkuwudvc657g2xcqahhbjyewazusyytapqo4xid.xnion").empty());
+	ASSERT_TRUE(from_onion_v3("zpv4fa3szgel7vf6jdjeugizdclq2vzkelscs2bhbgnlldzzggcen3ac.onion").empty());
 
 	// Invalid pubkey
 	ASSERT_TRUE(from_onion_v3("civ5tgldg3yx73ytse6hvvk3nm6q3zctbqvytpszihm35b33ze73kxad.onion").empty());
