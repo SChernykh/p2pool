@@ -245,6 +245,9 @@ TEST(util, onion)
 
 	// Invalid pubkey
 	ASSERT_TRUE(from_onion_v3("civ5tgldg3yx73ytse6hvvk3nm6q3zctbqvytpszihm35b33ze73kxad.onion").empty());
+
+	// Invalid version
+	ASSERT_TRUE(from_onion_v3("zpv4fa3szgel7vf6jdjeugizdclq2vzkelscs2bhbgnlldzzggcen3ac.onion").empty());
 }
 
 TEST(util, parse_config)

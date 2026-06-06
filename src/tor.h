@@ -52,7 +52,7 @@
 
 namespace p2pool {
 
-static FORCEINLINE constexpr hash from_onion_v3_const(const char* address)
+static FORCEINLINE constexpr hash from_onion_v3_const(const char* address, uint8_t* out_version = nullptr)
 {
 	uint8_t buf[HASH_SIZE + 4] = {};
 	uint8_t* p = buf;
@@ -74,6 +74,9 @@ static FORCEINLINE constexpr hash from_onion_v3_const(const char* address)
 			digit = static_cast<uint64_t>(c - '2') + 26;
 		}
 		else {
+			if (out_version) {
+				*out_version = 0;
+			}
 			return {};
 		}
 
@@ -90,6 +93,10 @@ static FORCEINLINE constexpr hash from_onion_v3_const(const char* address)
 
 	for (size_t i = 0; i < HASH_SIZE; ++i) {
 		result.h[i] = buf[i];
+	}
+
+	if (out_version) {
+		*out_version = buf[HASH_SIZE + 2];
 	}
 
 	return result;

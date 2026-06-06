@@ -1036,10 +1036,16 @@ hash from_onion_v3(const std::string& address)
 		return {};
 	}
 
-	const hash result = from_onion_v3_const(address.c_str());
+	uint8_t version = 0;
+	const hash result = from_onion_v3_const(address.c_str(), &version);
 
 	if (result.empty()) {
 		LOGWARN(3, "Invalid onion address \"" << address << "\": has invalid character(s)");
+		return {};
+	}
+
+	if (version != 3) {
+		LOGWARN(3, "Invalid onion address \"" << address << "\": invalid version " << version);
 		return {};
 	}
 
