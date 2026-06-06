@@ -166,6 +166,7 @@ public:
 		uint32_t m_broadcastedHashesIndex;
 
 		hash m_lastMoneroBlockBroadcastDigest;
+		uint64_t m_lastAuxJobMessage;
 
 		// log::Stream wrapper
 		struct SoftwareDisplayName

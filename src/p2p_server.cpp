@@ -1650,6 +1650,7 @@ P2PServer::P2PClient::P2PClient()
 	, m_broadcastedHashes{}
 	, m_broadcastedHashesIndex(0)
 	, m_lastMoneroBlockBroadcastDigest{}
+	, m_lastAuxJobMessage(0)
 {
 	m_p2pReadBuf[0] = '\0';
 }
@@ -2051,6 +2052,7 @@ void P2PServer::P2PClient::reset()
 	m_broadcastedHashesIndex = 0;
 
 	m_lastMoneroBlockBroadcastDigest = {};
+	m_lastAuxJobMessage = 0;
 }
 
 bool P2PServer::P2PClient::on_connect()
@@ -2851,6 +2853,9 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
+
+		server->m_missingBlockRequests.erase(std::make_pair(m_peerId, expected_id));
+
 		if ((expected_id == 0) && (cur_time >= m_nextOutgoingPeerListRequest)) {
 			server->send_peer_list_request(this, cur_time);
 		}
@@ -3221,6 +3226,14 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	}
 
 	const time_t cur_time = time(nullptr);
+	const uint64_t cur_time_steady = microseconds_since_epoch();
+
+	// At least 0.5 seconds between messages from the same peer
+	if (cur_time_steady < m_lastAuxJobMessage + 500'000) {
+		LOGWARN(5, "peer " << static_cast<char*>(m_addrString) << " sent the next AUX_JOB_DONATION message too fast, ignoring");
+		return true;
+	}
+	m_lastAuxJobMessage = cur_time_steady;
 
 	// Layout of the message:
 	//
