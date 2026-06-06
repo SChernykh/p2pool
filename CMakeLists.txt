@@ -169,6 +169,25 @@ set(SOURCES
 	src/i2p.cpp
 )
 
+if (NOT WITH_TLS AND NOT WITH_GRPC)
+	set(BORINGSSL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/src/grpc/third_party/boringssl-with-bazel)
+	include_directories(${BORINGSSL_DIR}/include)
+
+	set(ED25519_SOURCES
+		${BORINGSSL_DIR}/crypto/curve25519/curve25519.cc
+		${BORINGSSL_DIR}/crypto/sha/sha512.cc
+		external/src/crypto/bssl_stub.cpp
+	)
+
+	if (MSVC)
+		set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "/w /DOPENSSL_NO_ASM /I\"${BORINGSSL_DIR}\" /I\"${BORINGSSL_DIR}/include\"")
+	else()
+		set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "-w -DOPENSSL_NO_ASM -I${BORINGSSL_DIR} -I${BORINGSSL_DIR}/include")
+	endif()
+
+	set(SOURCES ${SOURCES} ${ED25519_SOURCES})
+endif()
+
 if (AMD64)
 	set(SOURCES ${SOURCES} src/keccak_bmi.cpp)
 	if (CMAKE_C_COMPILER_ID MATCHES GNU OR CMAKE_C_COMPILER_ID MATCHES Clang)

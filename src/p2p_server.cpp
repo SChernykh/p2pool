@@ -35,12 +35,7 @@
 #include "sha256.h"
 #include "i2p.h"
 
-#ifdef WITH_TLS
 #include <openssl/curve25519.h>
-#else
-#define ED25519_PUBLIC_KEY_LEN 32
-#define ED25519_SIGNATURE_LEN 64
-#endif
 
 #include <fstream>
 #include <numeric>
@@ -3271,12 +3266,10 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	memcpy(signature, buf + ED25519_PUBLIC_KEY_LEN + 8, sizeof(signature));
 
 	// Ignore messages with invalid signatures
-#ifdef WITH_TLS // Need BoringSSL to verify signatures
 	if (!ED25519_verify(buf, ED25519_PUBLIC_KEY_LEN + 8, signature, ED25519_MASTER_PUBLIC_KEY)) {
 		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an AUX_JOB_DONATION message with an invalid master key signature");
 		return true;
 	}
-#endif
 
 	const uint8_t* p = buf + DATA_OFFSET;
 	const uint8_t* data_end = p + data_size;
@@ -3287,12 +3280,10 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	memcpy(secondary_public_key, buf, sizeof(secondary_public_key));
 
 	// Ignore messages with invalid signatures
-#ifdef WITH_TLS // Need BoringSSL to verify signatures
 	if (!ED25519_verify(p, data_size, signature, secondary_public_key)) {
 		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent an AUX_JOB_DONATION message with an invalid secondary key signature");
 		return true;
 	}
-#endif
 
 	const int64_t data_timestamp = read_unaligned(reinterpret_cast<const int64_t*>(p));
 	p += sizeof(int64_t);
@@ -3322,7 +3313,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 		return true;
 	}
 
-#if defined(WITH_MERGE_MINING_DONATION) && defined(WITH_TLS) // Only work on verified jobs
+#if defined(WITH_MERGE_MINING_DONATION)
 	const uint32_t N = static_cast<uint32_t>(data_end - p) / DATA_ENTRY_SIZE;
 
 	std::vector<IMergeMiningClient::ChainParameters> chain_params_vec(N);

@@ -93,6 +93,24 @@ set(SOURCES
 	../src/i2p.cpp
 )
 
+set(BORINGSSL_DIR ../external/src/grpc/third_party/boringssl-with-bazel)
+include_directories(${BORINGSSL_DIR})
+include_directories(${BORINGSSL_DIR}/include)
+
+set(ED25519_SOURCES
+	${BORINGSSL_DIR}/crypto/curve25519/curve25519.cc
+	${BORINGSSL_DIR}/crypto/sha/sha512.cc
+	../external/src/crypto/bssl_stub.cpp
+)
+
+if (MSVC)
+	set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "/w /DOPENSSL_NO_ASM /I\"${BORINGSSL_DIR}\" /I\"${BORINGSSL_DIR}/include\"")
+else()
+	set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "-w -DOPENSSL_NO_ASM -I${BORINGSSL_DIR} -I${BORINGSSL_DIR}/include")
+endif()
+
+set(SOURCES ${SOURCES} ${ED25519_SOURCES})
+
 if (WITH_INDEXED_HASHES)
 	add_compile_definitions(WITH_INDEXED_HASHES)
 	set(SOURCES ${SOURCES} ../src/indexed_hash.cpp)
