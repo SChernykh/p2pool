@@ -81,7 +81,6 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_block(new PoolBlock())
 	, m_blockDeserializeBufCompact(false)
-	, m_blockDeserializeResult(0)
 	, m_timer{}
 	, m_timerCounter(0)
 	, m_timerInterval(2)
@@ -1379,13 +1378,20 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 
 	if ((m_blockDeserializeBuf.size() == size) && (m_blockDeserializeBufCompact == compact) && (memcmp(m_blockDeserializeBuf.data(), buf, size) == 0)) {
 		m_block->reset_offchain_data();
-		result = m_blockDeserializeResult;
+		result = 0;
 	}
 	else {
 		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact);
-		m_blockDeserializeBuf.assign(buf, buf + size);
-		m_blockDeserializeBufCompact = compact;
-		m_blockDeserializeResult = result;
+
+		// Cache only successfully deserialized blocks
+		if (result == 0) {
+			m_blockDeserializeBuf.assign(buf, buf + size);
+			m_blockDeserializeBufCompact = compact;
+		}
+		else {
+			m_blockDeserializeBuf.clear();
+		}
+
 		m_lookForMissingBlocks = true;
 	}
 
@@ -3071,6 +3077,10 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 		memcpy(&port, buf, 2);
 		buf += 2;
 
+		if (ip.is_localhost()) {
+			continue;
+		}
+
 		// Treat IPv4-mapped addresses as regular IPv4 addresses
 		// cppcheck-suppress uninitvar
 		if (is_v6 && ip.is_ipv4_prefix()) {
@@ -3079,7 +3089,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 		if (!is_v6) {
 			const uint32_t b = ip.data[12];
-			if ((b == 0) || (b >= 224) || ip.is_localhost()) {
+			if ((b == 0) || (b >= 224)) {
 				// Ignore 0.0.0.0/8 (special-purpose range for "this network"), 224.0.0.0/3 (IP multicast and reserved ranges) and localhost
 
 				// Check for protocol version message

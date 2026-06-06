@@ -265,7 +265,6 @@ private:
 	PoolBlock* m_block;
 	std::vector<uint8_t> m_blockDeserializeBuf;
 	bool m_blockDeserializeBufCompact;
-	int m_blockDeserializeResult;
 
 	uv_timer_t m_timer;
 	uint64_t m_timerCounter;
