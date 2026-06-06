@@ -180,7 +180,7 @@ if (NOT WITH_TLS AND NOT WITH_GRPC)
 	)
 
 	if (MSVC)
-		set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "/w /DOPENSSL_NO_ASM /I\"${BORINGSSL_DIR}\" /I\"${BORINGSSL_DIR}/include\"")
+		set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "/W0 /DOPENSSL_NO_ASM /I\"${BORINGSSL_DIR}\" /I\"${BORINGSSL_DIR}/include\"")
 	else()
 		set_source_files_properties(${ED25519_SOURCES} PROPERTIES COMPILE_FLAGS "-w -DOPENSSL_NO_ASM -I${BORINGSSL_DIR} -I${BORINGSSL_DIR}/include")
 	endif()
