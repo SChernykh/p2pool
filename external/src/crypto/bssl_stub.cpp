@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdlib>
 
+#include "crypto/fipsmodule/sha/sha256.cc.inc"
 #include "crypto/fipsmodule/sha/sha512.cc.inc"
 
 void OPENSSL_cleanse(void* ptr, size_t len)

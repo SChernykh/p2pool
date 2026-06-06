@@ -32,10 +32,10 @@
 #include "stratum_server.h"
 #include "rapidjson_wrapper.h"
 #include "merge_mining_client.h"
-#include "sha256.h"
 #include "i2p.h"
 
 #include <openssl/curve25519.h>
+#include <openssl/sha2.h>
 
 #include <fstream>
 #include <numeric>
@@ -1778,7 +1778,7 @@ void P2PServer::broadcast_aux_job_donation(const uint8_t* data, uint32_t data_si
 
 	if (!duplicate_check_done) {
 		hash digest;
-		sha256(data, data_size, digest.h);
+		SHA256(data, data_size, digest.h);
 
 		// Every message can be received from multiple peers, so broadcast it only once
 		if (!m_auxJobMessages.emplace(*digest.u64(), timestamp).second) {
@@ -1952,7 +1952,7 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 	}
 
 	hash digest;
-	sha256(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader), digest.h);
+	SHA256(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader), digest.h);
 
 	if (!duplicate_check_done && !store_monero_block_broadcast(digest)) {
 		LOGINFO(6, "broadcast_monero_block: skipping duplicate broadcast");
@@ -3318,7 +3318,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	}
 
 	hash digest;
-	sha256(buf, size, digest.h);
+	SHA256(buf, size, digest.h);
 
 	// Ignore repeated old messages
 	if (!server->m_auxJobMessages.emplace(*digest.u64(), data_timestamp).second) {
@@ -3413,7 +3413,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		return true;
 	}
 
-	sha256(buf, size, m_lastMoneroBlockBroadcastDigest.h);
+	SHA256(buf, size, m_lastMoneroBlockBroadcastDigest.h);
 
 	// Ignore repeated old messages
 	if (!server->store_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest)) {

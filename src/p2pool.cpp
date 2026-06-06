@@ -42,11 +42,9 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "merge_mining_client.h"
-#include "sha256.h"
 
-#ifdef WITH_TLS
 #include <openssl/curve25519.h>
-#endif
+#include <openssl/sha2.h>
 
 #include <thread>
 #include <fstream>
@@ -1134,7 +1132,7 @@ void p2pool::submit_block() const
 	request.append("\"]}");
 
 	hash digest;
-	sha256(blob.data(), static_cast<uint32_t>(blob.size()), digest.h);
+	SHA256(blob.data(), static_cast<uint32_t>(blob.size()), digest.h);
 
 	m_p2pServer->store_monero_block_broadcast(digest);
 

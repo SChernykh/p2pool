@@ -19,7 +19,8 @@
 #include "keccak.h"
 #include "merkle.h"
 #include "keccak.h"
-#include "sha256.h"
+
+#include <openssl/sha2.h>
 
 namespace p2pool {
 
@@ -403,7 +404,7 @@ uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
 	buf[HASH_SIZE + sizeof(uint32_t)] = HASH_KEY_MM_SLOT;
 
 	hash res;
-	sha256(buf, sizeof(buf), res.h);
+	SHA256(buf, sizeof(buf), res.h);
 
 	return *reinterpret_cast<uint32_t*>(res.h) % n_aux_chains;
 }

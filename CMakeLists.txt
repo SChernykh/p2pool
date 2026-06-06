@@ -101,7 +101,6 @@ endif()
 include(cmake/flags.cmake)
 
 set(HEADERS
-	external/src/crypto/sha256.h
 	external/src/cryptonote/crypto-ops.h
 	external/src/hardforks/hardforks.h
 	src/block_cache.h
@@ -136,7 +135,6 @@ set(HEADERS
 )
 
 set(SOURCES
-	external/src/crypto/sha256.c
 	external/src/cryptonote/crypto-ops-data.c
 	external/src/cryptonote/crypto-ops.c
 	external/src/cryptonote/fcmp_pp_crypto.cpp
@@ -175,6 +173,7 @@ if (NOT WITH_TLS AND NOT WITH_GRPC)
 
 	set(ED25519_SOURCES
 		${BORINGSSL_DIR}/crypto/curve25519/curve25519.cc
+		${BORINGSSL_DIR}/crypto/sha/sha256.cc
 		${BORINGSSL_DIR}/crypto/sha/sha512.cc
 		external/src/crypto/bssl_stub.cpp
 	)

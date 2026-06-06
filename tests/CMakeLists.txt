@@ -66,7 +66,6 @@ set(SOURCES
 	src/util_tests.cpp
 	src/wallet_tests.cpp
 	src/i2p_tests.cpp
-	../external/src/crypto/sha256.c
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
 	../external/src/cryptonote/fcmp_pp_crypto.cpp
@@ -99,6 +98,7 @@ include_directories(${BORINGSSL_DIR}/include)
 
 set(ED25519_SOURCES
 	${BORINGSSL_DIR}/crypto/curve25519/curve25519.cc
+	${BORINGSSL_DIR}/crypto/sha/sha256.cc
 	${BORINGSSL_DIR}/crypto/sha/sha512.cc
 	../external/src/crypto/bssl_stub.cpp
 )
