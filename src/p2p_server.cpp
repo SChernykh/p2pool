@@ -293,7 +293,10 @@ void P2PServer::connect_to_peers(const std::string& peer_list)
 		{
 			const Params& params = m_pool->params();
 
-			if (!m_socks5Proxy.empty() && (ip.find_first_not_of("0123456789.:") != std::string::npos)) {
+			if (!m_socks5Proxy.empty() &&
+				(ip.find_first_not_of("0123456789.") != std::string::npos) &&     // not IPv4
+				(ip.find_first_not_of("0123456789abcdef:") != std::string::npos)) // not IPv6
+			{
 				// Assume it's a domain name and use the proxy to resolve it
 				if (!connect_to_peer(ip, port)) {
 					LOGERR(5, "connect_to_peers: failed to connect to " << ip);
@@ -2655,6 +2658,11 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 	uint64_t peer_id;
 	memcpy(&peer_id, buf + CHALLENGE_SIZE, sizeof(uint64_t));
 
+	if (peer_id == 0) {
+		LOGWARN(5, "Peer " << static_cast<const char*>(m_addrString) << " uses invalid peer id 0");
+		return false;
+	}
+
 	if ((peer_id == server->m_peerId) || (peer_id == server->m_peerId_TOR) || (peer_id == server->m_peerId_I2P)) {
 		LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
 		return false;
@@ -3078,7 +3086,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 		memcpy(&port, buf, 2);
 		buf += 2;
 
-		if (ip.is_localhost()) {
+		if (ip.is_localhost() || (port == 0) || (port > 65535)) {
 			continue;
 		}
 
