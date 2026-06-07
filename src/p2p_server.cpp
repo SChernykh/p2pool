@@ -3698,6 +3698,9 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 		P2PServer* server = pool->p2p_server();
 		server->ban(is_v6, addr, DEFAULT_BAN_TIME);
 		server->remove_peer_from_list(addr);
+
+		// Don't send any requests to a peer which we just banned
+		return;
 	}
 
 	// We might have been disconnected while side_chain was adding the block
