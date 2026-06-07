@@ -288,7 +288,7 @@ void p2pool::update_host_ping(const std::string& display_name, double ping)
 		LOGINFO(1, display_name << " ping is " << ping << " ms");
 	}
 	else {
-		LOGWARN(1, display_name << " ping is " << ping << " ms, this is too high for an efficient mining. Try to use a different node, or your own local node.");
+		LOGWARN(1, display_name << " ping is " << ping << " ms, this is too high for efficient mining. Try to use a different node, or your own local node.");
 	}
 
 	const std::vector<Params::Host>& v = m_params.m_hosts;
@@ -1153,7 +1153,7 @@ void p2pool::submit_block() const
 				auto& err = doc["error"];
 
 				if (!err.IsObject()) {
-					LOGERR(0, "submit_block: invalid JSON reponse from daemon: 'error' is not an object");
+					LOGERR(0, "submit_block: invalid JSON response from daemon: 'error' is not an object");
 					return;
 				}
 
