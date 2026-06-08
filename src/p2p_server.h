@@ -88,6 +88,7 @@ public:
 		virtual size_t get_size() const override { return sizeof(P2PClient); }
 
 		void reset() override;
+		[[nodiscard]] bool on_connect_pre() override;
 		[[nodiscard]] bool on_connect() override;
 		[[nodiscard]] bool on_read(const char* data, uint32_t size) override;
 		void on_read_failed(int err) override;

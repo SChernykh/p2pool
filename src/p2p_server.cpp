@@ -350,12 +350,10 @@ void P2PServer::update_peer_connections()
 	for (P2PClient* client = static_cast<P2PClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		const int timeout = client->m_handshakeComplete ? 300 : 10;
 		if (client->m_lastAlive && (cur_time >= client->m_lastAlive + timeout)) {
-			if (client->m_socks5ProxyState == Client::Socks5ProxyState::Default) {
-				const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
-				LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
-				client->close();
-				continue;
-			}
+			const uint64_t idle_time = static_cast<uint64_t>(cur_time - client->m_lastAlive);
+			LOGWARN(5, "peer " << static_cast<char*>(client->m_addrString) << " has been idle for " << idle_time << " seconds, disconnecting");
+			client->close();
+			continue;
 		}
 
 		if (client->m_handshakeComplete && client->m_lastBroadcastTimestamp) {
@@ -2058,6 +2056,16 @@ void P2PServer::P2PClient::reset()
 	m_lastAuxJobMessage = 0;
 }
 
+bool P2PServer::P2PClient::on_connect_pre()
+{
+	const uint64_t cur_time = seconds_since_epoch();
+
+	m_connectedTime = cur_time;
+	m_lastAlive = cur_time;
+
+	return true;
+}
+
 bool P2PServer::P2PClient::on_connect()
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
@@ -2089,9 +2097,6 @@ bool P2PServer::P2PClient::on_connect()
 		}
 	}
 
-	const uint64_t cur_time = seconds_since_epoch();
-	m_connectedTime = cur_time;
-	m_lastAlive = cur_time;
 	return send_handshake_challenge();
 }
 

@@ -66,6 +66,7 @@ public:
 		// "Client::reset();" MUST be called by all derived classes to avoid handle leaks
 		virtual void reset();
 
+		[[nodiscard]] virtual bool on_connect_pre() { return true; }
 		[[nodiscard]] virtual bool on_connect() = 0;
 		[[nodiscard]] virtual bool on_read(const char* data, uint32_t size) = 0;
 		[[nodiscard]] bool on_proxy_handshake(const char* data, uint32_t size);

@@ -915,6 +915,12 @@ void TCPServer::on_new_client(uv_stream_t* server, Client* client)
 
 	LOGINFO(5, "new connection " << (client->m_isIncoming ? "from " : "to ") << log::Gray() << static_cast<char*>(client->m_addrString));
 
+	// Preliminary on_connect callback to let the derived classes handle PROXY protocol initial connection cases
+	if (!client->on_connect_pre()) {
+		client->close();
+		return;
+	}
+
 	if (m_proxyProtocol && client->m_isIncoming) {
 		// Defer ban check and on_connect until real IP is extracted from PROXY protocol header
 		client->m_proxyProtocolState = Client::ProxyProtocolState::ExpectingHeader;
