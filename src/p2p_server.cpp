@@ -2125,6 +2125,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 	uint32_t bytes_left = m_numRead;
 
 	uint32_t num_block_requests = 0;
+	uint32_t num_peer_list_requests = 0;
 
 	uint32_t bytes_read;
 	do {
@@ -2294,6 +2295,14 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			break;
 
 		case MessageId::PEER_LIST_REQUEST:
+			++num_peer_list_requests;
+			if (num_peer_list_requests > 10) {
+				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too many PEER_LIST_REQUEST messages at once");
+				ban(DEFAULT_BAN_TIME);
+				server->remove_peer_from_list(this);
+				return false;
+			}
+
 			LOGINFO(6, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent PEER_LIST_REQUEST");
 
 			if (bytes_left >= 1) {
@@ -2410,6 +2419,12 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 		if (m_numRead > 0) {
 			memmove(m_readBuf, buf, m_numRead);
 		}
+	}
+
+	// If we have more than 1 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
+	if (uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket)) > 1024 * 1024) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full, disconnecting this peer");
+		return false;
 	}
 
 	return true;
@@ -3426,16 +3441,8 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	const MinerData miner_data = pool->miner_data();
 	const uint64_t cur_height = miner_data.height;
 
-	if (unlock_height < cur_height) {
+	if ((unlock_height < cur_height) || (unlock_height < MINER_REWARD_UNLOCK_TIME)) {
 		LOGINFO(5, "Outdated MONERO_BLOCK_BROADCAST: unlock_height = " << unlock_height << ", current height = " << cur_height << " - ignored");
-		return true;
-	}
-
-	SHA256(buf, size, m_lastMoneroBlockBroadcastDigest.h);
-
-	// Ignore repeated old messages
-	if (!server->store_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest)) {
-		LOGINFO(6, "Repeated MONERO_BLOCK_BROADCAST - ignored");
 		return true;
 	}
 
@@ -3454,6 +3461,14 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	hash seed;
 	if (!pool->get_seed(height, seed)) {
 		LOGWARN(3, "MONERO_BLOCK_BROADCAST: couldn't get seed for height " << height);
+		return true;
+	}
+
+	SHA256(buf, size, m_lastMoneroBlockBroadcastDigest.h);
+
+	// Ignore repeated old messages
+	if (!server->store_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest)) {
+		LOGINFO(6, "Repeated MONERO_BLOCK_BROADCAST - ignored");
 		return true;
 	}
 
