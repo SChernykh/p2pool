@@ -2859,11 +2859,11 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
 
+	server->m_missingBlockRequests.erase(std::make_pair(m_peerId, expected_id));
+	server->m_blockNotifyRequests.erase(expected_id);
+
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
-
-		server->m_missingBlockRequests.erase(std::make_pair(m_peerId, expected_id));
-		server->m_blockNotifyRequests.erase(expected_id);
 
 		if ((expected_id == 0) && (cur_time >= m_nextOutgoingPeerListRequest)) {
 			server->send_peer_list_request(this, cur_time);
