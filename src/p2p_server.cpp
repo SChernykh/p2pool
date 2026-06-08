@@ -1630,6 +1630,7 @@ P2PServer::P2PClient::P2PClient()
 	: Client(m_p2pReadBuf, sizeof(m_p2pReadBuf))
 	, m_peerId(0)
 	, m_connectedTime(0)
+	, m_connectedDomain(false)
 	, m_broadcastMaxHeight(0)
 	, m_expectedMessage(MessageId::HANDSHAKE_CHALLENGE)
 	, m_handshakeChallenge(0)
@@ -2014,7 +2015,7 @@ void P2PServer::P2PClient::reset()
 		if (server->m_fastestPeer == this) {
 			server->m_fastestPeer = nullptr;
 		}
-		if ((m_addressType == AddressType::DomainName) && m_connectedTime) {
+		if ((m_addressType == AddressType::DomainName) && m_connectedDomain) {
 			if (server->m_isI2P == true) {
 				--server->m_numI2PConnections;
 			} else {
@@ -2027,6 +2028,7 @@ void P2PServer::P2PClient::reset()
 
 	m_peerId = 0;
 	m_connectedTime = 0;
+	m_connectedDomain = false;
 	m_broadcastMaxHeight = 0;
 	m_expectedMessage = MessageId::HANDSHAKE_CHALLENGE;
 	m_handshakeChallenge = 0;
@@ -2090,6 +2092,8 @@ bool P2PServer::P2PClient::on_connect()
 	}
 
 	if (m_addressType == AddressType::DomainName) {
+		m_connectedDomain = true;
+
 		if (server->m_isI2P == true) {
 			++server->m_numI2PConnections;
 		} else {

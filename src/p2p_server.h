@@ -137,6 +137,8 @@ public:
 
 		uint64_t m_peerId;
 		uint64_t m_connectedTime;
+		bool m_connectedDomain;
+
 		uint64_t m_broadcastMaxHeight;
 
 		MessageId m_expectedMessage;
