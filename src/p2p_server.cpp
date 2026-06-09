@@ -3050,10 +3050,22 @@ bool P2PServer::P2PClient::on_peer_list_request(const uint8_t*)
 			<< " to peer " << log::Gray() << static_cast<char*>(m_addrString));
 
 		peers[0] = {};
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data) = SUPPORTED_PROTOCOL_VERSION;
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 4) = P2POOL_VERSION;
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + 8) = static_cast<uint32_t>(SoftwareID::P2Pool);
-		*reinterpret_cast<uint32_t*>(peers[0].m_addr.data + sizeof(raw_ip::ipv4_prefix)) = 0xFFFFFFFFU;
+
+		uint8_t* p = peers[0].m_addr.data;
+
+		memcpy(p, &SUPPORTED_PROTOCOL_VERSION, sizeof(uint32_t));
+		p += sizeof(uint32_t);
+
+		memcpy(p, &P2POOL_VERSION, sizeof(uint32_t));
+		p += sizeof(uint32_t);
+
+		uint32_t t = static_cast<uint32_t>(SoftwareID::P2Pool);
+		memcpy(p, &t, sizeof(uint32_t));
+		p += sizeof(uint32_t);
+
+		t = 0xFFFFFFFFU;
+		memcpy(p, &t, sizeof(uint32_t));
+
 		peers[0].m_port = 0xFFFF;
 
 		if (num_selected_peers == 0) {
@@ -3126,8 +3138,8 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 				// Ignore 0.0.0.0/8 (special-purpose range for "this network"), 224.0.0.0/3 (IP multicast and reserved ranges) and localhost
 
 				// Check for protocol version message
-				if ((*reinterpret_cast<uint32_t*>(ip.data + sizeof(raw_ip::ipv4_prefix)) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
-					const uint32_t version = *reinterpret_cast<uint32_t*>(ip.data);
+				if ((read_unaligned(reinterpret_cast<uint32_t*>(ip.data + sizeof(raw_ip::ipv4_prefix))) == 0xFFFFFFFFU) && (port == 0xFFFF)) {
+					const uint32_t version = read_unaligned(reinterpret_cast<uint32_t*>(ip.data));
 
 					// Clients with different major protocol versions communicate using v1.0 protocol
 					// to reduce backwards compatibility requirements for newer clients
@@ -3139,8 +3151,8 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 						m_protocolVersion = std::max(m_protocolVersion, std::min(version, SUPPORTED_PROTOCOL_VERSION));
 					}
 
-					m_SoftwareVersion = *reinterpret_cast<uint32_t*>(ip.data + 4);
-					const uint32_t id_value = *reinterpret_cast<uint32_t*>(ip.data + 8);
+					m_SoftwareVersion = read_unaligned(reinterpret_cast<uint32_t*>(ip.data + 4));
+					const uint32_t id_value = read_unaligned(reinterpret_cast<uint32_t*>(ip.data + 8));
 					m_SoftwareID = get_software_id(id_value);
 
 					LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
