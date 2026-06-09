@@ -2422,7 +2422,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 	}
 
 	// If we have more than 1 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
-	if (uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket)) > 1024 * 1024) {
+	if (uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket)) > 1048576U) {
 		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full, disconnecting this peer");
 		return false;
 	}
