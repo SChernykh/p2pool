@@ -335,6 +335,10 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 	if (block.m_uncles.size() > 1) {
 		std::sort(block.m_uncles.begin(), block.m_uncles.end());
 		block.m_uncles.erase(std::unique(block.m_uncles.begin(), block.m_uncles.end()), block.m_uncles.end());
+
+		if (block.m_uncles.size() > MAX_UNCLES_PER_BLOCK) {
+			block.m_uncles.resize(MAX_UNCLES_PER_BLOCK);
+		}
 	}
 
 	block.m_difficulty = difficulty();
@@ -2013,8 +2017,14 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 		// cppcheck-suppress knownConditionTrueFalse
 		while (block_ancestor && candidate_ancestor) {
 			if (block_ancestor->m_parent == candidate_ancestor->m_parent) {
+				// Too far away
+				if ((block->m_sidechainHeight - block_ancestor->m_sidechainHeight >= m_chainWindowSize) ||
+					(candidate->m_sidechainHeight - candidate_ancestor->m_sidechainHeight >= m_chainWindowSize)) {
+					break;
+				}
+
 				// If they are really on the same chain, we can just compare cumulative difficulties
-				return block->m_cumulativeDifficulty < candidate->m_cumulativeDifficulty;
+				return (block->m_cumulativeDifficulty < candidate->m_cumulativeDifficulty);
 			}
 			block_ancestor = get_parent(block_ancestor);
 			candidate_ancestor = get_parent(candidate_ancestor);
@@ -2023,6 +2033,11 @@ bool SideChain::is_longer_chain(const PoolBlock* block, const PoolBlock* candida
 
 	// They're on totally different chains. Compare total difficulties over the last m_chainWindowSize blocks
 	is_alternative = true;
+
+	// Fix for unit tests crashing
+	if (!m_pool) {
+		return false;
+	}
 
 	difficulty_type block_total_diff;
 	difficulty_type candidate_total_diff;

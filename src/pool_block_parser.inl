@@ -355,7 +355,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		uint64_t num_uncles;
 		READ_VARINT(num_uncles);
 
-		if (num_uncles > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
+		if (num_uncles > MAX_UNCLES_PER_BLOCK) return __LINE__;
 		if (static_cast<uint64_t>(data_end - data) < num_uncles * HASH_SIZE) return __LINE__;
 
 		m_uncles.clear();

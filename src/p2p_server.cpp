@@ -52,6 +52,7 @@ static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpee
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 static constexpr uint64_t PEER_REQUEST_DELAY = 60;
+static constexpr uint64_t MAX_PENDING_BLOCK_REQUESTS = 25;
 
 namespace p2pool {
 
@@ -1430,6 +1431,16 @@ void P2PServer::on_timer()
 	api_update_local_stats();
 	clean_aux_job_messages();
 	clean_monero_block_broadcasts();
+
+	if ((t % 30) == 3) {
+		SideChain& s = m_pool->side_chain();
+
+		s.cleanup_incoming_blocks();
+
+		if (s.chainTip() && (seconds_since_epoch() >= s.last_updated() + s.block_time() * 30)) {
+			LOGWARN(1, "Sidechain seems to be stuck and/or out of sync");
+		}
+	}
 }
 
 void P2PServer::flush_cache()
@@ -1507,14 +1518,8 @@ void P2PServer::download_missing_blocks()
 	for (const hash& id : missing_blocks) {
 		P2PClient* client = clients[get_random64() % clients.size()];
 
-		if (client->m_blockPendingRequests.size() >= 25) {
+		if (client->m_blockPendingRequests.size() >= MAX_PENDING_BLOCK_REQUESTS) {
 			// Too many pending requests to this peer
-			continue;
-		}
-
-		if (!m_missingBlockRequests.emplace(client->m_peerId, *id.u64()).second) {
-			// We already asked this peer about this block
-			// Don't try to ask another peer, leave it for another timer tick
 			continue;
 		}
 
@@ -1527,6 +1532,13 @@ void P2PServer::download_missing_blocks()
 				}
 				continue;
 			}
+		}
+
+		const auto it = m_missingBlockRequests.emplace(client->m_peerId, *id.u64());
+		if (!it.second) {
+			// We already asked this peer about this block
+			// Don't try to ask another peer, leave it for another timer tick
+			continue;
 		}
 
 		const bool result = send(client,
@@ -1550,6 +1562,9 @@ void P2PServer::download_missing_blocks()
 
 		if (result) {
 			client->m_blockPendingRequests.push_back(*id.u64());
+		}
+		else {
+			m_missingBlockRequests.erase(it.first);
 		}
 	}
 }
@@ -2022,6 +2037,13 @@ void P2PServer::P2PClient::reset()
 				--server->m_numOnionConnections;
 			}
 		}
+
+		for (uint64_t id : m_blockPendingRequests) {
+			if (id) {
+				server->m_missingBlockRequests.erase(std::make_pair(m_peerId, id));
+				server->m_blockNotifyRequests.erase(id);
+			}
+		}
 	}
 
 	Client::reset();
@@ -2212,7 +2234,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 		case MessageId::BLOCK_REQUEST:
 			++num_block_requests;
-			if (num_block_requests > 100) {
+			if (num_block_requests > MAX_PENDING_BLOCK_REQUESTS * 4) {
 				LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too many BLOCK_REQUEST messages at once");
 				ban(DEFAULT_BAN_TIME);
 				server->remove_peer_from_list(this);
@@ -2256,6 +2278,9 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 
 					const uint64_t expected_id = m_blockPendingRequests.front();
 					m_blockPendingRequests.pop_front();
+
+					server->m_missingBlockRequests.erase(std::make_pair(m_peerId, expected_id));
+					server->m_blockNotifyRequests.erase(expected_id);
 
 					if (!on_block_response(buf + 1 + sizeof(uint32_t), block_size, expected_id)) {
 						ban(DEFAULT_BAN_TIME);
@@ -2421,9 +2446,10 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 		}
 	}
 
-	// If we have more than 1 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
-	if (uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket)) > 1048576U) {
-		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full, disconnecting this peer");
+	// If we have more than 4 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
+	const size_t n = uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket));
+	if (n > 4194304U) {
+		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full (" << n << " bytes), disconnecting this peer");
 		return false;
 	}
 
@@ -2883,9 +2909,6 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	const uint64_t cur_time = seconds_since_epoch();
 
-	server->m_missingBlockRequests.erase(std::make_pair(m_peerId, expected_id));
-	server->m_blockNotifyRequests.erase(expected_id);
-
 	if (!size) {
 		LOGINFO(5, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " sent an empty block response");
 
@@ -3215,7 +3238,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 	else {
 		LOGINFO(6, "Received an unknown block " << id << " in BLOCK_NOTIFY");
 
-		if (m_blockPendingRequests.size() >= 25) {
+		if (m_blockPendingRequests.size() >= MAX_PENDING_BLOCK_REQUESTS) {
 			LOGINFO(5, "Too many pending block requests, ignoring it");
 			return;
 		}
@@ -3698,6 +3721,10 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 			Work* work = reinterpret_cast<Work*>(req->data);
 
 			if (work->server->is_banned(work->client_isV6, work->client_ip)) {
+				LOGWARN(4, "block " << work->block.m_sidechainId << " (height = " << work->block.m_sidechainHeight << ") from " <<
+							work->client_ip << " was not processed because the peer is banned");
+
+				work->server->m_pool->side_chain().forget_incoming_block(work->block);
 				return;
 			}
 
@@ -3713,6 +3740,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 
 	if (err != 0) {
 		LOGERR(1, "handle_incoming_block_async: uv_queue_work failed, error " << uv_err_name(err));
+		side_chain.forget_incoming_block(*block);
 		delete work;
 		return false;
 	}
@@ -3783,7 +3811,14 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 			}
 		}
 
-		if (!server->m_missingBlockRequests.emplace(m_peerId, *id.u64()).second) {
+		if (m_blockPendingRequests.size() >= MAX_PENDING_BLOCK_REQUESTS) {
+			// Too many pending requests to this peer
+			// download_missing_blocks will take care of the rest
+			break;
+		}
+
+		auto it = server->m_missingBlockRequests.emplace(m_peerId, *id.u64());
+		if (!it.second) {
 			continue;
 		}
 
@@ -3807,6 +3842,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 			});
 
 		if (!send_result) {
+			server->m_missingBlockRequests.erase(it.first);
 			return;
 		}
 

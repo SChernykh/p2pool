@@ -268,9 +268,16 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 
 	const MinerData data = m_pool->miner_data();
 
-	if (tip && (data.height < tip->m_txinGenHeight)) {
-		node_health -= 5;
-		comments.push_back("Your Monero node is lagging");
+	if (tip) {
+		if (data.height < tip->m_txinGenHeight) {
+			node_health -= 5;
+			comments.push_back("Your Monero node is lagging");
+		}
+
+		if (seconds_since_epoch() >= c.last_updated() + c.block_time() * 30) {
+			node_health -= 5;
+			comments.push_back("Sidechain seems to be stuck and/or out of sync");
+		}
 	}
 
 	if (stratum && (stratum->num_connections() == 0)) {

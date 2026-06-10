@@ -291,13 +291,17 @@ root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t ind
 	}
 
 	if (count == 1) {
+		if (proof.size() != 0) {
+			return root_hash();
+		}
+
 		return root_hash(h);
 	}
 
 	hash tmp[2];
 
 	if (count == 2) {
-		if (proof.empty()) {
+		if (proof.size() != 1) {
 			return root_hash();
 		}
 
@@ -359,6 +363,10 @@ root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t ind
 
 			keccak(tmp[0].h, HASH_SIZE * 2, h.h);
 		}
+
+		if (proof_index != proof.size()) {
+			return root_hash();
+		}
 	}
 
 	return root_hash(h);
@@ -366,7 +374,8 @@ root_hash get_root_from_proof(hash h, const std::vector<hash>& proof, size_t ind
 
 bool verify_merkle_proof(const hash& h, const std::vector<hash>& proof, size_t index, size_t count, const root_hash& root)
 {
-	return get_root_from_proof(h, proof, index, count) == root;
+	const root_hash r = get_root_from_proof(h, proof, index, count);
+	return !r.empty() && (r == root);
 }
 
 bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, const root_hash& root)

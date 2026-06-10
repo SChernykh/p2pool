@@ -75,6 +75,10 @@ static constexpr uint64_t LOG2_MERGE_MINING_MAX_CHAINS = 8;
 static constexpr uint64_t HASHING_BLOB_MIN_SIZE = 76;
 static constexpr uint64_t HASHING_BLOB_MAX_SIZE = 128;
 
+// Realistically there can be only 1-2 eligible uncle blocks per block during normal operation.
+// Anything more can be a sign of an attack
+static constexpr uint64_t MAX_UNCLES_PER_BLOCK = 5;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}

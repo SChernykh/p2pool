@@ -370,6 +370,33 @@ TEST(merkle, malformed_tree)
 		bad[1].resize(2);
 		ASSERT_FALSE(get_merkle_proof(bad, input[3], proof, path));
 	}
+
+	// Proofs with extra junk in it
+	for (int n = 1; n <= 3; ++n) {
+		std::vector<hash> leaves;
+		for (int i = 0; i < n; ++i) {
+			leaves.push_back(input[i]);
+		}
+
+		std::vector<std::vector<hash>> good;
+		merkle_hash_full_tree(leaves, good);
+
+		// No junk
+		for (int i = 0; i < n; ++i) {
+			ASSERT_TRUE(get_merkle_proof(good, input[i], proof, path));
+			root_hash h = get_root_from_proof(input[i], proof, i, n);
+			ASSERT_TRUE(!h.empty());
+		}
+
+		// Added junk
+		for (int i = 0; i < n; ++i) {
+			ASSERT_TRUE(get_merkle_proof(good, input[i], proof, path));
+			proof.emplace_back(input[0]);
+
+			root_hash h = get_root_from_proof(input[i], proof, i, n);
+			ASSERT_TRUE(h.empty());
+		}
+	}
 }
 
 TEST(merkle, aux_slot)
