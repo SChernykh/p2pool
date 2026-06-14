@@ -191,7 +191,10 @@ public:
 		std::vector<uint8_t> blob;
 		std::vector<uint8_t> pruned_blob;
 		std::vector<uint8_t> compact_blob;
-		std::vector<hash> ancestor_hashes;
+		std::vector<uint8_t> compact_unpruned_blob;
+
+		hash parent_hash;
+		std::vector<hash> uncle_hashes;
 	};
 
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);

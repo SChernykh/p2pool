@@ -310,6 +310,17 @@ TEST(pool_block, verify)
 
 			ASSERT_EQ(v1, tip_full_blob);
 		}
+
+		if (!broadcast.compact_unpruned_blob.empty()) {
+			PoolBlock block4;
+			ASSERT_EQ(block4.deserialize(broadcast.compact_unpruned_blob.data(), broadcast.compact_unpruned_blob.size(), sidechain, nullptr, true), 0);
+
+			auto v1 = block4.serialize_mainchain_data();
+			v2 = block4.serialize_sidechain_data();
+			v1.insert(v1.end(), v2.begin(), v2.end());
+
+			ASSERT_EQ(v1, tip_full_blob);
+		}
 	}
 	}
 	destroy_crypto_cache();

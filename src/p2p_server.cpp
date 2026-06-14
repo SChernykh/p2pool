@@ -1075,6 +1075,8 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	const size_t N = block.m_transactions.size();
 	if ((N > 1) && parent && (parent->m_transactions.size() > 1)) {
+		const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+
 		unordered_map<hash, size_t> parent_transactions;
 		parent_transactions.reserve(parent->m_transactions.size());
 
@@ -1084,9 +1086,14 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 		// Reserve 1 additional byte per transaction to be ready for the worst case (all transactions are different in the parent block)
 		data->compact_blob.reserve(data->pruned_blob.capacity() + (N - 1));
+		data->compact_unpruned_blob.reserve(data->blob.capacity() + (N - 1));
 
-		// Copy pruned_blob without the transaction list
-		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - static_cast<uint32_t>((N - 1) * HASH_SIZE));
+		// Copy pruned_blob and mainchain_data without the transaction list
+		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - tx_list_size);
+		data->compact_unpruned_blob.assign(mainchain_data.begin(), mainchain_data.end() - tx_list_size);
+
+		std::vector<uint8_t> compact_transactions;
+		compact_transactions.reserve(tx_list_size + (N - 1));
 
 		// Process transaction hashes one by one
 		size_t num_found = 0;
@@ -1094,24 +1101,27 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 			const hash& tx = block.m_transactions[i];
 			auto it = parent_transactions.find(tx);
 			if (it != parent_transactions.end()) {
-				writeVarint(it->second, data->compact_blob);
+				writeVarint(it->second, compact_transactions);
 				++num_found;
 			}
 			else {
-				data->compact_blob.push_back(0);
-				data->compact_blob.insert(data->compact_blob.end(), tx.h, tx.h + HASH_SIZE);
+				compact_transactions.push_back(0);
+				compact_transactions.insert(compact_transactions.end(), tx.h, tx.h + HASH_SIZE);
 			}
 		}
 		LOGINFO(6, "compact blob: " << num_found << '/' << (N - 1) << " transactions were found in the parent block");
 
+		data->compact_blob.insert(data->compact_blob.end(), compact_transactions.begin(), compact_transactions.end());
 		data->compact_blob.insert(data->compact_blob.end(), sidechain_data.begin(), sidechain_data.end());
+
+		data->compact_unpruned_blob.insert(data->compact_unpruned_blob.end(), compact_transactions.begin(), compact_transactions.end());
+		data->compact_unpruned_blob.insert(data->compact_unpruned_blob.end(), sidechain_data.begin(), sidechain_data.end());
 	}
 
 	data->pruned_blob.insert(data->pruned_blob.end(), sidechain_data.begin(), sidechain_data.end());
 
-	data->ancestor_hashes.reserve(block.m_uncles.size() + 1);
-	data->ancestor_hashes = block.m_uncles;
-	data->ancestor_hashes.push_back(block.m_parent);
+	data->parent_hash = block.m_parent;
+	data->uncle_hashes = block.m_uncles;
 }
 
 void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
@@ -1135,7 +1145,12 @@ void P2PServer::broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	Broadcast* data = new Broadcast(block, parent);
 
-	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " << data->compact_blob.size() << '/' << data->pruned_blob.size() << '/' << data->blob.size() << " bytes (compact/pruned/full)");
+	LOGINFO(5, "Broadcasting block " << block.m_sidechainId << " (height " << block.m_sidechainHeight << "): " <<
+		data->compact_blob.size() << '/' <<
+		data->compact_unpruned_blob.size() << '/' <<
+		data->pruned_blob.size() << '/' <<
+		data->blob.size() <<
+		" bytes (compact/compact unpruned/pruned/full)");
 
 	MutexLock lock(m_broadcastLock);
 
@@ -1179,6 +1194,13 @@ void P2PServer::on_broadcast()
 				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), nullptr, true);
 				if (result != 0) {
 					LOGERR(1, "compact blob broadcast is broken, error " << result);
+				}
+			}
+			if (!data->compact_unpruned_blob.empty()) {
+				PoolBlock check;
+				const int result = check.deserialize(data->compact_unpruned_blob.data(), data->compact_unpruned_blob.size(), m_pool->side_chain(), nullptr, true);
+				if (result != 0) {
+					LOGERR(1, "compact unpruned blob broadcast is broken, error " << result);
 				}
 			}
 			{
@@ -1227,53 +1249,74 @@ void P2PServer::on_broadcast()
 					return p - buf;
 				}
 
-				bool send_pruned = true;
-				bool send_compact = (client->m_protocolVersion >= PROTOCOL_VERSION_1_1) && !data->compact_blob.empty() && (data->compact_blob.size() < data->pruned_blob.size());
+				bool has_parent = std::find(a, b, data->parent_hash) != b;
+				bool has_uncles = true;
 
-				for (const hash& id : data->ancestor_hashes) {
+				for (const hash& id : data->uncle_hashes) {
 					if (std::find(a, b, id) == b) {
-						send_pruned = false;
-						send_compact = false;
+						has_uncles = false;
 						break;
 					}
 				}
 
-				if (send_pruned) {
-					LOGINFO(6, "sending BLOCK_BROADCAST " << (send_compact ? "(compact)" : "(pruned) ") << " to " << log::Gray() << static_cast<char*>(client->m_addrString));
-					const std::vector<uint8_t>& blob = send_compact ? data->compact_blob : data->pruned_blob;
+				enum {
+					FULL,
+					PRUNED,
+					COMPACT,
+					COMPACT_UNPRUNED,
+				} what;
 
-					const uint32_t len = static_cast<uint32_t>(blob.size());
-					if (buf_size < 1 + sizeof(uint32_t) + len) {
-						return 0;
-					}
+				size_t cur_broadcast_size;
 
-					*(p++) = static_cast<uint8_t>(send_compact ? MessageId::BLOCK_BROADCAST_COMPACT : MessageId::BLOCK_BROADCAST);
-
-					memcpy(p, &len, sizeof(uint32_t));
-					p += sizeof(uint32_t);
-
-					if (len) {
-						memcpy(p, blob.data(), len);
-						p += len;
-					}
+				if (has_parent && has_uncles) {
+					what = PRUNED;
+					cur_broadcast_size = data->pruned_blob.size();
 				}
 				else {
-					LOGINFO(5, "sending BLOCK_BROADCAST (full)    to " << log::Gray() << static_cast<char*>(client->m_addrString));
+					what = FULL;
+					cur_broadcast_size = data->blob.size();
+				}
 
-					const uint32_t len = static_cast<uint32_t>(data->blob.size());
-					if (buf_size < 1 + sizeof(uint32_t) + len) {
-						return 0;
+				if (has_parent && (client->m_protocolVersion >= PROTOCOL_VERSION_1_1)) {
+					if (has_uncles && !data->compact_blob.empty() && (data->compact_blob.size() < cur_broadcast_size)) {
+						what = COMPACT;
+						cur_broadcast_size = data->compact_blob.size();
 					}
 
-					*(p++) = static_cast<uint8_t>(MessageId::BLOCK_BROADCAST);
-
-					memcpy(p, &len, sizeof(uint32_t));
-					p += sizeof(uint32_t);
-
-					if (len) {
-						memcpy(p, data->blob.data(), len);
-						p += len;
+					if (!data->compact_unpruned_blob.empty() && (data->compact_unpruned_blob.size() < cur_broadcast_size)) {
+						what = COMPACT_UNPRUNED;
+						cur_broadcast_size = data->compact_unpruned_blob.size();
 					}
+				}
+
+				static constexpr char broadcast_names[4][19] = {
+					"(full)            ",
+					"(pruned)          ",
+					"(compact)         ",
+					"(compact unpruned)"
+				};
+
+				LOGINFO((what == FULL) ? 5 : 6, "sending BLOCK_BROADCAST " << broadcast_names[static_cast<int>(what)] << " to " << log::Gray() << static_cast<char*>(client->m_addrString));
+
+				const std::vector<uint8_t>& blob =
+					(what == PRUNED)           ? data->pruned_blob :
+					(what == COMPACT)          ? data->compact_blob :
+					(what == COMPACT_UNPRUNED) ? data->compact_unpruned_blob :
+					                             data->blob;
+
+				const uint32_t len = static_cast<uint32_t>(blob.size());
+				if (buf_size < 1 + sizeof(uint32_t) + len) {
+					return 0;
+				}
+
+				*(p++) = static_cast<uint8_t>((what >= COMPACT) ? MessageId::BLOCK_BROADCAST_COMPACT : MessageId::BLOCK_BROADCAST);
+
+				memcpy(p, &len, sizeof(uint32_t));
+				p += sizeof(uint32_t);
+
+				if (len) {
+					memcpy(p, blob.data(), len);
+					p += len;
 				}
 
 				return p - buf;
