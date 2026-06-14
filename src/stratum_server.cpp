@@ -1037,17 +1037,25 @@ void StratumServer::on_share_found(uv_work_t* req)
 		}
 
 		if (pow_hash != share->m_resultHash) {
-			LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " submitted a share with invalid PoW");
-			share->m_result = SubmittedShare::Result::INVALID_POW;
-			share->m_score = BAD_SHARE_POINTS;
+			bool invalid_pow = true;
 
 			// Calculate the same hash second time to check if it's an unstable hardware that caused this
 			hash pow_hash2;
 			if (pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash2, true) && (pow_hash2 != pow_hash)) {
 				LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << pow_hash << " != " << pow_hash2);
+
+				if (pow_hash2 == share->m_resultHash) {
+					invalid_pow = false;
+				}
 			}
 
-			return;
+			if (invalid_pow) {
+				LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " submitted a share with invalid PoW");
+				share->m_result = SubmittedShare::Result::INVALID_POW;
+				share->m_score = BAD_SHARE_POINTS;
+
+				return;
+			}
 		}
 
 		share->m_score = GOOD_SHARE_POINTS;
