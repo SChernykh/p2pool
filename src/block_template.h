@@ -122,6 +122,7 @@ private:
 	std::array<uint64_t, 25> m_minerTxKeccakState;
 	size_t m_minerTxKeccakStateInputLength;
 
+	// m_sidechainHashBlob is the only "temp vector" that must be copied, because it's used in calc_sidechain_hash
 	std::vector<uint8_t> m_sidechainHashBlob;
 	std::array<uint64_t, 25> m_sidechainHashKeccakState;
 	size_t m_sidechainHashInputLength;
