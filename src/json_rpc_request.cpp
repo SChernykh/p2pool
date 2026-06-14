@@ -464,7 +464,7 @@ size_t CurlContext::on_write(const char* buffer, size_t size, size_t count)
 	   If that amount differs from the amount passed to your callback function, it signals an error condition to the library.
 	   This causes the transfer to get aborted and the libcurl function used returns CURLE_WRITE_ERROR. 
 	*/
-	constexpr size_t max_response_size = 32 * 1024 * 1024;
+	constexpr size_t max_response_size = static_cast<size_t>(32U) * 1024U * 1024U;
 
 	if (m_callbackData.m_response.size() + realsize > max_response_size) {
 		realsize = max_response_size - m_callbackData.m_response.size();
