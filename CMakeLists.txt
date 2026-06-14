@@ -18,7 +18,7 @@ option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, 
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
 option(WITH_TLS "Include TLS support. If this is turned off, p2pool will not support Stratum TLS connections, and lack many other security features. It's recommended to keep it ON!" ON)
-option(WITH_INDEXED_HASHES "Save memory used for storing transaction hashes and public keys (a bit slower block verification - use it only if you compile for a very low memory system)" OFF)
+option(WITH_INDEXED_HASHES "Save memory used for storing transaction hashes and public keys (a bit slower block verification and can potentially crash on overflow - use it at your own risk on a very low memory system)" OFF)
 
 option(WITH_MERGE_MINING_DONATION "Merge mine donations to the author. This doesn't affect your hashrate or payouts in any way - only unused merge mining capacity will be utilised. If you merge mine yourself, your settings will take priority." ON)
 

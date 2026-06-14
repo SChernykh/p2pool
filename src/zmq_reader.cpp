@@ -572,6 +572,11 @@ void ZMQReader::parse(char* data, size_t size)
 			std::vector<hash> tx_hashes;
 			blobs.emplace_back(construct_monero_block_blob(i, tx_hashes));
 
+			if (blobs.back().empty()) {
+				blobs.pop_back();
+				continue;
+			}
+
 			if (!PARSE(*i, m_chainmainData, timestamp)) {
 				LOGWARN(1, "json-full-chain_main timestamp failed to parse, skipping it");
 				continue;

@@ -405,7 +405,7 @@ void p2pool::handle_miner_data(MinerData& data)
 {
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	if (m_mempool->size() < data.tx_backlog.size()) {
-		m_mempool->swap(data.tx_backlog);
+		m_mempool->swap_transactions(data.tx_backlog);
 	}
 #else
 	m_mempool->swap_transactions(data.tx_backlog);
@@ -1914,7 +1914,13 @@ void p2pool::api_update_network_stats()
 	ChainMain mainnet_tip;
 	{
 		ReadLock lock(m_mainchainLock);
-		mainnet_tip = m_mainchainByHash[prev_id];
+
+		auto it = m_mainchainByHash.find(prev_id);
+		if (it == m_mainchainByHash.end()) {
+			return;
+		}
+
+		mainnet_tip = it->second;
 	}
 
 	m_api->set(p2pool_api::Category::NETWORK, "stats",
@@ -1997,7 +2003,13 @@ void p2pool::api_update_stats_mod()
 	ChainMain mainnet_tip;
 	{
 		ReadLock lock(m_mainchainLock);
-		mainnet_tip = m_mainchainByHash[prev_id];
+
+		auto it = m_mainchainByHash.find(prev_id);
+		if (it == m_mainchainByHash.end()) {
+			return;
+		}
+
+		mainnet_tip = it->second;
 	}
 
 	time_t last_block_found_time = 0;

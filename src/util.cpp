@@ -960,7 +960,7 @@ void init_uv()
 #define putenv _putenv
 #endif
 
-	const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), 4U), 8U);
+	const uint32_t N = std::min(std::max(std::thread::hardware_concurrency(), MIN_UV_THREADPOOL_SIZE), MAX_UV_THREADPOOL_SIZE);
 
 	static char buf[40] = {};
 	log::Stream s(buf);

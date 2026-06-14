@@ -20,6 +20,9 @@
 #include <uv.h>
 #include <thread>
 
+constexpr uint32_t MIN_UV_THREADPOOL_SIZE = 4;
+constexpr uint32_t MAX_UV_THREADPOOL_SIZE = 8;
+
 static_assert(sizeof(in6_addr) == 16, "struct in6_addr has invalid size");
 static_assert(sizeof(in_addr) == 4, "struct in_addr has invalid size");
 
@@ -184,7 +187,7 @@ void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
 
 	// "THREAD_COUNT - 1" because current thread is already running
 	// No more than 8 threads because our UV worker thread pool has 8 threads
-	const uint32_t THREADS_TO_START = std::min<uint32_t>(THREAD_COUNT - 1, 8);
+	const uint32_t THREADS_TO_START = std::min<uint32_t>(THREAD_COUNT - 1, MAX_UV_THREADPOOL_SIZE);
 
 	struct Callback
 	{

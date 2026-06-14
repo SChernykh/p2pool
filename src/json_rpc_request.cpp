@@ -456,7 +456,20 @@ size_t CurlContext::on_write(const char* buffer, size_t size, size_t count)
 		m_connectedTime = microseconds_since_epoch();
 	}
 
-	const size_t realsize = size * count;
+	size_t realsize = size * count;
+
+	/* Truncate too big responses. From libcurl's documentation:
+
+	   Your callback should return the number of bytes actually taken care of.
+	   If that amount differs from the amount passed to your callback function, it signals an error condition to the library.
+	   This causes the transfer to get aborted and the libcurl function used returns CURLE_WRITE_ERROR. 
+	*/
+	constexpr size_t max_response_size = 32 * 1024 * 1024;
+
+	if (m_callbackData.m_response.size() + realsize > max_response_size) {
+		realsize = max_response_size - m_callbackData.m_response.size();
+	}
+
 	m_callbackData.m_response.insert(m_callbackData.m_response.end(), buffer, buffer + realsize);
 	return realsize;
 }

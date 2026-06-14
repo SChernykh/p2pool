@@ -516,7 +516,7 @@ TEST(difficulty_type, input_output)
 
 TEST(difficulty_type, json_parser)
 {
-	auto test_value = [](uint64_t lo, uint64_t hi, const char* s) {
+	auto test_value = [](uint64_t lo, uint64_t hi, const char* s, bool valid = true) {
 		difficulty_type diff{ lo, hi };
 		std::stringstream ss;
 		ss << "{\"diff\":\"" << s << "\"}";
@@ -526,8 +526,13 @@ TEST(difficulty_type, json_parser)
 		doc.Parse(ss.str().c_str());
 
 		difficulty_type diff2;
-		parseValue(doc, "diff", diff2);
-		ASSERT_EQ(diff2, diff);
+
+		const bool result = parseValue(doc, "diff", diff2);
+		ASSERT_EQ(result, valid);
+
+		if (valid) {
+			ASSERT_EQ(diff2, diff);
+		}
 	};
 
 	test_value(0, 0, "0x0");
@@ -539,6 +544,9 @@ TEST(difficulty_type, json_parser)
 	test_value(1, 1, "0x10000000000000001");
 	test_value(0x1122334455667788ull, 0x99aabbccddeeff00ull, "0x99aabbccddeeff001122334455667788");
 	test_value(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), "0xffffffffffffffffffffffffffffffff");
+
+	// Too big hex value
+	test_value(0, 0, "0x0123456789abcdef0123456789abcdef0123456789abcdef", false);
 }
 
 TEST(difficulty_type, check_pow)

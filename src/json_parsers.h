@@ -136,6 +136,11 @@ struct parse_wrapper<T, difficulty_type>
 			N -= 2;
 		}
 
+		// Max 32 hex characters (128 bit)
+		if (N > 32) {
+			return false;
+		}
+
 		out_value.lo = 0;
 		out_value.hi = 0;
 
