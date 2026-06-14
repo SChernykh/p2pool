@@ -1259,7 +1259,7 @@ void P2PServer::on_broadcast()
 					}
 				}
 
-				enum {
+				enum What {
 					FULL,
 					PRUNED,
 					COMPACT,
