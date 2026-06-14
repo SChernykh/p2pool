@@ -3593,7 +3593,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 				const uint8_t* buf = buf0 + sizeof(MoneroBlockBroadcastHeader);
 				const uint32_t size = static_cast<uint32_t>(size0 - sizeof(MoneroBlockBroadcastHeader));
 
-				P2PClient* client = work->client;
+				const P2PClient* client = work->client;
 				if (client->m_resetCounter != work->reset_counter) {
 					client = nullptr;
 				}
