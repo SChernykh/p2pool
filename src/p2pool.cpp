@@ -89,13 +89,18 @@ p2pool::p2pool(const Params& params)
 
 	m_hostPing.resize(m_params.m_hosts.size());
 
-	hash pub, sec, eph_public_key;
-	generate_keys(pub, sec);
+	// Check that the wallet address is valid for get_eph_public_key (important when creating block templates)
+	{
+		constexpr uint8_t entropy[] = "Wallet address validation entropy";
 
-	uint8_t view_tag;
-	if (!m_params.m_miningWallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
-		LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
-		throw std::exception();
+		hash pub, sec, eph_public_key;
+		generate_keys_deterministic(pub, sec, entropy, sizeof(entropy) - 1);
+
+		uint8_t view_tag;
+		if (!m_params.m_miningWallet.get_eph_public_key(sec, 0, eph_public_key, view_tag)) {
+			LOGERR(1, "Invalid wallet address: get_eph_public_key failed");
+			throw std::exception();
+		}
 	}
 
 	const NetworkType type = m_params.m_miningWallet.get_type();

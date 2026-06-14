@@ -30,44 +30,6 @@ static constexpr uint8_t limit[32] = { 0xe3, 0x6a, 0x67, 0x72, 0x8b, 0xce, 0x13,
 
 namespace p2pool {
 
-namespace {
-
-class RandomBytes
-{
-public:
-	RandomBytes() : rng(RandomDeviceSeed::instance), dist(0, 255)
-	{
-		uv_mutex_init_checked(&m);
-
-		// Diffuse the initial state in case it has low quality
-		rng.discard(10000);
-	}
-
-	~RandomBytes()
-	{
-		uv_mutex_destroy(&m);
-	}
-
-	void operator()(uint8_t (&bytes)[HASH_SIZE])
-	{
-		MutexLock lock(m);
-
-		for (size_t i = 0; i < HASH_SIZE; ++i) {
-			bytes[i] = static_cast<uint8_t>(dist(rng));
-		}
-	}
-
-private:
-	uv_mutex_t m;
-
-	std::mt19937_64 rng;
-	std::uniform_int_distribution<> dist;
-};
-
-static RandomBytes* randomBytes = nullptr;
-
-} // namespace
-
 static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 {
 	for (int n = 31; n >= 0; --n)
@@ -78,19 +40,6 @@ static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 			return false;
 	}
 	return false;
-}
-
-// cppcheck-suppress constParameterReference
-void generate_keys(hash& pub, hash& sec)
-{
-	do {
-		do { (*randomBytes)(sec.h); } while (!less32(sec.h, limit));
-		sc_reduce32(sec.h);
-	} while (!sc_isnonzero(sec.h));
-
-	ge_p3 point;
-	ge_scalarmult_base_vartime(&point, sec.h);
-	ge_p3_tobytes(pub.h, &point);
 }
 
 // cppcheck-suppress constParameterReference
@@ -470,10 +419,6 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 
 void init_crypto_cache()
 {
-	if (!randomBytes) {
-		randomBytes = new RandomBytes();
-	}
-
 	if (!cache) {
 		cache = new Cache();
 	}
@@ -481,11 +426,6 @@ void init_crypto_cache()
 
 void destroy_crypto_cache()
 {
-	{
-		auto* p = randomBytes;
-		randomBytes = nullptr;
-		delete p;
-	}
 	{
 		auto* p = cache;
 		cache = nullptr;

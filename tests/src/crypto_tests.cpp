@@ -32,8 +32,9 @@ TEST(crypto, ops)
 {
 	init_crypto_cache();
 	{
+	constexpr uint8_t entropy[] = "Test entropy";
 	hash pub, sec;
-	generate_keys(pub, sec);
+	generate_keys_deterministic(pub, sec, entropy, sizeof(entropy) - 1);
 	ASSERT_TRUE(check_keys(pub, sec));
 
 	sec.h[HASH_SIZE - 1] = 0xff;

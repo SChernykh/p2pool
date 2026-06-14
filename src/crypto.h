@@ -19,7 +19,6 @@
 
 namespace p2pool {
 
-void generate_keys(hash& pub, hash& sec);
 void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, size_t len);
 void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id);
 bool check_keys(const hash& pub, const hash& sec);
