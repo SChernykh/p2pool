@@ -75,6 +75,11 @@ jobs:
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
+
     - name: Check p2pool.log for errors
       run: |
         cd build
@@ -166,6 +171,11 @@ jobs:
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
+
     - name: Check p2pool.log for errors
       run: |
         cd build
@@ -219,6 +229,11 @@ jobs:
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
+
     - name: Check p2pool.log for errors
       run: |
         cd build
@@ -271,6 +286,11 @@ jobs:
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
+
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
 
     - name: Check p2pool.log for errors
       run: |
@@ -329,6 +349,11 @@ jobs:
       run: |
         cd build
         grep 'Synchronization finished successfully' p2pool.log
+
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
 
     - name: Check p2pool.log for errors
       run: |
@@ -404,6 +429,11 @@ jobs:
         cd build
         grep 'Synchronization finished successfully' p2pool.log
 
+    - name: Check API files are valid JSON
+      run: |
+        cd build
+        python3 ../scripts/workflows/check-api-json.py data
+
     - name: Check p2pool.log for errors
       run: |
         cd build
@@ -455,6 +485,11 @@ jobs:
         cd build/Debug
         findstr /C:"Synchronization finished successfully" p2pool.log
 
+    - name: Check API files are valid JSON
+      run: |
+        cd build/Debug
+        python ../../scripts/workflows/check-api-json.py data
+
     - name: Archive p2pool.log
       if: '!cancelled()'
       uses: actions/upload-artifact@v7
@@ -499,6 +534,11 @@ jobs:
         cd build/RelWithDebInfo
         Remove-Item p2pool.cache -Force
         findstr /C:"Synchronization finished successfully" p2pool.log
+
+    - name: Check API files are valid JSON
+      run: |
+        cd build/RelWithDebInfo
+        python ../../scripts/workflows/check-api-json.py data
 
     - name: Archive p2pool.log
       if: '!cancelled()'

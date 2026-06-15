@@ -83,7 +83,7 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 	ON_SCOPE_LEAVE([old_log_category_prefix]() { log_category_prefix = old_log_category_prefix; });
 
 	// Sanity check
-	if (block.m_transactions.empty() || block.m_hashingBlob.empty() || (block.m_hashingBlob.size() > 128)) {
+	if (block.m_transactions.empty() || (block.m_hashingBlob.size() < HASHING_BLOB_MIN_SIZE) || (block.m_hashingBlob.size() > HASHING_BLOB_MAX_SIZE)) {
 		LOGWARN(3, "on_external_block: sanity check failed - " << block.m_transactions.size() << " transactions, hashing blob size = " << block.m_hashingBlob.size());
 		return;
 	}
