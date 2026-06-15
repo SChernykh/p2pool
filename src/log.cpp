@@ -41,7 +41,7 @@ namespace p2pool {
 
 namespace log {
 
-int GLOBAL_LOG_LEVEL = 3;
+std::atomic<int> GLOBAL_LOG_LEVEL = 3;
 bool CONSOLE_COLORS = true;
 
 #ifndef P2POOL_LOG_DISABLE

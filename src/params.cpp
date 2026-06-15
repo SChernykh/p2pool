@@ -290,7 +290,7 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 
 	if ((arg[0] == "loglevel") && has1(arg)) {
 		const int level = std::min(std::max<int>(static_cast<int>(strtol(arg[1].c_str(), nullptr, 10)), 0), log::MAX_GLOBAL_LOG_LEVEL);
-		log::GLOBAL_LOG_LEVEL = level;
+		log::GLOBAL_LOG_LEVEL.store(level, std::memory_order_relaxed);
 		return true;
 	}
 

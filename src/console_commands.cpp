@@ -306,7 +306,7 @@ static void do_loglevel(p2pool * /* m_pool */, const char *args)
 {
 	int level = static_cast<int>(strtol(args, nullptr, 10));
 	level = std::min(std::max(level, 0), log::MAX_GLOBAL_LOG_LEVEL);
-	log::GLOBAL_LOG_LEVEL = level;
+	log::GLOBAL_LOG_LEVEL.store(level, std::memory_order_relaxed);
 	LOGINFO(0, "log level set to " << level);
 }
 

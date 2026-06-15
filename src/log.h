@@ -24,7 +24,7 @@ struct Params;
 
 namespace log {
 
-extern int GLOBAL_LOG_LEVEL;
+extern std::atomic<int> GLOBAL_LOG_LEVEL;
 extern bool CONSOLE_COLORS;
 constexpr int MAX_GLOBAL_LOG_LEVEL = 6;
 
@@ -623,7 +623,7 @@ struct DummyStream
 #define LOG(level, severity, ...) \
 	do { \
 		SIDE_EFFECT_CHECK(level, log_category_prefix << __VA_ARGS__); \
-		if ((level) <= log::GLOBAL_LOG_LEVEL) { \
+		if ((level) <= log::GLOBAL_LOG_LEVEL.load(std::memory_order_relaxed)) { \
 			log::Writer CONCAT(log_wrapper_, __LINE__)(severity); \
 			CONCAT(log_wrapper_, __LINE__) << log::Gray() << log_category_prefix; \
 			log::apply_severity<severity>(CONCAT(log_wrapper_, __LINE__)); \

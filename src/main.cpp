@@ -348,7 +348,7 @@ int main(int argc, char* argv[])
 		p2pool::log::start(params);
 	}
 	else {
-		p2pool::log::GLOBAL_LOG_LEVEL = -1;
+		p2pool::log::GLOBAL_LOG_LEVEL.store(-1, std::memory_order_relaxed);
 	}
 
 	p2pool::init_crypto_cache();
