@@ -136,6 +136,7 @@ MergeMiningClientTari::~MergeMiningClientTari()
 	LOGINFO(1, "stopping");
 
 	m_workerStop.exchange(1);
+	m_server->drop_connections_async();
 	{
 		MutexLock lock(m_workerLock);
 		uv_cond_signal(&m_workerCond);

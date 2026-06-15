@@ -836,18 +836,18 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	struct Data
 	{
-		FORCEINLINE Data() : blockMinerWallet(nullptr), counter(0) {}
+		FORCEINLINE Data() : counter(0) {}
 		Data(Data&&) = delete;
 		Data& operator=(Data&&) = delete;
 
-		std::vector<MinerShare> tmpShares;
-		Wallet blockMinerWallet;
+		std::vector<Wallet> wallets;
 		hash txkeySec;
 		std::atomic<int> counter;
 	};
 
 	std::shared_ptr<Data> data;
 	std::vector<uint64_t> tmpRewards;
+	std::vector<MinerShare> tmpShares;
 	{
 		ReadLock lock(m_sidechainLock);
 
@@ -859,8 +859,13 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			blob.reserve(n * 39 + 64);
 			writeVarint(n, blob);
 
+			uint64_t total_reward_check = 0;
+
 			for (size_t i = 0; i < n; ++i) {
 				const PoolBlock::TxOutput& output = b->m_outputAmounts[i];
+
+				total_reward_check += output.m_reward;
+
 				writeVarint(output.m_reward, blob);
 				blob.emplace_back(TXOUT_TO_TAGGED_KEY);
 				const hash h = b->m_ephPublicKeys[i];
@@ -870,32 +875,31 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 			block->m_ephPublicKeys = b->m_ephPublicKeys;
 			block->m_outputAmounts = b->m_outputAmounts;
-			return true;
+
+			return total_reward_check == total_reward;
 		}
 
 		data = std::make_shared<Data>();
-		data->blockMinerWallet = block->m_minerWallet;
 		data->txkeySec = block->m_txkeySec;
 
-		if (!get_shares(block, data->tmpShares) || !split_reward(total_reward, data->tmpShares, tmpRewards) || (tmpRewards.size() != data->tmpShares.size())) {
+		if (!get_shares(block, tmpShares) || !split_reward(total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
 			return false;
 		}
 	}
 
-	const size_t n = data->tmpShares.size();
+	const size_t n = tmpShares.size();
+
+	data->wallets.reserve(n);
+
+	for (const MinerShare& i : tmpShares) {
+		data->wallets.emplace_back(*i.m_wallet);
+	}
+
 	data->counter = static_cast<int>(n) - 1;
 
 	// Helper jobs call get_eph_public_key with indices in descending order
 	// Current thread will process indices in ascending order so when they meet, everything will be cached
 	if (loop) {
-		// Avoid accessing block->m_minerWallet from other threads in "parallel_run" below
-		for (MinerShare& share : data->tmpShares) {
-			if (share.m_wallet == &block->m_minerWallet) {
-				share.m_wallet = &data->blockMinerWallet;
-				break;
-			}
-		}
-
 		parallel_run(loop, [data]() {
 			Data* d = data.get();
 			hash eph_public_key;
@@ -903,8 +907,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			int index;
 			while ((index = d->counter.fetch_sub(1)) >= 0) {
 				uint8_t view_tag;
-				if (!d->tmpShares[index].m_wallet->get_eph_public_key(d->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag)) {
+				if (!d->wallets[index].get_eph_public_key(d->txkeySec, static_cast<size_t>(index), eph_public_key, view_tag)) {
 					LOGWARN(6, "get_eph_public_key failed at index " << index);
+					return;
 				}
 			}
 		});
@@ -934,8 +939,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		blob.emplace_back(TXOUT_TO_TAGGED_KEY);
 
 		uint8_t view_tag;
-		if (!data->tmpShares[i].m_wallet->get_eph_public_key(data->txkeySec, i, eph_public_key, view_tag)) {
+		if (!data->wallets[i].get_eph_public_key(data->txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(6, "get_eph_public_key failed at index " << i);
+			return false;
 		}
 		blob.insert(blob.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 

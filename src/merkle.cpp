@@ -415,7 +415,7 @@ uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)
 	hash res;
 	SHA256(buf, sizeof(buf), res.h);
 
-	return *reinterpret_cast<uint32_t*>(res.h) % n_aux_chains;
+	return read_unaligned(reinterpret_cast<uint32_t*>(res.h)) % n_aux_chains;
 }
 
 bool find_aux_nonce(const std::vector<hash>& aux_id, uint32_t& nonce, uint32_t max_nonce)

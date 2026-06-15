@@ -54,6 +54,8 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 static constexpr uint64_t MAX_PENDING_BLOCK_REQUESTS = 25;
 
+static constexpr uint64_t MAX_BROADCASTS_PER_THROTTLE_WINDOW = 10;
+
 namespace p2pool {
 
 static constexpr hash seed_onion_nodes[] = {
@@ -1702,6 +1704,8 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
+	, m_broadcastThrottleTimestamp(0)
+	, m_broadcastThrottleCounter(0)
 	, m_broadcastedHashes{}
 	, m_broadcastedHashesIndex(0)
 	, m_lastMoneroBlockBroadcastDigest{}
@@ -2108,6 +2112,8 @@ void P2PServer::P2PClient::reset()
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
+	m_broadcastThrottleTimestamp = 0;
+	m_broadcastThrottleCounter = 0;
 
 	for (hash& h : m_broadcastedHashes) {
 		h = {};
@@ -3006,6 +3012,22 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 	const uint64_t received_timestamp = microseconds_since_epoch();
 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
+
+	// 1/10th of the target block time (in microseconds)
+	const uint64_t throttle_window = server->m_pool->side_chain().block_time() * (1'000'000 / 10);
+
+	if (received_timestamp >= m_broadcastThrottleTimestamp + throttle_window) {
+		m_broadcastThrottleTimestamp = received_timestamp;
+		m_broadcastThrottleCounter = 1;
+	}
+	else {
+		++m_broadcastThrottleCounter;
+
+		if (m_broadcastThrottleCounter > MAX_BROADCASTS_PER_THROTTLE_WINDOW) {
+			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " broadcasted too many blocks too quickly");
+			return false;
+		}
+	}
 
 	MutexLock lock(server->m_blockLock);
 

@@ -165,6 +165,10 @@ public:
 		uint64_t m_lastBroadcastTimestamp;
 		uint64_t m_lastBlockrequestTimestamp;
 
+		// Anti-spam broadcast throttle
+		uint64_t m_broadcastThrottleTimestamp;
+		uint64_t m_broadcastThrottleCounter;
+
 		hash m_broadcastedHashes[8];
 		uint32_t m_broadcastedHashesIndex;
 
