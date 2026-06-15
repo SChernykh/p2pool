@@ -1259,32 +1259,27 @@ void P2PServer::on_broadcast()
 					}
 				}
 
-				enum What {
-					FULL,
-					PRUNED,
-					COMPACT,
-					COMPACT_UNPRUNED,
-				} what;
+				Broadcast::Type what;
 
 				size_t cur_broadcast_size;
 
 				if (has_parent && has_uncles) {
-					what = PRUNED;
+					what = Broadcast::PRUNED;
 					cur_broadcast_size = data->pruned_blob.size();
 				}
 				else {
-					what = FULL;
+					what = Broadcast::FULL;
 					cur_broadcast_size = data->blob.size();
 				}
 
 				if (has_parent && (client->m_protocolVersion >= PROTOCOL_VERSION_1_1)) {
 					if (has_uncles && !data->compact_blob.empty() && (data->compact_blob.size() < cur_broadcast_size)) {
-						what = COMPACT;
+						what = Broadcast::COMPACT;
 						cur_broadcast_size = data->compact_blob.size();
 					}
 
 					if (!data->compact_unpruned_blob.empty() && (data->compact_unpruned_blob.size() < cur_broadcast_size)) {
-						what = COMPACT_UNPRUNED;
+						what = Broadcast::COMPACT_UNPRUNED;
 						cur_broadcast_size = data->compact_unpruned_blob.size();
 					}
 				}
@@ -1296,20 +1291,20 @@ void P2PServer::on_broadcast()
 					"(compact unpruned)"
 				};
 
-				LOGINFO((what == FULL) ? 5 : 6, "sending BLOCK_BROADCAST " << broadcast_names[static_cast<int>(what)] << " to " << log::Gray() << static_cast<char*>(client->m_addrString));
+				LOGINFO((what == Broadcast::FULL) ? 5 : 6, "sending BLOCK_BROADCAST " << broadcast_names[static_cast<int>(what)] << " to " << log::Gray() << static_cast<char*>(client->m_addrString));
 
 				const std::vector<uint8_t>& blob =
-					(what == PRUNED)           ? data->pruned_blob :
-					(what == COMPACT)          ? data->compact_blob :
-					(what == COMPACT_UNPRUNED) ? data->compact_unpruned_blob :
-					                             data->blob;
+					(what == Broadcast::PRUNED)           ? data->pruned_blob :
+					(what == Broadcast::COMPACT)          ? data->compact_blob :
+					(what == Broadcast::COMPACT_UNPRUNED) ? data->compact_unpruned_blob :
+					                                     data->blob;
 
 				const uint32_t len = static_cast<uint32_t>(blob.size());
 				if (buf_size < 1 + sizeof(uint32_t) + len) {
 					return 0;
 				}
 
-				*(p++) = static_cast<uint8_t>((what >= COMPACT) ? MessageId::BLOCK_BROADCAST_COMPACT : MessageId::BLOCK_BROADCAST);
+				*(p++) = static_cast<uint8_t>((what >= Broadcast::COMPACT) ? MessageId::BLOCK_BROADCAST_COMPACT : MessageId::BLOCK_BROADCAST);
 
 				memcpy(p, &len, sizeof(uint32_t));
 				p += sizeof(uint32_t);

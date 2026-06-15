@@ -185,6 +185,13 @@ public:
 	{
 		Broadcast(const PoolBlock& block, const PoolBlock* parent);
 
+		enum Type {
+			FULL,
+			PRUNED,
+			COMPACT,
+			COMPACT_UNPRUNED,
+		};
+
 		hash id;
 		uint64_t received_timestamp;
 

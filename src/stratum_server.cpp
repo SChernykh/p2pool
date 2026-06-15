@@ -679,7 +679,7 @@ void StratumServer::print_stratum_status() const
 		ReadLock lock(m_hashrateDataLock);
 
 		total_hashes = m_cumulativeHashes;
-		hashes_since_last_share = m_cumulativeHashes - m_cumulativeHashesAtLastShare;
+		hashes_since_last_share = (m_cumulativeHashes > m_cumulativeHashesAtLastShare) ? (m_cumulativeHashes - m_cumulativeHashesAtLastShare) : 0;
 
 		const HashrateData* data = m_hashrateData;
 		const HashrateData& head = data[m_hashrateDataHead];
@@ -1586,7 +1586,7 @@ void StratumServer::api_update_local_stats(uint64_t timestamp)
 		ReadLock lock(m_hashrateDataLock);
 
 		total_hashes = m_cumulativeHashes;
-		hashes_since_last_share = m_cumulativeHashes - m_cumulativeHashesAtLastShare;
+		hashes_since_last_share = (m_cumulativeHashes > m_cumulativeHashesAtLastShare) ? (m_cumulativeHashes - m_cumulativeHashesAtLastShare) : 0;
 
 		const HashrateData* data = m_hashrateData;
 		const HashrateData& head = data[m_hashrateDataHead];

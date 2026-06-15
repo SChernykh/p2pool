@@ -235,7 +235,7 @@ template<> struct Stream::Entry<double>
 {
 	static NOINLINE void put(double x, Stream* wrapper)
 	{
-		char buf[16];
+		char buf[32];
 		int n = snprintf(buf, sizeof(buf), "%.3f", x);
 		if (n > 0) {
 			if (n > static_cast<int>(sizeof(buf)) - 1) {
