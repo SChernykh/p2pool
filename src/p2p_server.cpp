@@ -2147,10 +2147,35 @@ bool P2PServer::P2PClient::on_connect()
 		return false;
 	}
 
-	// Don't allow multiple connections to/from the same IP (except localhost)
-	if (!m_addr.is_localhost()) {
+	// Don't allow multiple connections to/from the same IP or domain (except localhost)
+	if ((m_addressType == AddressType::DomainName) || !m_addr.is_localhost()) {
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
-			if ((client != this) && (client->m_addr == m_addr)) {
+			if (client == this) {
+				continue;
+			}
+
+			bool same = false;
+
+			if ((m_addressType == AddressType::DomainName) && (client->m_addressType == AddressType::DomainName)) {
+				const char* a = strchr(m_addrString,         ':');
+				const char* b = strchr(client->m_addrString, ':');
+
+				const size_t a_len = a ? (a - m_addrString)         : strlen(m_addrString);
+				const size_t b_len = b ? (b - client->m_addrString) : strlen(client->m_addrString);
+
+				same = (a_len == b_len) && (memcmp(client->m_addrString, m_addrString, a_len) == 0);
+			}
+			else if ((m_addressType != AddressType::DomainName) && (client->m_addressType != AddressType::DomainName)) {
+				// First catch the exact match between different combinations of IPv4 and IPv4-mapped IPv6 addresses
+				same = client->m_addr == m_addr;
+
+				// For full IPv6 addresses, check the /64 prefix
+				if (!same && !m_addr.is_ipv4_prefix() && !client->m_addr.is_ipv4_prefix()) {
+					same = memcmp(client->m_addr.data, m_addr.data, sizeof(m_addr.data) - 8) == 0;
+				}
+			}
+
+			if (same) {
 				LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " is already connected as " << static_cast<char*>(client->m_addrString));
 				return false;
 			}
