@@ -165,10 +165,6 @@ public:
 		uint64_t m_lastBroadcastTimestamp;
 		uint64_t m_lastBlockrequestTimestamp;
 
-		// Anti-spam broadcast throttle
-		uint64_t m_broadcastThrottleTimestamp;
-		uint64_t m_broadcastThrottleCounter;
-
 		hash m_broadcastedHashes[8];
 		uint32_t m_broadcastedHashesIndex;
 
@@ -388,6 +384,50 @@ private:
 
 	void clean_monero_block_broadcasts();
 	void submit_monero_blocks();
+
+	// Anti-spam broadcast throttle
+	struct BroadcastThrottle
+	{
+		BroadcastThrottle()
+			: m_startTime{}
+			, m_count{}
+		{}
+
+		// Time unit is 1 second for a default sidechain config.
+		// It can vary depending on the sidechain (i.e. it's 3 seconds for p2pool-nano)
+		static constexpr uint64_t LIMITS[][2] = {
+			{   1,  10 }, // no more than  10 broadcasts in   1 time unit  (100x the normal block rate)
+			{  60,  60 }, // no more than  60 broadcasts in  60 time units ( 10x the normal block rate)
+			{ 600, 180 }, // no more than 180 broadcasts in 600 time units (  3x the normal block rate)
+		};
+
+		enum { N = array_size(LIMITS) };
+
+		static constexpr bool check_limits() {
+			for (int i = 0; i < N; ++i) {
+				for (int j = 0; j < 2; ++j) {
+					// Can't be zero or too big
+					if (!LIMITS[i][j] || (LIMITS[i][j] > 100000)) {
+						return false;
+					}
+
+					// Both timeout and max number of broadcasts must be increasing
+					if (i && (LIMITS[i][j] <= LIMITS[i - 1][j])) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		uint64_t m_startTime[N];
+		uint32_t m_count[N];
+	};
+
+	unordered_map<hash, BroadcastThrottle> m_broadcastThrottle;
+
+	void clean_broadcast_throttle_data();
+	bool throttle_broadcast(const P2PClient* client, uint64_t timestamp_mcs);
 };
 
 } // namespace p2pool

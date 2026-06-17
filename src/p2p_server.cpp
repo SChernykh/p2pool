@@ -54,8 +54,6 @@ static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 static constexpr uint64_t MAX_PENDING_BLOCK_REQUESTS = 25;
 
-static constexpr uint64_t MAX_BROADCASTS_PER_THROTTLE_WINDOW = 10;
-
 namespace p2pool {
 
 static constexpr hash seed_onion_nodes[] = {
@@ -1471,6 +1469,7 @@ void P2PServer::on_timer()
 	api_update_local_stats();
 	clean_aux_job_messages();
 	clean_monero_block_broadcasts();
+	clean_broadcast_throttle_data();
 
 	if ((t % 30) == 3) {
 		SideChain& s = m_pool->side_chain();
@@ -1704,8 +1703,6 @@ P2PServer::P2PClient::P2PClient()
 	, m_lastAlive(0)
 	, m_lastBroadcastTimestamp(0)
 	, m_lastBlockrequestTimestamp(0)
-	, m_broadcastThrottleTimestamp(0)
-	, m_broadcastThrottleCounter(0)
 	, m_broadcastedHashes{}
 	, m_broadcastedHashesIndex(0)
 	, m_lastMoneroBlockBroadcastDigest{}
@@ -2112,8 +2109,6 @@ void P2PServer::P2PClient::reset()
 	m_lastAlive = 0;
 	m_lastBroadcastTimestamp = 0;
 	m_lastBlockrequestTimestamp = 0;
-	m_broadcastThrottleTimestamp = 0;
-	m_broadcastThrottleCounter = 0;
 
 	for (hash& h : m_broadcastedHashes) {
 		h = {};
@@ -3027,6 +3022,94 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 	return handle_incoming_block_async(block, max_time_delta);
 }
 
+void P2PServer::clean_broadcast_throttle_data()
+{
+	if ((m_timerCounter % 30) != 7) {
+		return;
+	}
+
+	const uint64_t t = microseconds_since_epoch();
+	const uint64_t time_unit_mcs = (m_pool->side_chain().block_time() * 1'000'000) / 10;
+
+	// The longest of configured timeouts in LIMITS
+	const uint64_t timeout = BroadcastThrottle::LIMITS[BroadcastThrottle::N - 1][0] * time_unit_mcs;
+
+	if (t < timeout) {
+		return;
+	}
+
+	const uint64_t cutoff_time = t - timeout;
+
+	for (auto it = m_broadcastThrottle.begin(); it != m_broadcastThrottle.end();) {
+		// If it's too old, remove it
+		if (it->second.m_startTime[0] < cutoff_time) {
+			it = m_broadcastThrottle.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+bool P2PServer::throttle_broadcast(const P2PClient* client, uint64_t timestamp_mcs)
+{
+	static_assert(BroadcastThrottle::check_limits(), "BroadcastThrottle::LIMITS has invalid data (numbers must be non-zero and increasing)");
+
+	hash address_hash;
+
+	uint8_t buf[sizeof(client->m_addrString) + 1] = {};
+
+	if (client->m_addressType == Client::AddressType::DomainName) {
+		const char* c = strchr(client->m_addrString, ':');
+		const size_t addr_len = c ? (c - client->m_addrString) : strlen(client->m_addrString);
+
+		buf[0] = 0; // hash domain separation
+		memcpy(buf + 1, client->m_addrString, addr_len);
+
+		SHA256(buf, addr_len + 1, address_hash.h);
+	}
+	else if (client->m_addr.is_localhost()) {
+		buf[0] = 1; // hash domain separation
+		memcpy(buf + 1, &client->m_peerId, sizeof(client->m_peerId));
+
+		SHA256(buf, sizeof(client->m_peerId) + 1, address_hash.h);
+	}
+	else {
+		// Use the /64 prefix for IPv6 addresses
+		const size_t addr_len = !client->m_addr.is_ipv4_prefix() ? (sizeof(client->m_addr.data) - 8) : sizeof(client->m_addr.data);
+
+		buf[0] = 2; // hash domain separation
+		memcpy(buf + 1, client->m_addr.data, addr_len);
+
+		SHA256(buf, addr_len + 1, address_hash.h);
+	}
+
+	// 1 second for default block time (P2Pool main/mini), 3 seconds for P2Pool nano
+	const uint64_t time_unit_mcs = (m_pool->side_chain().block_time() * 1'000'000) / 10;
+
+	BroadcastThrottle& data = m_broadcastThrottle[address_hash];
+
+	for (size_t i = 0; i < BroadcastThrottle::N; ++i) {
+		if (timestamp_mcs >= data.m_startTime[i] + BroadcastThrottle::LIMITS[i][0] * time_unit_mcs) {
+			data.m_startTime[i] = timestamp_mcs;
+			data.m_count[i] = 1;
+		}
+		else {
+			++data.m_count[i];
+
+			if (data.m_count[i] > BroadcastThrottle::LIMITS[i][1]) {
+				LOGWARN(4, "peer " << static_cast<const char*>(client->m_addrString)
+					<< " broadcasted " << data.m_count[i] << " blocks in "
+					<< (static_cast<double>(timestamp_mcs - data.m_startTime[i]) * 1e-6) << " seconds");
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact)
 {
 	if (!size) {
@@ -3038,20 +3121,8 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 
-	// 1/10th of the target block time (in microseconds)
-	const uint64_t throttle_window = server->m_pool->side_chain().block_time() * (1'000'000 / 10);
-
-	if (received_timestamp >= m_broadcastThrottleTimestamp + throttle_window) {
-		m_broadcastThrottleTimestamp = received_timestamp;
-		m_broadcastThrottleCounter = 1;
-	}
-	else {
-		++m_broadcastThrottleCounter;
-
-		if (m_broadcastThrottleCounter > MAX_BROADCASTS_PER_THROTTLE_WINDOW) {
-			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " broadcasted too many blocks too quickly");
-			return false;
-		}
+	if (server->throttle_broadcast(this, received_timestamp)) {
+		return false;
 	}
 
 	MutexLock lock(server->m_blockLock);
