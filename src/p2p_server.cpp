@@ -3828,15 +3828,28 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 
 		if (failed) {
 			if (is_new) {
+				static uint64_t last_failed_timestamp = 0;
+
+				bool show_warnings = false;
+
+				// Don't show warnings more than once per minute
+				if (t >= last_failed_timestamp + 60) {
+					last_failed_timestamp = t;
+					show_warnings = true;
+				}
+
 				int64_t dt = static_cast<int64_t>(block->m_timestamp - t);
 				char sign = '+';
 				if (dt < 0) {
 					sign = '-';
 					dt = -dt;
 				}
-				LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
-					<< " sent a block " << block->m_sidechainId << " (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
-					<< " (" << sign << dt << " seconds)");
+
+				if (show_warnings) {
+					LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
+						<< " sent a block " << block->m_sidechainId << " (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
+						<< " (" << sign << dt << " seconds)");
+				}
 
 				uint32_t failed_checks = 0;
 
@@ -3846,7 +3859,7 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 					}
 				}
 
-				if (failed_checks > 16) {
+				if ((failed_checks > 16) && show_warnings) {
 					LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of 32 last blocks were rejected due to high timestamp diff");
 				}
 			}
