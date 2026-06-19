@@ -256,7 +256,7 @@ public:
 
 	// Must be called with an appropriate lock held
 	template<typename T>
-	void clean_old(T* table, uint32_t timestamp, size_t excess_at_timestamp = 0) {
+	static void clean_old(T* table, uint32_t timestamp, size_t excess_at_timestamp = 0) {
 		for (auto it = table->begin(); it != table->end();) {
 			const uint32_t t = it->second.m_timestamp;
 			bool remove;
@@ -282,7 +282,7 @@ public:
 	// Must be called with an appropriate lock held
 	// If the table exceeded max_size, deletes oldest entries to shrink the table to <= max_new_size entries
 	template<typename T>
-	void limit_size(T* table, size_t max_size, size_t max_new_size)
+	static void limit_size(T* table, size_t max_size, size_t max_new_size)
 	{
 		if (table->size() <= max_size) {
 			return;
