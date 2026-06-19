@@ -3821,48 +3821,50 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 		const uint64_t t = time(nullptr);
 		const uint32_t failed = ((block->m_timestamp + max_time_delta < t) || (block->m_timestamp > t + max_time_delta)) ? 1 : 0;
 
-		static uint32_t failed_history = 0;
+		static uint64_t failed_history = 0;
 		if (is_new) {
 			failed_history = (failed_history << 1) | failed;
 		}
 
 		if (failed) {
-			if (is_new) {
-				static uint64_t last_failed_timestamp = 0;
-
-				bool show_warnings = false;
+#ifndef P2POOL_LOG_DISABLE
+			if (is_new && (log::GLOBAL_LOG_LEVEL.load(std::memory_order_relaxed) > 0)) {
+				static uint64_t last_shown_warning_timestamp = 0;
 
 				// Don't show warnings more than once per minute
-				if (t >= last_failed_timestamp + 60) {
-					last_failed_timestamp = t;
-					show_warnings = true;
-				}
+				if (t >= last_shown_warning_timestamp + 60) {
+					last_shown_warning_timestamp = t;
 
-				int64_t dt = static_cast<int64_t>(block->m_timestamp - t);
-				char sign = '+';
-				if (dt < 0) {
-					sign = '-';
-					dt = -dt;
-				}
+					uint64_t dt;
+					const char* direction;
 
-				if (show_warnings) {
+					if (block->m_timestamp > t) {
+						dt = block->m_timestamp - t;
+						direction = "ahead";
+					}
+					else {
+						dt = t - block->m_timestamp;
+						direction = "behind";
+					}
+
 					LOGWARN(4, "peer " << static_cast<char*>(m_addrString)
 						<< " sent a block " << block->m_sidechainId << " (mined by " << block->m_minerWallet << ") with an invalid timestamp " << block->m_timestamp
-						<< " (" << sign << dt << " seconds)");
-				}
+						<< " (" << dt << " seconds " << direction << ')');
 
-				uint32_t failed_checks = 0;
+					uint32_t failed_checks = 0;
 
-				for (uint32_t k = 1; k != 0; k <<= 1) {
-					if (failed_history & k) {
-						++failed_checks;
+					for (uint64_t k = 1; k != 0; k <<= 1) {
+						if (failed_history & k) {
+							++failed_checks;
+						}
+					}
+
+					if (failed_checks > 60) {
+						LOGWARN(1, "Your system clock might be invalid, or someone might be broadcasting invalid blocks: " << failed_checks << " of 64 last blocks were rejected due to high timestamp diff");
 					}
 				}
-
-				if ((failed_checks > 16) && show_warnings) {
-					LOGWARN(1, "Your system clock might be invalid: " << failed_checks << " of 32 last blocks were rejected due to high timestamp diff");
-				}
 			}
+#endif
 			return true;
 		}
 	}

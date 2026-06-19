@@ -168,7 +168,7 @@ public:
 		{
 			WriteLock lock(derivations_lock);
 
-			auto entry = derivations->emplace(index, DerivationEntry{ derivation, { 0xFFFFFFFFUL, 0xFFFFFFFFUL }, {}, t }).first;
+			auto entry = derivations->emplace(index, DerivationEntry(derivation, t)).first;
 			entry->second.add_view_tag(static_cast<uint32_t>(output_index << 8) | view_tag);
 			limit_size(derivations, 1'000'000, 500'000);
 		}
@@ -349,27 +349,26 @@ public:
 private:
 	struct DerivationEntry
 	{
+		FORCEINLINE DerivationEntry(const hash& derivation, uint32_t timestamp)
+			: m_derivation(derivation)
+			, m_viewTags{ TAG_NONE, TAG_NONE, TAG_NONE, TAG_NONE, TAG_NONE, TAG_NONE, TAG_NONE }
+			, m_timestamp(timestamp)
+		{}
+
+		static constexpr uint32_t TAG_NONE = 0xFFFFFFFFUL;
+
 		hash m_derivation;
-		uint32_t m_viewTags1[2] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL };
-		std::vector<uint32_t> m_viewTags2;
+		uint32_t m_viewTags[7];
 		// cppcheck-suppress unusedStructMember
-		uint32_t m_timestamp = 0;
+		uint32_t m_timestamp;
 
 		FORCEINLINE bool find_view_tag(size_t output_index, uint8_t& view_tag) const
 		{
-#define ITER(i) do { \
-				const uint32_t k = m_viewTags1[i]; \
-				if ((k >> 8) == output_index) { \
-					view_tag = static_cast<uint8_t>(k); \
-					return true; \
-				} \
-			} while(0)
+			for (const uint32_t k : m_viewTags) {
+				if (k == TAG_NONE) {
+					return false;
+				}
 
-			ITER(0);
-			ITER(1);
-#undef ITER
-
-			for (const uint32_t k : m_viewTags2) {
 				if ((k >> 8) == output_index) {
 					view_tag = static_cast<uint8_t>(k);
 					return true;
@@ -380,26 +379,22 @@ private:
 
 		FORCEINLINE void add_view_tag(uint32_t k)
 		{
-#define ITER(i) do { \
-				const uint32_t t = m_viewTags1[i]; \
-				if (t == 0xFFFFFFFFUL) { \
-					m_viewTags1[i] = k; \
-					return; \
-				} \
-				if (t == k) { \
-					return; \
-				} \
-			} while (0)
+			for (size_t i = 0, n = array_size(m_viewTags); i < n; ++i) {
+				const uint32_t t = m_viewTags[i];
 
-			ITER(0);
-			ITER(1);
-#undef ITER
+				if (t == TAG_NONE) {
+					m_viewTags[i] = k;
+					return;
+				}
 
-			if ((m_viewTags2.size() < 16) && (std::find(m_viewTags2.begin(), m_viewTags2.end(), k) == m_viewTags2.end())) {
-				m_viewTags2.emplace_back(k);
+				if (t == k) {
+					return;
+				}
 			}
 		}
 	};
+
+	static_assert(sizeof(DerivationEntry) == 64, "Invalid DerivationEntry size");
 
 	struct PublicKeyEntry
 	{

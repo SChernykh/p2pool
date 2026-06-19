@@ -566,7 +566,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		}
 	}
 
-	LOGINFO(4, "add_external_block: height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId << ", mainchain height = " << block.m_txinGenHeight);
+	LOGINFO(4, "add_external_block: height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId << ", mainchain height = " << block.m_txinGenHeight << ", difficulty = " << block.m_difficulty);
 
 	if (too_low_diff) {
 		LOGWARN(4, "add_external_block: block mined by " << block.m_minerWallet << " has too low difficulty " << block.m_difficulty << ", expected >= ~" << expected_diff << ". Ignoring it.");
