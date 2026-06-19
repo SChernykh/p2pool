@@ -147,6 +147,7 @@ template<typename T> FORCEINLINE constexpr bool is_negative(T x)
 		return (x < 0);
 	}
 	else {
+		(void) x;
 		return false;
 	}
 }
@@ -157,6 +158,7 @@ template<typename T> FORCEINLINE constexpr std::make_unsigned_t<T> abs(T x)
 
 	if constexpr (std::is_signed_v<T>) {
 		const std::make_unsigned_t<T> ux = static_cast<std::make_unsigned_t<T>>(x);
+		MSVC_PRAGMA(warning(suppress:4146))
 		return (x < 0) ? -ux : ux;
 	} else {
 		return x;
