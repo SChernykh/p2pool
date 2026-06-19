@@ -23,7 +23,12 @@
 #define FORCEINLINE __forceinline
 #define NOINLINE __declspec(noinline)
 #define LIKELY(expression) expression
+
+#ifndef __cppcheck__
 #define MSVC_PRAGMA(...) __pragma(__VA_ARGS__)
+#else
+#define MSVC_PRAGMA(...)
+#endif
 
 #elif __GNUC__
 
