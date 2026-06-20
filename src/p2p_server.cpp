@@ -53,6 +53,7 @@ static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
 static constexpr uint64_t PEER_REQUEST_DELAY = 60;
 static constexpr uint64_t MAX_PENDING_BLOCK_REQUESTS = 25;
+static constexpr uint64_t MAX_PEER_LIST_SIZE = 5000;
 
 namespace p2pool {
 
@@ -99,10 +100,19 @@ P2PServer::P2PServer(p2pool* pool)
 	// Diffuse the initial state in case it has low quality
 	m_rng.discard(10000);
 
-	// Make sure peer IDs are not 0
-	do { m_peerId     = m_rng(); } while (!m_peerId);
-	do { m_peerId_TOR = m_rng(); } while (!m_peerId_TOR);
-	do { m_peerId_I2P = m_rng(); } while (!m_peerId_I2P);
+	// Make sure peer IDs are not 0 and distinct
+	for (size_t i = 0, n = array_size(m_peerId); i < n; ++i) {
+		do {
+			m_peerId[i] = m_rng();
+
+			for (size_t j = 0; j < i; ++j) {
+				if (m_peerId[i] == m_peerId[j]) {
+					m_peerId[i] = 0;
+					break;
+				}
+			}
+		} while (!m_peerId[i]);
+	}
 
 	const Params& params = pool->params();
 
@@ -548,6 +558,10 @@ void P2PServer::update_peer_list()
 
 void P2PServer::send_peer_list_request(P2PClient* client, uint64_t cur_time)
 {
+	if (client->m_peerListPendingRequests > 0) {
+		return;
+	}
+
 	// Send peer list requests at random intervals (60-120 seconds)
 	client->m_nextOutgoingPeerListRequest = cur_time + (PEER_REQUEST_DELAY + (get_random64() % (PEER_REQUEST_DELAY + 1)));
 
@@ -889,7 +903,7 @@ void P2PServer::load_peer_list()
 			p.m_numFailedConnections = 0;
 			p.m_lastSeen = seconds_since_epoch();
 
-			if (!already_added && !is_banned(p.m_isV6, p.m_addr)) {
+			if (!already_added && (m_peerList.size() < MAX_PEER_LIST_SIZE) && !is_banned(p.m_isV6, p.m_addr)) {
 				m_peerList.push_back(p);
 			}
 		});
@@ -999,7 +1013,7 @@ void P2PServer::update_peer_in_list(bool is_v6, const raw_ip& ip, int port)
 		}
 	}
 
-	if (!is_banned(peer.m_isV6, peer.m_addr) && !ip.is_localhost()) {
+	if ((m_peerList.size() < MAX_PEER_LIST_SIZE) && !is_banned(peer.m_isV6, peer.m_addr) && !ip.is_localhost()) {
 		m_peerList.push_back(peer);
 	}
 }
@@ -2570,16 +2584,31 @@ bool P2PServer::P2PClient::send_handshake_challenge()
 			}
 
 			bool is_tor = false;
+			bool is_i2p = false;
 
-			if (((m_addressType == AddressType::DomainName) && (strstr(m_addrString, ".onion:"))) ||
-			    (!owner->m_pool->params().m_onionPubkey.empty() && m_isIncoming && (m_addressType != AddressType::DomainName) && m_addr.is_localhost()))
-			{
-				// 1) We're connecting to an .onion address
-				// 2) We published our .onion address, and it's an incoming connection on localhost interface, so it's likely an incoming tor connection
+			if (m_isIncoming && (m_addressType != AddressType::DomainName) && m_addr.is_localhost()) {
+				// Incoming localhost connection. See if TOR/I2P are configured.
+				// Mixed TOR/I2P will make it choose a special "TOR+I2P" peer ID in get_peerId.
+				// This is a compromise we have to make - no way to distinguish TOR/I2P here.
+				const Params& params = owner->m_pool->params();
+
+				is_tor = !params.m_onionPubkey.empty();
+				is_i2p = !params.m_i2pDestinationHash.empty();
+			}
+			else if ((m_addressType == AddressType::DomainName) && !m_isIncoming && (strstr(m_addrString, ".onion:"))) {
 				is_tor = true;
+				is_i2p = false;
+			}
+			else if ((m_addressType == AddressType::DomainName) && !m_isIncoming && (strstr(m_addrString, ".b32.i2p:"))) {
+				is_tor = false;
+				is_i2p = true;
+			}
+			else if ((m_addressType != AddressType::DomainName) && !(m_isIncoming && m_addr.is_localhost())) {
+				is_tor = false;
+				is_i2p = false;
 			}
 
-			k = owner->get_peerId(is_tor, owner->m_isI2P);
+			k = owner->get_peerId(is_tor, is_i2p);
 			memcpy(p, &k, sizeof(uint64_t));
 			p += sizeof(uint64_t);
 
@@ -2777,9 +2806,11 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 		return false;
 	}
 
-	if ((peer_id == server->m_peerId) || (peer_id == server->m_peerId_TOR) || (peer_id == server->m_peerId_I2P)) {
-		LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
-		return false;
+	for (size_t i = 0, n = array_size(server->m_peerId); i < n; ++i) {
+		if (peer_id == server->m_peerId[i]) {
+			LOGWARN(5, "tried to connect to self at " << static_cast<const char*>(m_addrString));
+			return false;
+		}
 	}
 
 	m_peerId = peer_id;
@@ -3313,7 +3344,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 		if (!is_v6) {
 			const uint32_t b = ip.data[12];
-			if ((b == 0) || (b >= 224)) {
+			if ((b == 0) || (b == 127) || (b >= 224)) {
 				// Ignore 0.0.0.0/8 (special-purpose range for "this network"), 224.0.0.0/3 (IP multicast and reserved ranges) and localhost
 
 				// Check for protocol version message
@@ -3368,7 +3399,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 			}
 		}
 
-		if (!already_added && !server->is_banned(is_v6, ip)) {
+		if (!already_added && (server->m_peerList.size() < MAX_PEER_LIST_SIZE) && !server->is_banned(is_v6, ip)) {
 			Peer p{ is_v6, ip, port, 0, cur_time };
 			p.normalize();
 			server->m_peerList.push_back(p);
@@ -3624,6 +3655,11 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	if (!readVarint(buf + data.header_size + 1, buf + header_and_miner_tx_size, unlock_height)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: unlock_height not found");
 		return false;
+	}
+
+	if (buf[header_and_miner_tx_size - 1] != 0) {
+		LOGWARN(6, "Invalid MONERO_BLOCK_BROADCAST: base RCT byte is not 0");
+		return true;
 	}
 
 	p2pool* pool = server->m_pool;

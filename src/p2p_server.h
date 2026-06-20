@@ -206,7 +206,7 @@ public:
 
 	void broadcast(const PoolBlock& block, const PoolBlock* parent);
 	[[nodiscard]] uint64_t get_random64();
-	[[nodiscard]] uint64_t get_peerId(bool is_tor, bool is_i2p) const { return is_tor ? m_peerId_TOR : (is_i2p ? m_peerId_I2P : m_peerId); }
+	[[nodiscard]] uint64_t get_peerId(bool is_tor, bool is_i2p) const { return m_peerId[(is_tor ? 1 : 0) + (is_i2p ? 2 : 0)]; }
 
 	void print_status() override;
 	void show_peers_async();
@@ -284,9 +284,8 @@ private:
 	uint64_t m_timerCounter;
 	uint64_t m_timerInterval;
 
-	uint64_t m_peerId;
-	uint64_t m_peerId_TOR;
-	uint64_t m_peerId_I2P;
+	// Clearnet, TOR, I2P, TOR+I2P
+	uint64_t m_peerId[4];
 
 	mutable uv_mutex_t m_peerListLock;
 	uv_mutex_t m_peerListSaveLock;
