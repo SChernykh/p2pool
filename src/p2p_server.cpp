@@ -2022,6 +2022,11 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 		return;
 	}
 
+	if (data_size > MAX_BLOCK_SIZE) {
+		LOGWARN(3, "broadcast_monero_block: data_size is too big: " << data_size);
+		return;
+	}
+
 	hash digest;
 	SHA256(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader), digest.h);
 
