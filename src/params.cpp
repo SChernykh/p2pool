@@ -362,6 +362,11 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		return true;
 	}
 
+	if (((arg[0] == "in-peers-localhost") || (arg[0] == "inpeers-localhost")) && has1(arg)) {
+		m_maxIncomingPeersLocalhost = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 10UL), 450UL);
+		return true;
+	}
+
 	if ((arg[0] == "start-mining") && has1(arg)) {
 		m_minerThreads = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 64UL);
 		return true;

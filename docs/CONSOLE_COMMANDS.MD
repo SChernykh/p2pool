@@ -14,6 +14,7 @@ hosts|show Monero hosts which were configured in the command line
 next_host|switch to the next Monero host configured in the command line
 outpeers **N**|set maximum number of outgoing connections (values above 50 are not recommended)
 inpeers **N**|set maximum number of incoming connections (values above 50 are not recommended)
+inpeers_localhost **N**|set maximum number of incoming localhost connections (values above 50 are not recommended)
 start_mining **T**|start mining (**T** is the number of threads to use, must be between 1 and 64)
 stop_mining|stop mining
 exit|terminate p2pool

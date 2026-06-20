@@ -118,6 +118,7 @@ P2PServer::P2PServer(p2pool* pool)
 
 	set_max_outgoing_peers(params.m_maxOutgoingPeers);
 	set_max_incoming_peers(params.m_maxIncomingPeers);
+	set_max_incoming_peers_localhost(params.m_maxIncomingPeersLocalhost);
 
 	uv_mutex_init_checked(&m_blockLock);
 	uv_mutex_init_checked(&m_peerListLock);
@@ -2156,7 +2157,7 @@ bool P2PServer::P2PClient::on_connect()
 		return false;
 	}
 
-	// Don't allow multiple connections to/from the same IP or domain (except localhost)
+	// Don't allow multiple connections to/from the same IP or domain (except localhost which can have up to 10 incoming connections)
 	if ((m_addressType == AddressType::DomainName) || !m_addr.is_localhost()) {
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			if (client == this) {
@@ -2187,6 +2188,22 @@ bool P2PServer::P2PClient::on_connect()
 			if (same) {
 				LOGINFO(5, "peer " << static_cast<char*>(m_addrString) << " is already connected as " << static_cast<char*>(client->m_addrString));
 				return false;
+			}
+		}
+	}
+
+	if (m_isIncoming && m_addr.is_localhost()) {
+		uint32_t n = 0;
+
+		for (P2PClient* c = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); c != server->m_connectedClientsList; c = static_cast<P2PClient*>(c->m_next)) {
+			if (c->m_isIncoming && (c->m_addressType != AddressType::DomainName) && c->m_addr.is_localhost()) {
+				++n;
+
+				// No more than 10 (by default) incoming localhost connections (including this one)
+				if (n > server->m_maxIncomingPeersLocalhost) {
+					LOGINFO(5, "Connection from " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor() << " rejected (incoming localhost connections limit was reached)");
+					return false;
+				}
 			}
 		}
 	}
@@ -2815,11 +2832,18 @@ bool P2PServer::P2PClient::on_handshake_challenge(const uint8_t* buf)
 
 	m_peerId = peer_id;
 
+	auto is_domain = [](const P2PClient* c) {
+		return (c->m_addressType == AddressType::DomainName) || (c->m_isIncoming && c->m_addr.is_localhost());
+	};
+
 	for (const P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 		if ((client != this) && (client->m_peerId == peer_id)) {
-			LOGWARN(5, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
-			close();
-			return true;
+			// Peers use different IDs for different domains
+			if (is_domain(client) == is_domain(this)) {
+				LOGWARN(5, "tried to connect to the same peer twice: current connection " << static_cast<const char*>(client->m_addrString) << ", new connection " << static_cast<const char*>(m_addrString));
+				close();
+				return true;
+			}
 		}
 	}
 

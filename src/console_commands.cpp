@@ -165,7 +165,7 @@ typedef struct cmd {
 	cmdfunc *func;
 } cmd;
 
-static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_showhosts, do_nexthost, do_outpeers, do_inpeers, do_exit, do_version;
+static cmdfunc do_help, do_status, do_loglevel, do_addpeers, do_droppeers, do_showpeers, do_showworkers, do_showbans, do_showhosts, do_nexthost, do_outpeers, do_inpeers, do_inpeers_localhost, do_exit, do_version;
 
 #ifdef WITH_RANDOMX
 static cmdfunc do_start_mining, do_stop_mining;
@@ -184,6 +184,7 @@ static cmd cmds[] = {
 	{ STRCONST("next_host"), "", "switch to the next Monero host", do_nexthost },
 	{ STRCONST("outpeers"), "<N>", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "<N>", "set maximum number of incoming connections", do_inpeers },
+	{ STRCONST("inpeers_localhost"), "<N>", "set maximum number of incoming localhost connections", do_inpeers_localhost },
 #ifdef WITH_RANDOMX
 	{ STRCONST("start_mining"), "<threads>", "start mining", do_start_mining },
 	{ STRCONST("stop_mining"), "", "stop mining", do_stop_mining },
@@ -380,6 +381,15 @@ static void do_inpeers(p2pool* m_pool, const char* args)
 	if (m_pool->p2p_server()) {
 		m_pool->p2p_server()->set_max_incoming_peers(strtoul(args, nullptr, 10));
 		LOGINFO(0, "max incoming peers set to " << m_pool->p2p_server()->max_incoming_peers());
+	}
+}
+
+// cppcheck-suppress constParameterCallback
+static void do_inpeers_localhost(p2pool* m_pool, const char* args)
+{
+	if (m_pool->p2p_server()) {
+		m_pool->p2p_server()->set_max_incoming_peers_localhost(strtoul(args, nullptr, 10));
+		LOGINFO(0, "max incoming localhost peers set to " << m_pool->p2p_server()->max_incoming_peers_localhost());
 	}
 }
 

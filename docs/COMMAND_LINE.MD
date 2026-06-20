@@ -1,58 +1,59 @@
 ### P2Pool command line options
 
 ```
---wallet              Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress
---subaddress          Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter
---host                IP address of your Monero node, default is 127.0.0.1
---rpc-port            monerod RPC API port number, default is 18081
---zmq-port            monerod ZMQ pub port number, default is 18083 (same port as in monerod's "--zmq-pub" command line parameter)
---stratum             Comma-separated list of IP:port for stratum server to listen on
---p2p                 Comma-separated list of IP:port for p2p server to listen on
---addpeers            Comma-separated list of IP:port of other p2pool nodes to connect to
---stratum-ban-time N  Number of seconds to ban misbehaving stratum client, default is 600
---light-mode          Don't allocate RandomX dataset, saves 2GB of RAM
---loglevel            Verbosity of the log, integer number between 0 and 6
---data-dir            Path to store general p2pool files (log, cache, peer data, etc.), default is current directory
---log-file            Path to the log file, default is "p2pool.log" in p2pool's working directory
---no-console-log      Disable logging to the console
---no-log-file         Disable logging to the file
---disable-log         Equivalent to --no-console-log --no-log-file, disables logging entirely and saves ~8 MB of memory
---sidechain-config    Name of the p2pool sidechain parameters file (only use it if you run your own sidechain)
---data-api            Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!
---local-api           Enable /local/ path in api path for Stratum Server and built-in miner statistics
---stratum-api         An alias for --local-api
---no-cache            Disable p2pool.cache
---no-color            Disable colors in console output
---no-randomx          Disable internal RandomX hasher: p2pool will use RPC calls to monerod to check PoW hashes
---out-peers N         Maximum number of outgoing connections for p2p server (any value between 10 and 450)
---in-peers N          Maximum number of incoming connections for p2p server (any value between 10 and 450)
---start-mining N      Start built-in miner using N threads (any value between 1 and 64)
---mini                Connect to p2pool-mini sidechain. Note that it will also change default p2p port from 37889 to 37888. Cannot be used with --nano.
---nano                Connect to p2pool-nano sidechain. Note that it will also change default p2p port from 37889 to 37890. Cannot be used with --mini.
---no-autodiff         Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)
---rpc-login           Specify username[:password] required for Monero RPC server
---socks5              Specify IP:port of a SOCKS5 proxy to use for outgoing connections
---socks5-proxy-type   The type of SOCKS5 proxy. Can be one of the following values: auto, plain, tor. Default is auto (auto-detect by the port number)
---no-dns              Disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)
---p2p-external-port   Port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections
---no-upnp             Disable UPnP port forwarding
---no-igd              An alias for --no-upnp
---upnp-stratum        Port forward Stratum port (it's not forwarded by default)
---merge-mine          [https://]IP:port and wallet address for another blockchain to merge mine with.
-                      Prefix the host with https:// to connect over TLS (requires a TLS-enabled build).
-                      An optional base64-encoded SPKI fingerprint can be added as a third value for certificate pinning
---version             Print p2pool's version and build details
---tls-cert file       Load TLS certificate chain from "file" in the PEM format
---tls-cert-key file   Load TLS certificate private key from "file" in the PEM format
---rpc-ssl             Enable SSL on RPC connections to the Monero node
---rpc-ssl-fingerprint base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)
+--wallet                  Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress
+--subaddress              Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter
+--host                    IP address of your Monero node, default is 127.0.0.1
+--rpc-port                monerod RPC API port number, default is 18081
+--zmq-port                monerod ZMQ pub port number, default is 18083 (same port as in monerod's "--zmq-pub" command line parameter)
+--stratum                 Comma-separated list of IP:port for stratum server to listen on
+--p2p                     Comma-separated list of IP:port for p2p server to listen on
+--addpeers                Comma-separated list of IP:port of other p2pool nodes to connect to
+--stratum-ban-time N      Number of seconds to ban misbehaving stratum client, default is 600
+--light-mode              Don't allocate RandomX dataset, saves 2GB of RAM
+--loglevel                Verbosity of the log, integer number between 0 and 6
+--data-dir                Path to store general p2pool files (log, cache, peer data, etc.), default is current directory
+--log-file                Path to the log file, default is "p2pool.log" in p2pool's working directory
+--no-console-log          Disable logging to the console
+--no-log-file             Disable logging to the file
+--disable-log             Equivalent to --no-console-log --no-log-file, disables logging entirely and saves ~8 MB of memory
+--sidechain-config        Name of the p2pool sidechain parameters file (only use it if you run your own sidechain)
+--data-api                Path to the p2pool JSON data (use it in tandem with an external web-server). Not affected by --data-dir setting!
+--local-api               Enable /local/ path in api path for Stratum Server and built-in miner statistics
+--stratum-api             An alias for --local-api
+--no-cache                Disable p2pool.cache
+--no-color                Disable colors in console output
+--no-randomx              Disable internal RandomX hasher: p2pool will use RPC calls to monerod to check PoW hashes
+--out-peers N             Maximum number of outgoing connections for p2p server (any value between 10 and 450)
+--in-peers N              Maximum number of incoming connections for p2p server (any value between 10 and 450)
+--in-peers-localhost N    Maximum number of incoming localhost connections for p2p server (any value between 10 and 450)
+--start-mining N          Start built-in miner using N threads (any value between 1 and 64)
+--mini                    Connect to p2pool-mini sidechain. Note that it will also change default p2p port from 37889 to 37888. Cannot be used with --nano.
+--nano                    Connect to p2pool-nano sidechain. Note that it will also change default p2p port from 37889 to 37890. Cannot be used with --mini.
+--no-autodiff             Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)
+--rpc-login               Specify username[:password] required for Monero RPC server
+--socks5                  Specify IP:port of a SOCKS5 proxy to use for outgoing connections
+--socks5-proxy-type       The type of SOCKS5 proxy. Can be one of the following values: auto, plain, tor. Default is auto (auto-detect by the port number)
+--no-dns                  Disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)
+--p2p-external-port       Port number that your router uses for mapping to your local p2p port. Use it if you are behind a NAT and still want to accept incoming connections
+--no-upnp                 Disable UPnP port forwarding
+--no-igd                  An alias for --no-upnp
+--upnp-stratum            Port forward Stratum port (it's not forwarded by default)
+--merge-mine              [https://]IP:port and wallet address for another blockchain to merge mine with.
+                          Prefix the host with https:// to connect over TLS (requires a TLS-enabled build).
+                          An optional base64-encoded SPKI fingerprint can be added as a third value for certificate pinning
+--version                 Print p2pool's version and build details
+--tls-cert file           Load TLS certificate chain from "file" in the PEM format
+--tls-cert-key file       Load TLS certificate private key from "file" in the PEM format
+--rpc-ssl                 Enable SSL on RPC connections to the Monero node
+--rpc-ssl-fingerprint     base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)
 --stratum-proxy-protocol  Enable HAProxy PROXY protocol v2 for incoming Stratum connections (use with HAProxy send-proxy-v2)
 --p2p-proxy-protocol      Enable HAProxy PROXY protocol v2 for incoming P2P connections (use with HAProxy send-proxy-v2)
---no-stratum-http     Disable HTTP on Stratum ports
---full-validation     Enables full share validation / increases CPU usage
---onion-address       Tell other peers to use this .onion address to connect to this node through TOR
---no-clearnet-p2p     Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs
---params-file         File name to load parameters from. It can't be used together with any other command line parameters
+--no-stratum-http         Disable HTTP on Stratum ports
+--full-validation         Enables full share validation / increases CPU usage
+--onion-address           Tell other peers to use this .onion address to connect to this node through TOR
+--no-clearnet-p2p         Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs
+--params-file             File name to load parameters from. It can't be used together with any other command line parameters
 ```
 
 ### Example command line

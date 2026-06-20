@@ -110,6 +110,7 @@ struct Params
 #endif
 	uint32_t m_maxOutgoingPeers = 10;
 	uint32_t m_maxIncomingPeers = 450;
+	uint32_t m_maxIncomingPeersLocalhost = 10;
 	uint32_t m_minerThreads = 0;
 	bool m_mini = false;
 	bool m_nano = false;
