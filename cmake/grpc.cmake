@@ -37,6 +37,8 @@ add_definitions(-DPROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0)
 add_definitions(-DGRPC_NO_RLS)
 add_definitions(-DGRPC_NO_XDS)
 
+set(OPENSSL_SMALL ON CACHE BOOL "Build a smaller, slightly slower BoringSSL")
+
 add_subdirectory(external/src/grpc)
 
 include_directories(external/src/grpc/third_party/abseil-cpp)

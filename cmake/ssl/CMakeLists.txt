@@ -28,4 +28,6 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
 	endif()
 endif()
 
-add_subdirectory(../../external/src/grpc/third_party/boringssl-with-bazel BoringSSL)
+set(OPENSSL_SMALL ON CACHE BOOL "Build a smaller, slightly slower BoringSSL")
+
+add_subdirectory(../../external/src/grpc/third_party/boringssl-with-bazel BoringSSL EXCLUDE_FROM_ALL)
