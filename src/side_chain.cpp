@@ -2065,52 +2065,61 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 	uint64_t candidate_mainchain_min_height = 0;
 
 	unordered_set<hash> current_chain_monero_blocks, candidate_chain_monero_blocks;
+	std::vector<uint64_t> candidate_timestamps;
 	{
 		const uint64_t k = m_chainWindowSize * m_targetBlockTime * 2 / MONERO_BLOCK_TIME;
 		current_chain_monero_blocks.reserve(k);
 		candidate_chain_monero_blocks.reserve(k);
+		candidate_timestamps.reserve(m_chainWindowSize * 2);
 	}
 
 	for (uint64_t i = 0; (i < m_chainWindowSize) && (old_chain || new_chain); ++i) {
 		if (old_chain) {
 			block_total_diff += old_chain->m_difficulty;
 
+			auto add_monero_block_from = [this, &current_chain_monero_blocks](const hash& h) {
+				ChainMain data;
+				if ((current_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
+					current_chain_monero_blocks.insert(h);
+				}
+			};
+
 			for (const hash& uncle : old_chain->m_uncles) {
 				auto it = m_blocksById.find(uncle);
 				if ((it != m_blocksById.end()) && (block->m_sidechainHeight - it->second->m_sidechainHeight < m_chainWindowSize)) {
 					block_total_diff += it->second->m_difficulty;
+					add_monero_block_from(it->second->m_prevId);
 				}
 			}
 
-			ChainMain data;
-			const hash& h = old_chain->m_prevId;
-
-			if ((current_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
-				current_chain_monero_blocks.insert(h);
-			}
-
+			add_monero_block_from(old_chain->m_prevId);
 			old_chain = get_parent(old_chain);
 		}
 
 		if (new_chain) {
 			candidate_mainchain_min_height = candidate_mainchain_min_height ? std::min(candidate_mainchain_min_height, new_chain->m_txinGenHeight) : new_chain->m_txinGenHeight;
 			candidate_total_diff += new_chain->m_difficulty;
+			candidate_timestamps.emplace_back(new_chain->m_timestamp);
+
+			auto add_monero_block_from = [this, &candidate_chain_monero_blocks, &candidate_mainchain_height](const hash& h) {
+				ChainMain data;
+				if ((candidate_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
+					candidate_chain_monero_blocks.insert(h);
+					candidate_mainchain_height = std::max(candidate_mainchain_height, data.height);
+				}
+			};
 
 			for (const hash& uncle : new_chain->m_uncles) {
 				auto it = m_blocksById.find(uncle);
 				if ((it != m_blocksById.end()) && (candidate->m_sidechainHeight - it->second->m_sidechainHeight < m_chainWindowSize)) {
+					candidate_mainchain_min_height = std::min(candidate_mainchain_min_height, it->second->m_txinGenHeight);
 					candidate_total_diff += it->second->m_difficulty;
+					candidate_timestamps.emplace_back(it->second->m_timestamp);
+					add_monero_block_from(it->second->m_prevId);
 				}
 			}
 
-			ChainMain data;
-			const hash& h = new_chain->m_prevId;
-
-			if ((candidate_chain_monero_blocks.count(h) == 0) && m_pool->chainmain_get_by_hash(h, data)) {
-				candidate_chain_monero_blocks.insert(h);
-				candidate_mainchain_height = std::max(candidate_mainchain_height, data.height);
-			}
-
+			add_monero_block_from(new_chain->m_prevId);
 			new_chain = get_parent(new_chain);
 		}
 	}
@@ -2133,8 +2142,50 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 	}
 
 	// Candidate chain must have been mined on top of at least half as many known Monero blocks, compared to the current chain
-	if (candidate_chain_monero_blocks.size() * 2 < current_chain_monero_blocks.size()) {
+	if ((candidate_chain_monero_blocks.size() * 2 < current_chain_monero_blocks.size()) || (candidate_mainchain_height < candidate_mainchain_min_height)) {
 		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Monero blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
+		return false;
+	}
+
+	// Candidate chain's timestamps must not be altered to fake a high-difficulty chain
+
+	// Returns "90th percentile value - 10th percentile value" of a given vector when the values are sorted in non-decreasing order
+	auto span80 = [](std::vector<uint64_t>& v) -> uint64_t {
+		// Handle a degenerate case
+		if (v.empty()) {
+			return 0;
+		}
+
+		const uint64_t cut_size = (v.size() + 9) / 10;
+
+		const uint64_t pos1 = cut_size - 1;
+		const uint64_t pos2 = v.size() - cut_size;
+
+		// Handle the rest of degenerate cases
+		if (pos1 >= pos2) {
+			return 0;
+		}
+
+		std::nth_element(v.begin(), v.begin() + pos1, v.end());
+		const uint64_t v1 = v[pos1];
+
+		std::nth_element(v.begin(), v.begin() + pos2, v.end());
+		const uint64_t v2 = v[pos2];
+
+		return v2 - v1;
+	};
+
+	// Candidate's span is based on timestamps
+	const uint64_t candidate_span = span80(candidate_timestamps);
+
+	// Monero's span is based on blockchain heights and block time (also reduced to 80%).
+	// This is to anchor the span to the most recent Monero block in candidate's chain
+	const uint64_t candidate_monero_span = (candidate_mainchain_height + 1 - candidate_mainchain_min_height) * MONERO_BLOCK_TIME * 8 / 10;
+
+	// Candidate's timestamps span must be between 0.75 and 1.333 of Monero's timestamps span
+	if ((candidate_span > std::numeric_limits<uint64_t>::max() / 4) || // overflow check
+		(candidate_span * 4 < candidate_monero_span * 3) || (candidate_span * 3 > candidate_monero_span * 4)) {
+		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: span " << candidate_span << " vs Monero span " << candidate_monero_span);
 		return false;
 	}
 
