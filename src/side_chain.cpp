@@ -2166,10 +2166,10 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 			return 0;
 		}
 
-		std::nth_element(v.begin(), v.begin() + pos1, v.end());
+		std::nth_element(v.begin(), v.begin() + static_cast<uint32_t>(pos1), v.end());
 		const uint64_t v1 = v[pos1];
 
-		std::nth_element(v.begin(), v.begin() + pos2, v.end());
+		std::nth_element(v.begin(), v.begin() + static_cast<uint32_t>(pos2), v.end());
 		const uint64_t v2 = v[pos2];
 
 		return v2 - v1;
