@@ -1049,6 +1049,14 @@ void StratumServer::on_share_found(uv_work_t* req)
 				}
 			}
 
+#ifdef DEV_TEST_SYNC
+			static std::atomic<uint32_t> pow_was_forced = 0;
+
+			if (pow_was_forced.exchange(1) == 0) {
+				invalid_pow = false;
+			}
+#endif
+
 			if (invalid_pow) {
 				LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " submitted a share with invalid PoW");
 				share->m_result = SubmittedShare::Result::INVALID_POW;

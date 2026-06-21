@@ -55,6 +55,8 @@ if (sys.argv[1] == '2'):
 	diff = '+1000'
 if (sys.argv[1] == '3'):
 	diff = '+10000000'
+if (sys.argv[1] == '4'):
+	diff = '+10000000000'
 
 msg_id = 1
 

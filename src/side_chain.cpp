@@ -2163,7 +2163,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 	}
 
 	// Candidate chain's timestamps must not be altered to fake a high-difficulty chain
-	if (candidate_ts_deviation > 3600 * 3) {
+	if (candidate_ts_deviation > 10800u) {
 		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: max deviation is " << candidate_ts_deviation << " seconds");
 		return false;
 	}
