@@ -44,7 +44,7 @@ while True:
 	f.write(b'.')
 	f.flush()
 	print('.')
-	time.sleep(1)
+	time.sleep(0.01)
 
 f.write(b'\n')
 f.flush()
@@ -96,7 +96,7 @@ while True:
 
 	if (job_id != ''):
 		if (msg_id < 4):
-			result = ('f' if (msg_id == 2) else '0') * 64
+			result = ('0' if (msg_id == 2) else 'f') * 64
 			request = '{"id":' + str(msg_id) + ',"method":"submit","params":{"id":"' + rpc_id + '","job_id":"' + job_id + '","nonce":"ffffffff","result":"' + result + '"}}\n'
 		elif (msg_id == 4):
 			request = '{"id":' + str(msg_id) + ',"method":"keepalived"}\n'
