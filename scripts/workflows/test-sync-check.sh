@@ -6,12 +6,12 @@ if [ -s errors.log ]; then
 	exit 1
 fi
 
-if ! grep -q 'submit_sidechain_block: template id =' p2pool.log; then
+if ! grep 'submit_sidechain_block: template id =' p2pool_stdout.log; then
 	echo "p2pool::submit_sidechain_block didn't execute"
 	exit 1
 fi
 
-if ! grep -q 'received a longer alternative chain: height' p2pool.log; then
+if ! grep 'received a longer alternative chain: height' p2pool_stdout.log; then
 	echo "sidechain switch didn't happen"
 	exit 1
 fi

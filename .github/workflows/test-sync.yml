@@ -62,13 +62,14 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         python ../tests/src/stratum_dummy.py 4 &
         sudo sysctl vm.mmap_rnd_bits=28
-        TSAN_OPTIONS="halt_on_error=1 history_size=4" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        TSAN_OPTIONS="halt_on_error=1 history_size=4" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -159,13 +160,14 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         python ../tests/src/stratum_dummy.py 4 &
         sudo sysctl vm.mmap_rnd_bits=28
-        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6
+        MSAN_OPTIONS="halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -217,13 +219,14 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         python ../tests/src/stratum_dummy.py 4 &
         sudo sysctl vm.mmap_rnd_bits=28
-        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        UBSAN_OPTIONS="suppressions=../tests/src/ubsan_sup.txt halt_on_error=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -275,13 +278,14 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         python ../tests/src/stratum_dummy.py 4 &
         sudo sysctl vm.mmap_rnd_bits=28
-        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        ASAN_OPTIONS="detect_stack_use_after_return=1 atexit=1" ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -339,13 +343,14 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python ../tests/src/stratum_dummy.py 1 &
         python ../tests/src/stratum_dummy.py 2 &
         python ../tests/src/stratum_dummy.py 3 &
         python ../tests/src/stratum_dummy.py 4 &
         sudo sysctl vm.mmap_rnd_bits=28
-        TYSAN_OPTIONS=print_stacktrace=1 ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6 --light-mode 2> stderr.log
+        TYSAN_OPTIONS=print_stacktrace=1 ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --out-peers 50 --data-api data --local-api --loglevel 6 --light-mode 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -420,12 +425,13 @@ jobs:
     - name: Run p2pool
       run: |
         cd build
+        set -o pipefail
         mkdir data
         python3 ../tests/src/stratum_dummy.py 1 &
         python3 ../tests/src/stratum_dummy.py 2 &
         python3 ../tests/src/stratum_dummy.py 3 &
         python3 ../tests/src/stratum_dummy.py 4 &
-        ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        ./p2pool --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 2>&1 | tee p2pool_stdout.log
 
     - name: Check synchronization
       run: |
@@ -482,12 +488,23 @@ jobs:
         start python ../../tests/src/stratum_dummy.py 2
         start python ../../tests/src/stratum_dummy.py 3
         start python ../../tests/src/stratum_dummy.py 4
-        p2pool.exe --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        p2pool.exe --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 > p2pool_stdout.log 2>&1
 
     - name: Check p2pool.log
       run: |
         cd build/Debug
         findstr /C:"Synchronization finished successfully" p2pool.log
+        if ($LASTEXITCODE -ne 0) {
+          throw 'Synchronization did not finish successfully'
+        }
+        findstr /C:"submit_sidechain_block: template id =" p2pool_stdout.log
+        if ($LASTEXITCODE -ne 0) {
+          throw "p2pool::submit_sidechain_block didn't execute"
+        }
+        findstr /C:"received a longer alternative chain: height" p2pool_stdout.log
+        if ($LASTEXITCODE -ne 0) {
+          throw "sidechain switch didn't happen"
+        }
 
     - name: Check API files are valid JSON
       run: |
@@ -532,13 +549,24 @@ jobs:
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 2"
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 3"
         Start-Process python -ArgumentList "../../tests/src/stratum_dummy.py 4"
-        ./p2pool.exe --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6
+        ./p2pool.exe --host node.monerodevs.org --rpc-port 18089 --zmq-port 18084 --host node.richfowler.net --rpc-port 18089 --zmq-port 18084 --rpc-ssl --wallet 44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg ${{ secrets.MM_PARAMS }} --mini --out-peers 200 --data-api data --local-api --loglevel 6 *>&1 | Tee-Object -FilePath p2pool_stdout.log
 
     - name: Check p2pool.log
       run: |
         cd build/RelWithDebInfo
         Remove-Item p2pool.cache -Force
         findstr /C:"Synchronization finished successfully" p2pool.log
+        if ($LASTEXITCODE -ne 0) {
+          throw 'Synchronization did not finish successfully'
+        }
+        findstr /C:"submit_sidechain_block: template id =" p2pool_stdout.log
+        if ($LASTEXITCODE -ne 0) {
+          throw "p2pool::submit_sidechain_block didn't execute"
+        }
+        findstr /C:"received a longer alternative chain: height" p2pool_stdout.log
+        if ($LASTEXITCODE -ne 0) {
+          throw "sidechain switch didn't happen"
+        }
 
     - name: Check API files are valid JSON
       run: |
@@ -552,4 +580,5 @@ jobs:
         name: p2pool_windows_data_leaks
         path: |
           build/RelWithDebInfo/p2pool.*
+          build/RelWithDebInfo/*.log
           build/RelWithDebInfo/data/
