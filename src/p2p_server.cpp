@@ -78,6 +78,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_rng(RandomDeviceSeed::instance)
 	, m_block(new PoolBlock())
 	, m_blockDeserializeBufCompact(false)
+	, m_blockDeserializeBufAllowPruned(false)
 	, m_timer{}
 	, m_timerCounter(0)
 	, m_timerInterval(2)
@@ -1206,28 +1207,28 @@ void P2PServer::on_broadcast()
 		for (Broadcast* data : broadcast_queue) {
 			if (!data->compact_blob.empty()) {
 				PoolBlock check;
-				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), nullptr, true);
+				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), nullptr, true, true);
 				if (result != 0) {
 					LOGERR(1, "compact blob broadcast is broken, error " << result);
 				}
 			}
 			if (!data->compact_unpruned_blob.empty()) {
 				PoolBlock check;
-				const int result = check.deserialize(data->compact_unpruned_blob.data(), data->compact_unpruned_blob.size(), m_pool->side_chain(), nullptr, true);
+				const int result = check.deserialize(data->compact_unpruned_blob.data(), data->compact_unpruned_blob.size(), m_pool->side_chain(), nullptr, true, false);
 				if (result != 0) {
 					LOGERR(1, "compact unpruned blob broadcast is broken, error " << result);
 				}
 			}
 			{
 				PoolBlock check;
-				const int result = check.deserialize(data->pruned_blob.data(), data->pruned_blob.size(), m_pool->side_chain(), nullptr, false);
+				const int result = check.deserialize(data->pruned_blob.data(), data->pruned_blob.size(), m_pool->side_chain(), nullptr, false, true);
 				if (result != 0) {
 					LOGERR(1, "pruned blob broadcast is broken, error " << result);
 				}
 			}
 			{
 				PoolBlock check;
-				const int result = check.deserialize(data->blob.data(), data->blob.size(), m_pool->side_chain(), nullptr, false);
+				const int result = check.deserialize(data->blob.data(), data->blob.size(), m_pool->side_chain(), nullptr, false, false);
 				if (result != 0) {
 					LOGERR(1, "full blob broadcast is broken, error " << result);
 				}
@@ -1422,21 +1423,25 @@ int P2PServer::external_listen_port() const
 	return params.m_p2pExternalPort ? params.m_p2pExternalPort : m_listenPort;
 }
 
-int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact, uint64_t received_timestamp)
+int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact, bool allow_pruned, uint64_t received_timestamp)
 {
 	int result;
 
-	if ((m_blockDeserializeBuf.size() == size) && (m_blockDeserializeBufCompact == compact) && (memcmp(m_blockDeserializeBuf.data(), buf, size) == 0)) {
+	if ((m_blockDeserializeBuf.size() == size) &&
+		(m_blockDeserializeBufCompact == compact) &&
+		(m_blockDeserializeBufAllowPruned == allow_pruned) &&
+		(memcmp(m_blockDeserializeBuf.data(), buf, size) == 0)) {
 		m_block->reset_offchain_data();
 		result = 0;
 	}
 	else {
-		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact);
+		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact, allow_pruned);
 
 		// Cache only successfully deserialized blocks
 		if (result == 0) {
 			m_blockDeserializeBuf.assign(buf, buf + size);
 			m_blockDeserializeBufCompact = compact;
+			m_blockDeserializeBufAllowPruned = allow_pruned;
 		}
 		else {
 			m_blockDeserializeBuf.clear();
@@ -3046,7 +3051,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size, false, received_timestamp);
+	const int result = server->deserialize_block(buf, size, false, false, received_timestamp);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;
@@ -3187,7 +3192,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 
 	MutexLock lock(server->m_blockLock);
 
-	const int result = server->deserialize_block(buf, size, compact, received_timestamp);
+	const int result = server->deserialize_block(buf, size, compact, true, received_timestamp);
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;

@@ -222,7 +222,7 @@ public:
 	void set_max_incoming_peers(uint32_t n) { m_maxIncomingPeers = std::min(std::max(n, 10U), 450U); }
 	void set_max_incoming_peers_localhost(uint32_t n) { m_maxIncomingPeersLocalhost = std::min(std::max(n, 10U), 450U); }
 
-	[[nodiscard]] int deserialize_block(const uint8_t* buf, uint32_t size, bool compact, uint64_t received_timestamp);
+	[[nodiscard]] int deserialize_block(const uint8_t* buf, uint32_t size, bool compact, bool allow_pruned, uint64_t received_timestamp);
 	[[nodiscard]] const PoolBlock* get_block() const { return m_block; }
 
 	[[nodiscard]] const PoolBlock* find_block(const hash& id) const;
@@ -282,6 +282,7 @@ private:
 	PoolBlock* m_block;
 	std::vector<uint8_t> m_blockDeserializeBuf;
 	bool m_blockDeserializeBufCompact;
+	bool m_blockDeserializeBufAllowPruned;
 
 	uv_timer_t m_timer;
 	uint64_t m_timerCounter;

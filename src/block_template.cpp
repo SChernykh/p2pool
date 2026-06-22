@@ -710,7 +710,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			}
 		}
 		PoolBlock check;
-		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, nullptr, false);
+		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, nullptr, false, false);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
@@ -1481,7 +1481,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			buf.insert(buf.end(), sidechain_data.begin(), sidechain_data.end());
 
 			PoolBlock check;
-			const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false);
+			const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false, false);
 			if (result != 0) {
 				LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 			}
