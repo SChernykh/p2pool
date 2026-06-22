@@ -58,6 +58,8 @@ public:
 	[[nodiscard]] const PoolBlock* find_block_by_merkle_root(const root_hash& merkle_root) const;
 	void watch_mainchain_block(const ChainMain& data, const hash& possible_merkle_root);
 
+	[[nodiscard]] difficulty_type get_cached_next_difficulty(const hash& id) const;
+
 	[[nodiscard]] const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
 	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
 

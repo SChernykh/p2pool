@@ -2531,6 +2531,13 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			break;
 		}
 
+		// If we have more than 4 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
+		const size_t n = uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket));
+		if (n > 4194304U) {
+			LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full (" << n << " bytes), disconnecting this peer");
+			return false;
+		}
+
 		if (bytes_read) {
 			buf += bytes_read;
 			bytes_left -= bytes_read;
@@ -2544,13 +2551,6 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 		if (m_numRead > 0) {
 			memmove(m_readBuf, buf, m_numRead);
 		}
-	}
-
-	// If we have more than 4 MB pending writes to this peer, disconnect - because this peer is either dead or malicious
-	const size_t n = uv_stream_get_write_queue_size(reinterpret_cast<uv_stream_t*>(&m_socket));
-	if (n > 4194304U) {
-		LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " write queue is full (" << n << " bytes), disconnecting this peer");
-		return false;
 	}
 
 	return true;

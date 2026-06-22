@@ -132,6 +132,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_powHash = b.m_powHash;
 	m_seed = b.m_seed;
 
+	m_cachedNextDifficulty = b.m_cachedNextDifficulty;
+
 	return *this;
 }
 
@@ -342,6 +344,8 @@ void PoolBlock::reset_offchain_data()
 
 	m_powHash = {};
 	m_seed = {};
+
+	m_cachedNextDifficulty = {};
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode)

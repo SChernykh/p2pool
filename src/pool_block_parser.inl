@@ -302,17 +302,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		READ_BUF(m_txkeySecSeed.h, HASH_SIZE);
-
-		hash pub;
-		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
-		if (pub != m_txkeyPub) {
-			return __LINE__;
-		}
-
-		if (!check_keys(m_txkeyPub, m_txkeySec)) {
-			return __LINE__;
-		}
-
 		READ_BUF(m_parent.h, HASH_SIZE);
 
 		m_transactions.clear();
@@ -376,6 +365,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_difficulty.lo);
 		READ_VARINT(m_difficulty.hi);
 
+		// If possible, validate block's difficulty early
+		// This is not a load-bearing check, but it saves CPU time on further parsing of invalid blocks
+		const difficulty_type diff = sidechain.get_cached_next_difficulty(m_parent);
+		if (!diff.empty() && (m_difficulty != diff)) {
+			return __LINE__;
+		}
+
 		READ_VARINT(m_cumulativeDifficulty.lo);
 		READ_VARINT(m_cumulativeDifficulty.hi);
 
@@ -386,6 +382,16 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		// m_cumulativeDifficulty is the sum of all m_difficulty values
 		// for this and preceding blocks, so this one must be impossible
 		if (m_difficulty > m_cumulativeDifficulty) {
+			return __LINE__;
+		}
+
+		hash pub;
+		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
+		if (pub != m_txkeyPub) {
+			return __LINE__;
+		}
+
+		if (!check_keys(m_txkeyPub, m_txkeySec)) {
 			return __LINE__;
 		}
 

@@ -797,6 +797,18 @@ void SideChain::watch_mainchain_block(const ChainMain& data, const hash& possibl
 	m_watchBlockMerkleRoot = possible_merkle_root;
 }
 
+difficulty_type SideChain::get_cached_next_difficulty(const hash& id) const
+{
+	ReadLock lock(m_sidechainLock);
+
+	auto it = m_blocksById.find(id);
+	if (it != m_blocksById.end()) {
+		return it->second->m_cachedNextDifficulty;
+	}
+
+	return {};
+}
+
 const PoolBlock* SideChain::get_block_blob(const hash& id, std::vector<uint8_t>& blob) const
 {
 	ReadLock lock(m_sidechainLock);
@@ -1292,8 +1304,13 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	return true;
 }
 
-bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
+bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
 {
+	if (!pool_block_debug() && !tip->m_cachedNextDifficulty.empty()) {
+		curDifficulty = tip->m_cachedNextDifficulty;
+		return true;
+	}
+
 	difficultyData.clear();
 
 	const PoolBlock* cur = tip;
@@ -1384,6 +1401,11 @@ bool SideChain::get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>
 	if (curDifficulty < m_minDifficulty) {
 		curDifficulty = m_minDifficulty;
 	}
+
+	if (pool_block_debug() && !tip->m_cachedNextDifficulty.empty() && (tip->m_cachedNextDifficulty != curDifficulty)) {
+		LOGERR(1, "SideChain::get_difficulty: difficulty caching is broken. Fix the code!");
+	}
+	tip->m_cachedNextDifficulty = curDifficulty;
 
 	return true;
 }
