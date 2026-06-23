@@ -282,7 +282,9 @@ struct
 #ifdef _MSC_VER
 		_addcarry_u64(_addcarry_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
 #elif defined(__GNUC__) && !defined(DEV_CLANG_TIDY)
-		*reinterpret_cast<unsigned __int128*>(this) += *reinterpret_cast<const unsigned __int128*>(&b);
+		const unsigned __int128 result = ((static_cast<unsigned __int128>(hi) << 64) | lo) + ((static_cast<unsigned __int128>(b.hi) << 64) | b.lo);
+		lo = static_cast<uint64_t>(result);
+		hi = static_cast<uint64_t>(result >> 64);
 #else
 		const uint64_t t = lo;
 		lo += b.lo;
@@ -299,7 +301,9 @@ struct
 #ifdef _MSC_VER
 		_subborrow_u64(_subborrow_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
 #elif defined(__GNUC__) && !defined(DEV_CLANG_TIDY)
-		*reinterpret_cast<unsigned __int128*>(this) -= *reinterpret_cast<const unsigned __int128*>(&b);
+		const unsigned __int128 result = ((static_cast<unsigned __int128>(hi) << 64) | lo) - ((static_cast<unsigned __int128>(b.hi) << 64) | b.lo);
+		lo = static_cast<uint64_t>(result);
+		hi = static_cast<uint64_t>(result >> 64);
 #else
 		const uint64_t t = b.lo;
 		const uint64_t carry = (lo < t) ? 1 : 0;
