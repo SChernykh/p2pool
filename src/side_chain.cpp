@@ -2261,10 +2261,11 @@ void SideChain::update_depths(PoolBlock* block)
 		for (const PoolBlock* child : it->second) {
 			if (child->m_parent == block->m_sidechainId) {
 				if (i != 1) {
-					LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
-					return;
+					LOGWARN(4, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
 				}
-				update_depth(block, child->m_depth + 1);
+				else {
+					update_depth(block, child->m_depth + 1);
+				}
 			}
 
 			if (std::find(child->m_uncles.begin(), child->m_uncles.end(), block->m_sidechainId) != child->m_uncles.end()) {
@@ -2302,10 +2303,9 @@ void SideChain::update_depths(PoolBlock* block)
 
 				if (child->m_parent == block->m_sidechainId) {
 					if (i != 1) {
-						LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
-						return;
+						LOGWARN(4, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with child's m_sidechainHeight.");
 					}
-					if (block->m_depth > 0) {
+					else if (block->m_depth > 0) {
 						update_depth(child, block->m_depth - 1);
 					}
 				}
@@ -2325,11 +2325,9 @@ void SideChain::update_depths(PoolBlock* block)
 		auto it = m_blocksById.find(block->m_parent);
 		if (it != m_blocksById.end()) {
 			if (it->second->m_sidechainHeight + 1 != block->m_sidechainHeight) {
-				LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with parent's m_sidechainHeight.");
-				return;
+				LOGWARN(4, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with parent's m_sidechainHeight.");
 			}
-
-			if (it->second->m_depth < block->m_depth + 1) {
+			else if (it->second->m_depth < block->m_depth + 1) {
 				update_depth(it->second, block->m_depth + 1);
 				blocks_to_update.push_back(it->second);
 			}
@@ -2342,8 +2340,8 @@ void SideChain::update_depths(PoolBlock* block)
 			}
 
 			if ((it->second->m_sidechainHeight >= block->m_sidechainHeight) || (it->second->m_sidechainHeight + UNCLE_BLOCK_DEPTH < block->m_sidechainHeight)) {
-				LOGWARN(3, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with uncle's m_sidechainHeight.");
-				return;
+				LOGWARN(4, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with uncle's m_sidechainHeight.");
+				continue;
 			}
 
 			const uint64_t d = block->m_sidechainHeight - it->second->m_sidechainHeight;
