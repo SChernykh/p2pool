@@ -56,6 +56,7 @@ jobs:
       run: |
         cd tests/build
         llvm-cov-22 export ./p2pool_tests -format=lcov -instr-profile=./p2pool_tests.profdata > coverage.info
+        llvm-cov-22 show ./p2pool_tests -format=text -instr-profile=./p2pool_tests.profdata > coverage.txt
 
     - name: Run genhtml
       run: |
@@ -73,6 +74,7 @@ jobs:
       run: |
         rm -rf gh-pages/p2pool-coverage
         cp -r tests/build/coverage gh-pages/p2pool-coverage
+        cp tests/build/coverage.info tests/build/coverage.txt gh-pages/p2pool-coverage/
 
     - name: Commit and push coverage report
       run: |

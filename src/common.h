@@ -604,26 +604,7 @@ struct raw_ip
 {
 	alignas(8) uint8_t data[16] = {};
 
-	FORCEINLINE bool operator<(const raw_ip& other) const
-	{
-		const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
-		const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
-
-		if (a[1] < b[1]) return true;
-		if (a[1] > b[1]) return false;
-
-		return a[0] < b[0];
-	}
-
-	FORCEINLINE bool operator==(const raw_ip& other) const
-	{
-		const uint64_t* a = reinterpret_cast<const uint64_t*>(data);
-		const uint64_t* b = reinterpret_cast<const uint64_t*>(other.data);
-
-		return (a[0] == b[0]) && (a[1] == b[1]);
-	}
-
-	FORCEINLINE bool operator!=(const raw_ip& other) const { return !operator==(other); }
+	FORCEINLINE bool operator==(const raw_ip& other) const { return memcmp(data, other.data, sizeof(data)) == 0; }
 
 	FORCEINLINE bool is_localhost() const { return (*this == localhost_ipv4) || (*this == localhost_ipv6); }
 	FORCEINLINE bool is_ipv4_prefix() const { return memcmp(data, ipv4_prefix, sizeof(ipv4_prefix)) == 0; }
