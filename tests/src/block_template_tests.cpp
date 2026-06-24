@@ -157,7 +157,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, params);
 	ASSERT_EQ(tpl.get_reward(), 600300000000ULL);
 
-	ASSERT_EQ(b->m_sidechainId, H("c32abac2cad40e263a94f5f43f90e0a7d7d4b151305b79951dbc8c88c3180613"));
+	ASSERT_EQ(b->m_sidechainId, H("9317e0557a0ba99eac25bb5f4c43b7bbc0b0176d0c777adfac6486bfc46072e5"));
 	ASSERT_EQ(b->m_transactions.size(), 11);
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
@@ -170,7 +170,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 3U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("536c0ee8013718b174b63613939379939cee2267e803f77cdabb05fcb47e846f"));
+	ASSERT_EQ(blobs_hash, H("af2b1d6547ba91fe9cf38a6cc0cf5a8a8de1badfbf62846287865e4db3e0bb58"));
 
 	// Test 4: mempool with a lot of transactions with various fees, all parts of transaction picking algorithm should be tested
 

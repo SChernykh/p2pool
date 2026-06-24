@@ -102,8 +102,8 @@ Wallet& Wallet::operator=(const Wallet& w)
 	}
 
 	m_prefix = w.m_prefix;
-	m_spendPublicKey = w.m_spendPublicKey;
-	m_viewPublicKey = w.m_viewPublicKey;
+	m_keys[0] = w.m_keys[0];
+	m_keys[1] = w.m_keys[1];
 	m_checksum = w.m_checksum;
 	m_type = w.m_type;
 	m_subaddress = w.m_subaddress;
@@ -169,8 +169,8 @@ bool Wallet::decode(const char* address)
 		return false;
 	}
 
-	memcpy(m_spendPublicKey.h, data + 1, HASH_SIZE);
-	memcpy(m_viewPublicKey.h, data + 1 + HASH_SIZE, HASH_SIZE);
+	memcpy(m_keys[0].h, data + 1, HASH_SIZE);
+	memcpy(m_keys[1].h, data + 1 + HASH_SIZE, HASH_SIZE);
 	memcpy(&m_checksum, data + 1 + HASH_SIZE * 2, sizeof(m_checksum));
 
 	uint8_t md[200];
@@ -181,7 +181,7 @@ bool Wallet::decode(const char* address)
 	}
 
 	ge_p3 point;
-	if ((ge_frombytes_vartime(&point, m_spendPublicKey.h) != 0) || (ge_frombytes_vartime(&point, m_viewPublicKey.h) != 0)) {
+	if ((ge_frombytes_vartime(&point, m_keys[0].h) != 0) || (ge_frombytes_vartime(&point, m_keys[1].h) != 0)) {
 		m_type = NetworkType::Invalid;
 	}
 
@@ -208,8 +208,8 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 	default:                    m_prefix = 0;                 break;
 	}
 
-	m_spendPublicKey = spend_pub_key;
-	m_viewPublicKey = view_pub_key;
+	m_keys[0] = spend_pub_key;
+	m_keys[1] = view_pub_key;
 
 	uint8_t data[1 + HASH_SIZE * 2];
 	data[0] = static_cast<uint8_t>(m_prefix);
@@ -237,8 +237,8 @@ void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 	uint8_t data[1 + HASH_SIZE * 2 + sizeof(m_checksum)];
 
 	data[0] = static_cast<uint8_t>(m_prefix);
-	memcpy(data + 1, m_spendPublicKey.h, HASH_SIZE);
-	memcpy(data + 1 + HASH_SIZE, m_viewPublicKey.h, HASH_SIZE);
+	memcpy(data + 1, m_keys[0].h, HASH_SIZE);
+	memcpy(data + 1 + HASH_SIZE, m_keys[1].h, HASH_SIZE);
 	memcpy(data + 1 + HASH_SIZE * 2, &m_checksum, sizeof(m_checksum));
 
 	for (int i = 0; i <= num_full_blocks; ++i) {
@@ -257,7 +257,7 @@ void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag) const
 {
 	hash derivation;
-	if (!generate_key_derivation(m_viewPublicKey, txkey_sec, output_index, derivation, view_tag)) {
+	if (!generate_key_derivation(m_keys[1], txkey_sec, output_index, derivation, view_tag)) {
 		return false;
 	}
 
@@ -265,7 +265,7 @@ bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash
 		return false;
 	}
 
-	if (!derive_public_key(derivation, output_index, m_spendPublicKey, eph_public_key)) {
+	if (!derive_public_key(derivation, output_index, m_keys[0], eph_public_key)) {
 		return false;
 	}
 
@@ -275,7 +275,7 @@ bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash
 bool Wallet::torsion_check() const
 {
 	ge_p3 p1, p2;
-	if ((ge_frombytes_vartime(&p1, m_spendPublicKey.h) != 0) || (ge_frombytes_vartime(&p2, m_viewPublicKey.h) != 0)) {
+	if ((ge_frombytes_vartime(&p1, m_keys[0].h) != 0) || (ge_frombytes_vartime(&p2, m_keys[1].h) != 0)) {
 		return false;
 	}
 

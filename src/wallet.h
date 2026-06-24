@@ -50,12 +50,13 @@ public:
 
 	[[nodiscard]] bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag = nullptr) const;
 
-	FORCEINLINE bool operator<(const Wallet& w) const { return (m_spendPublicKey < w.m_spendPublicKey) || ((m_spendPublicKey == w.m_spendPublicKey) && (m_viewPublicKey < w.m_viewPublicKey)); }
-	FORCEINLINE bool operator==(const Wallet& w) const { return (m_spendPublicKey == w.m_spendPublicKey) && (m_viewPublicKey == w.m_viewPublicKey); }
+	FORCEINLINE bool operator<(const Wallet& w) const { return (m_keys[0] < w.m_keys[0]) || ((m_keys[0] == w.m_keys[0]) && (m_keys[1] < w.m_keys[1])); }
+	FORCEINLINE bool operator==(const Wallet& w) const { return (m_keys[0] == w.m_keys[0]) && (m_keys[1] == w.m_keys[1]); }
 
 	[[nodiscard]] FORCEINLINE uint64_t prefix() const { return m_prefix; }
-	[[nodiscard]] FORCEINLINE const hash& spend_public_key() const { return m_spendPublicKey; }
-	[[nodiscard]] FORCEINLINE const hash& view_public_key() const { return m_viewPublicKey; }
+	[[nodiscard]] FORCEINLINE const hash* keys() const { return m_keys; }
+	[[nodiscard]] FORCEINLINE const hash& spend_public_key() const { return m_keys[0]; }
+	[[nodiscard]] FORCEINLINE const hash& view_public_key() const { return m_keys[1]; }
 	[[nodiscard]] FORCEINLINE uint32_t checksum() const { return m_checksum; }
 	[[nodiscard]] FORCEINLINE NetworkType get_type() const { return m_type; }
 	[[nodiscard]] FORCEINLINE bool is_subaddress() const { return m_subaddress; }
@@ -63,8 +64,12 @@ public:
 
 private:
 	uint64_t m_prefix;
-	hash m_spendPublicKey;
-	hash m_viewPublicKey;
+
+	hash m_keys[2];
+
+	// Make sure it's safe to memcpy/pass to plain C dode
+	static_assert(std::is_standard_layout_v<decltype(m_keys)> && (sizeof(m_keys) == HASH_SIZE * 2));
+
 	uint32_t m_checksum;
 	NetworkType m_type;
 	bool m_subaddress;

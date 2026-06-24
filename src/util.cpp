@@ -65,6 +65,10 @@ extern "C" {
 
 LOG_CATEGORY(Util)
 
+namespace robin_hood {
+	const robin_hood::SipHashKey SIPHASH_KEY;
+}
+
 namespace p2pool {
 
 #if defined(P2POOL_VERSION_PATCH) && (P2POOL_VERSION_PATCH > 0)

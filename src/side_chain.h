@@ -194,7 +194,7 @@ namespace robin_hood {
 	{
 		FORCEINLINE size_t operator()(const p2pool::MinerShare& value) const noexcept
 		{
-			return hash_bytes(value.m_wallet->spend_public_key().h, p2pool::HASH_SIZE);
+			return hash_bytes(value.m_wallet->keys(), p2pool::HASH_SIZE * 2);
 		}
 	};
 

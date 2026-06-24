@@ -26,6 +26,36 @@
 #define ROBIN_HOOD_CALLOC(count, size) p2pool::calloc_hook((count), (size))
 #define ROBIN_HOOD_FREE(ptr) p2pool::free_hook(ptr)
 
+extern "C" {
+#include "siphash/siphash.h"
+}
+
+namespace robin_hood {
+	struct SipHashKey {
+		enum { N = 16 / sizeof(std::random_device::result_type) };
+
+		SipHashKey() {
+			std::random_device rd;
+
+			for (size_t i = 0; i < N; ++i) {
+				data[i] = rd();
+			}
+		}
+
+		std::random_device::result_type data[N];
+	};
+
+	extern const SipHashKey SIPHASH_KEY;
+
+	FORCEINLINE size_t hash_bytes(const void* ptr, size_t len) noexcept {
+		size_t result;
+		uint8_t result_buf[sizeof(size_t)];
+		siphash(ptr, len, SIPHASH_KEY.data, result_buf, sizeof(result));
+		memcpy(&result, result_buf, sizeof(result));
+		return result;
+	}
+}
+
 #include "robin_hood.h"
 #include "tor.h"
 

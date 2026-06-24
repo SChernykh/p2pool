@@ -70,6 +70,7 @@ set(SOURCES
 	../external/src/cryptonote/crypto-ops.c
 	../external/src/cryptonote/fcmp_pp_crypto.cpp
 	../external/src/hardforks/hardforks.cpp
+	../external/src/siphash/siphash.c
 	../src/block_cache.cpp
 	../src/block_template.cpp
 	../src/crypto.cpp

@@ -103,6 +103,7 @@ include(cmake/flags.cmake)
 set(HEADERS
 	external/src/cryptonote/crypto-ops.h
 	external/src/hardforks/hardforks.h
+	external/src/siphash/siphash.h
 	src/block_cache.h
 	src/block_template.h
 	src/common.h
@@ -139,6 +140,7 @@ set(SOURCES
 	external/src/cryptonote/crypto-ops.c
 	external/src/cryptonote/fcmp_pp_crypto.cpp
 	external/src/hardforks/hardforks.cpp
+	external/src/siphash/siphash.c
 	src/block_cache.cpp
 	src/block_template.cpp
 	src/console_commands.cpp
