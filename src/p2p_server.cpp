@@ -65,7 +65,8 @@ static constexpr hash seed_onion_nodes[] = {
 static constexpr hash seed_i2p_nodes[] = {
 	from_i2p_b32_const("p2pseeds2ggmpw62wdua6ll27awcndorshcg7nsbinc5xlhp6tqa.b32.i2p"),
 	from_i2p_b32_const("p2pse3irgfuks5eazbcwkcijsv6u3qtffl6zudct4t4kn2sinotq.b32.i2p"),
-	from_i2p_b32_const("h6jrh53yvlvzqqyy7abzjp2t4kidtheee7e7nfbynecroc7yvbjq.b32.i2p")
+	from_i2p_b32_const("h6jrh53yvlvzqqyy7abzjp2t4kidtheee7e7nfbynecroc7yvbjq.b32.i2p"),
+	from_i2p_b32_const("p2pz7uiuhfijlj3pho6jx2t7fegnxouu34xjyiyhulvouux4knkq.b32.i2p")
 };
 
 P2PServer::P2PServer(p2pool* pool)
