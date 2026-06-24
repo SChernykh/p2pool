@@ -54,7 +54,7 @@ namespace robin_hood {
 		memcpy(&result, result_buf, sizeof(result));
 		return result;
 	}
-}
+} // namespace robin_hood
 
 #include "robin_hood.h"
 #include "tor.h"
