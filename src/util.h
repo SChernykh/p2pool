@@ -455,6 +455,13 @@ constexpr char base32_alphabet[] = "abcdefghijklmnopqrstuvwxyz234567";
 std::string to_onion_v3(const hash& pubkey);
 hash from_onion_v3(const std::string& address);
 
+// Returns a process-local keyed 64-bit digest. Collisions are possible.
+// Use only for tracking where memory is tight, collisions are non-fatal and cannot bypass validation or affect consensus.
+FORCEINLINE uint64_t hash64(const hash& h)
+{
+	return robin_hood::hash_bytes(h.h, HASH_SIZE);
+}
+
 std::vector<std::vector<std::string>> parse_config(const std::string& file_name);
 
 } // namespace p2pool

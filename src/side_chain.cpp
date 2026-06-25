@@ -1365,7 +1365,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 		const uint64_t dt = d.m_timestamp - oldest_timestamp;
 
 		if (dt > std::numeric_limits<uint32_t>::max()) {
-			LOGWARN(3, "get_difficulty: too large timestamp delta << " << dt);
+			LOGWARN(3, "get_difficulty: too large timestamp delta " << dt);
 			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return false;
 		}

@@ -1594,7 +1594,7 @@ void P2PServer::download_missing_blocks()
 			}
 		}
 
-		const auto it = m_missingBlockRequests.emplace(client->m_peerId, *id.u64());
+		const auto it = m_missingBlockRequests.emplace(client->m_peerId, hash64(id));
 		if (!it.second) {
 			// We already asked this peer about this block
 			// Don't try to ask another peer, leave it for another timer tick
@@ -1621,7 +1621,7 @@ void P2PServer::download_missing_blocks()
 			});
 
 		if (result) {
-			client->m_blockPendingRequests.push_back(*id.u64());
+			client->m_blockPendingRequests.push_back(hash64(id));
 		}
 		else {
 			m_missingBlockRequests.erase(it.first);
@@ -3077,7 +3077,7 @@ bool P2PServer::P2PClient::on_block_response(const uint8_t* buf, uint32_t size, 
 			server->send_peer_list_request(this, cur_time);
 		}
 	}
-	else if (*block->m_sidechainId.u64() != expected_id) {
+	else if (hash64(block->m_sidechainId) != expected_id) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent a wrong block: expected " << log::hex_buf(&expected_id) << ", got " << block->m_sidechainId);
 		return false;
 	}
@@ -3465,7 +3465,7 @@ void P2PServer::P2PClient::on_block_notify(const uint8_t* buf)
 			return;
 		}
 
-		const uint64_t id64 = *id.u64();
+		const uint64_t id64 = hash64(id);
 
 		// First check these two, then update them only after a successful send
 		if (server->m_blockNotifyRequests.find(id64) != server->m_blockNotifyRequests.end()) {
@@ -4064,7 +4064,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 			break;
 		}
 
-		auto it = server->m_missingBlockRequests.emplace(m_peerId, *id.u64());
+		auto it = server->m_missingBlockRequests.emplace(m_peerId, hash64(id));
 		if (!it.second) {
 			continue;
 		}
@@ -4093,7 +4093,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 			return;
 		}
 
-		m_blockPendingRequests.push_back(*id.u64());
+		m_blockPendingRequests.push_back(hash64(id));
 	}
 }
 
