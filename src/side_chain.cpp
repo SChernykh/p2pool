@@ -1360,11 +1360,18 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 	std::vector<uint32_t> tmpTimestamps;
 	tmpTimestamps.reserve(difficultyData.size());
 
-	std::transform(difficultyData.begin(), difficultyData.end(), std::back_inserter(tmpTimestamps),
-		[oldest_timestamp](const DifficultyData& d)
-		{
-			return static_cast<uint32_t>(d.m_timestamp - oldest_timestamp);
-		});
+	// Sanity check for the overall timestamp range
+	for (const DifficultyData& d : difficultyData) {
+		const uint64_t dt = d.m_timestamp - oldest_timestamp;
+
+		if (dt > std::numeric_limits<uint32_t>::max()) {
+			LOGWARN(3, "get_difficulty: too large timestamp delta << " << dt);
+			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
+			return false;
+		}
+
+		tmpTimestamps.emplace_back(static_cast<uint32_t>(dt));
+	}
 
 	const uint64_t cut_size = (difficultyData.size() + 9) / 10;
 	const uint64_t index1 = cut_size - 1;
