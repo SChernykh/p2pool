@@ -292,4 +292,53 @@ TEST(block_template, submit_sidechain_block)
 #endif
 }
 
+TEST(block_template, genesis_block_max_timestamp)
+{
+	init_crypto_cache();
+	{
+	SideChain sidechain(nullptr, NetworkType::Mainnet, "unit_test");
+	ASSERT_EQ(sidechain.consensus_hash(), H("81d45b62c10afa4fdda7cebb02dd5ad82c43b577eb3fb0857824427c55fd8a8d"));
+
+	BlockTemplate tpl(&sidechain, nullptr);
+	tpl.rng().seed(0);
+
+	MinerData data;
+	data.major_version = 16;
+	data.height = 2762973;
+	data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+	data.seed_hash = H("33d0fb381466f04d6a1919ced3b698f54a28add3da5a6479b096c67df7a4974c");
+	data.difficulty = { 300346053753ULL, 0 };
+	data.median_weight = 300000;
+	data.already_generated_coins = 18204981557254756780ULL;
+	data.median_timestamp = std::numeric_limits<uint64_t>::max() - 1;
+
+	Mempool mempool;
+	Params params;
+
+	params.m_miningWallet = Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
+
+	tpl.update(data, mempool, params);
+
+	ASSERT_TRUE(tpl.submit_sidechain_block(1, 0, 0));
+	ASSERT_EQ(sidechain.difficulty(), 100000);
+
+	const PoolBlock* tip = sidechain.chainTip();
+
+	ASSERT_TRUE(tip != nullptr);
+	ASSERT_TRUE(tip->m_verified);
+	ASSERT_FALSE(tip->m_invalid);
+
+	ASSERT_EQ(tip->m_timestamp, std::numeric_limits<uint64_t>::max());
+	ASSERT_EQ(tip->m_txinGenHeight, data.height);
+	ASSERT_EQ(tip->m_sidechainHeight, 0);
+
+	ASSERT_EQ(tip->m_sidechainId, H("cd83d28671cfdad7e86b07debc45737e4bec40e4555023634a9921d7687e504e"));
+	}
+	destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+	indexed_hash::cleanup_storage();
+#endif
+}
+
 }

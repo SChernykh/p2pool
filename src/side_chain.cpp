@@ -1387,7 +1387,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 	// Because if it is, someone is trying to mess with timestamps
 	// In reality, delta_t ~ delta_index*10 (sidechain block time)
 	const uint64_t delta_index = (index2 > index1) ? (index2 - index1) : 1U;
-	const uint64_t delta_t = (timestamp2 > timestamp1 + delta_index) ? (timestamp2 - timestamp1) : delta_index;
+	const uint64_t delta_t = std::max<uint64_t>((timestamp2 > timestamp1) ? (timestamp2 - timestamp1) : 0U, delta_index);
 
 	difficulty_type diff1{ std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max() };
 	difficulty_type diff2{ 0, 0 };
