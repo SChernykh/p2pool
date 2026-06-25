@@ -74,7 +74,8 @@ p2pool::p2pool(const Params& params)
 
 	// P2Pool-nano requires more Monero blocks for the initial sync
 	if (m_params.m_nano) {
-		BLOCK_HEADERS_REQUIRED = 1440;
+		// 3 times more because P2Pool-nano has 3x bigger block time
+		BLOCK_HEADERS_REQUIRED = 2160;
 	}
 
 	bkg_jobs_tracker = new BackgroundJobTracker();
