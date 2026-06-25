@@ -67,7 +67,7 @@ LOG_CATEGORY(Util)
 
 namespace robin_hood {
 	const robin_hood::SipHashKey SIPHASH_KEY;
-}
+} // namespace robin_hood
 
 namespace p2pool {
 
