@@ -1,5 +1,5 @@
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-	set(GENERAL_FLAGS "-pthread")
+	set(GENERAL_FLAGS "-pthread -fno-strict-aliasing")
 
 	if (ARMv8)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769 -mfix-cortex-a53-843419")
@@ -109,6 +109,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 	else()
 		set(GENERAL_FLAGS "-pthread")
 	endif()
+
+	set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-strict-aliasing")
 
 	if (ARMv8)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769")
