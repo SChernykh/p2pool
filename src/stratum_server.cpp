@@ -1228,6 +1228,11 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 
 void StratumServer::on_shutdown()
 {
+	for (const SubmittedShare* share : m_pendingShareChecks) {
+		delete share;
+	}
+	m_pendingShareChecks.clear();
+
 	{
 		MutexLock lock(m_resetShareCountersLock);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_resetShareCountersAsync), nullptr);
