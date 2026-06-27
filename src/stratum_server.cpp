@@ -23,6 +23,7 @@
 #include "params.h"
 #include "p2pool_api.h"
 #include "p2p_server.h"
+#include "pow_hash.h"
 
 #include "rapidjson_wrapper.h"
 
@@ -1030,7 +1031,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		}
 
 		hash pow_hash;
-		if (!pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash, false)) {
+		if (!pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash, false, RandomX_Hasher_Base::VM_LANE_STRATUM)) {
 			LOGWARN(3, "client " << static_cast<char*>(share->m_clientAddrString) << " couldn't check share PoW");
 			share->m_result = SubmittedShare::Result::COULDNT_CHECK_POW;
 			return;
@@ -1041,7 +1042,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 
 			// Calculate the same hash second time to check if it's an unstable hardware that caused this
 			hash pow_hash2;
-			if (pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash2, true) && (pow_hash2 != pow_hash)) {
+			if (pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash2, true, RandomX_Hasher_Base::VM_LANE_STRATUM) && (pow_hash2 != pow_hash)) {
 				LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << pow_hash << " != " << pow_hash2);
 
 				if (pow_hash2 == share->m_resultHash) {

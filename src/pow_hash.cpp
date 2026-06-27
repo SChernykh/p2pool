@@ -77,9 +77,11 @@ RandomX_Hasher::RandomX_Hasher(p2pool* pool)
 	uv_rwlock_init_checked(&m_datasetLock);
 	uv_rwlock_init_checked(&m_cacheLock);
 
-	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_vm); ++i) {
-		uv_mutex_init_checked(&m_vm[i].mutex);
-		m_vm[i].vm = nullptr;
+	for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
+		for (size_t j = 0; j < VM_INDEX_COUNT; ++j) {
+			uv_mutex_init_checked(&m_vm[i][j].mutex);
+			m_vm[i][j].vm = nullptr;
+		}
 	}
 
 
@@ -98,14 +100,16 @@ RandomX_Hasher::~RandomX_Hasher()
 	uv_rwlock_destroy(&m_datasetLock);
 	uv_rwlock_destroy(&m_cacheLock);
 
-	for (size_t i = 0; i < array_size(&RandomX_Hasher::m_vm); ++i) {
-		{
-			MutexLock lock(m_vm[i].mutex);
-			if (m_vm[i].vm) {
-				randomx_destroy_vm(m_vm[i].vm);
+	for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
+		for (size_t j = 0; j < VM_INDEX_COUNT; ++j) {
+			{
+				MutexLock lock(m_vm[i][j].mutex);
+				if (m_vm[i][j].vm) {
+					randomx_destroy_vm(m_vm[i][j].vm);
+				}
 			}
+			uv_mutex_destroy(&m_vm[i][j].mutex);
 		}
-		uv_mutex_destroy(&m_vm[i].mutex);
 	}
 
 	if (m_dataset) {
@@ -192,21 +196,23 @@ void RandomX_Hasher::set_seed(const hash& seed)
 		LOGINFO(1, "new seed " << log::LightBlue() << seed);
 		randomx_init_cache(m_cache[m_index], m_seed[m_index].h, HASH_SIZE);
 
-		MutexLock lock2(m_vm[m_index].mutex);
+		for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
+			MutexLock lock2(m_vm[i][m_index].mutex);
 
-		if (m_vm[m_index].vm) {
-			m_vm[m_index].vm->setCache(m_cache[m_index]);
-		}
-		else {
-			const randomx_flags flags = randomx_get_flags();
+			if (m_vm[i][m_index].vm) {
+				m_vm[i][m_index].vm->setCache(m_cache[m_index]);
+			}
+			else {
+				const randomx_flags flags = randomx_get_flags();
 
-			m_vm[m_index].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, m_cache[m_index], nullptr);
-			if (!m_vm[m_index].vm) {
-				LOGWARN(1, "couldn't allocate RandomX light VM using large pages");
-				m_vm[m_index].vm = randomx_create_vm(flags, m_cache[m_index], nullptr);
-				if (!m_vm[m_index].vm) {
-					LOGERR(1, "couldn't allocate RandomX light VM, aborting");
-					PANIC_STOP();
+				m_vm[i][m_index].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, m_cache[m_index], nullptr);
+				if (!m_vm[i][m_index].vm) {
+					LOGWARN(1, "couldn't allocate RandomX light VM using large pages");
+					m_vm[i][m_index].vm = randomx_create_vm(flags, m_cache[m_index], nullptr);
+					if (!m_vm[i][m_index].vm) {
+						LOGERR(1, "couldn't allocate RandomX light VM, aborting");
+						PANIC_STOP();
+					}
 				}
 			}
 		}
@@ -257,17 +263,19 @@ void RandomX_Hasher::set_seed(const hash& seed)
 			randomx_init_dataset(m_dataset, m_cache[m_index], 0, numItems);
 		}
 
-		MutexLock lock3(m_vm[FULL_DATASET_VM].mutex);
+		for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
+			MutexLock lock3(m_vm[i][FULL_DATASET_VM].mutex);
 
-		if (!m_vm[FULL_DATASET_VM].vm) {
-			const randomx_flags flags = randomx_get_flags() | RANDOMX_FLAG_FULL_MEM;
+			if (!m_vm[i][FULL_DATASET_VM].vm) {
+				const randomx_flags flags = randomx_get_flags() | RANDOMX_FLAG_FULL_MEM;
 
-			m_vm[FULL_DATASET_VM].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, nullptr, m_dataset);
-			if (!m_vm[FULL_DATASET_VM].vm) {
-				LOGWARN(1, "couldn't allocate RandomX VM using large pages");
-				m_vm[FULL_DATASET_VM].vm = randomx_create_vm(flags, nullptr, m_dataset);
-				if (!m_vm[FULL_DATASET_VM].vm) {
-					LOGERR(1, "couldn't allocate RandomX VM");
+				m_vm[i][FULL_DATASET_VM].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, nullptr, m_dataset);
+				if (!m_vm[i][FULL_DATASET_VM].vm) {
+					LOGWARN(1, "couldn't allocate RandomX VM using large pages");
+					m_vm[i][FULL_DATASET_VM].vm = randomx_create_vm(flags, nullptr, m_dataset);
+					if (!m_vm[i][FULL_DATASET_VM].vm) {
+						LOGERR(1, "couldn't allocate RandomX VM");
+					}
 				}
 			}
 		}
@@ -295,21 +303,23 @@ void RandomX_Hasher::set_old_seed(const hash& seed)
 
 		randomx_init_cache(m_cache[old_index], m_seed[old_index].h, HASH_SIZE);
 
-		MutexLock lock2(m_vm[old_index].mutex);
+		for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
+			MutexLock lock2(m_vm[i][old_index].mutex);
 
-		if (m_vm[old_index].vm) {
-			m_vm[old_index].vm->setCache(m_cache[old_index]);
-		}
-		else {
-			const randomx_flags flags = randomx_get_flags();
+			if (m_vm[i][old_index].vm) {
+				m_vm[i][old_index].vm->setCache(m_cache[old_index]);
+			}
+			else {
+				const randomx_flags flags = randomx_get_flags();
 
-			m_vm[old_index].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, m_cache[old_index], nullptr);
-			if (!m_vm[old_index].vm) {
-				LOGWARN(1, "couldn't allocate RandomX light VM using large pages");
-				m_vm[old_index].vm = randomx_create_vm(flags, m_cache[old_index], nullptr);
-				if (!m_vm[old_index].vm) {
-					LOGERR(1, "couldn't allocate RandomX light VM, aborting");
-					PANIC_STOP();
+				m_vm[i][old_index].vm = randomx_create_vm(flags | RANDOMX_FLAG_LARGE_PAGES, m_cache[old_index], nullptr);
+				if (!m_vm[i][old_index].vm) {
+					LOGWARN(1, "couldn't allocate RandomX light VM using large pages");
+					m_vm[i][old_index].vm = randomx_create_vm(flags, m_cache[old_index], nullptr);
+					if (!m_vm[i][old_index].vm) {
+						LOGERR(1, "couldn't allocate RandomX light VM, aborting");
+						PANIC_STOP();
+					}
 				}
 			}
 		}
@@ -339,8 +349,12 @@ static bool randomx_calculate_hash_safe(randomx_vm* machine, const void* input, 
 	return false;
 }
 
-bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result, bool force_light_mode)
+bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& seed, hash& result, bool force_light_mode, size_t lane)
 {
+	if (lane >= VM_LANE_COUNT) {
+		return false;
+	}
+
 	// First try to use the dataset if it's ready
 	if (!force_light_mode && (uv_rwlock_tryrdlock(&m_datasetLock) == 0)) {
 		ON_SCOPE_LEAVE([this]() { uv_rwlock_rdunlock(&m_datasetLock); });
@@ -349,10 +363,10 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 			return false;
 		}
 
-		MutexLock lock(m_vm[FULL_DATASET_VM].mutex);
+		MutexLock lock(m_vm[lane][FULL_DATASET_VM].mutex);
 
-		if (m_vm[FULL_DATASET_VM].vm && (seed == m_seed[m_index])) {
-			return randomx_calculate_hash_safe(m_vm[FULL_DATASET_VM].vm, data, size, &result);
+		if (m_vm[lane][FULL_DATASET_VM].vm && (seed == m_seed[m_index])) {
+			return randomx_calculate_hash_safe(m_vm[lane][FULL_DATASET_VM].vm, data, size, &result);
 		}
 	}
 
@@ -364,18 +378,18 @@ bool RandomX_Hasher::calculate(const void* data, size_t size, uint64_t /*height*
 	}
 
 	{
-		MutexLock lock2(m_vm[m_index].mutex);
-		if (m_vm[m_index].vm && (seed == m_seed[m_index])) {
-			return randomx_calculate_hash_safe(m_vm[m_index].vm, data, size, &result);
+		MutexLock lock2(m_vm[lane][m_index].mutex);
+		if (m_vm[lane][m_index].vm && (seed == m_seed[m_index])) {
+			return randomx_calculate_hash_safe(m_vm[lane][m_index].vm, data, size, &result);
 		}
 	}
 
 	const uint32_t prev_index = m_index ^ 1;
 
-	MutexLock lock2(m_vm[prev_index].mutex);
+	MutexLock lock2(m_vm[lane][prev_index].mutex);
 
-	if (m_vm[prev_index].vm && (seed == m_seed[prev_index])) {
-		return randomx_calculate_hash_safe(m_vm[prev_index].vm, data, size, &result);
+	if (m_vm[lane][prev_index].vm && (seed == m_seed[prev_index])) {
+		return randomx_calculate_hash_safe(m_vm[lane][prev_index].vm, data, size, &result);
 	}
 
 	return false;
@@ -444,7 +458,7 @@ void RandomX_Hasher_RPC::loop(void* data)
 	LOGINFO(1, "event loop stopped");
 }
 
-bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool /*force_light_mode*/)
+bool RandomX_Hasher_RPC::calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool /*force_light_mode*/, size_t /*lane*/)
 {
 	MutexLock lock(m_requestMutex);
 

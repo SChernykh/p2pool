@@ -40,7 +40,14 @@ public:
 	virtual uint32_t seed_counter() const { return 0; }
 	virtual void sync_wait() {}
 
-	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode) = 0;
+	virtual bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode, size_t lane) = 0;
+
+	enum {
+		VM_LANE_STRATUM = 0,
+		VM_LANE_P2P = 1,
+		VM_LANE_MONERO = 2,
+		VM_LANE_COUNT,
+	};
 };
 
 #ifdef WITH_RANDOMX
@@ -60,7 +67,7 @@ public:
 	uint32_t seed_counter() const override { return m_seedCounter.load(); }
 	void sync_wait() override;
 
-	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode) override;
+	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode, size_t lane) override;
 
 private:
 
@@ -80,11 +87,14 @@ private:
 	uv_rwlock_t m_datasetLock;
 	randomx_dataset* m_dataset;
 
-	// 0: light VM for the current seed
-	// 1: light VM for the previous seed
-	// 2: full dataset VM for the current seed
-	enum { FULL_DATASET_VM = 2 };
-	ThreadSafeVM m_vm[3]{};
+	enum {
+		LIGHT_VM_CURRENT_SEED = 0,
+		LIGHT_VM_PREV_SEED = 1,
+		FULL_DATASET_VM = 2,
+		VM_INDEX_COUNT,
+	};
+
+	ThreadSafeVM m_vm[VM_LANE_COUNT][VM_INDEX_COUNT]{};
 
 	hash m_seed[2];
 	uint32_t m_index;
@@ -100,7 +110,7 @@ public:
 	explicit RandomX_Hasher_RPC(p2pool* pool);
 	~RandomX_Hasher_RPC() override;
 
-	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool force_light_mode) override;
+	bool calculate(const void* data_ptr, size_t size, uint64_t height, const hash& seed, hash& h, bool force_light_mode, size_t lane) override;
 
 private:
 	static void loop(void* data);

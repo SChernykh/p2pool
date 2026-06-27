@@ -34,6 +34,7 @@
 #include "json_parsers.h"
 #include "crypto.h"
 #include "hardforks/hardforks.h"
+#include "pow_hash.h"
 
 #if !defined(_MSC_VER) || !defined(__cppcheck__)
 #include <rapidjson/document.h>
@@ -591,7 +592,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		return false;
 	}
 
-	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, block.m_powHash)) {
+	if (!block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, block.m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P)) {
 		LOGWARN(3, "add_external_block: couldn't get PoW hash for height = " << block.m_sidechainHeight << ", mainchain height " << block.m_txinGenHeight << ". Ignoring it.");
 		forget_incoming_block(block);
 		return true;
@@ -627,7 +628,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 
 		// Calculate the same hash second time to check if it's an unstable hardware that caused this
 		hash pow_hash2;
-		if (block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, pow_hash2, true) && (pow_hash2 != block.m_powHash)) {
+		if (block.get_pow_hash(m_pool->hasher(), block.m_txinGenHeight, block.m_seed, pow_hash2, true, RandomX_Hasher_Base::VM_LANE_P2P) && (pow_hash2 != block.m_powHash)) {
 			LOGERR(0, "UNSTABLE HARDWARE DETECTED: Calculated the same hash twice, got different results: " << block.m_powHash << " != " << pow_hash2 << " (sidechain id = " << block.m_sidechainId << ')');
 			if (block.m_difficulty.check_pow(pow_hash2)) {
 				LOGINFO(3, "add_external_block second result has enough PoW for height = " << block.m_sidechainHeight << ", id = " << block.m_sidechainId);

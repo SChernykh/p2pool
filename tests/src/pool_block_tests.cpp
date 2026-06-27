@@ -117,7 +117,7 @@ TEST(pool_block, deserialize)
 	hasher.set_seed(seed);
 
 	hash pow_hash;
-	ASSERT_EQ(b.get_pow_hash(&hasher, 0, seed, pow_hash), true);
+	ASSERT_EQ(b.get_pow_hash(&hasher, 0, seed, pow_hash, false, RandomX_Hasher_Base::VM_LANE_P2P), true);
 
 	std::stringstream s;
 	s << pow_hash;

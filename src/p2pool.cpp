@@ -329,9 +329,9 @@ void p2pool::print_hosts() const
 	}
 }
 
-bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode)
+bool p2pool::calculate_hash(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode, size_t lane)
 {
-	return m_hasher->calculate(data, size, height, seed, result, force_light_mode);
+	return m_hasher->calculate(data, size, height, seed, result, force_light_mode, lane);
 }
 
 uint64_t p2pool::get_seed_height(uint64_t height)

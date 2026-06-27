@@ -28,6 +28,7 @@
 #include "side_chain.h"
 #include "pool_block.h"
 #include "merkle.h"
+#include "pow_hash.h"
 #include <zmq.hpp>
 #include <ctime>
 #include <numeric>
@@ -1488,7 +1489,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 
 			if (m_hasher) {
 				hash pow_hash;
-				if (!check.get_pow_hash(m_hasher, check.m_txinGenHeight, m_seedHash, pow_hash)) {
+				if (!check.get_pow_hash(m_hasher, check.m_txinGenHeight, m_seedHash, pow_hash, false, RandomX_Hasher_Base::VM_LANE_STRATUM)) {
 					LOGERR(1, "PoW check failed for the sidechain block. Fix it! ");
 				}
 				else if (!check.m_difficulty.check_pow(pow_hash)) {

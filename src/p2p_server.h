@@ -242,6 +242,7 @@ public:
 	void broadcast_monero_block(const uint8_t* data, uint32_t data_size, const P2PClient* source, bool duplicate_check_done);
 
 	bool store_monero_block_broadcast(const hash& digest);
+	bool forget_monero_block_broadcast(const hash& digest);
 
 private:
 	[[nodiscard]] const char* get_log_category() const override;
@@ -383,7 +384,39 @@ private:
 
 	std::deque<std::string> m_MoneroBlocksToSubmit;
 
+	struct MoneroBlockBroadcastWork
+	{
+		uv_work_t req = {};
+
+		P2PServer* server = nullptr;
+		P2PClient* client = nullptr;
+
+		uint32_t reset_counter = 0;
+		bool is_v6 = false;
+		raw_ip addr;
+
+		RandomX_Hasher_Base* hasher = nullptr;
+
+		std::vector<uint8_t> blob;
+		hash digest;
+
+		uint64_t height = 0;
+		hash seed;
+		difficulty_type diff;
+
+		std::vector<uint8_t> message;
+
+		bool pow_check_passed = false;
+		bool pow_check_failed = false;
+	};
+
+	// Can only be accessed on the P2P event loop thread
+	std::deque<MoneroBlockBroadcastWork*> m_pendingMoneroBlockBroadcasts;
+
 	static void on_monero_block_broadcast(uv_async_t* handle) { reinterpret_cast<P2PServer*>(handle->data)->broadcast_monero_block_handler(); }
+
+	static void monero_block_broadcast_work_cb(uv_work_t* req);
+	static void monero_block_broadcast_after_work_cb(uv_work_t* req, int status);
 
 	void clean_monero_block_broadcasts();
 	void submit_monero_blocks();
