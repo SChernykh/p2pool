@@ -255,6 +255,11 @@ void TCPServer::start_listening(const std::string& listen_addresses, bool upnp)
 			}
 		});
 
+	if (m_listenPort < 0) {
+		LOGERR(1, "failed to start listening - configuration error");
+		PANIC_STOP();
+	}
+
 #ifdef WITH_UPNP
 	if (upnp) {
 		m_portMapping = add_portmapping(external_listen_port(), m_listenPort);

@@ -2000,7 +2000,16 @@ void P2PServer::broadcast_monero_block_async(std::vector<std::vector<uint8_t>>&&
 {
 	MutexLock lock(m_MoneroBlocksToBroadcastLock);
 
-	m_MoneroBlocksToBroadcast = std::move(blobs);
+	if (m_MoneroBlocksToBroadcast.empty()) {
+		m_MoneroBlocksToBroadcast = std::move(blobs);
+	}
+	else {
+		m_MoneroBlocksToBroadcast.reserve(m_MoneroBlocksToBroadcast.size() + blobs.size());
+
+		for (std::vector<uint8_t>& v : blobs) {
+			m_MoneroBlocksToBroadcast.emplace_back(std::move(v));
+		}
+	}
 
 	if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_MoneroBlocksToBroadcastAsync))) {
 		const int err = uv_async_send(&m_MoneroBlocksToBroadcastAsync);
@@ -3917,9 +3926,19 @@ void P2PServer::monero_block_broadcast_after_work_cb(uv_work_t* req, int /*statu
 		if (err) {
 			LOGERR(1, "on_monero_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
 
-			// If uv_queue_work failed, process this Monero broadcast here anyway
-			monero_block_broadcast_work_cb(&next_work->req);
-			monero_block_broadcast_after_work_cb(&next_work->req, 0);
+			// If uv_queue_work failed, we can't do much here.
+			// MONERO_BLOCK_BROADCAST messages are "best effort", not obligatory
+			// Just clear the queue and forget all blocks there because we can't uv_queue_work() it now
+			server->forget_monero_block_broadcast(next_work->digest);
+			delete next_work;
+
+			for (MoneroBlockBroadcastWork* w : server->m_pendingMoneroBlockBroadcasts) {
+				if (w) {
+					server->forget_monero_block_broadcast(w->digest);
+					delete w;
+				}
+			}
+			server->m_pendingMoneroBlockBroadcasts.clear();
 		}
 	}
 
