@@ -88,6 +88,8 @@ public:
 
 		FORCEINLINE bool isV6() const { return m_addressType == AddressType::IPv6; }
 
+		FORCEINLINE bool is_gone(uint32_t expected_reset_counter) const { return (m_resetCounter.load() != expected_reset_counter); }
+
 		char* m_readBuf;
 		uint32_t m_readBufSize;
 

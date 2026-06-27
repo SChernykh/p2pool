@@ -2704,7 +2704,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 					}, CHALLENGE_SIZE * 2 + static_cast<int>(consensus_id.size()), work->solution.h, HASH_SIZE);
 
 				// We might've been disconnected while working on the challenge, do nothing in this case
-				if (work->client->m_resetCounter.load() != work->reset_counter) {
+				if (work->client->is_gone(work->reset_counter)) {
 					return;
 				}
 
@@ -2736,7 +2736,7 @@ void P2PServer::P2PClient::send_handshake_solution(const uint8_t (&challenge)[CH
 				});
 
 			// We might've been disconnected while working on the challenge, do nothing in this case
-			if (work->client->m_resetCounter.load() != work->reset_counter) {
+			if (work->client->is_gone(work->reset_counter)) {
 				return;
 			}
 
@@ -3777,9 +3777,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		std::vector<uint8_t> message;
 
 		bool pow_check_passed = false;
+		bool pow_check_failed = false;
 	};
 
-	Work* work = new Work{ {}, server, this, m_resetCounter, isV6(), m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
+	Work* work = new Work{ {}, server, this, m_resetCounter.load(), isV6(), m_addr, pool->hasher(), std::move(blob), height, seed, diff, { buf0, buf0 + size0 }, false };
 	work->req.data = work;
 
 	const int err = uv_queue_work(&server->m_loop, &work->req,
@@ -3789,18 +3790,20 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 			Work* work = reinterpret_cast<Work*>(req->data);
 
-			if (work->server->is_banned(work->is_v6, work->addr)) {
+			if (work->server->is_banned(work->is_v6, work->addr) || work->client->is_gone(work->reset_counter)) {
 				return;
 			}
 
 			hash pow_hash;
 			if (!work->hasher->calculate(work->blob.data(), work->blob.size(), work->height, work->seed, pow_hash, false)) {
 				LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash for height = " << work->height);
+				work->pow_check_failed = true;
 				return;
 			}
 
 			if (!work->diff.check_pow(pow_hash)) {
 				LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: diff check failed for height = " << work->height << ", PoW hash = " << pow_hash);
+				work->pow_check_failed = true;
 				return;
 			}
 
@@ -3821,7 +3824,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 				const uint32_t size = static_cast<uint32_t>(size0 - sizeof(MoneroBlockBroadcastHeader));
 
 				const P2PClient* client = work->client;
-				if (client->m_resetCounter != work->reset_counter) {
+				if (client->is_gone(work->reset_counter)) {
 					client = nullptr;
 				}
 
@@ -3847,10 +3850,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 					server->submit_monero_blocks();
 				}
 			}
-			else if (!server->is_banned(work->is_v6, work->addr)) {
+			else if (work->pow_check_failed && !server->is_banned(work->is_v6, work->addr)) {
 				P2PClient* client = work->client;
 
-				if (client->m_resetCounter == work->reset_counter) {
+				if (!client->is_gone(work->reset_counter)) {
 					client->close();
 					LOGWARN(3, "peer " << static_cast<const char*>(client->m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
 				}
@@ -3967,9 +3970,11 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 			BACKGROUND_JOB_START(P2PServer::handle_incoming_block_async);
 			Work* work = reinterpret_cast<Work*>(req->data);
 
-			if (work->server->is_banned(work->client_isV6, work->client_ip)) {
+			const bool banned = work->server->is_banned(work->client_isV6, work->client_ip);
+
+			if (banned || work->client->is_gone(work->client_reset_counter)) {
 				LOGWARN(4, "block " << work->block.m_sidechainId << " (height = " << work->block.m_sidechainHeight << ") from " <<
-							work->client_ip << " was not processed because the peer is banned");
+							work->client_ip << " was not processed because the peer is " << (banned ? "banned" : "gone"));
 
 				work->server->m_pool->side_chain().forget_incoming_block(work->block);
 				return;
@@ -4002,11 +4007,11 @@ void P2PServer::P2PClient::handle_incoming_block(p2pool* pool, PoolBlock& block,
 
 void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBlock& block, const uint32_t reset_counter, bool is_v6, const raw_ip& addr, std::vector<hash>& missing_blocks, const bool result)
 {
-	const uint32_t new_reset_counter = m_resetCounter.load();
+	const bool gone = is_gone(reset_counter);
 
 	if (!result) {
 		// Client sent bad data, disconnect and ban it
-		if (reset_counter == new_reset_counter) {
+		if (!gone) {
 			close();
 			LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " banned for " << DEFAULT_BAN_TIME << " seconds");
 		}
@@ -4024,7 +4029,7 @@ void P2PServer::P2PClient::post_handle_incoming_block(p2pool* pool, const PoolBl
 
 	// We might have been disconnected while side_chain was adding the block
 	// In this case we can't send BLOCK_REQUEST messages on this connection anymore
-	if (reset_counter != new_reset_counter) {
+	if (gone) {
 		return;
 	}
 
