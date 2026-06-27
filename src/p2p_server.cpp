@@ -3732,14 +3732,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	const uint64_t height = unlock_height - MINER_REWARD_UNLOCK_TIME;
 	LOGINFO(6, "on_monero_block_broadcast: height = " << height);
 
-	difficulty_type diff;
-	if (!pool->get_difficulty_at_height(height, diff)) {
-		LOGWARN(3, "MONERO_BLOCK_BROADCAST: couldn't get difficulty at height " << height);
-		diff = miner_data.difficulty;
+	if (server->m_pendingMoneroBlockBroadcasts.size() >= MAX_PENDING_MONERO_BLOCK_BROADCASTS) {
+		LOGWARN(6, "Too many pending Monero block broadcasts, ignoring this one");
+		return true;
 	}
-
-	// Use 90% of this height's difficulty to account for possible altchain deviations
-	diff -= diff / 10;
 
 	hash seed;
 	if (!pool->get_seed(height, seed)) {
@@ -3755,33 +3751,14 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		return true;
 	}
 
-	hash hashes[3] = { {}, keccak_0x00, {} };
-
-	// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
-	keccak(buf + data.header_size, static_cast<int>(data.miner_tx_size) - 1, hashes[0].h);
-
-	std::vector<hash> transactions(num_transactions + 1);
-	keccak(reinterpret_cast<uint8_t*>(hashes), sizeof(hashes), transactions[0].h);
-
-	if (num_transactions > 0) {
-		memcpy(transactions.data() + 1, tx_hashes, num_transactions * HASH_SIZE);
+	difficulty_type diff;
+	if (!pool->get_difficulty_at_height(height, diff)) {
+		LOGWARN(3, "MONERO_BLOCK_BROADCAST: couldn't get difficulty at height " << height);
+		diff = miner_data.difficulty;
 	}
 
-	root_hash root;
-	merkle_hash(transactions, root);
-
-	std::vector<uint8_t> blob;
-	blob.reserve(data.header_size + HASH_SIZE + 2);
-
-	blob.insert(blob.end(), buf, buf + data.header_size);
-	blob.insert(blob.end(), root.h, root.h + HASH_SIZE);
-	writeVarint(num_transactions + 1, blob);
-
-	if (server->m_pendingMoneroBlockBroadcasts.size() >= MAX_PENDING_MONERO_BLOCK_BROADCASTS) {
-		LOGWARN(6, "Too many pending Monero block broadcasts, ignoring this one");
-		server->forget_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest);
-		return true;
-	}
+	// Use 90% of this height's difficulty to account for possible altchain deviations
+	diff -= diff / 10;
 
 	MoneroBlockBroadcastWork* work = new MoneroBlockBroadcastWork{
 		{},
@@ -3791,12 +3768,13 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		isV6(),
 		m_addr,
 		pool->hasher(),
-		std::move(blob),
 		m_lastMoneroBlockBroadcastDigest,
 		height,
 		seed,
 		diff,
 		{ buf0, buf0 + size0 },
+		num_transactions,
+		static_cast<uint32_t>(tx_hashes - buf),
 		false,
 		false
 	};
@@ -3836,8 +3814,37 @@ void P2PServer::monero_block_broadcast_work_cb(uv_work_t* req)
 		return;
 	}
 
+	const uint8_t* buf = work->message.data();
+
+	MoneroBlockBroadcastHeader data;
+	memcpy(&data, buf, sizeof(data));
+
+	buf += sizeof(data);
+
+	hash hashes[3] = { {}, keccak_0x00, {} };
+
+	// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
+	keccak(buf + data.header_size, static_cast<int>(data.miner_tx_size) - 1, hashes[0].h);
+
+	std::vector<hash> transactions(work->num_transactions + 1);
+	keccak(reinterpret_cast<uint8_t*>(hashes), sizeof(hashes), transactions[0].h);
+
+	if (work->num_transactions > 0) {
+		memcpy(transactions.data() + 1, buf + work->tx_hashes_offset, work->num_transactions * HASH_SIZE);
+	}
+
+	root_hash root;
+	merkle_hash(transactions, root);
+
+	std::vector<uint8_t> blob;
+	blob.reserve(data.header_size + HASH_SIZE + 2);
+
+	blob.insert(blob.end(), buf, buf + data.header_size);
+	blob.insert(blob.end(), root.h, root.h + HASH_SIZE);
+	writeVarint(work->num_transactions + 1, blob);
+
 	hash pow_hash;
-	if (!work->hasher->calculate(work->blob.data(), work->blob.size(), work->height, work->seed, pow_hash, false, RandomX_Hasher_Base::VM_LANE_MONERO)) {
+	if (!work->hasher->calculate(blob.data(), blob.size(), work->height, work->seed, pow_hash, false, RandomX_Hasher_Base::VM_LANE_MONERO)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: failed to calculate PoW hash for height = " << work->height);
 		work->pow_check_failed = true;
 		return;

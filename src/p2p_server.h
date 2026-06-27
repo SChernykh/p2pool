@@ -397,7 +397,6 @@ private:
 
 		RandomX_Hasher_Base* hasher = nullptr;
 
-		std::vector<uint8_t> blob;
 		hash digest;
 
 		uint64_t height = 0;
@@ -405,6 +404,8 @@ private:
 		difficulty_type diff;
 
 		std::vector<uint8_t> message;
+		uint32_t num_transactions = 0;
+		uint32_t tx_hashes_offset = 0;
 
 		bool pow_check_passed = false;
 		bool pow_check_failed = false;
