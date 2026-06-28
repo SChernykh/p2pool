@@ -487,13 +487,16 @@ void p2pool::handle_miner_data(MinerData& data)
 				check_height(h);
 			}
 
-			const uint64_t seed_height = get_seed_height(data.height);
-			const uint64_t prev_seed_height = (seed_height > SEEDHASH_EPOCH_BLOCKS) ? (seed_height - SEEDHASH_EPOCH_BLOCKS) : 0;
-			const uint64_t oldest_seed_height = get_seed_height(data.height - BLOCK_HEADERS_REQUIRED);
+			uint64_t seed_height = get_seed_height(data.height);
+			const uint64_t oldest_seed_height = (data.height > BLOCK_HEADERS_REQUIRED) ? get_seed_height(data.height - BLOCK_HEADERS_REQUIRED) : 0;
 
-			check_height(seed_height);
-			check_height(prev_seed_height);
-			check_height(oldest_seed_height);
+			for (;;) {
+				check_height(seed_height);
+				if (seed_height <= std::max(oldest_seed_height, SEEDHASH_EPOCH_BLOCKS - 1)) {
+					break;
+				}
+				seed_height -= SEEDHASH_EPOCH_BLOCKS;
+			}
 		}
 
 		if (missing_heights.size() > 1) {
@@ -2069,14 +2072,19 @@ void p2pool::cleanup_mainchain_data(uint64_t height)
 
 	const uint64_t PRUNE_DISTANCE = BLOCK_HEADERS_REQUIRED;
 
-	const uint64_t seed_height = get_seed_height(height);
+	uint64_t seed_height = get_seed_height(height);
+	const uint64_t oldest_seed_height = (height > BLOCK_HEADERS_REQUIRED) ? get_seed_height(height - BLOCK_HEADERS_REQUIRED) : 0;
 
-	const std::array<uint64_t, 4> seed_heights{
-		seed_height,
-		seed_height - SEEDHASH_EPOCH_BLOCKS,
-		seed_height - SEEDHASH_EPOCH_BLOCKS * 2,
-		get_seed_height(height - BLOCK_HEADERS_REQUIRED)
-	};
+	std::vector<uint64_t> seed_heights;
+	seed_heights.reserve((seed_height - oldest_seed_height) / SEEDHASH_EPOCH_BLOCKS + 1);
+
+	for (;;) {
+		seed_heights.emplace_back(seed_height);
+		if (seed_height <= std::max(oldest_seed_height, SEEDHASH_EPOCH_BLOCKS - 1)) {
+			break;
+		}
+		seed_height -= SEEDHASH_EPOCH_BLOCKS;
+	}
 
 	for (auto it = m_mainchainByHeight.begin(); it != m_mainchainByHeight.end();) {
 		const uint64_t h = it->first;
