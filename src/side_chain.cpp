@@ -50,6 +50,8 @@ LOG_CATEGORY(SideChain)
 static constexpr uint64_t MIN_DIFFICULTY = 100000;
 static constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
+static constexpr uint64_t MAX_PPLNS_WINDOW_HOURS = 30;
+
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
 
 namespace p2pool {
@@ -2593,6 +2595,13 @@ bool SideChain::check_config() const
 
 	if ((m_unclePenalty < 1) || (m_unclePenalty > 99)) {
 		LOGERR(1, "uncle_penalty is invalid (must be between 1 and 99)");
+		return false;
+	}
+
+	// When the nominal PPLNS window is more than 30 hours, the random 2x PPLNS sync horizon
+	// can span more than 2048 Monero blocks and require a RandomX seed older than the hasher keeps.
+	if (m_chainWindowSize * m_targetBlockTime > MAX_PPLNS_WINDOW_HOURS * 3600u) {
+		LOGERR(1, "PPLNS window is too large (more than " << MAX_PPLNS_WINDOW_HOURS << " hours), this is unsafe");
 		return false;
 	}
 
