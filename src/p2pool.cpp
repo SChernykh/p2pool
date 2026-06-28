@@ -72,12 +72,6 @@ p2pool::p2pool(const Params& params)
 {
 	LOGINFO(1, log::LightCyan() << VERSION);
 
-	// P2Pool-nano requires more Monero blocks for the initial sync
-	if (m_params.m_nano) {
-		// 3 times more because P2Pool-nano has 3x bigger block time
-		BLOCK_HEADERS_REQUIRED = 2160;
-	}
-
 	bkg_jobs_tracker = new BackgroundJobTracker();
 
 #ifdef WITH_UPNP
@@ -197,6 +191,9 @@ p2pool::p2pool(const Params& params)
 	}
 
 	m_sideChain = new SideChain(this, type, m_params.m_mini ? "mini" : (m_params.m_nano ? "nano" : nullptr));
+
+	// Update it for non-standard sidechain configs (including P2Pool-nano)
+	BLOCK_HEADERS_REQUIRED = std::max(BLOCK_HEADERS_REQUIRED, m_sideChain->monero_headers_required());
 
 #ifdef WITH_RANDOMX
 	if (m_params.m_disableRandomX) {
@@ -492,9 +489,11 @@ void p2pool::handle_miner_data(MinerData& data)
 
 			const uint64_t seed_height = get_seed_height(data.height);
 			const uint64_t prev_seed_height = (seed_height > SEEDHASH_EPOCH_BLOCKS) ? (seed_height - SEEDHASH_EPOCH_BLOCKS) : 0;
+			const uint64_t oldest_seed_height = get_seed_height(data.height - BLOCK_HEADERS_REQUIRED);
 
 			check_height(seed_height);
 			check_height(prev_seed_height);
+			check_height(oldest_seed_height);
 		}
 
 		if (missing_heights.size() > 1) {
@@ -1302,7 +1301,7 @@ void p2pool::download_block_headers2(uint64_t current_height)
 		[this, seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
 			ChainMain block;
 			if (parse_block_header(data.m_response.data(), data.m_response.size(), block)) {
-				const uint64_t start_height = (current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0;
+				const uint64_t start_height = get_seed_height((current_height > BLOCK_HEADERS_REQUIRED) ? (current_height - BLOCK_HEADERS_REQUIRED) : 0);
 				download_block_headers3(start_height, current_height);
 			}
 			else {
@@ -2066,11 +2065,18 @@ void p2pool::api_update_stats_mod()
 void p2pool::cleanup_mainchain_data(uint64_t height)
 {
 	// Expects m_mainchainLock to be already locked here
-	// Deletes everything older than 720 blocks, except for the 3 latest RandomX seed heights
+	// Deletes everything older than 720 blocks, except for the 3-4 latest RandomX seed heights
 
 	const uint64_t PRUNE_DISTANCE = BLOCK_HEADERS_REQUIRED;
+
 	const uint64_t seed_height = get_seed_height(height);
-	const std::array<uint64_t, 3> seed_heights{ seed_height, seed_height - SEEDHASH_EPOCH_BLOCKS, seed_height - SEEDHASH_EPOCH_BLOCKS * 2 };
+
+	const std::array<uint64_t, 4> seed_heights{
+		seed_height,
+		seed_height - SEEDHASH_EPOCH_BLOCKS,
+		seed_height - SEEDHASH_EPOCH_BLOCKS * 2,
+		get_seed_height(height - BLOCK_HEADERS_REQUIRED)
+	};
 
 	for (auto it = m_mainchainByHeight.begin(); it != m_mainchainByHeight.end();) {
 		const uint64_t h = it->first;

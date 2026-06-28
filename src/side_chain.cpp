@@ -52,8 +52,6 @@ static constexpr size_t UNCLE_BLOCK_DEPTH = 3;
 
 static_assert(1 <= UNCLE_BLOCK_DEPTH && UNCLE_BLOCK_DEPTH <= 10, "Invalid UNCLE_BLOCK_DEPTH");
 
-static constexpr uint64_t MONERO_BLOCK_TIME = 120;
-
 namespace p2pool {
 
 static constexpr uint8_t default_consensus_id[HASH_SIZE] = { 34,175,126,231,181,11,104,146,227,153,218,107,44,108,68,39,178,81,4,212,169,4,142,0,177,110,157,240,68,7,249,24 };
@@ -2180,7 +2178,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 		return false;
 	}
 
-	const uint64_t limit = m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME;
+	const uint64_t limit = monero_headers_required();
 	if (candidate_mainchain_min_height + limit < data.height) {
 		LOGWARN(3, "received a longer alternative chain but it's stale: min height " << candidate_mainchain_min_height << ", must be >= " << (data.height - limit));
 		return false;

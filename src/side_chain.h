@@ -25,6 +25,8 @@
 
 namespace p2pool {
 
+static constexpr uint64_t MONERO_BLOCK_TIME = 120;
+
 class p2pool;
 class P2PServer;
 
@@ -103,6 +105,8 @@ public:
 #endif
 
 	[[nodiscard]] static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
+
+	[[nodiscard]] FORCEINLINE uint64_t monero_headers_required() const { return m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME; }
 
 private:
 	p2pool* m_pool;
