@@ -64,6 +64,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_lastSidechainShareFoundTime(0)
 	, m_totalStratumShares(0)
 	, m_apiLastUpdateTime(0)
+	, m_shareCheckInFlight(false)
 {
 	// Need a bigger buffer for the TLS handshake
 	m_callbackBuf.resize(STRATUM_CALLBACK_BUF_SIZE);
@@ -514,17 +515,19 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		}
 
 		// Else switch to a worker thread to check PoW which can take a long time
+
+		// This pointer can either be "in flight" (libuv queue then owns it),
+		// or it can be stored in m_pendingShareChecks - but never in both places
 		SubmittedShare* share2 = new SubmittedShare(share);
 
 		share2->m_req.data = share2;
 		share2->m_allocated = true;
 
-		m_pendingShareChecks.push_back(share2);
-		LOGINFO(5, "on_submit: pending share checks count = " << m_pendingShareChecks.size());
-
-		// If there were no pending share checks, run on_share_found in background
+		// If there is no share check in flight, run on_share_found in background
 		// on_after_share_found will pick the remaining share checks
-		if (m_pendingShareChecks.size() == 1) {
+		if (!m_shareCheckInFlight) {
+			m_shareCheckInFlight = true;
+
 			const int err = uv_queue_work(&m_loop, &share2->m_req, on_share_found, on_after_share_found);
 			if (err) {
 				LOGERR(1, "uv_queue_work failed, error " << uv_err_name(err));
@@ -533,6 +536,10 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 				on_share_found(&share2->m_req);
 				on_after_share_found(&share2->m_req, 0);
 			}
+		}
+		else {
+			m_pendingShareChecks.push_back(share2);
+			LOGINFO(5, "on_submit: pending share checks count = " << m_pendingShareChecks.size());
 		}
 
 		return true;
@@ -1201,15 +1208,15 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 	}
 
 	if (share->m_allocated) {
-		auto it = std::find(server->m_pendingShareChecks.begin(), server->m_pendingShareChecks.end(), share);
-		if (it != server->m_pendingShareChecks.end()) {
-			server->m_pendingShareChecks.erase(it);
-		}
-
 		delete share;
 
-		if (!server->m_pendingShareChecks.empty()) {
+		if (server->m_pendingShareChecks.empty()) {
+			server->m_shareCheckInFlight = false;
+		}
+		else {
 			SubmittedShare* share2 = server->m_pendingShareChecks.front();
+			server->m_pendingShareChecks.pop_front();
+			LOGINFO(5, "on_after_share_found: pending share checks count = " << server->m_pendingShareChecks.size());
 
 			const int err = uv_queue_work(&server->m_loop, &share2->m_req, on_share_found, on_after_share_found);
 			if (err) {
@@ -1220,8 +1227,6 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				server->on_after_share_found(&share2->m_req, 0);
 			}
 		}
-
-		LOGINFO(5, "on_after_share_found: pending share checks count = " << server->m_pendingShareChecks.size());
 
 		BACKGROUND_JOB_STOP(StratumServer::on_share_found);
 	}

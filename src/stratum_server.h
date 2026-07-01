@@ -221,6 +221,7 @@ private:
 	std::atomic<uint64_t> m_apiLastUpdateTime;
 
 	std::deque<SubmittedShare*> m_pendingShareChecks;
+	bool m_shareCheckInFlight;
 
 	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
 	void api_update_local_stats(uint64_t timestamp);
