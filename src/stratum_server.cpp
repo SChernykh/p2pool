@@ -1012,6 +1012,8 @@ void StratumServer::on_share_found(uv_work_t* req)
 	const uint64_t target = share->m_target;
 	const uint64_t hashes = share->m_hashes;
 
+	bool submit_failed = false;
+
 	if (share->m_highEnoughDifficulty || server->m_enableFullValidation) {
 		if (pool->stopped()) {
 			LOGWARN(0, "p2pool is shutting down, but a share was found. Trying to process it anyway!");
@@ -1079,12 +1081,15 @@ void StratumServer::on_share_found(uv_work_t* req)
 		if (share->m_highEnoughDifficulty) {
 			const double diff = sidechain_difficulty.to_double();
 			time_t prev_time;
+			uint64_t prevCumulativeHashesAtLastShare;
 			const time_t cur_time = time(nullptr);
 			{
 				WriteLock lock(server->m_hashrateDataLock);
 
 				const uint64_t n = server->m_cumulativeHashes + hashes;
 				share->m_effort = static_cast<double>(n - server->m_cumulativeHashesAtLastShare) * 100.0 / diff;
+
+				prevCumulativeHashesAtLastShare = server->m_cumulativeHashesAtLastShare;
 				server->m_cumulativeHashesAtLastShare = n;
 
 				server->m_cumulativeFoundSharesDiff += diff;
@@ -1095,7 +1100,12 @@ void StratumServer::on_share_found(uv_work_t* req)
 			}
 
 			if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
+				submit_failed = true;
+
 				WriteLock lock(server->m_hashrateDataLock);
+
+				server->m_cumulativeHashesAtLastShare = prevCumulativeHashesAtLastShare;
+				server->m_cumulativeFoundSharesDiff -= diff;
 
 				if (server->m_totalFoundSidechainShares > 0) {
 					--server->m_totalFoundSidechainShares;
@@ -1113,7 +1123,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 		const uint64_t timestamp = share->m_timestamp;
 		server->update_hashrate_data(hashes, timestamp);
 		server->api_update_local_stats(timestamp);
-		share->m_result = SubmittedShare::Result::OK;
+		share->m_result = submit_failed ? SubmittedShare::Result::SUBMIT_FAILED : SubmittedShare::Result::OK;
 	}
 	else {
 		LOGWARN(4, "client " << static_cast<char*>(share->m_clientAddrString) << " got a low diff share");
@@ -1145,6 +1155,7 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				"low difficulty",
 				"invalid PoW",
 				"worker banned",
+				"submit failed"
 			};
 			static_assert(array_size(reason_list) == static_cast<size_t>(SubmittedShare::Result::OK), "Update reason_list to match SubmittedShare::Result enum");
 
@@ -1181,6 +1192,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 					break;
 				case SubmittedShare::Result::BANNED:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Banned\"}}\n";
+					break;
+				case SubmittedShare::Result::SUBMIT_FAILED:
+					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Submit failed\"}}\n";
 					break;
 				case SubmittedShare::Result::OK:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":null,\"result\":{\"status\":\"OK\"}}\n";

@@ -190,6 +190,7 @@ private:
 			LOW_DIFF,
 			INVALID_POW,
 			BANNED,
+			SUBMIT_FAILED,
 			OK
 		} m_result = Result::NONE;
 	};
