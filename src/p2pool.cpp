@@ -968,12 +968,12 @@ void p2pool::submit_aux_block() const
 
 		if ((hashing_blob_size < HASHING_BLOB_MIN_SIZE) || (hashing_blob_size > HASHING_BLOB_MAX_SIZE)) {
 			LOGWARN(3, "submit_aux_block: invalid hashing_blob_size (" << hashing_blob_size << " bytes)");
-			return;
+			continue;
 		}
 
 		if (blob.empty()) {
 			LOGWARN(3, "submit_aux_block: block template blob not found");
-			return;
+			continue;
 		}
 
 		uint8_t* p = blob.data();
