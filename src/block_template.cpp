@@ -1035,6 +1035,7 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 		keccak_custom([this, sidechain_extra_nonce_offset, &sidechain_extra_nonce_buf](int offset) -> uint8_t {
 			const uint32_t k = static_cast<uint32_t>(offset - sidechain_extra_nonce_offset);
 			if (k < EXTRA_NONCE_SIZE) {
+				// cppcheck-suppress objectIndex
 				return sidechain_extra_nonce_buf[k];
 			}
 			return m_sidechainHashBlob[offset];
@@ -1103,6 +1104,7 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		keccak_custom([data, extra_nonce_offset, &extra_nonce_buf, merkle_root_offset, &merge_mining_root](int offset) {
 			uint32_t k = static_cast<uint32_t>(offset - static_cast<int>(extra_nonce_offset));
 			if (k < EXTRA_NONCE_SIZE) {
+				// cppcheck-suppress objectIndex
 				return extra_nonce_buf[k];
 			}
 
