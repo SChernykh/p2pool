@@ -620,15 +620,6 @@ bool TCPServer::send_internal(Client* client, const Callback<size_t, uint8_t*, s
 		buf->m_write.data = buf;
 		buf->m_client = client;
 
-		if (buf->m_dataCapacity < size) {
-			buf->m_dataCapacity = round_up(size, 64);
-			buf->m_data = realloc_hook(buf->m_data, buf->m_dataCapacity);
-			if (!buf->m_data) {
-				LOGERR(0, "failed to allocate " << buf->m_dataCapacity << " bytes to send data");
-				PANIC_STOP();
-			}
-		}
-
 		memcpy(buf->m_data, data, size);
 
 		uv_buf_t bufs[1];
@@ -703,17 +694,15 @@ void TCPServer::loop(void* data)
 	LOGINFO(1, "event loop started");
 	server_event_loop_thread = data;
 
+	// Allocate lists for up to max possible buffer size
+	// 128 buckets for callback buf = 131072 bytes
+	uint64_t adjusted_size;
+	server->m_writeBufferLists.resize(get_bucket_index(server->m_callbackBuf.size(), adjusted_size) + 1);
+
 	server->m_preallocatedClients.reserve(server->m_defaultBacklog);
 	for (int i = 0; i < server->m_defaultBacklog; ++i) {
-		WriteBuf* wb = new WriteBuf();
-		const size_t capacity = wb->m_dataCapacity;
-
 		Client* c = server->m_allocateNewClient();
-
-		ASAN_POISON_MEMORY_REGION(wb, sizeof(WriteBuf));
 		c->asan_poison_this();
-
-		server->m_writeBuffers.emplace(capacity, wb);
 		server->m_preallocatedClients.emplace_back(c);
 	}
 
@@ -727,17 +716,21 @@ void TCPServer::loop(void* data)
 		LOGWARN(1, "uv_loop_close returned error " << uv_err_name(err));
 	}
 
-	for (const auto& it : server->m_writeBuffers) {
-		WriteBuf* buf = it.second;
+	for (size_t i = 0, n = server->m_writeBufferLists.size(); i < n; ++i) {
+		const WriteBuf* buf = server->m_writeBufferLists[i];
 
-		ASAN_UNPOISON_MEMORY_REGION(buf, sizeof(WriteBuf));
-		if (buf->m_data) {
-			ASAN_UNPOISON_MEMORY_REGION(buf->m_data, buf->m_dataCapacity);
-			free_hook(buf->m_data);
+		while (buf) {
+			ASAN_UNPOISON_MEMORY_REGION(buf, sizeof(WriteBuf));
+			if (buf->m_data) {
+				ASAN_UNPOISON_MEMORY_REGION(buf->m_data, buf->m_dataCapacity);
+				free_hook(buf->m_data);
+			}
+			const WriteBuf* t = buf;
+			buf = buf->m_next;
+			delete t;
 		}
-		delete buf;
 	}
-	server->m_writeBuffers.clear();
+	server->m_writeBufferLists.clear();
 
 	for (Client* c : server->m_preallocatedClients) {
 		ASAN_UNPOISON_MEMORY_REGION(c, sizeof(Client));
@@ -1049,28 +1042,36 @@ void TCPServer::on_shutdown(uv_async_t* async)
 		});
 }
 
-TCPServer::WriteBuf* TCPServer::get_write_buffer(size_t size_hint)
+TCPServer::WriteBuf* TCPServer::get_write_buffer(size_t size)
 {
-	WriteBuf* buf;
+	uint64_t adjusted_size;
+	const uint64_t k = get_bucket_index(size, adjusted_size);
 
-	if (!m_writeBuffers.empty()) {
-		// Try to find the smallest buffer that still has enough capacity
-		// If there is no buffer with enough capacity, just take the largest available buffer
-		auto it = m_writeBuffers.lower_bound(size_hint);
-		if (it == m_writeBuffers.end()) {
-			it = std::prev(it);
-		}
+	if (k >= m_writeBufferLists.size()) {
+		m_writeBufferLists.resize(k + 1);
+	}
 
-		buf = it->second;
-		m_writeBuffers.erase(it);
+	WriteBuf* buf = m_writeBufferLists[k];
 
+	if (buf) {
 		ASAN_UNPOISON_MEMORY_REGION(buf, sizeof(WriteBuf));
+		m_writeBufferLists[k] = buf->m_next;
+
 		if (buf->m_data) {
 			ASAN_UNPOISON_MEMORY_REGION(buf->m_data, buf->m_dataCapacity);
 		}
 	}
 	else {
 		buf = new WriteBuf();
+	}
+
+	if (buf->m_dataCapacity != adjusted_size) {
+		buf->m_data = realloc_hook(buf->m_data, adjusted_size);
+		if (!buf->m_data) {
+			LOGERR(0, "failed to allocate " << adjusted_size << " bytes to send data");
+			PANIC_STOP();
+		}
+		buf->m_dataCapacity = adjusted_size;
 	}
 
 	return buf;
@@ -1080,12 +1081,20 @@ void TCPServer::return_write_buffer(WriteBuf* buf)
 {
 	const size_t capacity = buf->m_dataCapacity;
 
+	uint64_t adjusted_size;
+	const uint64_t k = get_bucket_index(capacity, adjusted_size);
+
+	if (k >= m_writeBufferLists.size()) {
+		m_writeBufferLists.resize(k + 1);
+	}
+
+	buf->m_next = m_writeBufferLists[k];
+	m_writeBufferLists[k] = buf;
+
 	if (buf->m_data) {
 		ASAN_POISON_MEMORY_REGION(buf->m_data, capacity);
 	}
 	ASAN_POISON_MEMORY_REGION(buf, sizeof(WriteBuf));
-
-	m_writeBuffers.emplace(capacity, buf);
 }
 
 TCPServer::Client* TCPServer::get_client()

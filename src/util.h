@@ -366,6 +366,31 @@ FORCEINLINE uint64_t bsr(uint64_t x)
 #define bsr bsr_reference
 #endif
 
+// Multiples of 64 when size <= 2048
+// Multiples of 128 when 2048 < size <= 4096
+// Multiples of 256 when 4096 < size <= 8192 and so on
+// 131072 will get index 127
+template<uint64_t MIN_GRANULARITY = 6, uint64_t BITS_TO_USE = 4>
+[[nodiscard]] FORCEINLINE uint64_t get_bucket_index(uint64_t size, uint64_t& adjusted_size)
+{
+	if (size == 0) {
+		adjusted_size = static_cast<uint64_t>(1u) << MIN_GRANULARITY;
+		return 0;
+	}
+
+	constexpr uint64_t TOTAL_BITS = MIN_GRANULARITY + BITS_TO_USE;
+
+	const int bit_index = bsr(size);
+
+	int n = std::max<uint64_t>(bit_index, TOTAL_BITS) - BITS_TO_USE;
+
+	const uint64_t mask = (static_cast<uint64_t>(1u) << n) - 1u;
+	adjusted_size = (size + mask) & ~mask;
+
+	n = std::max<uint64_t>(bit_index, TOTAL_BITS) - TOTAL_BITS;
+	return (adjusted_size >> (n + MIN_GRANULARITY)) + (n << BITS_TO_USE) - 1;
+}
+
 bool str_to_ip(bool is_v6, const char* ip, raw_ip& result);
 bool is_localhost(const std::string& host);
 

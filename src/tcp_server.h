@@ -24,8 +24,6 @@
 #include "tls.h"
 #endif
 
-#include <map>
-
 namespace p2pool {
 
 class TCPServer : public nocopy_nomove
@@ -147,11 +145,13 @@ public:
 		Client* m_client = nullptr;
 		void* m_data = nullptr;
 		size_t m_dataCapacity = 0;
+
+		WriteBuf* m_next = nullptr;
 	};
 
-	std::multimap<size_t, WriteBuf*> m_writeBuffers;
+	std::vector<WriteBuf*> m_writeBufferLists;
 
-	[[nodiscard]] WriteBuf* get_write_buffer(size_t size_hint);
+	[[nodiscard]] WriteBuf* get_write_buffer(size_t size);
 	void return_write_buffer(WriteBuf* buf);
 
 	template<typename T>
