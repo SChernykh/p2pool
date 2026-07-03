@@ -75,7 +75,7 @@ StratumServer::StratumServer(p2pool* pool)
 	m_hashrateData[0] = { seconds_since_epoch(), 0 };
 
 	uv_mutex_init_checked(&m_resetShareCountersLock);
-	uv_mutex_init_checked(&m_blobsQueueLock);
+	uv_mutex_init_checked(&m_blobsToSendLock);
 	uv_mutex_init_checked(&m_showWorkersLock);
 	uv_mutex_init_checked(&m_rngLock);
 	uv_rwlock_init_checked(&m_hashrateDataLock);
@@ -87,7 +87,6 @@ StratumServer::StratumServer(p2pool* pool)
 
 	uv_async_init_checked(&m_loop, &m_blobsAsync, on_blobs_ready);
 	m_blobsAsync.data = this;
-	m_blobsQueue.reserve(2);
 
 	uv_async_init_checked(&m_loop, &m_showWorkersAsync, on_show_workers);
 	m_showWorkersAsync.data = this;
@@ -101,16 +100,8 @@ StratumServer::~StratumServer()
 {
 	shutdown_tcp();
 
-	{
-		MutexLock lock(m_blobsQueueLock);
-
-		for (BlobsData* data : m_blobsQueue) {
-			delete data;
-		}
-	}
-
 	uv_mutex_destroy(&m_resetShareCountersLock);
-	uv_mutex_destroy(&m_blobsQueueLock);
+	uv_mutex_destroy(&m_blobsToSendLock);
 	uv_mutex_destroy(&m_showWorkersLock);
 	uv_mutex_destroy(&m_rngLock);
 	uv_rwlock_destroy(&m_hashrateDataLock);
@@ -131,7 +122,7 @@ void StratumServer::on_block(const BlockTemplate& block)
 	const uint32_t extra_nonce_start = get_random32();
 	m_extraNonce.exchange(extra_nonce_start + num_connections);
 
-	BlobsData* blobs_data = new BlobsData{};
+	std::unique_ptr<BlobsData> blobs_data(new BlobsData{});
 	blobs_data->m_extraNonceStart = extra_nonce_start;
 
 	difficulty_type difficulty;
@@ -143,18 +134,18 @@ void StratumServer::on_block(const BlockTemplate& block)
 	// Even if they do, they'll be added to the beginning of the list and will get their block template in on_login()
 	// We'll iterate through the list backwards so when we get to the beginning and run out of extra_nonce values, it'll be only new clients left
 	blobs_data->m_numClientsExpected = num_connections;
-	blobs_data->m_blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, aux_diff, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+
+	const uint32_t blobSize = block.get_hashing_blobs(extra_nonce_start, num_connections, blobs_data->m_blobs, blobs_data->m_height, difficulty, aux_diff, sidechain_difficulty, blobs_data->m_seedHash, nonce_offset, blobs_data->m_templateId);
+	blobs_data->m_blobSize = blobSize;
 
 	// Integrity checks
-	if ((blobs_data->m_blobSize < HASHING_BLOB_MIN_SIZE) || (blobs_data->m_blobSize > HASHING_BLOB_MAX_SIZE)) {
-		LOGERR(1, "internal error: get_hashing_blobs returned wrong sized blobs (" << blobs_data->m_blobSize << " bytes)");
-		delete blobs_data;
+	if ((blobSize < HASHING_BLOB_MIN_SIZE) || (blobSize > HASHING_BLOB_MAX_SIZE)) {
+		LOGERR(1, "internal error: get_hashing_blobs returned wrong sized blobs (" << blobSize << " bytes)");
 		return;
 	}
 
 	if (blobs_data->m_blobs.size() != blobs_data->m_blobSize * num_connections) {
 		LOGERR(1, "internal error: get_hashing_blobs returned wrong amount of data");
-		delete blobs_data;
 		return;
 	}
 
@@ -176,7 +167,6 @@ void StratumServer::on_block(const BlockTemplate& block)
 		for (uint32_t i = 1; i < num_connections; ++i) {
 			if (blob_hashes[i - 1] == blob_hashes[i]) {
 				LOGERR(1, "internal error: get_hashing_blobs returned two identical blobs");
-				delete blobs_data;
 				return;
 			}
 		}
@@ -188,21 +178,18 @@ void StratumServer::on_block(const BlockTemplate& block)
 	blobs_data->m_target = std::min(blobs_data->m_target, MAX_TARGET);
 
 	{
-		MutexLock lock(m_blobsQueueLock);
+		MutexLock lock(m_blobsToSendLock);
 
 		if (uv_is_closing(reinterpret_cast<uv_handle_t*>(&m_blobsAsync))) {
-			delete blobs_data;
 			return;
 		}
 
-		m_blobsQueue.push_back(blobs_data);
+		m_blobsToSend = std::move(blobs_data);
 
 		const int err = uv_async_send(&m_blobsAsync);
 		if (err) {
 			LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
-
-			m_blobsQueue.pop_back();
-			delete blobs_data;
+			m_blobsToSend.reset();
 		}
 	}
 
@@ -811,37 +798,69 @@ void StratumServer::on_blobs_ready()
 {
 	check_event_loop_thread(__func__);
 
-	std::vector<BlobsData*> blobs_queue;
-	blobs_queue.reserve(2);
+	const uint64_t cur_time_mcs = microseconds_since_epoch();
+	const uint64_t cur_time = cur_time_mcs / 1'000'000;
 
-	{
-		MutexLock lock(m_blobsQueueLock);
-		blobs_queue = m_blobsQueue;
-		m_blobsQueue.clear();
+	// Get new blobs if we're not sending anything right now
+	std::unique_ptr<BlobsData>& data = m_blobsBeingSent;
+
+	if (!data) {
+		MutexLock lock(m_blobsToSendLock);
+
+		data = std::move(m_blobsToSend);
+
+		if (!data) {
+			return;
+		}
 	}
 
-	if (blobs_queue.empty()) {
-		return;
+	// Take a snapshot of all clients if we just started sending
+	std::vector<std::pair<StratumClient*, uint32_t>>& clients = data->m_clients;
+
+	if (clients.empty()) {
+		const uint32_t N = num_connections();
+		LOGINFO(5, "sending new job to " << N << " clients");
+		clients.reserve(N);
+
+		for (StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_next); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_next)) {
+			clients.emplace_back(client, client->m_resetCounter.load());
+		}
 	}
 
-	ON_SCOPE_LEAVE([&blobs_queue]()
-		{
-			for (BlobsData* data : blobs_queue) {
-				delete data;
-			}
-		});
+#ifndef P2POOL_LOG_DISABLE
+	if (!clients.empty()) {
+		++data->m_numBatches;
+	}
+#endif
 
-	// Only send the latest blob
-	BlobsData* data = blobs_queue.back();
 	const uint32_t extra_nonce_start = data->m_extraNonceStart;
+	uint32_t next_wall_time_check = data->m_numClientsProcessed + 10;
 
-	size_t numClientsProcessed = 0;
-	uint32_t num_sent = 0;
+	while (!clients.empty()) {
+		// Stop after 0.95 ms total run time, continue in the next libuv loop iteration
+		if (data->m_numClientsProcessed >= next_wall_time_check) {
+			if (microseconds_since_epoch() >= cur_time_mcs + 950) {
+				const int err = uv_async_send(&m_blobsAsync);
+				if (err) {
+					LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+				}
+				else {
+					// All good, we'll continue soon
+					return;
+				}
+			}
+			next_wall_time_check = data->m_numClientsProcessed + 10;
+		}
 
-	const uint64_t cur_time = seconds_since_epoch();
+		StratumClient* client = clients.back().first;
+		const uint32_t expected_reset_counter = clients.back().second;
+		clients.pop_back();
 
-	for (StratumClient* client = static_cast<StratumClient*>(m_connectedClientsList->m_prev); client != m_connectedClientsList; client = static_cast<StratumClient*>(client->m_prev)) {
-		++numClientsProcessed;
+		++data->m_numClientsProcessed;
+
+		if (client->is_gone(expected_reset_counter)) {
+			continue;
+		}
 
 		if (!client->m_rpcId) {
 			// Not logged in yet, on_login() will send the job to this client. Also close inactive connections.
@@ -853,12 +872,12 @@ void StratumServer::on_blobs_ready()
 			continue;
 		}
 
-		if (num_sent >= data->m_numClientsExpected) {
+		if (data->m_numSent >= data->m_numClientsExpected) {
 			// We don't have any more extra_nonce values available
 			continue;
 		}
 
-		uint8_t* hashing_blob = data->m_blobs.data() + num_sent * data->m_blobSize;
+		uint8_t* hashing_blob = data->m_blobs.data() + data->m_numSent * data->m_blobSize;
 
 		uint64_t target = data->m_target;
 		if (client->m_customDiff.lo) {
@@ -896,14 +915,18 @@ void StratumServer::on_blobs_ready()
 
 			StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
 			saved_job.job_id = job_id;
-			saved_job.extra_nonce = extra_nonce_start + num_sent;
+			saved_job.extra_nonce = extra_nonce_start + data->m_numSent;
 			saved_job.template_id = data->m_templateId;
 			saved_job.target = target;
 		}
 		client->m_lastJobTarget = target;
 
+		const size_t blobSize = data->m_blobSize;
+		const uint64_t height = data->m_height;
+		const hash seedHash = data->m_seedHash;
+
 		const bool result = send(client,
-			[data, target, hashing_blob, job_id](uint8_t* buf, size_t buf_size)
+			[blobSize, height, &seedHash, target, hashing_blob, job_id](uint8_t* buf, size_t buf_size)
 			{
 				log::hex_buf target_hex(&target);
 
@@ -914,28 +937,44 @@ void StratumServer::on_blobs_ready()
 
 				log::Stream s(buf, buf_size);
 				s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
-				s << log::hex_buf(hashing_blob, data->m_blobSize) << "\",\"job_id\":\"";
+				s << log::hex_buf(hashing_blob, blobSize) << "\",\"job_id\":\"";
 				s << log::Hex(job_id) << "\",\"target\":\"";
 				s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
-				s << data->m_height << ",\"seed_hash\":\"";
-				s << data->m_seedHash << "\"}}\n";
+				s << height << ",\"seed_hash\":\"";
+				s << seedHash << "\"}}\n";
 				return s.m_pos;
 			});
 
 		if (result) {
-			++num_sent;
+			++data->m_numSent;
 		}
 		else {
 			client->close();
 		}
 	}
 
-	const uint32_t num_connections = m_numConnections;
-	if (numClientsProcessed != num_connections) {
-		LOGWARN(1, "client list is broken, expected " << num_connections << ", got " << numClientsProcessed << " clients");
-	}
+#ifndef P2POOL_LOG_DISABLE
+	const uint32_t numClientsProcessed = data->m_numClientsProcessed;
+	const uint32_t numSent = data->m_numSent;
+	const uint32_t numBatches = data->m_numBatches;
 
-	LOGINFO(3, "sent new job to " << num_sent << '/' << numClientsProcessed << " clients");
+	LOGINFO(3, "sent new job to " << numSent << '/' << numClientsProcessed << " clients in " << numBatches << " batches");
+#endif
+
+	// Get the next job to send, if any
+	// We could call on_blobs_ready() recursively here,
+	// and it would've been faster, but it's prone to unlimited recursion
+
+	MutexLock lock(m_blobsToSendLock);
+
+	data = std::move(m_blobsToSend);
+
+	if (data) {
+		const int err = uv_async_send(&m_blobsAsync);
+		if (err) {
+			LOGERR(1, "uv_async_send failed, error " << uv_err_name(err));
+		}
+	}
 }
 
 void StratumServer::update_hashrate_data(uint64_t hashes, uint64_t timestamp)
@@ -1258,7 +1297,7 @@ void StratumServer::on_shutdown()
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_resetShareCountersAsync), nullptr);
 	}
 	{
-		MutexLock lock(m_blobsQueueLock);
+		MutexLock lock(m_blobsToSendLock);
 		uv_close(reinterpret_cast<uv_handle_t*>(&m_blobsAsync), nullptr);
 	}
 	{
