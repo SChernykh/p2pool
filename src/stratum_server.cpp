@@ -65,6 +65,8 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_totalStratumShares(0)
 	, m_apiLastUpdateTime(0)
 	, m_shareCheckInFlight(false)
+	, m_jsonParseValueBuf{}
+	, m_jsonParseStackBuf{}
 {
 	// Need a bigger buffer for the TLS handshake
 	m_callbackBuf.resize(STRATUM_CALLBACK_BUF_SIZE);
