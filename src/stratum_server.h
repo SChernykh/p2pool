@@ -237,6 +237,9 @@ private:
 	std::deque<SubmittedShare*> m_pendingShareChecks;
 	bool m_shareCheckInFlight;
 
+	alignas(8) char m_jsonParseValueBuf[STRATUM_BUF_SIZE * 16];
+	alignas(8) char m_jsonParseStackBuf[STRATUM_BUF_SIZE * 16];
+
 	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
 	void api_update_local_stats(uint64_t timestamp);
 

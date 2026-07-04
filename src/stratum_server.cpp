@@ -1447,10 +1447,19 @@ bool StratumServer::StratumClient::on_read(const char* data, uint32_t size)
 	return on_parse(data, size);
 }
 
-bool StratumServer::StratumClient::process_request(char* data, uint32_t size)
+bool StratumServer::StratumClient::process_request(char* data, uint32_t /*size*/)
 {
-	rapidjson::Document doc;
-	if (doc.Parse(data, size).HasParseError()) {
+	StratumServer* server = static_cast<StratumServer*>(m_owner);
+
+	using namespace rapidjson;
+
+	MemoryPoolAllocator<> valueAlloc(server->m_jsonParseValueBuf, sizeof(server->m_jsonParseValueBuf));
+	MemoryPoolAllocator<> stackAlloc(server->m_jsonParseStackBuf, sizeof(server->m_jsonParseStackBuf));
+
+	// "/ 2" on the second parameter because it's an initial reservation, not the full stack buf size
+	GenericDocument<UTF8<>, MemoryPoolAllocator<>, MemoryPoolAllocator<>> doc(&valueAlloc, sizeof(server->m_jsonParseStackBuf) / 2, &stackAlloc);
+
+	if (doc.ParseInsitu(data).HasParseError()) {
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON request (parse error)");
 		return false;
 	}
