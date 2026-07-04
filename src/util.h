@@ -380,9 +380,9 @@ template<uint64_t MIN_GRANULARITY = 6, uint64_t BITS_TO_USE = 4>
 
 	constexpr uint64_t TOTAL_BITS = MIN_GRANULARITY + BITS_TO_USE;
 
-	const int bit_index = bsr(size);
+	const uint64_t bit_index = bsr(size);
 
-	int n = std::max<uint64_t>(bit_index, TOTAL_BITS) - BITS_TO_USE;
+	uint64_t n = std::max<uint64_t>(bit_index, TOTAL_BITS) - BITS_TO_USE;
 
 	const uint64_t mask = (static_cast<uint64_t>(1u) << n) - 1u;
 	adjusted_size = (size + mask) & ~mask;

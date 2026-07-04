@@ -1065,7 +1065,7 @@ TCPServer::WriteBuf* TCPServer::get_write_buffer(size_t size)
 		buf = new WriteBuf();
 	}
 
-	if (buf->m_dataCapacity != adjusted_size) {
+	if (!buf->m_data || (buf->m_dataCapacity != adjusted_size)) {
 		buf->m_data = realloc_hook(buf->m_data, adjusted_size);
 		if (!buf->m_data) {
 			LOGERR(0, "failed to allocate " << adjusted_size << " bytes to send data");
