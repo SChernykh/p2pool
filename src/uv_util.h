@@ -19,6 +19,8 @@
 
 #include <uv.h>
 #include <thread>
+#include <utility>
+#include "thread_pool.h"
 
 constexpr uint32_t MIN_UV_THREADPOOL_SIZE = 4;
 constexpr uint32_t MAX_UV_THREADPOOL_SIZE = 8;
@@ -145,7 +147,7 @@ bool CallOnLoop(uv_loop_t* loop, T&& callback)
 		return false;
 	}
 
-	UV_LoopCallbackBase* cb = new Callback<void>::Derived<T>(std::move(callback));
+	UV_LoopCallbackBase* cb = new Callback<void>::Derived<T>(std::forward<T>(callback));
 	{
 		MutexLock lock(data->m_callbacksLock);
 		data->m_callbacks.push_back(cb);
@@ -174,65 +176,112 @@ bool CallOnLoop(uv_loop_t* loop, T&& callback)
 	return false;
 }
 
-template<typename T>
-void parallel_run(uv_loop_t* loop, T&& callback, bool wait = false)
-{
-	const uint32_t THREAD_COUNT = std::thread::hardware_concurrency();
+template<typename T, typename U = void>
+struct accepts_parallel_run_params : std::false_type{};
 
-	// Don't start other threads on single CPU systems
-	if (THREAD_COUNT <= 1) {
-		callback();
+template<typename T>
+struct accepts_parallel_run_params<T, std::void_t<decltype(std::declval<T&>()(
+	// parameters that parallel_run wants to pass to the callback
+	std::declval<uint32_t>(), // zero-based thread index
+	std::declval<uint32_t>()  // thread count
+))>> : std::true_type{};
+
+// Runs the callback in parallel on up to 16 threads
+template<typename T>
+void parallel_run(T&& callback, bool wait = false)
+{
+	static_assert(!std::is_lvalue_reference_v<T>, "parallel_run() requires an rvalue callback; use std::move or pass a temporary lambda");
+	using CallbackT = std::decay_t<T>;
+
+	const uint32_t THREAD_CAPACITY = std::min<uint32_t>(std::thread::hardware_concurrency(), 16u);
+
+	// Run synchronously on single-CPU systems
+	if (THREAD_CAPACITY <= 1) {
+		if constexpr (accepts_parallel_run_params<CallbackT>::value) {
+			callback(0u, 1u);
+		}
+		else {
+			callback();
+		}
 		return;
 	}
 
-	// "THREAD_COUNT - 1" because current thread is already running
-	// No more than 8 threads because our UV worker thread pool has 8 threads
-	const uint32_t THREADS_TO_START = std::min<uint32_t>(THREAD_COUNT - 1, MAX_UV_THREADPOOL_SIZE);
-
-	struct Callback
-	{
-		explicit FORCEINLINE Callback(T&& f) : m_func(std::move(f)) {}
-		Callback& operator=(Callback&&) = delete;
-
-		T m_func;
-	};
-
-	std::shared_ptr<Callback> cb = std::make_shared<Callback>(std::move(callback));
-
 	struct Work
 	{
-		uv_work_t req = {};
-		std::shared_ptr<Callback> cb;
+		FORCEINLINE Work(CallbackT&& f, uint32_t total_thread_count)
+			: m_func(std::forward<CallbackT>(f))
+			, m_threadIndex(0)
+			, m_finishedThreads(0)
+			, m_totalThreadCount(total_thread_count)
+		{}
+
+		Work& operator=(Work&&) = delete;
+
+		CallbackT m_func;
+		std::atomic<uint32_t> m_threadIndex;
+		std::atomic<uint32_t> m_finishedThreads;
+
+		uint32_t m_totalThreadCount;
 	};
 
-	for (size_t i = 0; i < THREADS_TO_START; ++i) {
-		Work* w = new Work{ {}, cb };
-		w->req.data = w;
+	// "THREAD_CAPACITY - 1" because current thread is already running
+	const uint32_t threads_to_start = THREAD_CAPACITY - 1;
 
-		const int err = uv_queue_work(loop, &w->req,
-			[](uv_work_t* req)
-			{
-				std::shared_ptr<Callback>& cb = reinterpret_cast<Work*>(req->data)->cb;
-				cb->m_func();
-				cb.reset();
-			},
-			[](uv_work_t* req, int)
-			{
-				delete reinterpret_cast<Work*>(req->data);
-			});
+	std::shared_ptr<Work> work = std::make_shared<Work>(std::forward<T>(callback), threads_to_start + (wait ? 1 : 0));
 
-		if (err) {
-			delete w;
+	queue_work([work, wait]() {
+		Work* w = work.get();
+
+		if constexpr (accepts_parallel_run_params<CallbackT>::value) {
+			w->m_func(w->m_threadIndex.fetch_add(1, std::memory_order_relaxed), w->m_totalThreadCount);
 		}
-	}
+		else {
+			w->m_func();
+		}
+
+		if (wait) {
+			// Ensure the data written by the callback can be read after this point
+			w->m_finishedThreads.fetch_add(1, std::memory_order_acq_rel);
+		}
+	}, threads_to_start);
 
 	if (wait) {
-		cb->m_func();
+		Work* w = work.get();
 
-		while (cb.use_count() > 1) {
+		if constexpr (accepts_parallel_run_params<CallbackT>::value) {
+			w->m_func(w->m_threadIndex.fetch_add(1, std::memory_order_relaxed), w->m_totalThreadCount);
+		}
+		else {
+			w->m_func();
+		}
+
+		while (w->m_finishedThreads.load(std::memory_order_acquire) < threads_to_start) {
 			std::this_thread::yield();
 		}
 	}
+}
+
+// Thread sync point to use inside parallel_run's callback
+template<typename T>
+FORCEINLINE bool sync_point(std::atomic<T>& value, T k) {
+	if (value.fetch_add(1, std::memory_order_acq_rel) + 1 >= k) {
+		return true;
+	}
+
+	// some threads are not here yet, wait for them
+	size_t fast_spin_count = 0;
+
+	do {
+		if (fast_spin_count < 10000) {
+			++fast_spin_count;
+			cpu_yield();
+		}
+		else {
+			std::this_thread::yield();
+		}
+	} while (value.load(std::memory_order_acquire) < k);
+
+	return false;
 }
 
 void set_thread_name(const char* name);

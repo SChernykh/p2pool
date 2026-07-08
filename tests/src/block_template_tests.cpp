@@ -36,6 +36,7 @@ static hash H(const char* s)
 
 TEST(block_template, update)
 {
+	thread_pool_init();
 	init_crypto_cache();
 	{
 	SideChain sidechain(nullptr, NetworkType::Mainnet);
@@ -209,6 +210,7 @@ TEST(block_template, update)
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
 	ASSERT_EQ(blobs_hash, H("4f62562aa84400eb085f58447d8daa45257369f1ec046b2150212329c9e86ae4"));
 	}
+	thread_pool_destroy();
 	destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES
@@ -218,6 +220,7 @@ TEST(block_template, update)
 
 TEST(block_template, submit_sidechain_block)
 {
+	thread_pool_init();
 	init_crypto_cache();
 	{
 	SideChain sidechain(nullptr, NetworkType::Mainnet, "unit_test");
@@ -285,6 +288,7 @@ TEST(block_template, submit_sidechain_block)
 
 	ASSERT_EQ(tip->m_sidechainId, H("12d57571a28d62d2b6dca3a647500d23ac22864138b22a133f237b459a0862da"));
 	}
+	thread_pool_destroy();
 	destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES
@@ -294,6 +298,7 @@ TEST(block_template, submit_sidechain_block)
 
 TEST(block_template, genesis_block_max_timestamp)
 {
+	thread_pool_init();
 	init_crypto_cache();
 	{
 	SideChain sidechain(nullptr, NetworkType::Mainnet, "unit_test");
@@ -334,6 +339,7 @@ TEST(block_template, genesis_block_max_timestamp)
 
 	ASSERT_EQ(tip->m_sidechainId, H("cd83d28671cfdad7e86b07debc45737e4bec40e4555023634a9921d7687e504e"));
 	}
+	thread_pool_destroy();
 	destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES

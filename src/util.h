@@ -303,6 +303,21 @@ extern BackgroundJobTracker* bkg_jobs_tracker;
 void set_main_thread();
 bool is_main_thread();
 
+void set_uv_worker_pool_thread();
+bool is_uv_worker_pool_thread();
+
+FORCEINLINE static void cpu_yield() {
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+	_mm_pause();
+#elif defined(_M_ARM64) || defined(_M_ARM)
+	__yield();
+#elif defined(__aarch64__) || defined(__arm__)
+	__asm__ __volatile__("yield");
+#else
+	// no-op on other platforms
+#endif
+}
+
 extern bool disable_resolve_host;
 bool resolve_host(std::string& host, bool& is_v6);
 

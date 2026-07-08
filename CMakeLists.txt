@@ -127,6 +127,7 @@ set(HEADERS
 	src/side_chain.h
 	src/stratum_server.h
 	src/tcp_server.h
+	src/thread_pool.h
 	src/tor.h
 	src/util.h
 	src/uv_util.h
@@ -163,6 +164,7 @@ set(SOURCES
 	src/side_chain.cpp
 	src/stratum_server.cpp
 	src/tcp_server.cpp
+	src/thread_pool.cpp
 	src/util.cpp
 	src/wallet.cpp
 	src/zmq_reader.cpp

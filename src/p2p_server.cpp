@@ -1209,28 +1209,28 @@ void P2PServer::on_broadcast()
 		for (Broadcast* data : broadcast_queue) {
 			if (!data->compact_blob.empty()) {
 				PoolBlock check;
-				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), nullptr, true, true);
+				const int result = check.deserialize(data->compact_blob.data(), data->compact_blob.size(), m_pool->side_chain(), true, true);
 				if (result != 0) {
 					LOGERR(1, "compact blob broadcast is broken, error " << result);
 				}
 			}
 			if (!data->compact_unpruned_blob.empty()) {
 				PoolBlock check;
-				const int result = check.deserialize(data->compact_unpruned_blob.data(), data->compact_unpruned_blob.size(), m_pool->side_chain(), nullptr, true, false);
+				const int result = check.deserialize(data->compact_unpruned_blob.data(), data->compact_unpruned_blob.size(), m_pool->side_chain(), true, false);
 				if (result != 0) {
 					LOGERR(1, "compact unpruned blob broadcast is broken, error " << result);
 				}
 			}
 			{
 				PoolBlock check;
-				const int result = check.deserialize(data->pruned_blob.data(), data->pruned_blob.size(), m_pool->side_chain(), nullptr, false, true);
+				const int result = check.deserialize(data->pruned_blob.data(), data->pruned_blob.size(), m_pool->side_chain(), false, true);
 				if (result != 0) {
 					LOGERR(1, "pruned blob broadcast is broken, error " << result);
 				}
 			}
 			{
 				PoolBlock check;
-				const int result = check.deserialize(data->blob.data(), data->blob.size(), m_pool->side_chain(), nullptr, false, false);
+				const int result = check.deserialize(data->blob.data(), data->blob.size(), m_pool->side_chain(), false, false);
 				if (result != 0) {
 					LOGERR(1, "full blob broadcast is broken, error " << result);
 				}
@@ -1437,7 +1437,7 @@ int P2PServer::deserialize_block(const uint8_t* buf, uint32_t size, bool compact
 		result = 0;
 	}
 	else {
-		result = m_block->deserialize(buf, size, m_pool->side_chain(), &m_loop, compact, allow_pruned);
+		result = m_block->deserialize(buf, size, m_pool->side_chain(), compact, allow_pruned);
 
 		// Cache only successfully deserialized blocks
 		if (result == 0) {

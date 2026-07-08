@@ -2196,7 +2196,7 @@ bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)
 	ReadLock lock(m_mainchainLock);
 
 	auto it = m_mainchainByHeight.find(height);
-	if (it == m_mainchainByHeight.end()) {
+	if ((it == m_mainchainByHeight.end()) || it->second.difficulty.empty()) {
 		return false;
 	}
 

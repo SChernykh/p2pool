@@ -138,6 +138,8 @@ void fe_pow22523(fe, const fe);
 /* New code */
 
 void ge_scalarmult(ge_p2 *, const unsigned char *, const ge_p3 *);
+void ge_scalarmult_slide(signed char *r, const unsigned char *a);
+void ge_scalarmult_vartime_precomp(ge_p2 *r, const ge_cached* Ai, signed char *aslide);
 void ge_scalarmult_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A);
 void ge_scalarmult_p3(ge_p3 *, const unsigned char *, const ge_p3 *);
 void ge_double_scalarmult_precomp_vartime(ge_p2 *, const unsigned char *, const ge_p3 *, const unsigned char *, const ge_dsmp);

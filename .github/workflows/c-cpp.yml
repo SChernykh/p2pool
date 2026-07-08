@@ -631,7 +631,7 @@ jobs:
         os:
           - name: freebsd
             architecture: x86-64
-            version: '13.3'
+            version: '13.5'
             host: ubuntu-latest
 
     steps:
@@ -646,7 +646,7 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.24.0
+      uses: cross-platform-actions/action@v1.3.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
@@ -701,7 +701,7 @@ jobs:
         os:
           - name: openbsd
             architecture: x86-64
-            version: '7.4'
+            version: '7.9'
             host: ubuntu-latest
 
     steps:
@@ -716,7 +716,7 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v0.24.0
+      uses: cross-platform-actions/action@v1.3.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}

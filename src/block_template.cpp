@@ -208,6 +208,8 @@ void BlockTemplate::shuffle_tx_order()
 
 void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const Params& params)
 {
+	LOGINFO(6, "BlockTemplate::update started");
+
 	if (data.major_version > HARDFORK_SUPPORTED_VERSION) {
 		LOGERR(1, "got hardfork version " << data.major_version << ", expected <= " << HARDFORK_SUPPORTED_VERSION);
 		return;
@@ -280,52 +282,33 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	// Pre-calculate outputs to speed up miner tx generation
 	if (!m_shares.empty()) {
-		struct Precalc
-		{
-			FORCEINLINE Precalc(const std::vector<MinerShare>& s, const hash& k) : txKeySec(k)
-			{
-				const size_t N = s.size();
-				counter = static_cast<int>(N) - 1;
-				shares = reinterpret_cast<std::pair<hash, hash>*>(malloc_hook(sizeof(std::pair<hash, hash>) * N));
-				if (shares) {
-					const MinerShare* src = &s[0];
-					std::pair<hash, hash>* dst = shares;
-					const std::pair<hash, hash>* e = shares + N;
+		LOGINFO(6, "BlockTemplate::update batch start");
 
-					for (; dst < e; ++src, ++dst) {
-						const Wallet* w = src->m_wallet;
-						dst->first = w->view_public_key();
-						dst->second = w->spend_public_key();
-					}
-				}
-			}
+		std::vector<std::pair<hash, size_t>> in;
+		std::vector<std::pair<hash, int32_t>> out;
 
-			FORCEINLINE Precalc(Precalc&& rhs) noexcept : txKeySec(rhs.txKeySec), counter(rhs.counter.load()), shares(rhs.shares) { rhs.shares = nullptr; }
-			FORCEINLINE ~Precalc() { free_hook(shares); }
+		const size_t n = m_shares.size();
 
-			// Disable any other way of copying/moving Precalc
-			Precalc(const Precalc&) = delete;
-			Precalc& operator=(const Precalc&) = delete;
-			Precalc& operator=(Precalc&&) = delete;
+		in.reserve(n);
+		for (size_t i = 0; i < n; ++i) {
+			in.emplace_back(m_shares[i].m_wallet->view_public_key(), i);
+		}
 
-			FORCEINLINE void operator()()
-			{
-				if (shares) {
-					hash derivation, eph_public_key;
-					int i;
-					while ((i = counter.fetch_sub(1)) >= 0) {
-						uint8_t view_tag;
-						generate_key_derivation(shares[i].first, txKeySec, i, derivation, view_tag);
-						derive_public_key(derivation, i, shares[i].second, eph_public_key);
-					}
-				}
-			}
+		batch_derivations(in, m_poolBlockTemplate->m_txkeySec, out);
 
-			hash txKeySec;
-			std::atomic<int> counter;
-			std::pair<hash, hash>* shares;
-		};
-		parallel_run(uv_default_loop_checked(), Precalc(m_shares, m_poolBlockTemplate->m_txkeySec));
+		LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
+
+		std::vector<batch_public_key_input> in2;
+		std::vector<std::pair<hash, bool>> out2;
+
+		in2.reserve(n);
+		for (size_t i = 0; i < n; ++i) {
+			in2.emplace_back(out[i].first, i, m_shares[i].m_wallet->spend_public_key());
+		}
+
+		batch_public_keys(in2, out2);
+
+		LOGINFO(6, "BlockTemplate::update batch end");
 	}
 
 	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
@@ -711,7 +694,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			}
 		}
 		PoolBlock check;
-		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, nullptr, false, false);
+		const int result = check.deserialize(m_fullDataBlob.data(), m_fullDataBlob.size(), *m_sidechain, false, false);
 		if (result != 0) {
 			LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 		}
@@ -1329,7 +1312,7 @@ uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t c
 
 		std::atomic<uint32_t> counter = 1;
 
-		parallel_run(uv_default_loop_checked(), [this, blob_size, extra_nonce_start, count, &counter, blobs_data]() {
+		parallel_run([this, blob_size, extra_nonce_start, count, &counter, blobs_data]() {
 			for (;;) {
 				const uint32_t i = counter.fetch_add(1);
 				if (i >= count) {
@@ -1484,7 +1467,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			buf.insert(buf.end(), sidechain_data.begin(), sidechain_data.end());
 
 			PoolBlock check;
-			const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, nullptr, false, false);
+			const int result = check.deserialize(buf.data(), buf.size(), *m_sidechain, false, false);
 			if (result != 0) {
 				LOGERR(1, "pool block blob generation and/or parsing is broken, error " << result);
 			}

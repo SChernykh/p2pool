@@ -1206,6 +1206,10 @@ static void slide(signed char *r, const unsigned char *a) {
   }
 }
 
+void ge_scalarmult_slide(signed char *r, const unsigned char *a) {
+	slide(r, a);
+}
+
 void ge_dsm_precomp(ge_dsmp r, const ge_p3 *s) {
   ge_p1p1 t;
   ge_p3 s2, u;
@@ -2207,16 +2211,11 @@ void ge_scalarmult(ge_p2 *r, const unsigned char *a, const ge_p3 *A) {
   }
 }
 
-void ge_scalarmult_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A) {
-  signed char aslide[256];
-  ge_dsmp Ai; /* A, 3A, 5A, 7A, 9A, 11A, 13A, 15A */
+void ge_scalarmult_vartime_precomp(ge_p2 *r, const ge_cached* Ai, signed char *aslide) {
   ge_p1p1 t;
   ge_p3 u;
   ge_p2 r_p2;
   int i;
-
-  slide(aslide, a);
-  ge_dsm_precomp(Ai, A);
 
   ge_p2_0(&r_p2);
   ge_p2_0(r);
@@ -2242,6 +2241,16 @@ void ge_scalarmult_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A) {
     else
       ge_p1p1_to_p2(r, &t); // last step
   }
+}
+
+void ge_scalarmult_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A) {
+  ge_dsmp Ai; /* A, 3A, 5A, 7A, 9A, 11A, 13A, 15A */
+  ge_dsm_precomp(Ai, A);
+
+  signed char aslide[256];
+  slide(aslide, a);
+
+  ge_scalarmult_vartime_precomp(r, Ai, aslide);
 }
 
 void ge_scalarmult_p3(ge_p3 *r3, const unsigned char *a, const ge_p3 *A) {
