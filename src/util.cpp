@@ -554,6 +554,10 @@ static thread_local bool main_thread = false;
 void set_main_thread() { main_thread = true; }
 bool is_main_thread() { return main_thread; }
 
+static thread_local bool uv_worker_pool_thread = false;
+void set_uv_worker_pool_thread() { uv_worker_pool_thread = true; }
+bool is_uv_worker_pool_thread() { return uv_worker_pool_thread; }
+
 bool disable_resolve_host = false;
 
 bool resolve_host(std::string& host, bool& is_v6)
@@ -973,13 +977,56 @@ void init_uv()
 	int err = putenv(buf);
 	if (err != 0) {
 		err = errno;
-		fprintf(stderr, "Couldn't set UV thread pool size to %u threads, putenv returned error %d\n", N, err);
+		fprintf(stderr, "init_uv_threadpool: couldn't set UV thread pool size to %u threads, putenv returned error %d\n", N, err);
+		abort();
 	}
 
-	static uv_work_t dummy;
-	err = uv_queue_work(uv_default_loop_checked(), &dummy, [](uv_work_t*) {}, nullptr);
-	if (err) {
-		fprintf(stderr, "init_uv_threadpool: uv_queue_work failed, error %s\n", uv_err_name(err));
+	struct Work {
+		uv_work_t req = {};
+		std::shared_ptr<std::atomic<int32_t>> k = 0;
+
+		FORCEINLINE void run()
+		{
+			k->fetch_sub(1, std::memory_order_acq_rel);
+
+			// Wait until all threads are at this point
+			while (k->load(std::memory_order_acquire) > 0) {
+				cpu_yield();
+			}
+
+			set_uv_worker_pool_thread();
+		}
+	};
+
+	std::shared_ptr<std::atomic<int32_t>> k(new std::atomic<int32_t>(static_cast<int32_t>(N)));
+
+	for (uint32_t i = 0; i < N; ++i) {
+		Work* w = new Work{ {}, k };
+		w->req.data = w;
+
+		err = uv_queue_work(uv_default_loop_checked(), &w->req,
+			[](uv_work_t* req) {
+				reinterpret_cast<Work*>(req->data)->run();
+			},
+			[](uv_work_t* req, int) {
+				delete reinterpret_cast<Work*>(req->data);
+			});
+
+		if (err) {
+			fprintf(stderr, "init_uv_threadpool: uv_queue_work failed, error %s\n", uv_err_name(err));
+			abort();
+		}
+	}
+
+	// Bail out after 1 second
+	const uint64_t start_time = microseconds_since_epoch();
+
+	while (k->load(std::memory_order_acquire) > 0) {
+		if (microseconds_since_epoch() - start_time >= 1'000'000) {
+			fprintf(stderr, "init_uv_threadpool: timed out waiting for %u worker threads\n", N);
+			abort();
+		}
+		cpu_yield();
 	}
 }
 

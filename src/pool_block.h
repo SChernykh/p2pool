@@ -202,7 +202,7 @@ struct PoolBlock
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
-	[[nodiscard]] int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, uv_loop_t* loop, bool compact, bool allow_pruned);
+	[[nodiscard]] int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, bool compact, bool allow_pruned);
 	void reset_offchain_data();
 
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane);

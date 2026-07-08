@@ -66,6 +66,7 @@ set(SOURCES
 	src/util_tests.cpp
 	src/wallet_tests.cpp
 	src/i2p_tests.cpp
+	src/thread_pool_tests.cpp
 	../external/src/cryptonote/crypto-ops-data.c
 	../external/src/cryptonote/crypto-ops.c
 	../external/src/cryptonote/fcmp_pp_crypto.cpp
@@ -88,6 +89,7 @@ set(SOURCES
 	../src/side_chain.cpp
 	../src/stratum_server.cpp
 	../src/tcp_server.cpp
+	../src/thread_pool.cpp
 	../src/util.cpp
 	../src/wallet.cpp
 	../src/i2p.cpp

@@ -20,6 +20,7 @@
 #include "p2pool.h"
 #include "stratum_server.h"
 #include "p2p_server.h"
+#include "thread_pool.h"
 #include <curl/curl.h>
 
 #ifdef WITH_GRPC
@@ -329,11 +330,11 @@ int main(int argc, char* argv[])
 
 	int result;
 	{
-
 	// Create the default libuv loop and initialize libuv here
 	// It will call the important stuff like WSAStartup and many other things
 	// Some P2Pool code will not work without libuv initialized, so the code above this line must be minimal
 	p2pool::init_uv();
+	p2pool::thread_pool_init();
 
 	const p2pool::Params params = params_file.empty() ? get_params(argc, argv) : get_params(params_file);
 
@@ -388,6 +389,7 @@ int main(int argc, char* argv[])
 
 	curl_global_cleanup();
 
+	p2pool::thread_pool_destroy();
 	p2pool::destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES
@@ -403,7 +405,6 @@ int main(int argc, char* argv[])
 #if ((UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 38)))
 	uv_library_shutdown();
 #endif
-
 	}
 
 	if (!memory_tracking_stop()) {

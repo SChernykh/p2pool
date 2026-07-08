@@ -190,6 +190,19 @@ template<> struct Stream::Entry<std::string_view>
 	static FORCEINLINE void put(const std::string_view& data, Stream* wrapper) { wrapper->writeBuf(data.data(), data.size()); }
 };
 
+template<> struct Stream::Entry<bool>
+{
+	static FORCEINLINE void put(bool data, Stream* wrapper)
+	{
+		if (data) {
+			*wrapper << "true";
+		}
+		else {
+			*wrapper << "false";
+		}
+	}
+};
+
 #define INT_ENTRY(x) \
 template<> struct Stream::Entry<x> { static FORCEINLINE void put(x data, Stream* wrapper) { wrapper->writeInt(data); } };
 

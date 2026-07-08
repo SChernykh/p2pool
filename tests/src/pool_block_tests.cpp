@@ -63,7 +63,7 @@ TEST(pool_block, deserialize)
 	f.read(reinterpret_cast<char*>(buf.data()), buf.size());
 	ASSERT_EQ(f.good(), true);
 
-	ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain, nullptr, false, false), 0);
+	ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain, false, false), 0);
 
 	{
 		const PoolBlock::full_id id = b.get_full_id();
@@ -140,6 +140,7 @@ TEST(pool_block, deserialize)
 
 TEST(pool_block, verify)
 {
+	thread_pool_init();
 	init_crypto_cache();
 	{
 	struct STest
@@ -184,7 +185,7 @@ TEST(pool_block, verify)
 			ASSERT_TRUE(p + n <= e);
 
 			PoolBlock* b = new PoolBlock();
-			ASSERT_EQ(b->deserialize(p, n, sidechain, nullptr, false, false), 0);
+			ASSERT_EQ(b->deserialize(p, n, sidechain, false, false), 0);
 			p += n;
 
 			blocks.push_back(b);
@@ -291,7 +292,7 @@ TEST(pool_block, verify)
 
 		{
 			PoolBlock block2;
-			ASSERT_EQ(block2.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), sidechain, nullptr, false, true), 0);
+			ASSERT_EQ(block2.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), sidechain, false, true), 0);
 
 			auto v1 = block2.serialize_mainchain_data();
 			v2 = block2.serialize_sidechain_data();
@@ -299,12 +300,12 @@ TEST(pool_block, verify)
 
 			ASSERT_EQ(v1, tip_full_blob);
 
-			ASSERT_NE(block2.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), sidechain, nullptr, false, false), 0);
+			ASSERT_NE(block2.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), sidechain, false, false), 0);
 		}
 
 		if (!broadcast.compact_blob.empty()) {
 			PoolBlock block3;
-			ASSERT_EQ(block3.deserialize(broadcast.compact_blob.data(), broadcast.compact_blob.size(), sidechain, nullptr, true, true), 0);
+			ASSERT_EQ(block3.deserialize(broadcast.compact_blob.data(), broadcast.compact_blob.size(), sidechain, true, true), 0);
 
 			auto v1 = block3.serialize_mainchain_data();
 			v2 = block3.serialize_sidechain_data();
@@ -315,7 +316,7 @@ TEST(pool_block, verify)
 
 		if (!broadcast.compact_unpruned_blob.empty()) {
 			PoolBlock block4;
-			ASSERT_EQ(block4.deserialize(broadcast.compact_unpruned_blob.data(), broadcast.compact_unpruned_blob.size(), sidechain, nullptr, true, false), 0);
+			ASSERT_EQ(block4.deserialize(broadcast.compact_unpruned_blob.data(), broadcast.compact_unpruned_blob.size(), sidechain, true, false), 0);
 
 			auto v1 = block4.serialize_mainchain_data();
 			v2 = block4.serialize_sidechain_data();
@@ -325,6 +326,7 @@ TEST(pool_block, verify)
 		}
 	}
 	}
+	thread_pool_destroy();
 	destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES

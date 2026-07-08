@@ -63,7 +63,7 @@ public:
 	[[nodiscard]] difficulty_type get_cached_next_difficulty(const hash& id) const;
 
 	[[nodiscard]] const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
-	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, uv_loop_t* loop) const;
+	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob) const;
 
 	void print_status(bool obtain_sidechain_lock = true) const;
 	[[nodiscard]] double get_reward_share(const Wallet& w) const;
