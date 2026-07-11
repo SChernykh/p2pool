@@ -221,8 +221,8 @@ void RandomX_Hasher::set_seed(const hash& seed)
 	LOGINFO(1, log::LightCyan() << "cache updated");
 
 	if (m_dataset) {
-		const uint32_t numItems = randomx_dataset_item_count();
-		uint32_t numThreads = std::thread::hardware_concurrency();
+		const uint64_t numItems = randomx_dataset_item_count();
+		uint64_t numThreads = std::thread::hardware_concurrency();
 
 		// Use only half the cores to let other threads do their stuff in the meantime
 		if (numThreads > 1) {
@@ -242,9 +242,9 @@ void RandomX_Hasher::set_seed(const hash& seed)
 			std::vector<std::thread> threads;
 			threads.reserve(numThreads);
 
-			for (uint32_t i = 0; i < numThreads; ++i) {
-				const uint32_t a = (numItems * i) / numThreads;
-				const uint32_t b = (numItems * (i + 1)) / numThreads;
+			for (uint64_t i = 0; i < numThreads; ++i) {
+				const uint64_t a = (numItems * i) / numThreads;
+				const uint64_t b = (numItems * (i + 1)) / numThreads;
 
 				threads.emplace_back([this, a, b]()
 					{
