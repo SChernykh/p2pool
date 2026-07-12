@@ -251,7 +251,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 						// Background doesn't work very well with xmrig mining on all cores
 						//make_thread_background();
 						set_thread_name("Dataset init");
-						randomx_init_dataset(m_dataset, m_cache[m_index], a, b - a);
+						randomx_init_dataset(m_dataset, m_cache[m_index], static_cast<uint32_t>(a), static_cast<uint32_t>(b - a));
 					});
 			}
 
@@ -260,7 +260,7 @@ void RandomX_Hasher::set_seed(const hash& seed)
 			}
 		}
 		else {
-			randomx_init_dataset(m_dataset, m_cache[m_index], 0, numItems);
+			randomx_init_dataset(m_dataset, m_cache[m_index], 0, static_cast<uint32_t>(numItems));
 		}
 
 		for (size_t i = 0; i < VM_LANE_COUNT; ++i) {
