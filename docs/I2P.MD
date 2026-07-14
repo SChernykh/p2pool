@@ -39,6 +39,29 @@ curl -s http://127.0.0.1:7070/?page=i2p_tunnels | grep -Eo "[a-zA-Z0-9./?=_%:-]*
 
 The resulting `.b32.i2p` address should then be used for the `--i2p-address` command-line parameter.
 
+## Setting up I2P tunnels for P2Pool (I2P Java on Linux)
+
+Follow [these instructions](https://i2p.net/en/download) to install I2P Java on your system, then start the router:
+```bash
+sudo systemctl start i2p.service
+```
+
+Alternatively, if you downloaded a binary:
+```bash
+./i2p/i2prouter start
+```
+
+Unlike in i2pd, the SOCKS proxy tunnel is not enabled by default. Open the tunnel manager at `http://127.0.0.1:7657/i2ptunnel/`, click on `Tunnel Wizard`, select a client tunnel, select type `SOCKS 4/4a/5`, and set the port to `4447` to match the example above.
+
+You will need to add a server tunnel to allow inbound connections from peers, using port number 37889 for main, 37888 for mini, andÂ 37890 for nano. From the same tunnel manager, click on `Tunnel Wizard` again, choose a server tunnel of type `Standard`, set the target host to `127.0.0.1`, and the target port to the number above. Then, save and start the tunnel.
+
+This will create a hidden service key under your I2P config directory, usually `~/.i2p/` for a user install or `/var/lib/i2p/i2p-config/` for a system service install; you may want to back this up.
+Please note that you **must** use the port number shown above in order for other peers to be able to find you.
+
+Get the hostname of your hidden service from the tunnel list once the tunnel has started, under "I2P Hidden Services" (this can take a couple of minutes on first startup).
+
+The resulting `.b32.i2p` address should then be used for the `--i2p-address` command-line parameter.
+
 ## Command line example
 ```bash
 ./p2pool --host MONERO_NODE_IP --wallet YOUR_WALLET --socks5 127.0.0.1:4447 --socks5-proxy-type i2p --no-dns --no-upnp --i2p-address YOUR_I2P_ADDRESS
