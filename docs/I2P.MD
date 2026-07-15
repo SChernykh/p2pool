@@ -41,7 +41,7 @@ The resulting `.b32.i2p` address should then be used for the `--i2p-address` com
 
 ## Setting up I2P tunnels for P2Pool (I2P Java on Linux)
 
-Follow [these instructions](https://i2p.net/en/download) to install I2P Java on your system, then start the router:
+Follow [these instructions](https://i2p.net/en/downloads) to install I2P Java on your system, then start the router:
 ```bash
 sudo systemctl start i2p.service
 ```
