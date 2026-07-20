@@ -777,17 +777,17 @@ bool is_private_address(const std::string& host)
 			((a & 0xfe) == 0xfc) ||                // fc00::/7 (ULA - Unique Local Address)
 			((a == 0xfe) && ((b & 0xc0) == 0x80)); // fe80::/10 (link-local)
 	}
-	else {
-		const uint8_t a = addr.data[12];
-		const uint8_t b = addr.data[13];
 
-		return 
-			(a == 10) ||                              // 10.0.0.0/8 (Private/LAN)
-			((a == 172) && (b >= 16) && (b <= 31)) || // 172.16.0.0/12 (Private/LAN)
-			((a == 192) && (b == 168)) ||             // 192.168.0.0/16 (Private/LAN)
-			((a == 169) && (b == 254)) ||             // 169.254.0.0/16 (link-local)
-			(a == 127);                               // 127.0.0.0/8 (loopback)
-	}
+	// IPv4
+	const uint8_t a = addr.data[12];
+	const uint8_t b = addr.data[13];
+
+	return 
+		(a == 10) ||                              // 10.0.0.0/8 (Private/LAN)
+		((a == 172) && (b >= 16) && (b <= 31)) || // 172.16.0.0/12 (Private/LAN)
+		((a == 192) && (b == 168)) ||             // 192.168.0.0/16 (Private/LAN)
+		((a == 169) && (b == 254)) ||             // 169.254.0.0/16 (link-local)
+		(a == 127);                               // 127.0.0.0/8 (loopback)
 }
 
 UV_LoopUserData* GetLoopUserData(uv_loop_t* loop, bool create)
