@@ -32,8 +32,8 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	, m_minerData()
 	, m_chainmainData()
 {
-	if (!m_proxy.empty() && is_localhost(address)) {
-		LOGINFO(5, "not using proxy to connect to localhost address " << log::Gray() << address);
+	if (!m_proxy.empty() && is_private_address(address)) {
+		LOGINFO(5, "not using proxy to connect to " << log::Gray() << address);
 		m_proxy.clear();
 	}
 

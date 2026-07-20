@@ -247,8 +247,8 @@ CurlContext::CurlContext(const std::string& address, int port, const std::string
 	}
 
 	if (!proxy.empty()) {
-		if (is_localhost(address)) {
-			LOGINFO(5, "not using proxy to connect to localhost address " << log::Gray() << address);
+		if (is_private_address(address)) {
+			LOGINFO(5, "not using proxy to connect to " << log::Gray() << address);
 		}
 		else {
 			curl_easy_setopt_checked(m_handle, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
