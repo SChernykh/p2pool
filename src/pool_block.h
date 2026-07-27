@@ -19,6 +19,7 @@
 
 #include "uv_util.h"
 #include "wallet.h"
+#include "coin_config.h"
 
 #include <map>
 
@@ -53,8 +54,11 @@ struct MinerShare;
 // 128 KB minus BLOCK_RESPONSE P2P protocol header (5 bytes)
 static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
 
-// 0.6 XMR
-static constexpr uint64_t BASE_BLOCK_REWARD = 600000000000ULL;
+// Approximate base block reward, used only as a fallback/estimate; the
+// authoritative reward always comes from the daemon's getblocktemplate.
+// Monero hard-coded 0.6 XMR here; for kryptokrona we derive it from the
+// coin's emission (see coin_config.h).
+static constexpr uint64_t BASE_BLOCK_REWARD = coin::APPROX_BASE_BLOCK_REWARD;
 
 // Because these values are stored in a 56 bit field
 static constexpr uint64_t MAX_OUTPUT_VALUE = (1ULL << 56) - 1;

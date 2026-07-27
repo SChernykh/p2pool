@@ -195,16 +195,10 @@ p2pool::p2pool(const Params& params)
 	// Update it for non-standard sidechain configs (including P2Pool-nano)
 	BLOCK_HEADERS_REQUIRED = std::max(BLOCK_HEADERS_REQUIRED, m_sideChain->monero_headers_required());
 
-#ifdef WITH_RANDOMX
-	if (m_params.m_disableRandomX) {
-		m_hasher = new RandomX_Hasher_RPC(this);
-	}
-	else {
-		m_hasher = new RandomX_Hasher(this);
-	}
-#else
-	m_hasher = new RandomX_Hasher_RPC(this);
-#endif
+	// Kryptokrona uses CryptoNight-Turtle-Lite v2 (not Monero's RandomX). The
+	// hasher is a stateless local CN-Turtle implementation; there is no seed
+	// epoch, dataset, or optional RPC (calc_pow) fallback to configure.
+	m_hasher = new CnTurtle_Hasher(this);
 
 	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
 
@@ -1597,15 +1591,14 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 	const auto& result = doc["result"];
 
+	// Kryptokrona's get_info exposes `synced` and `testnet` (bool) instead of
+	// Monero's busy_syncing/synchronized/mainnet/testnet/stagenet quartet.
 	struct {
-		bool busy_syncing, synchronized, mainnet, testnet, stagenet;
+		bool synced, testnet;
 	} info;
 
-	if (!PARSE(result, info, busy_syncing) ||
-		!PARSE(result, info, synchronized) ||
-		!PARSE(result, info, mainnet) ||
-		!PARSE(result, info, testnet) ||
-		!PARSE(result, info, stagenet)) {
+	if (!PARSE(result, info, synced) ||
+		!PARSE(result, info, testnet)) {
 		LOGWARN(1, "get_info RPC response is invalid, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		switch_host();
@@ -1613,28 +1606,27 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 		return;
 	}
 
-	if (info.busy_syncing || !info.synchronized) {
-		LOGINFO(1, "monerod is " << (info.busy_syncing ? "busy syncing" : "not synchronized") << ", trying again in 1 second");
+	if (!info.synced) {
+		LOGINFO(1, "kryptokronad is not synchronized, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		switch_host();
 		get_info();
 		return;
 	}
 
-	NetworkType monero_network = NetworkType::Invalid;
-
-	if (info.mainnet)  monero_network = NetworkType::Mainnet;
-	if (info.testnet)  monero_network = NetworkType::Testnet;
-	if (info.stagenet) monero_network = NetworkType::Stagenet;
+	// Kryptokrona has no stagenet; mainnet is simply "not testnet".
+	const NetworkType node_network = info.testnet ? NetworkType::Testnet : NetworkType::Mainnet;
 
 	const NetworkType sidechain_network = m_sideChain->network_type();
 
-	if (monero_network != sidechain_network) {
-		LOGERR(1, "monerod is on " << monero_network << ", but you're mining to a " << sidechain_network << " sidechain");
+	if (node_network != sidechain_network) {
+		LOGERR(1, "kryptokronad is on " << node_network << ", but you're mining to a " << sidechain_network << " sidechain");
 		PANIC_STOP();
 	}
 
-	get_version();
+	// Kryptokrona has no get_version JSON-RPC (and no Monero RPC-version gate to
+	// enforce), so go straight to fetching miner data.
+	get_miner_data();
 }
 
 void p2pool::get_version()

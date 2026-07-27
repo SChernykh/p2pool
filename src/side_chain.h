@@ -19,13 +19,17 @@
 
 #include "uv_util.h"
 #include "pool_block.h"
+#include "coin_config.h"
 #include <map>
 #include <deque>
 #include <thread>
 
 namespace p2pool {
 
-static constexpr uint64_t MONERO_BLOCK_TIME = 120;
+// Main-chain (kryptokrona daemon) target block time. Kept under the historical
+// name to avoid churning the ~10 call sites that use it; value comes from the
+// centralized coin config (90s for XKR vs 120s for Monero).
+static constexpr uint64_t MONERO_BLOCK_TIME = coin::MAIN_CHAIN_BLOCK_TIME;
 
 class p2pool;
 class P2PServer;

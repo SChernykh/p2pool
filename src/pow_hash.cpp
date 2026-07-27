@@ -29,9 +29,29 @@
 #include "rapidjson_wrapper.h"
 #include <thread>
 
+extern "C" {
+#include "xkr_pow.h"
+}
+
 LOG_CATEGORY(RandomX_Hasher)
 
 namespace p2pool {
+
+CnTurtle_Hasher::CnTurtle_Hasher(p2pool* pool) : m_pool(pool)
+{
+	LOGINFO(1, "using CryptoNight-Turtle-Lite v2 (Kryptokrona) PoW");
+}
+
+CnTurtle_Hasher::~CnTurtle_Hasher()
+{
+}
+
+bool CnTurtle_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& /*seed*/, hash& result, bool /*force_light_mode*/, size_t /*lane*/)
+{
+	// CN-Turtle is stateless: hash the block hashing blob directly.
+	xkr_cn_turtle_pow(data, size, result.h);
+	return true;
+}
 
 #ifdef WITH_RANDOMX
 RandomX_Hasher::RandomX_Hasher(p2pool* pool)

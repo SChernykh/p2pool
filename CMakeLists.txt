@@ -13,7 +13,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(STATIC_BINARY "Build static binary" OFF)
 option(STATIC_LIBS "Link libuv and libzmq statically" OFF)
-option(WITH_RANDOMX "Include the RandomX library in the build. If this is turned off, p2pool will rely on monerod for verifying RandomX hashes" ON)
+# Kryptokrona (XKR) uses CryptoNight-Turtle-Lite v2, not RandomX. RandomX is
+# disabled by default for the XKR port (the RandomX submodule is not required).
+option(WITH_RANDOMX "Include Monero's RandomX library. Not used by the Kryptokrona port; kept off." OFF)
 option(WITH_LTO "Use link-time compiler optimization (if linking fails for you, run cmake with -DWITH_LTO=OFF)" ON)
 option(WITH_UPNP "Include UPnP support. If this is turned off, p2pool will not be able to configure port forwarding on UPnP-enabled routers." ON)
 option(WITH_GRPC "Include gRPC support. If this is turned off, p2pool will not be able to merge mine with Tari." ON)
@@ -55,6 +57,10 @@ if (WITH_RANDOMX)
 	add_subdirectory(external/src/RandomX)
 	set(LIBS ${LIBS} randomx)
 endif()
+
+# Kryptokrona (XKR) uses CryptoNight-Turtle-Lite v2 for PoW instead of RandomX.
+add_subdirectory(external/src/cryptonight)
+set(LIBS ${LIBS} cryptonight)
 
 if (WITH_UPNP)
 	add_definitions(-DWITH_UPNP)
@@ -260,6 +266,9 @@ include_directories(src)
 include_directories(external/src)
 include_directories(external/src/crypto)
 include_directories(external/src/cryptonote)
+# NB: external/src/cryptonight is intentionally NOT added here. Its xkr_pow.h is
+# reached via the cryptonight target's PUBLIC include dir (see LIBS), so its
+# internal headers (e.g. keccak.h) don't shadow p2pool's own src/keccak.h.
 include_directories(${UV_INCLUDE_DIR})
 include_directories(external/src/cppzmq)
 include_directories(${ZMQ_INCLUDE_DIR})
