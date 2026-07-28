@@ -41,6 +41,12 @@ else()
 	set(LIBS ${LIBS} randomx)
 endif()
 
+# pow_hash.cpp always uses Kryptokrona's CryptoNight-Turtle PoW (xkr_pow.h), so
+# the test build needs the cryptonight lib linked and its PUBLIC include dir
+# propagated, exactly like the main build does via LIBS.
+add_subdirectory(../external/src/cryptonight cryptonight)
+set(LIBS ${LIBS} cryptonight)
+
 add_definitions(-DWITH_RANDOMX)
 add_definitions(-DWITH_MERGE_MINING_DONATION)
 
