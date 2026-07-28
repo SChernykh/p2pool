@@ -117,9 +117,6 @@ public:
 	~CnTurtle_Hasher() override;
 
 	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode, size_t lane) override;
-
-private:
-	p2pool* m_pool;
 };
 
 class RandomX_Hasher_RPC : public RandomX_Hasher_Base

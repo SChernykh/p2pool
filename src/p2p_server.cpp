@@ -1636,8 +1636,10 @@ void P2PServer::check_host()
 		return;
 	}
 
+	// Kryptokrona has no ZMQ; reconnect_to_host() polls the daemon for fresh
+	// miner data. Do this every tick so new main-chain blocks are picked up.
 	if (!m_pool->zmq_running()) {
-		LOGERR(1, "ZMQ is not running, restarting it");
+		LOGINFO(6, "polling daemon for new miner data");
 		m_pool->reconnect_to_host();
 		return;
 	}

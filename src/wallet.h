@@ -24,10 +24,13 @@ namespace p2pool {
 class Wallet
 {
 public:
-	// public keys: 64 bytes -> 88 characters in base58
-	// prefix (1 byte) + checksum (4 bytes) -> 7 characters in base58
-	// 95 characters in total
-	static constexpr int ADDRESS_LENGTH = 95;
+	// Kryptokrona addresses use a multi-byte VARINT base58 prefix, unlike
+	// Monero's single byte. The default SEKR prefix (2239254) is a 4-byte
+	// varint => 4 + 64 keys + 4 checksum = 72 bytes => 99 base58 chars (exactly
+	// 9 full CryptoNote blocks). The Xkr prefix (45239) is a 3-byte varint =>
+	// 98 chars. encode() always emits the 99-char SEKR form; decode() accepts
+	// both lengths.
+	static constexpr int ADDRESS_LENGTH = 99;
 
 	explicit Wallet(const char* address);
 

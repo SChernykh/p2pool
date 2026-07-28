@@ -37,7 +37,7 @@ LOG_CATEGORY(RandomX_Hasher)
 
 namespace p2pool {
 
-CnTurtle_Hasher::CnTurtle_Hasher(p2pool* pool) : m_pool(pool)
+CnTurtle_Hasher::CnTurtle_Hasher(p2pool* /*pool*/)
 {
 	LOGINFO(1, "using CryptoNight-Turtle-Lite v2 (Kryptokrona) PoW");
 }

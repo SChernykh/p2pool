@@ -528,7 +528,7 @@ void p2pool::get_missing_heights()
 
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << h << "}}" << '\0';
 
 	const Params::Host& host = current_host();
 
@@ -951,7 +951,7 @@ void p2pool::submit_aux_block() const
 		root_hash merge_mining_root;
 		const BlockTemplate* block_tpl = nullptr;
 
-		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
+		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, nonce, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 		uint8_t hashing_blob[HASHING_BLOB_MAX_SIZE] = {};
 		uint64_t height = 0;
@@ -1079,7 +1079,7 @@ void p2pool::submit_block() const
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.nonce, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
 			<< ", template id = " << submit_data.template_id
@@ -1100,7 +1100,7 @@ void p2pool::submit_block() const
 	std::string request;
 	request.reserve(submit_data.blob.size() * 2 + 128);
 
-	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"";
+	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submitblock\",\"params\":[\"";
 
 	const uint32_t template_id = submit_data.template_id;
 	const uint32_t nonce = submit_data.nonce;
@@ -1259,7 +1259,7 @@ void p2pool::download_block_headers1(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, prev_seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
@@ -1292,7 +1292,7 @@ void p2pool::download_block_headers2(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
@@ -1619,9 +1619,12 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 	const NetworkType sidechain_network = m_sideChain->network_type();
 
+	// Kryptokrona addresses do not encode a network, so the sidechain network is
+	// derived from the mining wallet (always Mainnet on decode). Mining a
+	// mainnet-typed sidechain against a testnet daemon is fine for local
+	// testing, so this is a warning rather than a hard stop.
 	if (node_network != sidechain_network) {
-		LOGERR(1, "kryptokronad is on " << node_network << ", but you're mining to a " << sidechain_network << " sidechain");
-		PANIC_STOP();
+		LOGWARN(1, "kryptokronad is on " << node_network << ", but the sidechain is typed " << sidechain_network << " (ok for local testing)");
 	}
 
 	// Kryptokrona has no get_version JSON-RPC (and no Monero RPC-version gate to
@@ -1776,6 +1779,11 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 		return;
 	}
 
+	// Kryptokrona coinbase unlock window (20 mainnet / 1 testnet). Optional for
+	// backward compat; defaults to 20. Used when building the coinbase.
+	parseValue(result, "unlock_window", minerData.unlock_window);
+	PoolBlock::s_coinbaseUnlockWindow = minerData.unlock_window;
+
 	auto it = result.FindMember("tx_backlog");
 
 	if ((it != result.MemberEnd()) && it->value.IsArray()) {
@@ -1823,7 +1831,11 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 
 	const auto& v = it2->value;
 
-	if (!parseValue(v, "difficulty", c.difficulty.lo) || !parseValue(v, "difficulty_top64", c.difficulty.hi)) {
+	// Kryptokrona difficulty is 64-bit (a plain number); there is no Monero-style
+	// difficulty_top64 high word, so it defaults to 0.
+	c.difficulty.hi = 0;
+	parseValue(v, "difficulty_top64", c.difficulty.hi);
+	if (!parseValue(v, "difficulty", c.difficulty.lo)) {
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse difficulty");
 		return false;
 	}
@@ -1877,7 +1889,9 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 
 		ChainMain c;
 
-		if (!parseValue(*i, "difficulty", c.difficulty.lo) || !parseValue(*i, "difficulty_top64", c.difficulty.hi)) {
+		c.difficulty.hi = 0;
+		parseValue(*i, "difficulty_top64", c.difficulty.hi);
+		if (!parseValue(*i, "difficulty", c.difficulty.lo)) {
 			continue;
 		}
 
@@ -2337,25 +2351,12 @@ void p2pool::reconnect_to_host()
 	}
 
 #ifndef P2POOL_UNIT_TESTS
-	const Params::Host& new_host = switch_host();
-
-	WriteLock lock(m_ZMQReaderLock);
-
-	delete m_ZMQReader;
-	m_ZMQReader = nullptr;
-
-	try {
-		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params.m_socks5Proxy, this);
-		m_zmqLastActive = seconds_since_epoch();
-		m_ZMQReader = new_reader;
-	}
-	catch (const std::exception& e) {
-		LOGERR(1, "Couldn't restart ZMQ reader: exception " << e.what());
-	}
-
-	if (m_ZMQReader) {
-		get_miner_data(false);
-	}
+	// Kryptokrona has no ZMQ pub interface, so instead of (re)starting a ZMQ
+	// reader we poll the daemon for fresh miner data. get_miner_data() is
+	// deduplicated (by response hash) and self-guarded against overlap, and its
+	// handler refreshes m_zmqLastActive, so this doubles as the "node is alive"
+	// signal that ZMQ used to provide.
+	get_miner_data(false);
 #endif
 }
 

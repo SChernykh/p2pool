@@ -53,7 +53,7 @@ public:
 	[[nodiscard]] std::vector<AuxChainData> get_aux_chains(const uint32_t template_id) const;
 	[[nodiscard]] bool get_aux_proof(const uint32_t template_id, uint32_t extra_nonce, const hash& h, std::vector<hash>& proof, uint32_t& path) const;
 
-	[[nodiscard]] std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const;
+	[[nodiscard]] std::vector<uint8_t> get_block_template_blob(uint32_t template_id, uint32_t nonce, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const;
 
 	[[nodiscard]] FORCEINLINE uint64_t get_height() const { return m_height; }
 	[[nodiscard]] FORCEINLINE difficulty_type get_difficulty() const { return m_difficulty; }
@@ -126,6 +126,13 @@ private:
 	std::vector<uint8_t> m_sidechainHashBlob;
 	std::array<uint64_t, 25> m_sidechainHashKeccakState;
 	size_t m_sidechainHashInputLength;
+
+	// XKR: byte offsets (into m_sidechainHashBlob) of the four regions zeroed
+	// when computing the stable sidechain id. See serialize_mainchain_data.
+	int m_sidechainNonceOffset;
+	int m_sidechainAuxHashOffset;
+	int m_sidechainExtraNonceOffset;
+	int m_sidechainMmRootOffset;
 
 	std::vector<uint8_t> m_blockHeader;
 	std::vector<uint8_t> m_minerTxExtra;

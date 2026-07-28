@@ -82,6 +82,22 @@ static constexpr uint64_t MAX_EXTRA_SIZE_POOL  = 2200;
 // Reward-window / difficulty (informational; consensus lives on the daemon).
 static constexpr size_t   REWARD_BLOCKS_WINDOW = 100;
 
+// Coinbase / block serialization (CryptoNote, differs from Monero):
+//   - coinbase transaction version is 1 (Monero uses 2)
+//   - outputs use TXOUT_TO_KEY tag 0x02 with NO view tag (Monero: 0x03 tagged
+//     key + 1 view-tag byte)
+//   - there is NO trailing RingCT type byte (Monero appends 0x00)
+static constexpr uint8_t  COINBASE_TX_VERSION = 1;
+static constexpr uint8_t  TXOUT_TO_KEY        = 2;
+// Coinbase unlock window: coinbase.unlock_time = height + this. Kryptokrona uses
+// CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW = 20 on mainnet, 1 on testnet. Selected
+// at runtime by SideChain::network_type() since p2pool has no compile switch.
+static constexpr uint64_t MINED_MONEY_UNLOCK_WINDOW_MAINNET = 20;
+static constexpr uint64_t MINED_MONEY_UNLOCK_WINDOW_TESTNET = 1;
+// Merge-mining tag depth for the (self-referential) parent block. Always 0:
+// there is a single aux chain (the block itself), no branch.
+static constexpr uint8_t  PARENT_MM_TAG_DEPTH = 0;
+
 // Default kryptokrona daemon RPC port that p2pool talks to via JSON-RPC.
 // Kryptokrona: mainnet RPC 11898, testnet RPC 11899 (P2P is 11897 / 11898).
 #ifdef USE_TESTNET

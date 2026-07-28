@@ -112,7 +112,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 
 	set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-strict-aliasing")
 
-	if (ARMv8)
+	# The Cortex-A53 erratum workaround is a GCC/Linux-ARM flag; AppleClang on
+	# Apple Silicon rejects it.
+	if (ARMv8 AND NOT APPLE)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -mfix-cortex-a53-835769")
 	endif()
 
