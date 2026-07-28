@@ -341,7 +341,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 			s << log::Hex(rpc_id) << "\",\"job\":{\"blob\":\"";
 			s << log::hex_buf(hashing_blob, blob_size) << "\",\"job_id\":\"";
 			s << log::Hex(job_id) << "\",\"target\":\"";
-			s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
+			s << target_hex << "\",\"algo\":\"cn/turtle\",\"height\":";
 			s << height << ",\"seed_hash\":\"";
 			s << seed_hash << "\"},\"extensions\":[\"algo\"],\"status\":\"OK\"}}\n";
 			return s.m_pos;
@@ -941,7 +941,7 @@ void StratumServer::on_blobs_ready()
 				s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
 				s << log::hex_buf(hashing_blob, blobSize) << "\",\"job_id\":\"";
 				s << log::Hex(job_id) << "\",\"target\":\"";
-				s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
+				s << target_hex << "\",\"algo\":\"cn/turtle\",\"height\":";
 				s << height << ",\"seed_hash\":\"";
 				s << seedHash << "\"}}\n";
 				return s.m_pos;

@@ -283,49 +283,49 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 	auto miner_tx = value->FindMember("miner_tx");
 
 	if ((miner_tx == value->MemberEnd()) || !miner_tx->value.IsObject()) {
-		LOGWARN(3, "construct_monero_block_blob: miner_tx not found or is not an object");
+		LOGWARN(3, "construct_kryptokrona_block_blob: miner_tx not found or is not an object");
 		return empty_blob;
 	}
 
 	uint8_t version;
 	if (!parseValue(miner_tx->value, "version", version)) {
-		LOGWARN(3, "construct_monero_block_blob: version not found");
+		LOGWARN(3, "construct_kryptokrona_block_blob: version not found");
 		return empty_blob;
 	}
 
 	uint64_t unlock_height;
 	if (!parseValue(miner_tx->value, "unlock_time", unlock_height)) {
-		LOGWARN(3, "construct_monero_block_blob: unlock_time not found");
+		LOGWARN(3, "construct_kryptokrona_block_blob: unlock_time not found");
 		return empty_blob;
 	}
 
 	if (unlock_height < MINER_REWARD_UNLOCK_TIME) {
-		LOGWARN(3, "construct_monero_block_blob: invalid unlock_height " << unlock_height);
+		LOGWARN(3, "construct_kryptokrona_block_blob: invalid unlock_height " << unlock_height);
 		return empty_blob;
 	}
 
 	std::string extra;
 	if (!parseValue(miner_tx->value, "extra", extra)) {
-		LOGWARN(3, "construct_monero_block_blob: extra not found");
+		LOGWARN(3, "construct_kryptokrona_block_blob: extra not found");
 		return empty_blob;
 	}
 
 	auto outputs = miner_tx->value.FindMember("outputs");
 
 	if ((outputs == miner_tx->value.MemberEnd()) || !outputs->value.IsArray()) {
-		LOGWARN(3, "construct_monero_block_blob: outputs not found or is not an array");
+		LOGWARN(3, "construct_kryptokrona_block_blob: outputs not found or is not an array");
 		return empty_blob;
 	}
 
 	auto tx_hashes = value->FindMember("tx_hashes");
 
 	if ((tx_hashes == value->MemberEnd()) || !tx_hashes->value.IsArray()) {
-		LOGWARN(3, "construct_monero_block_blob: tx_hashes not found or is not an array");
+		LOGWARN(3, "construct_kryptokrona_block_blob: tx_hashes not found or is not an array");
 		return empty_blob;
 	}
 
 	if (tx_hashes->value.GetArray().Size() > 65536) {
-		LOGWARN(3, "construct_monero_block_blob: tx_hashes is too big (" << tx_hashes->value.GetArray().Size() << ')');
+		LOGWARN(3, "construct_kryptokrona_block_blob: tx_hashes is too big (" << tx_hashes->value.GetArray().Size() << ')');
 		return empty_blob;
 	}
 
@@ -339,7 +339,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	hash h;
 	if (!from_hex(prev_id.c_str(), prev_id.length(), h)) {
-		LOGWARN(3, "construct_monero_block_blob: invalid prev_id " << prev_id);
+		LOGWARN(3, "construct_kryptokrona_block_blob: invalid prev_id " << prev_id);
 		return empty_blob;
 	}
 
@@ -362,12 +362,12 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 	auto arr = outputs->value.GetArray();
 
 	if (arr.Empty()) {
-		LOGWARN(3, "construct_monero_block_blob: outputs array is empty");
+		LOGWARN(3, "construct_kryptokrona_block_blob: outputs array is empty");
 		return empty_blob;
 	}
 
 	if (arr.Size() > 10000) {
-		LOGWARN(3, "construct_monero_block_blob: outputs array is too big (" << arr.Size() << ')');
+		LOGWARN(3, "construct_kryptokrona_block_blob: outputs array is too big (" << arr.Size() << ')');
 		return empty_blob;
 	}
 
@@ -376,25 +376,25 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 	for (auto* i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
-			LOGWARN(3, "construct_monero_block_blob: amount not found or is not UInt64");
+			LOGWARN(3, "construct_kryptokrona_block_blob: amount not found or is not UInt64");
 			return empty_blob;
 		}
 
 		auto to_tagged_key = i->FindMember("to_tagged_key");
 		if ((to_tagged_key == i->MemberEnd()) || !to_tagged_key->value.IsObject()) {
-			LOGWARN(3, "construct_monero_block_blob: to_tagged_key not found or is not an object");
+			LOGWARN(3, "construct_kryptokrona_block_blob: to_tagged_key not found or is not an object");
 			return empty_blob;
 		}
 
 		auto key = to_tagged_key->value.FindMember("key");
 		if ((key == to_tagged_key->value.MemberEnd()) || !key->value.IsString()) {
-			LOGWARN(3, "construct_monero_block_blob: key not found or is not a string");
+			LOGWARN(3, "construct_kryptokrona_block_blob: key not found or is not a string");
 			return empty_blob;
 		}
 
 		auto view_tag = to_tagged_key->value.FindMember("view_tag");
 		if ((view_tag == to_tagged_key->value.MemberEnd()) || !view_tag->value.IsString()) {
-			LOGWARN(3, "construct_monero_block_blob: view_tag not found or is not a string");
+			LOGWARN(3, "construct_kryptokrona_block_blob: view_tag not found or is not a string");
 			return empty_blob;
 		}
 
@@ -402,7 +402,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 		blob.push_back(TXOUT_TO_TAGGED_KEY);
 
 		if (!from_hex(key->value.GetString(), key->value.GetStringLength(), h)) {
-			LOGWARN(3, "construct_monero_block_blob: invalid key " << key->value.GetString());
+			LOGWARN(3, "construct_kryptokrona_block_blob: invalid key " << key->value.GetString());
 			return empty_blob;
 		}
 
@@ -410,7 +410,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 		std::vector<uint8_t> t;
 		if (!from_hex(view_tag->value.GetString(), view_tag->value.GetStringLength(), t) || (t.size() != 1)) {
-			LOGWARN(3, "construct_monero_block_blob: invalid view_tag " << view_tag->value.GetString());
+			LOGWARN(3, "construct_kryptokrona_block_blob: invalid view_tag " << view_tag->value.GetString());
 			return empty_blob;
 		}
 
@@ -419,7 +419,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	std::vector<uint8_t> t;
 	if (!from_hex(extra.c_str(), extra.length(), t) || (t.size() < HASH_SIZE + 1)) {
-		LOGWARN(3, "construct_monero_block_blob: invalid extra " << extra);
+		LOGWARN(3, "construct_kryptokrona_block_blob: invalid extra " << extra);
 		return empty_blob;
 	}
 
@@ -437,12 +437,12 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	for (auto* i = arr2.begin(); i != arr2.end(); ++i) {
 		if (!i->IsString()) {
-			LOGWARN(3, "construct_monero_block_blob: tx_hash is not a string");
+			LOGWARN(3, "construct_kryptokrona_block_blob: tx_hash is not a string");
 			out_transaction_hashes.clear();
 			return empty_blob;
 		}
 		if (!from_hex(i->GetString(), i->GetStringLength(), h)) {
-			LOGWARN(3, "construct_monero_block_blob: invalid tx_hash " << i->GetString());
+			LOGWARN(3, "construct_kryptokrona_block_blob: invalid tx_hash " << i->GetString());
 			out_transaction_hashes.clear();
 			return empty_blob;
 		}

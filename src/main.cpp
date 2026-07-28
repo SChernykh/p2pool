@@ -62,9 +62,9 @@ void p2pool_usage()
 		"\nUsage:\n\n" \
 		"--wallet                  Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress\n"
 		"--subaddress              Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter\n"
-		"--host                    IP address of your Monero node, default is 127.0.0.1\n"
-		"--rpc-port                monerod RPC API port number, default is 18081\n"
-		"--zmq-port                monerod ZMQ pub port number, default is 18083 (same port as in monerod's \"--zmq-pub\" command line parameter)\n"
+		"--host                    IP address of your Kryptokrona node, default is 127.0.0.1\n"
+		"--rpc-port                kryptokronad RPC API port number, default is 18081\n"
+		"--zmq-port                kryptokronad ZMQ pub port number, default is 18083 (same port as in kryptokronad's \"--zmq-pub\" command line parameter)\n"
 		"--stratum                 Comma-separated list of IP:port for stratum server to listen on\n"
 		"--p2p                     Comma-separated list of IP:port for p2p server to listen on\n"
 		"--addpeers                Comma-separated list of IP:port of other p2pool nodes to connect to\n"
@@ -83,7 +83,7 @@ void p2pool_usage()
 		"--no-cache                Disable p2pool.cache\n"
 		"--no-color                Disable colors in console output\n"
 #ifdef WITH_RANDOMX
-		"--no-randomx              Disable internal RandomX hasher: p2pool will use RPC calls to monerod to check PoW hashes\n"
+		"--no-randomx              Disable internal RandomX hasher: p2pool will use RPC calls to kryptokronad to check PoW hashes\n"
 #endif
 		"--out-peers N             Maximum number of outgoing connections for p2p server (any value between 10 and 450)\n"
 		"--in-peers N              Maximum number of incoming connections for p2p server (any value between 10 and 450)\n"
@@ -92,7 +92,7 @@ void p2pool_usage()
 		"--mini                    Connect to p2pool-mini sidechain. Note that it will also change default p2p port from %d to %d\n"
 		"--nano                    Connect to p2pool-nano sidechain. Note that it will also change default p2p port from %d to %d\n"
 		"--no-autodiff             Disable automatic difficulty adjustment for miners connected to stratum (WARNING: incompatible with Nicehash and MRR)\n"
-		"--rpc-login               Specify username[:password] required for Monero RPC server\n"
+		"--rpc-login               Specify username[:password] required for Kryptokrona RPC server\n"
 		"--socks5                  Specify IP:port of a SOCKS5 proxy to use for outgoing connections\n"
 		"--socks5-proxy-type       The type of SOCKS5 proxy. Can be one of the following values: auto, plain, tor, i2p. Default is auto (auto-detected by the port number)\n"
 		"--no-dns                  Disable DNS queries, use only IP addresses to connect to peers (seed node DNS will be unavailable too)\n"
@@ -109,8 +109,8 @@ void p2pool_usage()
 #ifdef WITH_TLS
 		"--tls-cert file           Load TLS certificate chain from \"file\" in the PEM format\n"
 		"--tls-cert-key file       Load TLS certificate private key from \"file\" in the PEM format\n"
-		"--rpc-ssl                 Enable SSL on RPC connections to the Monero node\n"
-		"--rpc-ssl-fingerprint     base64-encoded fingerprint of the Monero node's certificate (optional, use it for certificate pinning)\n"
+		"--rpc-ssl                 Enable SSL on RPC connections to the Kryptokrona node\n"
+		"--rpc-ssl-fingerprint     base64-encoded fingerprint of the Kryptokrona node's certificate (optional, use it for certificate pinning)\n"
 #endif
 		"--stratum-proxy-protocol  Enable HAProxy PROXY protocol v2 for incoming Stratum connections (use with HAProxy send-proxy-v2)\n"
 		"--p2p-proxy-protocol      Enable HAProxy PROXY protocol v2 for incoming P2P connections (use with HAProxy send-proxy-v2)\n"

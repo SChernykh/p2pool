@@ -524,7 +524,7 @@ void p2pool::get_missing_heights()
 		m_missingHeights.pop_back();
 	}
 
-	LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
+	LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from kryptokronad again");
 
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
@@ -1697,7 +1697,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		const uint64_t version_lo = version & 65535;
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
-		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.18.0.0 or newer)");
+		LOGERR(1, "kryptokronad RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (update kryptokronad to a newer version)");
 		PANIC_STOP();
 	}
 

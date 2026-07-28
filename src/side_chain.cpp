@@ -27,6 +27,9 @@
 #include "configuration.h"
 #include "intrin_portable.h"
 #endif
+extern "C" {
+#include "xkr_pow.h"
+}
 #include "keccak.h"
 #include "p2p_server.h"
 #include "stratum_server.h"
@@ -139,45 +142,13 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		m_consensusId.assign(nano_consensus_id, nano_consensus_id + HASH_SIZE);
 	}
 	else {
-#ifdef WITH_RANDOMX
-		const randomx_flags flags = randomx_get_flags();
-		randomx_cache* cache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
-		if (!cache) {
-			LOGWARN(1, "couldn't allocate RandomX cache using large pages");
-			cache = randomx_alloc_cache(flags);
-			if (!cache) {
-				LOGERR(1, "couldn't allocate RandomX cache, aborting");
-				PANIC_STOP();
-			}
-		}
-
-		randomx_init_cache(cache, buf, s.m_pos);
-
-		// Intentionally not a power of 2
-		constexpr size_t scratchpad_size = 1009;
-
-		rx_vec_i128* scratchpad = reinterpret_cast<rx_vec_i128*>(cache->memory);
-		rx_vec_i128* scratchpad_end = scratchpad + scratchpad_size;
-		rx_vec_i128* scratchpad_ptr = scratchpad;
-		rx_vec_i128* cache_ptr = scratchpad_end;
-
-		for (uint64_t i = scratchpad_size, n = static_cast<uint64_t>(RANDOMX_ARGON_MEMORY * 1024) / sizeof(rx_vec_i128); i < n; ++i) {
-			*scratchpad_ptr = rx_xor_vec_i128(*scratchpad_ptr, *cache_ptr);
-			++cache_ptr;
-			++scratchpad_ptr;
-			if (scratchpad_ptr == scratchpad_end) {
-				scratchpad_ptr = scratchpad;
-			}
-		}
-
+		// Kryptokrona: derive a custom sidechain's consensus ID with
+		// CryptoNight-Turtle (a slow hash - Monero used RandomX here) over the
+		// serialized sidechain parameters, so it's expensive to brute-force a
+		// colliding config.
 		hash id;
-		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h);
-		randomx_release_cache(cache);
+		xkr_cn_turtle_pow(buf, s.m_pos, id.h);
 		m_consensusId.assign(id.h, id.h + HASH_SIZE);
-#else
-		LOGERR(1, "Can't calculate consensus ID without RandomX library");
-		PANIC_STOP();
-#endif
 	}
 
 	s.m_pos = 0;
@@ -378,7 +349,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 		LOGINFO(6, "get_shares: parent = " << tip->m_parent
 			<< ", height = " << tip->m_sidechainHeight
-			<< ", Monero height = " << tip->m_txinGenHeight
+			<< ", Kryptokrona height = " << tip->m_txinGenHeight
 			<< ", seed height = " << h
 			<< ", mainchain_diff = " << mainchain_diff
 		);
@@ -611,7 +582,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	// Check if it has the correct parent and difficulty to go right to monerod for checking
 	MinerData miner_data = m_pool->miner_data();
 	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(block.m_powHash)) {
-		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
+		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Kryptokrona network, submitting it");
 		m_pool->submit_block_async(block.serialize_mainchain_data());
 	}
 	else {
@@ -620,7 +591,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			LOGWARN(3, "add_external_block: couldn't get mainchain difficulty for height = " << block.m_txinGenHeight);
 		}
 		else if (diff.check_pow(block.m_powHash)) {
-			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
+			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Kryptokrona height " << block.m_txinGenHeight << ", submitting it");
 			m_pool->submit_block_async(block.serialize_mainchain_data());
 		}
 	}
@@ -1120,7 +1091,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 #endif
 
 	LOGINFO(0, "status" <<
-		"\nMonero node               = " << m_pool->current_host().m_displayName << fingerprint <<
+		"\nKryptokrona node               = " << m_pool->current_host().m_displayName << fingerprint <<
 		"\nMain chain height         = " << m_pool->block_template().get_height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : (is_nano() ? "nano" : m_consensusIdDisplayStr.c_str()))) <<
@@ -2190,7 +2161,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 
 	// Candidate chain must have been mined on top of at least half as many known Monero blocks, compared to the current chain
 	if ((candidate_chain_monero_blocks.size() * 2 < current_chain_monero_blocks.size()) || (candidate_mainchain_height < candidate_mainchain_min_height)) {
-		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Monero blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
+		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Kryptokrona blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
 		return false;
 	}
 
@@ -2236,7 +2207,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 	// Candidate's timestamps span must be between 2/3 and 4/3 of Monero's timestamps span
 	if ((candidate_span > std::numeric_limits<uint64_t>::max() / 3) || // overflow check
 		(candidate_span * 3 < candidate_monero_span * 2) || (candidate_span * 3 > candidate_monero_span * 4)) {
-		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: span " << candidate_span << " vs Monero span " << candidate_monero_span);
+		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: span " << candidate_span << " vs Kryptokrona span " << candidate_monero_span);
 		return false;
 	}
 
