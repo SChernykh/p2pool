@@ -148,6 +148,13 @@ static inline uint32_t ident32(uint32_t x)
 }
 static inline uint64_t ident64(uint64_t x) { return x; }
 
+// OpenBSD (and some other BSDs) define swap32/swap64 as function-like macros in
+// <sys/endian.h>, which would expand over the definitions below and break the
+// build. Undefine them so the portable inline versions are used everywhere;
+// they perform the same byte reversal, so behavior is identical.
+#undef swap32
+#undef swap64
+
 static inline uint32_t swap32(uint32_t x)
 {
     x = ((x & 0x00ff00ff) << 8) | ((x & 0xff00ff00) >> 8);
