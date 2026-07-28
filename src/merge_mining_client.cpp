@@ -241,7 +241,7 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 
 	// nonce_offset and blob
 
-	size_t header_size = 0;
+	int header_size = 0;
 	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&header_size);
 
 	if (header_size <= NONCE_SIZE) {
