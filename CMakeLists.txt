@@ -459,6 +459,11 @@ if (STATIC_BINARY OR STATIC_LIBS)
 		set(STATIC_LIBS randomx)
 	endif()
 
+	# Kryptokrona's CryptoNight-Turtle PoW. Must be linked (and its PUBLIC
+	# include dir propagated so pow_hash.cpp can find xkr_pow.h) in static
+	# builds too, mirroring how it is added to LIBS for shared builds.
+	set(STATIC_LIBS ${STATIC_LIBS} cryptonight)
+
 	if (WITH_UPNP)
 		set(STATIC_LIBS ${STATIC_LIBS} libminiupnpc-static)
 	endif()

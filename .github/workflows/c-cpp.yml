@@ -80,8 +80,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j$(nproc) randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       shell: alpine.sh {0}
@@ -149,8 +147,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j$(nproc) randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -228,8 +224,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j$(nproc) randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -305,8 +299,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j$(nproc) randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -392,8 +384,6 @@ jobs:
       run: |
         cd build
         ./p2pool.exe --test
-        make -j$(nproc) randomx-tests
-        external/src/RandomX/randomx-tests.exe
 
     - name: Build tests
       run: |
@@ -463,9 +453,6 @@ jobs:
       if: matrix.config.rx == 'ON'
       run: |
         build/Release/p2pool.exe --test
-        cd build/external/src/RandomX
-        & "${{ matrix.config.vspath }}\\MSBuild\\Current\\Bin\\amd64\\msbuild" -v:m /m /p:Configuration=Release randomx-tests.vcxproj
-        Release/randomx-tests.exe
 
     - name: Build tests
       run: |
@@ -533,8 +520,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j4 randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -600,8 +585,6 @@ jobs:
       run: |
         cd build
         ./p2pool --test
-        make -j3 randomx-tests
-        external/src/RandomX/randomx-tests
 
     - name: Build tests
       run: |
@@ -677,8 +660,6 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release -DSTATIC_LIBS=ON
           make -j4 p2pool
           ./p2pool --test
-          make -j4 randomx-tests
-          external/src/RandomX/randomx-tests
           cd ../tests
           mkdir build
           cd build

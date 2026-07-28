@@ -47,6 +47,9 @@
 
 #ifdef _WIN32
 #include <process.h>
+// On Windows the POSIX name getpid() is a deprecated alias that doesn't link
+// cleanly (__imp_getpid); use the ISO C _getpid() from <process.h> instead.
+#define getpid _getpid
 #else
 #include <sys/types.h>
 #include <unistd.h>
