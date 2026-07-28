@@ -9,6 +9,20 @@ cmake_minimum_required(VERSION 3.10)
 
 project(cryptonight C)
 
+# Match p2pool's static CRT (/MT). This library is a separate CMake project and
+# otherwise inherits CMake's default dynamic CRT (/MD), which mismatches
+# p2pool.exe at link time on MSVC (LNK4098 + unresolved __imp__getpid /
+# __imp__ftime64). Rewrite /MD -> /MT (covers /MDd -> /MTd) for all configs.
+if (MSVC)
+	foreach(flag_var
+			CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+			CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS_MINSIZEREL)
+		if (${flag_var} MATCHES "/MD")
+			string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+		endif()
+	endforeach()
+endif()
+
 set(CRYPTONIGHT_SOURCES
 	slow-hash.c
 	aesb.c
