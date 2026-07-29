@@ -64,7 +64,6 @@ void p2pool_usage()
 		"--subaddress              Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter\n"
 		"--host                    IP address of your Kryptokrona node, default is 127.0.0.1\n"
 		"--rpc-port                kryptokronad RPC API port number, default is 18081\n"
-		"--zmq-port                kryptokronad ZMQ pub port number, default is 18083 (same port as in kryptokronad's \"--zmq-pub\" command line parameter)\n"
 		"--stratum                 Comma-separated list of IP:port for stratum server to listen on\n"
 		"--p2p                     Comma-separated list of IP:port for p2p server to listen on\n"
 		"--addpeers                Comma-separated list of IP:port of other p2pool nodes to connect to\n"
@@ -122,7 +121,7 @@ void p2pool_usage()
 		"--params-file             File name to load parameters from. It can't be used together with any other command line parameters\n"
 		"--help                    Show this help message\n\n"
 		"Example command line:\n\n"
-		"%s --host 127.0.0.1 --rpc-port 18081 --zmq-port 18083 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
+		"%s --host 127.0.0.1 --rpc-port 18081 --wallet YOUR_WALLET_ADDRESS --stratum 0.0.0.0:%d --p2p 0.0.0.0:%d\n\n",
 		p2pool::VERSION,
 		static_cast<uint32_t>(p2pool::DEFAULT_STRATUM_BAN_TIME),
 		p2pool::log::MAX_GLOBAL_LOG_LEVEL,

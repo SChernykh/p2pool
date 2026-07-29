@@ -51,7 +51,6 @@ extern "C" {
 #include <curl/curl.h>
 #endif
 
-#include <zmq.h>
 
 #ifdef HAVE_GLIBC
 #include <gnu/libc-version.h>
@@ -96,9 +95,6 @@ std::string p2pool_version()
 	const curl_version_info_data* curl_version_data = curl_version_info(CURLVERSION_NOW);
 #endif
 
-	int zmq_major, zmq_minor, zmq_patch;
-	zmq_version(&zmq_major, &zmq_minor, &zmq_patch);
-
 	char buf[384] = {};
 	log::Stream s(buf);
 
@@ -115,7 +111,6 @@ std::string p2pool_version()
 		<< ", SSL library: " << (curl_version_data ? curl_version_data->ssl_version : "unknown") << '\n'
 #endif
 		<< " - libuv " << uv_version_string() << '\n'
-		<< " - libzmq " << zmq_major << '.' << zmq_minor << '.' << zmq_patch << '\n'
 #ifdef WITH_UPNP
 		<< " - miniupnpc " << MINIUPNPC_VERSION << '\n'
 #endif

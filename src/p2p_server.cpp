@@ -1639,37 +1639,19 @@ void P2PServer::check_host()
 		return;
 	}
 
-	// Kryptokrona has no ZMQ; reconnect_to_host() polls the daemon for fresh
-	// miner data. Do this every tick so new main-chain blocks are picked up.
-	if (!m_pool->zmq_running()) {
-		LOGINFO(6, "polling daemon for new miner data");
-		m_pool->reconnect_to_host();
-		return;
-	}
+	// Poll kryptokronad for fresh miner data every tick so new main-chain
+	// blocks are picked up (the request is deduplicated and self-guarded).
+	LOGINFO(6, "polling daemon for new miner data");
+	m_pool->reconnect_to_host();
 
-	const uint64_t height = m_pool->miner_data().height;
-	const SideChain& side_chain = m_pool->side_chain();
-
-	// If the latest 5 side chain blocks are 2 or more Monero blocks ahead, then the node is probably stuck
-	uint32_t counter = 5;
-	for (const PoolBlock* b = side_chain.chainTip(); b && (b->m_txinGenHeight >= height + 2); b = side_chain.find_block(b->m_parent)) {
-		if (--counter == 0) {
-			const Params::Host& host = m_pool->current_host();
-			LOGERR(1, "Host " << host.m_displayName << " seems to be stuck, reconnecting");
-			m_pool->reconnect_to_host();
-			return;
-		}
-	}
-
+	// If no fresh data has arrived from the node in 5 minutes, it's probably
+	// stuck or unreachable.
 	const uint64_t cur_time = seconds_since_epoch();
-	const uint64_t last_active = m_pool->zmq_last_active();
-
-	// If there were no ZMQ messages in the last 5 minutes, then the node is probably stuck
-	if (cur_time >= last_active + 300) {
+	const uint64_t last_active = m_pool->last_active();
+	if (last_active && (cur_time >= last_active + 300)) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
 		const Params::Host& host = m_pool->current_host();
-		LOGERR(1, "no ZMQ messages received from host " << host.m_displayName << " in the last " << dt << " seconds, check your kryptokronad/p2pool/network/firewall setup!!!");
-		m_pool->reconnect_to_host();
+		LOGERR(1, "no fresh data received from host " << host.m_displayName << " in the last " << dt << " seconds, check your kryptokronad/p2pool/network/firewall setup!!!");
 	}
 }
 
@@ -1824,7 +1806,7 @@ void P2PServer::api_update_local_stats()
 				}
 			}
 
-			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"zmq_last_active\":" << (seconds_since_epoch() - m_pool->zmq_last_active()) << '}';
+			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"last_active\":" << (seconds_since_epoch() - m_pool->last_active()) << '}';
 		});
 }
 

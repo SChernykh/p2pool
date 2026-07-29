@@ -72,7 +72,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	auto invalid_host = [](const Host& h)
 	{
 		if (!h.valid()) {
-			LOGERR(1, "Invalid host " << h.m_address << ':' << h.m_rpcPort << ":ZMQ:" << h.m_zmqPort << ". Try \"p2pool --help\".");
+			LOGERR(1, "Invalid host " << h.m_address << ':' << h.m_rpcPort << ". Try \"p2pool --help\".");
 			return true;
 		}
 		return false;
@@ -120,23 +120,24 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	}
 
 	char display_wallet_buf[Wallet::ADDRESS_LENGTH] = {};
+	int display_wallet_len = 0;
 
 	if (m_mainWallet.valid() && m_subaddress.valid()) {
 		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.get_type(), false)) {
 			LOGERR(1, "Failed to configure the mining wallet, falling back to " << m_mainWallet);
 			m_miningWallet = m_mainWallet;
-			m_mainWallet.encode(display_wallet_buf);
+			display_wallet_len = m_mainWallet.encode(display_wallet_buf);
 		}
 		else {
-			m_subaddress.encode(display_wallet_buf);
+			display_wallet_len = m_subaddress.encode(display_wallet_buf);
 		}
 	}
 	else if (m_mainWallet.valid()) {
 		m_miningWallet = m_mainWallet;
-		m_mainWallet.encode(display_wallet_buf);
+		display_wallet_len = m_mainWallet.encode(display_wallet_buf);
 	}
 
-	m_displayWallet.assign(display_wallet_buf, Wallet::ADDRESS_LENGTH);
+	m_displayWallet.assign(display_wallet_buf, display_wallet_len);
 
 	for (Params::Host& h : m_hosts) {
 		if (!h.init_display_name(*this)) {
@@ -216,10 +217,9 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 			const Host& h = m_hosts.back();
 
 			int32_t rpc_port = h.m_rpcPort;
-			int32_t zmq_port = h.m_zmqPort;
 
 			// Better not to use "h" here because emplace_back can reallocate
-			m_hosts.emplace_back(address, rpc_port, zmq_port, std::string());
+			m_hosts.emplace_back(address, rpc_port, std::string());
 		}
 
 		return true;
@@ -231,15 +231,6 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		}
 
 		m_hosts.back().m_rpcPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
-		return true;
-	}
-
-	if ((arg[0] == "zmq-port") && has1(arg)) {
-		if (m_hosts.empty()) {
-			m_hosts.emplace_back();
-		}
-
-		m_hosts.back().m_zmqPort = static_cast<int32_t>(std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 65535UL));
 		return true;
 	}
 
@@ -613,7 +604,7 @@ bool Params::Host::init_display_name(const Params& p)
 	buf[0] = '\0';
 	log::Stream s(buf);
 
-	s << m_displayName << (m_rpcSSL ? ":RPC-SSL " : ":RPC ") << m_rpcPort << ":ZMQ " << m_zmqPort;
+	s << m_displayName << (m_rpcSSL ? ":RPC-SSL " : ":RPC ") << m_rpcPort;
 	if (m_address != m_displayName) {
 		s << " (" << m_address << ')';
 	}

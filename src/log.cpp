@@ -538,8 +538,8 @@ NOINLINE void Stream::Entry<raw_ip>::put(const raw_ip& value, Stream* wrapper)
 NOINLINE void Stream::Entry<Wallet>::put(const Wallet& w, Stream* wrapper)
 {
 	char buf[Wallet::ADDRESS_LENGTH];
-	w.encode(buf);
-	wrapper->writeBuf(buf, Wallet::ADDRESS_LENGTH);
+	const int len = w.encode(buf);
+	wrapper->writeBuf(buf, len);
 }
 
 } // namespace log

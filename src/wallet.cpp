@@ -248,17 +248,24 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 	return true;
 }
 
-void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
+int Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 {
-	// Always emit the canonical 99-char SEKR form: varint(prefix) + spend +
-	// view + checksum = 72 bytes = 9 full CryptoNote base58 blocks.
+	// Emit the wallet's own prefix so both address formats round-trip exactly:
+	// SEKR (4-byte prefix varint) -> 99 chars, Xkr (3-byte prefix) -> 98 chars.
+	// Layout: varint(prefix) + spend + view + checksum. Returns the number of
+	// base58 characters actually written (<= ADDRESS_LENGTH).
 	uint8_t data[10 + HASH_SIZE * 2 + sizeof(m_checksum)] = {};
 	size_t n = 0;
-	for (uint64_t p = coin::ADDRESS_PREFIX_DEFAULT; p >= 0x80; p >>= 7) { data[n++] = static_cast<uint8_t>(p & 0x7f) | 0x80; }
-	data[n] = static_cast<uint8_t>(coin::ADDRESS_PREFIX_DEFAULT >> (7 * n)); ++n;
+	for (uint64_t p = m_prefix; p >= 0x80; p >>= 7) { data[n++] = static_cast<uint8_t>(p & 0x7f) | 0x80; }
+	data[n] = static_cast<uint8_t>(m_prefix >> (7 * n)); ++n;
 	memcpy(data + n, m_keys[0].h, HASH_SIZE);
 	memcpy(data + n + HASH_SIZE, m_keys[1].h, HASH_SIZE);
-	memcpy(data + n + HASH_SIZE * 2, &m_checksum, sizeof(m_checksum));
+	// Recompute the checksum for the prefix we emit. The stored m_checksum is
+	// prefix-specific; recomputing keeps encode() correct for any m_prefix and
+	// makes decode()->encode() a bit-exact round-trip for both SEKR and Xkr.
+	hash cs;
+	keccak(data, static_cast<int>(n + HASH_SIZE * 2), cs.h);
+	memcpy(data + n + HASH_SIZE * 2, cs.h, sizeof(m_checksum));
 	const int data_size = static_cast<int>(n + HASH_SIZE * 2 + sizeof(m_checksum));
 
 	const int nblk = data_size / static_cast<int>(sizeof(uint64_t));
@@ -277,6 +284,9 @@ void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 			num /= alphabet_size;
 		}
 	}
+
+	const int rem = data_size % static_cast<int>(sizeof(uint64_t));
+	return nblk * block_sizes.back() + (rem ? block_sizes[rem] : 0);
 }
 
 bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag) const

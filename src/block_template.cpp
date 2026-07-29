@@ -29,7 +29,6 @@
 #include "pool_block.h"
 #include "merkle.h"
 #include "pow_hash.h"
-#include <zmq.hpp>
 #include <ctime>
 #include <numeric>
 

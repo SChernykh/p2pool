@@ -12,7 +12,7 @@ message(STATUS "Build environment:
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(STATIC_BINARY "Build static binary" OFF)
-option(STATIC_LIBS "Link libuv and libzmq statically" OFF)
+option(STATIC_LIBS "Link libuv statically" OFF)
 # Kryptokrona (XKR) uses CryptoNight-Turtle-Lite v2, not RandomX. RandomX is
 # disabled by default for the XKR port (the RandomX submodule is not required).
 option(WITH_RANDOMX "Include Monero's RandomX library. Not used by the Kryptokrona port; kept off." OFF)
@@ -138,7 +138,6 @@ set(HEADERS
 	src/util.h
 	src/uv_util.h
 	src/wallet.h
-	src/zmq_reader.h
 	src/i2p.h
 )
 
@@ -173,7 +172,6 @@ set(SOURCES
 	src/thread_pool.cpp
 	src/util.cpp
 	src/wallet.cpp
-	src/zmq_reader.cpp
 	src/i2p.cpp
 )
 
@@ -256,10 +254,8 @@ endif()
 
 if ((CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR STATIC_BINARY OR STATIC_LIBS)
 	set(UV_INCLUDE_DIR external/src/libuv/include)
-	set(ZMQ_INCLUDE_DIR external/src/libzmq/include)
 else()
 	find_path(UV_INCLUDE_DIR NAMES uv.h PATH_SUFFIXES "include")
-	find_path(ZMQ_INCLUDE_DIR NAMES zmq.h PATH_SUFFIXES "include")
 endif()
 
 include_directories(src)
@@ -270,8 +266,6 @@ include_directories(external/src/cryptonote)
 # reached via the cryptonight target's PUBLIC include dir (see LIBS), so its
 # internal headers (e.g. keccak.h) don't shadow p2pool's own src/keccak.h.
 include_directories(${UV_INCLUDE_DIR})
-include_directories(external/src/cppzmq)
-include_directories(${ZMQ_INCLUDE_DIR})
 if (WITH_RANDOMX)
 	include_directories(external/src/RandomX/src)
 endif()
@@ -296,8 +290,6 @@ elseif (NOT APPLE)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU OR CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	find_library(ZMQ_LIBRARY_DEBUG NAMES zmq libzmq.a)
-	find_library(ZMQ_LIBRARY NAMES zmq libzmq.a)
 	find_library(UV_LIBRARY_DEBUG NAMES uv libuv.a)
 	find_library(UV_LIBRARY NAMES uv libuv.a)
 	if (WIN32)
@@ -321,7 +313,6 @@ if(APPLE)
 	set(LIBS ${LIBS} ${FOUNDATION_LIB} ${CORE_FOUNDATION_LIB} ${SYSTEM_CONFIGURATION_LIB})
 endif()
 
-add_definitions(-DZMQ_STATIC)
 
 include(CheckIncludeFile)
 
@@ -499,7 +490,6 @@ if (STATIC_BINARY OR STATIC_LIBS)
 	endif()
 
 	target_link_libraries(${CMAKE_PROJECT_NAME}
-		"${CMAKE_SOURCE_DIR}/external/src/libzmq/build/lib/libzmq.a"
 		"${CMAKE_SOURCE_DIR}/external/src/libuv/build/libuv.a"
 		debug "${CMAKE_SOURCE_DIR}/external/src/curl/lib/libcurl-d.a"
 		optimized "${CMAKE_SOURCE_DIR}/external/src/curl/lib/libcurl.a"
@@ -516,7 +506,7 @@ else()
 		set(LIBS ${LIBS} stdc++fs)
 	endif()
 
-	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${ZMQ_LIBRARY_DEBUG} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${ZMQ_LIBRARY} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
+	target_link_libraries(${CMAKE_PROJECT_NAME} debug ${UV_LIBRARY_DEBUG} debug ${CURL_LIBRARY_DEBUG} optimized ${UV_LIBRARY} optimized ${CURL_LIBRARY} ${LIBS})
 endif()
 
 message(STATUS "Summary of build options:

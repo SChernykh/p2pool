@@ -18,7 +18,6 @@
 #include "common.h"
 #include "p2pool.h"
 #ifndef P2POOL_UNIT_TESTS
-#include "zmq_reader.h"
 #endif
 #include "mempool.h"
 #include "json_rpc_request.h"
@@ -66,7 +65,7 @@ p2pool::p2pool(const Params& params)
 	, m_params(params)
 	, m_updateSeed(true)
 	, m_submitBlockData{}
-	, m_zmqLastActive(0)
+	, m_lastActive(0)
 	, m_startTime(seconds_since_epoch())
 	, m_lastMinerDataReceived(0)
 {
@@ -155,9 +154,6 @@ p2pool::p2pool(const Params& params)
 
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
-#ifndef P2POOL_UNIT_TESTS
-	uv_rwlock_init_checked(&m_ZMQReaderLock);
-#endif
 	uv_rwlock_init_checked(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -240,9 +236,6 @@ p2pool::~p2pool()
 
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
-#ifndef P2POOL_UNIT_TESTS
-	uv_rwlock_destroy(&m_ZMQReaderLock);
-#endif
 	uv_rwlock_destroy(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -390,7 +383,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 	m_blockTemplate->update(miner_data(), *m_mempool, &m_params.m_wallet);
 #endif
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 }
 
 void p2pool::handle_miner_data(MinerData& data)
@@ -462,7 +455,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		update_block_template();
 	}
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 
 	if (m_serversStarted.load()) {
 		std::vector<uint64_t> missing_heights;
@@ -633,7 +626,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra, const std::ve
 
 	api_update_network_stats();
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 }
 
 void p2pool::handle_monero_block_broadcast(std::vector<std::vector<uint8_t>>&& blobs)
@@ -1374,18 +1367,6 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 					if (m_params.m_minerThreads) {
 						start_mining(m_params.m_minerThreads);
-					}
-					{
-						WriteLock lock(m_ZMQReaderLock);
-
-						try {
-							m_ZMQReader = new ZMQReader(host.m_address, host.m_zmqPort, m_params.m_socks5Proxy, this);
-							m_zmqLastActive = seconds_since_epoch();
-						}
-						catch (const std::exception& e) {
-							LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-							PANIC_STOP();
-						}
 					}
 #endif
 
@@ -2322,16 +2303,6 @@ void p2pool::stop()
 	}
 }
 
-bool p2pool::zmq_running() const
-{
-#ifdef P2POOL_UNIT_TESTS
-	return true;
-#else
-	ReadLock lock(m_ZMQReaderLock);
-	return m_ZMQReader && m_ZMQReader->is_running();
-#endif
-}
-
 const Params::Host& p2pool::switch_host()
 {
 	const std::vector<Params::Host>& v = m_params.m_hosts;
@@ -2351,11 +2322,10 @@ void p2pool::reconnect_to_host()
 	}
 
 #ifndef P2POOL_UNIT_TESTS
-	// Kryptokrona has no ZMQ pub interface, so instead of (re)starting a ZMQ
-	// reader we poll the daemon for fresh miner data. get_miner_data() is
-	// deduplicated (by response hash) and self-guarded against overlap, and its
-	// handler refreshes m_zmqLastActive, so this doubles as the "node is alive"
-	// signal that ZMQ used to provide.
+	// The node is driven by polling kryptokronad for fresh miner data.
+	// get_miner_data() is deduplicated (by response hash) and self-guarded
+	// against overlap, and its handler refreshes m_lastActive, which serves as
+	// the "node is alive" signal.
 	get_miner_data(false);
 #endif
 }
@@ -2393,13 +2363,6 @@ int p2pool::run()
 		load_found_blocks();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
-
-#ifndef P2POOL_UNIT_TESTS
-		WriteLock lock(m_ZMQReaderLock);
-
-		delete m_ZMQReader;
-		m_ZMQReader = nullptr;
-#endif
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "exception " << e.what());
