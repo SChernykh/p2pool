@@ -1309,8 +1309,10 @@ void p2pool::download_block_headers2(uint64_t current_height)
 
 void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_height)
 {
-	// Workaround the restricted RPC limit
-	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 1000;
+	// Workaround the restricted RPC limit. kryptokronad's get_block_headers_range
+	// fetches a full block per header, so large batches (Monero used 1000) time
+	// out; a smaller batch keeps each request well within the RPC timeout.
+	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 100;
 
 	if (current_height - start_height > RESTRICTED_BLOCK_HEADER_RANGE + 1) {
 		char buf[log::Stream::BUF_SIZE + 1] = {};
