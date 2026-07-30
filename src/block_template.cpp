@@ -571,8 +571,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_minerTx.begin(), m_minerTx.end());
 	writeVarint(m_numTransactionHashes, m_blockTemplateBlob);
 
-	// Miner tx hash is skipped here because it's not a part of block template
-	m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	// Miner tx hash is skipped here because it's not a part of block template.
+	// Guard against m_transactionHashes being shorter than one hash: begin() +
+	// HASH_SIZE would then be past end(), and vector::insert would compute a
+	// wildly negative range length (std::length_error / crash). With no extra
+	// tx hashes there is simply nothing to append.
+	if (m_transactionHashes.size() > HASH_SIZE) {
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	}
 
 	m_poolBlockTemplate->m_transactions.clear();
 	m_poolBlockTemplate->m_transactions.resize(1);
