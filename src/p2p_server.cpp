@@ -1070,6 +1070,21 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
+
+	// NOTE: the Monero-style coinbase-output pruning below assumes serialize_
+	// mainchain_data returns the output offset/size, but for the XKR coinbase
+	// layout the 3rd/4th params are the extra-nonce and merge-mining offsets, so
+	// these values don't delimit the outputs. Clamp them to valid ranges so the
+	// insert/assign calls below can't compute a negative (huge) length and crash
+	// (std::length_error). The resulting pruned/compact blobs are not valid XKR
+	// blocks, but the self-check further down deserializes each candidate and
+	// falls back to the full blob, so the block still broadcasts correctly.
+	// TODO(xkr): report the real coinbase output offset/size and prune properly.
+	{
+		const int mc = static_cast<int>(mainchain_data.size());
+		outputs_offset = std::min(std::max(outputs_offset, 0), mc);
+		outputs_blob_size = std::min(std::max(outputs_blob_size, 0), mc - outputs_offset);
+	}
 	const std::vector<uint8_t> sidechain_data = block.serialize_sidechain_data();
 
 	data->blob.reserve(mainchain_data.size() + sidechain_data.size());
@@ -1095,8 +1110,13 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 
 	const size_t N = block.m_transactions.size();
-	if ((N > 1) && parent && (parent->m_transactions.size() > 1)) {
-		const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+	const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+	// Also require the blobs to be at least tx_list_size so end() - tx_list_size
+	// below can't wrap past begin() (same crash class as above). If the pruned
+	// blob came out short because of the clamp, skip compact and let the self-
+	// check fall back to the full blob.
+	if ((N > 1) && parent && (parent->m_transactions.size() > 1) &&
+		(tx_list_size <= data->pruned_blob.size()) && (tx_list_size <= mainchain_data.size())) {
 
 		unordered_map<hash, size_t> parent_transactions;
 		parent_transactions.reserve(parent->m_transactions.size());
