@@ -728,7 +728,7 @@ bool str_to_ip(bool is_v6, const char* ip, raw_ip& result)
 		sockaddr_in6* addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
 		const int err = uv_ip6_addr(ip, 0, addr6);
 		if (err) {
-			LOGERR(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
+			LOGWARN(1, "failed to parse IPv6 address " << ip << ", error " << uv_err_name(err));
 			return false;
 		}
 		memcpy(result.data, &addr6->sin6_addr, sizeof(in6_addr));
@@ -737,7 +737,7 @@ bool str_to_ip(bool is_v6, const char* ip, raw_ip& result)
 		sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&addr);
 		const int err = uv_ip4_addr(ip, 0, addr4);
 		if (err) {
-			LOGERR(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
+			LOGWARN(1, "failed to parse IPv4 address " << ip << ", error " << uv_err_name(err));
 			return false;
 		}
 		memcpy(result.data, raw_ip::ipv4_prefix, sizeof(raw_ip::ipv4_prefix));
@@ -757,7 +757,7 @@ bool is_private_address(const std::string& host)
 		return true;
 	}
 
-	if (host.find_first_not_of("0123456789.:") != std::string::npos) {
+	if (host.find_first_not_of("0123456789abcdef.:") != std::string::npos) {
 		return false;
 	}
 

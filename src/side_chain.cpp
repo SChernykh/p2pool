@@ -1693,6 +1693,15 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
+	if (block->m_uncles.size() > MAX_UNCLES_PER_BLOCK) {
+		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+			", id = " << block->m_sidechainId <<
+			", mainchain height = " << block->m_txinGenHeight << " has too many uncles (" << block->m_uncles.size() << ')');
+		block->m_verified = true;
+		block->m_invalid = true;
+		return;
+	}
+
 	// Uncle hashes must be sorted in the ascending order to prevent cheating when the same hash is repeated multiple times
 	for (size_t i = 1, n = block->m_uncles.size(); i < n; ++i) {
 		if (!(block->m_uncles[i - 1] < block->m_uncles[i])) {

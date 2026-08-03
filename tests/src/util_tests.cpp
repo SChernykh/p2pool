@@ -337,4 +337,62 @@ TEST(util, get_bucket_index)
 	}
 }
 
+TEST(util, is_private_address)
+{
+	ASSERT_FALSE(is_private_address(""));
+
+	ASSERT_TRUE(is_private_address("localhost"));
+	ASSERT_FALSE(is_private_address("p2pool.io"));
+
+	ASSERT_FALSE(is_private_address(":::::"));
+
+	ASSERT_FALSE(is_private_address("fbff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+	ASSERT_TRUE(is_private_address("fc00::"));
+	ASSERT_TRUE(is_private_address("fc00::1:2:3"));
+	ASSERT_TRUE(is_private_address("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+	ASSERT_FALSE(is_private_address("fe00::"));
+
+	ASSERT_FALSE(is_private_address("fe7f:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+	ASSERT_TRUE(is_private_address("fe80::"));
+	ASSERT_TRUE(is_private_address("fe80::e031:b4ff:fe5a:ea31"));
+	ASSERT_TRUE(is_private_address("febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+	ASSERT_FALSE(is_private_address("fec0::"));
+
+	ASSERT_FALSE(is_private_address("2a01:4f9:6a:1a0d::2"));
+
+	ASSERT_FALSE(is_private_address("9.255.255.255"));
+	ASSERT_TRUE(is_private_address("10.0.0.0"));
+	ASSERT_TRUE(is_private_address("10.8.0.1"));
+	ASSERT_TRUE(is_private_address("10.255.255.255"));
+	ASSERT_FALSE(is_private_address("11.0.0.0"));
+
+	ASSERT_FALSE(is_private_address("172.15.255.255"));
+	ASSERT_TRUE(is_private_address("172.16.0.0"));
+	ASSERT_TRUE(is_private_address("172.16.1.2"));
+	ASSERT_TRUE(is_private_address("172.31.255.255"));
+	ASSERT_FALSE(is_private_address("172.32.0.0"));
+
+	ASSERT_FALSE(is_private_address("192.167.255.255"));
+	ASSERT_TRUE(is_private_address("192.168.0.0"));
+	ASSERT_TRUE(is_private_address("192.168.0.1"));
+	ASSERT_TRUE(is_private_address("192.168.255.255"));
+	ASSERT_FALSE(is_private_address("192.169.0.0"));
+
+	ASSERT_FALSE(is_private_address("169.253.255.255"));
+	ASSERT_TRUE(is_private_address("169.254.0.0"));
+	ASSERT_TRUE(is_private_address("169.254.2.3"));
+	ASSERT_TRUE(is_private_address("169.254.255.255"));
+	ASSERT_FALSE(is_private_address("169.255.0.0"));
+
+	ASSERT_FALSE(is_private_address("126.255.255.255"));
+	ASSERT_TRUE(is_private_address("127.0.0.0"));
+	ASSERT_TRUE(is_private_address("127.0.0.1"));
+	ASSERT_TRUE(is_private_address("127.1.2.3"));
+	ASSERT_TRUE(is_private_address("127.255.255.255"));
+	ASSERT_FALSE(is_private_address("128.0.0.0"));
+
+	ASSERT_FALSE(is_private_address("8.8.8.8"));
+	ASSERT_FALSE(is_private_address("1.2.3.4"));
+}
+
 }
