@@ -48,7 +48,11 @@ static constexpr char saved_i2p_peer_list_file_name[] = "p2pool_i2p_peers.txt";
 // Kryptokrona has no public P2Pool seed-node DNS infrastructure yet, so the
 // Monero seed nodes are removed. Peers are found via --addpeers / the local
 // peer cache. Add "seeds.<domain>" entries here once XKR seed nodes exist.
-static const char* seed_nodes[] = { "" };
+// Kryptokrona (XKR) seed nodes for the default sidechain. Entries may be
+// "host" (default p2p port) or "host:port". The kth VPS publishes its p2pool
+// p2p on external port 20211, so new nodes auto-discover the network without
+// needing --addpeers.
+static const char* seed_nodes[] = { "deploy.cloud.cbh.kth.se:20211", "" };
 static const char* seed_nodes_mini[] = { "" };
 static const char* seed_nodes_nano[] = { "" };
 
@@ -737,8 +741,25 @@ void P2PServer::load_peer_list()
 	// Load peers from seed nodes if we're on the default or mini sidechain
 	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
 		for (size_t i = 0; nodes[i][0]; ++i) {
-			const char* cur_node = nodes[i];
-			LOGINFO(4, "loading peers from " << cur_node);
+			// Kryptokrona: allow "host:port" seed entries. p2pool's seeds are
+			// host-only with a fixed default p2p port, but XKR nodes may publish
+			// their p2p on a non-default external port (e.g. the kth VPS mapping),
+			// so parse a trailing :<port> and use it for this seed if present.
+			std::string host_str = nodes[i];
+			int node_port = p2p_port;
+			{
+				const size_t colon = host_str.find_last_of(':');
+				// Skip IPv6 literals like [::1]:port (handled by their own brackets)
+				if ((colon != std::string::npos) && (host_str.find(']') == std::string::npos)) {
+					const int parsed = atoi(host_str.c_str() + colon + 1);
+					if ((parsed > 0) && (parsed <= 65535)) {
+						node_port = parsed;
+						host_str.resize(colon);
+					}
+				}
+			}
+			const char* cur_node = host_str.c_str();
+			LOGINFO(4, "loading peers from " << cur_node << " (port " << node_port << ')');
 
 			// Prefer DNS TXT records
 			const bool has_txt = get_dns_txt_records(cur_node, [&saved_list, cur_node](const char* s, size_t n) {
@@ -778,13 +799,13 @@ void P2PServer::load_peer_list()
 					if (r->ai_family == AF_INET6) {
 						addr_str = inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(r->ai_addr)->sin6_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << '[' << addr_str << "]:" << p2p_port << '\0';
+							s << '[' << addr_str << "]:" << node_port << '\0';
 						}
 					}
 					else {
 						addr_str = inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(r->ai_addr)->sin_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << addr_str << ':' << p2p_port << '\0';
+							s << addr_str << ':' << node_port << '\0';
 						}
 					}
 
