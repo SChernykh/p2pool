@@ -50,7 +50,11 @@ bool CONSOLE_COLORS = true;
 static const HANDLE hStdIn  = GetStdHandle(STD_INPUT_HANDLE);
 static const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
-#if defined(_MSC_VER) && !defined(NDEBUG)
+// Kryptokrona: enabled in release too (dropped !NDEBUG) so a shipped MSVC build
+// prints a crash backtrace to stderr — needed to diagnose the Windows-only
+// crash on p2p peer connect. Requires the matching p2pool.pdb next to the exe
+// for file/line resolution; otherwise raw frame addresses are printed.
+#if defined(_MSC_VER)
 
 #include <DbgHelp.h>
 
@@ -76,17 +80,38 @@ LONG WINAPI UnhandledExceptionFilter(_In_ _EXCEPTION_POINTERS* exception_pointer
 	const HANDLE h = GetCurrentProcess();
 
 	const uint32_t code = (exception_pointers && exception_pointers->ExceptionRecord) ? exception_pointers->ExceptionRecord->ExceptionCode : 0;
+	const void* fault_addr = (exception_pointers && exception_pointers->ExceptionRecord) ? exception_pointers->ExceptionRecord->ExceptionAddress : nullptr;
 
-	fprintf(stderr, "\n\nUnhandled exception %X at:\n", code);
+	// Load symbols for all loaded modules so file/line resolution works even in
+	// release builds (when a matching p2pool.pdb sits next to the exe).
+	SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME);
+	SymInitialize(h, nullptr, TRUE);
+
+	fprintf(stderr, "\n\nUnhandled exception %X at %p:\n", code, fault_addr);
 	fflush(stderr);
 
 	for (size_t j = 0; j < MAX_FRAMES; ++j) {
 		const DWORD64 address = reinterpret_cast<DWORD64>(stack_trace[j]);
-		DWORD t = 0;
-		if (SymFromAddr(h, address, nullptr, pSymbol) && SymGetLineFromAddr64(h, address, &t, &line)) {
-			fprintf(stderr, "%s (%s, line %lu)\n", line.FileName, pSymbol->Name, line.LineNumber);
-			fflush(stderr);
+		if (!address) {
+			break;
 		}
+		DWORD t = 0;
+		DWORD64 disp = 0;
+		if (SymFromAddr(h, address, &disp, pSymbol)) {
+			if (SymGetLineFromAddr64(h, address, &t, &line)) {
+				fprintf(stderr, "  %s+0x%llx (%s, line %lu)\n", pSymbol->Name, static_cast<unsigned long long>(disp), line.FileName, line.LineNumber);
+			}
+			else {
+				fprintf(stderr, "  %s+0x%llx\n", pSymbol->Name, static_cast<unsigned long long>(disp));
+			}
+		}
+		else {
+			// No symbols: print the raw address and module-relative offset so it
+			// can be resolved later from a map file / matching pdb.
+			const DWORD64 base = SymGetModuleBase64(h, address);
+			fprintf(stderr, "  0x%llx (module+0x%llx)\n", static_cast<unsigned long long>(address), static_cast<unsigned long long>(base ? (address - base) : 0));
+		}
+		fflush(stderr);
 	}
 
 	fprintf(stderr, "\n\n");
@@ -129,7 +154,7 @@ public:
 		, m_logFileLastStatTime(0)
 		, m_workerWaiting(false)
 	{
-#if defined(_WIN32) && defined(_MSC_VER) && !defined(NDEBUG)
+#if defined(_WIN32) && defined(_MSC_VER)
 		SetUnhandledExceptionFilter(UnhandledExceptionFilter);
 #endif
 

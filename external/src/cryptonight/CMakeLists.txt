@@ -44,6 +44,13 @@ add_library(cryptonight STATIC ${CRYPTONIGHT_SOURCES})
 
 set_target_properties(cryptonight PROPERTIES C_STANDARD 11)
 
+# FORCE_USE_HEAP: allocate the CryptoNight scratchpad on the heap (per call)
+# instead of as a ~256 KB stack VLA. kryptokrona's own daemon builds this code
+# with -DFORCE_USE_HEAP; matching it keeps the hash bit-identical to the daemon
+# and avoids a large stack allocation in p2pool's libuv worker threads (which
+# run share PoW validation) that can otherwise corrupt the result.
+target_compile_definitions(cryptonight PRIVATE FORCE_USE_HEAP)
+
 # Consumers include "xkr_pow.h" from here.
 target_include_directories(cryptonight PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
