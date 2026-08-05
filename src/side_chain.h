@@ -115,7 +115,7 @@ private:
 
 private:
 	[[nodiscard]] bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
-	[[nodiscard]] bool get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
+	[[nodiscard]] int get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(PoolBlock* block);

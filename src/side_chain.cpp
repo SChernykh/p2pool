@@ -1307,11 +1307,11 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	return true;
 }
 
-bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
+int SideChain::get_difficulty(const PoolBlock* const tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
 {
 	if (!pool_block_debug() && !tip->m_cachedNextDifficulty.empty()) {
 		curDifficulty = tip->m_cachedNextDifficulty;
-		return true;
+		return 0;
 	}
 
 	difficultyData.clear();
@@ -1329,7 +1329,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 			if (it == m_blocksById.end()) {
 				LOGWARN(3, "get_difficulty: can't find uncle block at height = " << cur->m_sidechainHeight << ", id = " << uncle_id);
 				LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
-				return false;
+				return 1;
 			}
 
 			const PoolBlock* uncle = it->second;
@@ -1353,7 +1353,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 		if (it == m_blocksById.end()) {
 			LOGWARN(3, "get_difficulty: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
 			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
-			return false;
+			return 1;
 		}
 
 		cur = it->second;
@@ -1370,7 +1370,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 		if (dt > std::numeric_limits<uint32_t>::max()) {
 			LOGWARN(3, "get_difficulty: too large timestamp delta " << dt);
 			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
-			return false;
+			return 2;
 		}
 
 		tmpTimestamps.emplace_back(static_cast<uint32_t>(dt));
@@ -1417,7 +1417,7 @@ bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficult
 	}
 	tip->m_cachedNextDifficulty = curDifficulty;
 
-	return true;
+	return 0;
 }
 
 bool SideChain::p2pool_update_available() const
@@ -1850,9 +1850,22 @@ void SideChain::verify(PoolBlock* block)
 		LOGINFO(6, "block " << block->m_sidechainId << " is built on top of the current chain tip, using current difficulty for verification");
 		diff = difficulty();
 	}
-	else if (!get_difficulty(parent, m_difficultyData, diff)) {
-		block->m_invalid = true;
-		return;
+	else {
+		const int err = get_difficulty(parent, m_difficultyData, diff);
+		if (err != 0) {
+			switch (err) {
+			// Parent/uncle or some other ancestor not found, verify it later
+			case 1:
+				block->m_verified = false;
+				return;
+
+			// Invalid timestamp or some other error
+			case 2:
+			default:
+				block->m_invalid = true;
+				return;
+			}
+		}
 	}
 
 	if (diff != block->m_difficulty) {
@@ -1977,7 +1990,7 @@ void SideChain::update_chain_tip(PoolBlock* block)
 	bool is_alternative;
 	if (is_longer_chain(tip, block, is_alternative)) {
 		difficulty_type diff;
-		if (get_difficulty(block, m_difficultyData, diff)) {
+		if (get_difficulty(block, m_difficultyData, diff) == 0) {
 			if (!m_chainTip.compare_exchange_strong(tip, block)) {
 				LOGINFO(5, "Trying to update an outdated chain tip. Ignoring it.");
 				return;
