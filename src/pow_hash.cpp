@@ -49,6 +49,11 @@ CnTurtle_Hasher::~CnTurtle_Hasher()
 bool CnTurtle_Hasher::calculate(const void* data, size_t size, uint64_t /*height*/, const hash& /*seed*/, hash& result, bool /*force_light_mode*/, size_t /*lane*/)
 {
 	// CN-Turtle is stateless: hash the block hashing blob directly.
+	// NOTE: the vendored cn_slow_hash MUST be compiled at <= -O2. At -O3 it has
+	// undefined behavior that miscomputes the hash for ~1 in 4 blobs, which made
+	// p2pool reject that fraction of perfectly valid shares as "invalid PoW"
+	// (verified: -O0/-O1/-O2 all agree with xmrig; only -O3 diverges). See the
+	// -O2 override in external/src/cryptonight/CMakeLists.txt.
 	xkr_cn_turtle_pow(data, size, result.h);
 	return true;
 }

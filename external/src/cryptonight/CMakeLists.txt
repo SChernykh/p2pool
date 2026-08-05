@@ -62,4 +62,11 @@ if (NOT MSVC)
 	if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686|i386")
 		target_compile_options(cryptonight PRIVATE -maes)
 	endif()
+
+	# IMPORTANT: cap optimization at -O2. The vendored cn_slow_hash has undefined
+	# behavior that gcc/clang miscompile at -O3, producing a WRONG hash for ~1 in 4
+	# blobs. In a Release build (-O3) this made p2pool reject ~23% of valid shares
+	# as "invalid PoW" (and ban miners). -O0/-O1/-O2 all match xmrig and the daemon;
+	# only -O3 diverges. This -O2 comes after the build-type flags so it wins.
+	target_compile_options(cryptonight PRIVATE -O2)
 endif()
