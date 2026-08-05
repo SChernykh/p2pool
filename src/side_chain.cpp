@@ -1894,14 +1894,13 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if (out.m_viewTag != view_tag) {
-			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
-				", id = " << block->m_sidechainId <<
-				", mainchain height = " << block->m_txinGenHeight <<
-				" has an incorrect view tag at index " << i);
-			block->m_invalid = true;
-			return;
-		}
+		// XKR: coinbase outputs are TXOUT_TO_KEY (0x02) with NO view tag (unlike
+		// Monero's tagged keys), so the view tag is not serialized —
+		// PoolBlock::deserialize sets m_viewTag = 0 for every output. Checking it
+		// here would reject every relayed/synced block (the miner has the derived
+		// view tag in memory and passes, but a peer parses 0 and fails). Output
+		// ownership is still fully verified by the eph public key check below.
+		(void) view_tag;
 
 		if (eph_public_key != block->m_ephPublicKeys[i]) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<

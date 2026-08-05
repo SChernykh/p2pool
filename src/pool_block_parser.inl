@@ -202,9 +202,15 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 		}
 
-		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
-		// But default transaction picking algorithm never does that. It's better to just ban such nodes
-		if (total_reward < BASE_BLOCK_REWARD) {
+		// Monero rejected blocks whose reward dropped below its constant 0.6 XMR
+		// tail emission (a node stuffing txs to shrink the reward). Kryptokrona
+		// has no tail emission: the block reward is (MONEY_SUPPLY - already
+		// generated) >> EMISSION_SPEED_FACTOR, which decreases every block and is
+		// already far below the genesis emission (BASE_BLOCK_REWARD) at current
+		// heights. Using that as a floor rejected every real block (parser error
+		// 208). The daemon is authoritative on the exact reward, so here we only
+		// reject a degenerate zero-reward coinbase.
+		if (total_reward == 0) {
 			return __LINE__;
 		}
 
@@ -471,6 +477,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 
+		// Offset of the side-chain extra_nonce (m_sidechainExtraBuf[3], the last 4
+		// bytes just read) in the raw block. It is finalized per share at submit
+		// time and must be zeroed when computing the side-chain id below, matching
+		// BlockTemplate::calc_sidechain_hash — otherwise the recomputed id would not
+		// match the miner's (breaking the merkle proof) and the block's PoW.
+		const int sidechain_extra_nonce_offset = static_cast<int>((data - data_begin) - static_cast<ptrdiff_t>(sizeof(uint32_t)));
+
 #undef READ_BYTE
 #undef EXPECT_BYTE
 #undef READ_VARINT
@@ -498,8 +511,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 
+		// Side-chain extra_nonce offset in the reconstructed (outputs/tx-reindexed)
+		// coordinate space used by the lambda below.
+		const int se_nonce_off_recon = sidechain_extra_nonce_offset + outputs_blob_size_diff + transactions_blob_size_diff;
+
 		keccak_custom(
-			[nonce_offset, aux_hash_offset, extra_nonce_offset, mm_root_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
+			[nonce_offset, aux_hash_offset, extra_nonce_offset, mm_root_hash_offset, se_nonce_off_recon, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
 			{
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
@@ -521,6 +538,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				k = static_cast<uint32_t>(offset - mm_root_hash_offset);
 				if (k < HASH_SIZE) {
+					return 0;
+				}
+
+				// XKR: the per-share side-chain extra_nonce (m_sidechainExtraBuf[3])
+				// is not part of the side-chain id (see calc_sidechain_hash).
+				k = static_cast<uint32_t>(offset - se_nonce_off_recon);
+				if (k < sizeof(uint32_t)) {
 					return 0;
 				}
 

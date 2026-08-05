@@ -1346,6 +1346,19 @@ void P2PServer::on_broadcast()
 					}
 				}
 
+				// XKR: the pruned/compact broadcast blobs are NOT valid blocks — the
+				// Monero coinbase-output pruning relies on serialize_mainchain_data()
+				// reporting the output offset/size, but for the XKR coinbase layout
+				// those out-params are the extra-nonce/merge-mining offsets (see the
+				// Broadcast() constructor). A peer therefore rejects a pruned blob
+				// (e.g. parser error 290, "not enough data for the transaction list").
+				// The Monero release build has no self-check to fall back to the full
+				// blob, so force the full blob here until pruning is ported properly.
+				// TODO(xkr): implement correct coinbase-output pruning and restore
+				// the size-based selection above.
+				what = Broadcast::FULL;
+				cur_broadcast_size = data->blob.size();
+
 				static constexpr char broadcast_names[4][19] = {
 					"(full)            ",
 					"(pruned)          ",

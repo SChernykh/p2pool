@@ -1005,8 +1005,19 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t /*sidechain_extra_nonce*/) cons
 	const int en_off = m_sidechainExtraNonceOffset;
 	const int mm_off = m_sidechainMmRootOffset;
 
+	// The side-chain extra_nonce is m_sidechainExtraBuf[3] — the last 4 bytes of
+	// the side-chain data, i.e. right before the appended consensus id in the
+	// cached blob. It is finalized PER SHARE at submit time, but the side-chain id
+	// and the merge-mining merkle root are fixed BEFORE mining (the stratum blob
+	// the miner hashes commits to them), so the id must NOT depend on it: baking a
+	// per-share extra_nonce into the id would (a) break verify_merkle_proof on a
+	// peer and (b) make the peer's build_pow_blob reconstruct a different blob than
+	// was mined ("not enough PoW"). Zero it here, and PoolBlock::deserialize must
+	// zero the same region so a peer recomputes the identical id.
+	const int se_off = static_cast<int>(size - m_sidechain->consensus_id().size() - sizeof(uint32_t));
+
 	hash result;
-	keccak_custom([this, nonce_off, aux_off, en_off, mm_off](int offset) -> uint8_t {
+	keccak_custom([this, nonce_off, aux_off, en_off, mm_off, se_off](int offset) -> uint8_t {
 		uint32_t k = static_cast<uint32_t>(offset - nonce_off);
 		if (k < NONCE_SIZE) return 0;
 		k = static_cast<uint32_t>(offset - aux_off);
@@ -1015,6 +1026,8 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t /*sidechain_extra_nonce*/) cons
 		if (k < EXTRA_NONCE_SIZE) return 0;
 		k = static_cast<uint32_t>(offset - mm_off);
 		if (k < HASH_SIZE) return 0;
+		k = static_cast<uint32_t>(offset - se_off);
+		if (k < sizeof(uint32_t)) return 0;
 		return m_sidechainHashBlob[offset];
 	}, static_cast<int>(size), result.h, HASH_SIZE);
 
