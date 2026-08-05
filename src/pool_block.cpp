@@ -242,6 +242,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 	}
 #else
 	const uint8_t* t = reinterpret_cast<const uint8_t*>(m_transactions.data());
+	// cppcheck-suppress pointerOutOfBounds
 	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
 #endif
 
