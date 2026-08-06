@@ -572,6 +572,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			m_sidechainId = check;
 		}
 		else if (m_sidechainId != check) {
+			LOGWARN(1, "side-chain id mismatch: received " << m_sidechainId << " but recomputed " << check
+				<< " (stale/mismatched build or wrong consensus config?)");
 			return __LINE__;
 		}
 
@@ -582,6 +584,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const uint32_t mm_aux_slot = get_aux_slot(sidechain.consensus_hash(), mm_nonce, mm_n_aux_chains);
 
 		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, m_merkleRoot)) {
+			LOGWARN(1, "merkle proof failed for side-chain id " << check << ": merkle root " << static_cast<const hash&>(m_merkleRoot)
+				<< ", n_aux_chains " << mm_n_aux_chains << ", slot " << mm_aux_slot << ", proof len " << m_merkleProof.size()
+				<< " (stale/mismatched build?)");
 			return __LINE__;
 		}
 	}
