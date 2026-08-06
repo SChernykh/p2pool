@@ -34,11 +34,21 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	include(cmake/msvc_libs.cmake)
 endif()
 
-if (STATIC_LIBS AND WIN32 AND (CMAKE_CXX_COMPILER_ID MATCHES Clang))
-	set(LIBS ${LIBS} "${CMAKE_SOURCE_DIR}/../build/external/src/RandomX/librandomx.a")
-else()
-	add_subdirectory(../external/src/RandomX RandomX)
-	set(LIBS ${LIBS} randomx)
+# Kryptokrona (XKR) uses CryptoNight-Turtle, not RandomX, so RandomX is OFF by
+# default here (mirrors the main CMakeLists). The Monero+RandomX test sources
+# (pool_block_tests / block_template_tests / wallet_tests) are already excluded
+# from SOURCES below; the only remaining RandomX use is the keccak BMI test, which
+# is compiled out when WITH_RANDOMX is off. With RandomX off there is no
+# librandomx.a to link (that missing lib is what broke the Windows CI test build).
+option(WITH_RANDOMX "Include Monero's RandomX library for the tests. Not used by the Kryptokrona port." OFF)
+if (WITH_RANDOMX)
+	if (STATIC_LIBS AND WIN32 AND (CMAKE_CXX_COMPILER_ID MATCHES Clang))
+		set(LIBS ${LIBS} "${CMAKE_SOURCE_DIR}/../build/external/src/RandomX/librandomx.a")
+	else()
+		add_subdirectory(../external/src/RandomX RandomX)
+		set(LIBS ${LIBS} randomx)
+	endif()
+	add_definitions(-DWITH_RANDOMX)
 endif()
 
 # pow_hash.cpp always uses Kryptokrona's CryptoNight-Turtle PoW (xkr_pow.h), so
@@ -47,7 +57,6 @@ endif()
 add_subdirectory(../external/src/cryptonight cryptonight)
 set(LIBS ${LIBS} cryptonight)
 
-add_definitions(-DWITH_RANDOMX)
 add_definitions(-DWITH_MERGE_MINING_DONATION)
 
 add_definitions(-DP2POOL_UNIT_TESTS)
