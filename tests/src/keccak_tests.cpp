@@ -17,7 +17,12 @@
 
 #include "common.h"
 #include "keccak.h"
+#ifdef WITH_RANDOMX
+// Only used to detect BMI support for the BMI keccak test below. XKR builds
+// without RandomX, so the BMI-specific test is compiled out (the generic keccak
+// test still covers correctness).
 #include "RandomX/src/cpu.hpp"
+#endif
 #include "gtest/gtest.h"
 
 namespace p2pool {
@@ -76,7 +81,7 @@ TEST(keccak, hashing)
 	keccakf = t;
 }
 
-#if defined(__x86_64__) || defined(_M_AMD64)
+#if defined(WITH_RANDOMX) && (defined(__x86_64__) || defined(_M_AMD64))
 TEST(keccak, hashing_bmi)
 {
 	if (randomx::Cpu().hasBmi()) {
