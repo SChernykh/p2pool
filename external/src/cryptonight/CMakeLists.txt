@@ -69,4 +69,13 @@ if (NOT MSVC)
 	# as "invalid PoW" (and ban miners). -O0/-O1/-O2 all match xmrig and the daemon;
 	# only -O3 diverges. This -O2 comes after the build-type flags so it wins.
 	target_compile_options(cryptonight PRIVATE -O2)
+else()
+	# Same optimization miscompile on MSVC: a Release (/O2) Windows build computes
+	# the wrong hash / side-chain id for some blobs, so a Windows p2pool NODE
+	# rejects valid blocks from its (correct) Linux peers, bans them, and ends up
+	# with 0 peers. Disable optimization for this one library on MSVC so the hash
+	# is bit-identical to the daemon and the Linux nodes. Validation is not a
+	# throughput bottleneck, so /Od is fine. (This later /Od overrides the /O2 that
+	# the Release configuration adds.)
+	target_compile_options(cryptonight PRIVATE /w /Od)
 endif()
