@@ -205,10 +205,14 @@ endif()
 if (WITH_RANDOMX)
 	set(HEADERS ${HEADERS} src/miner.h)
 	set(SOURCES ${SOURCES} src/miner.cpp)
-else()
-	set(HEADERS ${HEADERS} external/src/RandomX/src/cpu.hpp)
-	set(SOURCES ${SOURCES} external/src/RandomX/src/cpu.cpp)
 endif()
+# NOTE: upstream compiles external/src/RandomX/src/cpu.cpp here when WITH_RANDOMX
+# is OFF, because its keccak.cpp always probes randomx::Cpu() for BMI support.
+# The XKR port guards that probe behind WITH_RANDOMX (see src/keccak.cpp), so
+# nothing references randomx::Cpu when RandomX is off and cpu.cpp is not needed.
+# Compiling it anyway breaks the riscv64 build: randomx::Cpu::Cpu() calls
+# riscv64 vector-AES test symbols (rv64_test_vector_aes, hashAes1Rx4_zvkned,
+# rv64_test_vector) that only exist in the full RandomX library we don't build.
 
 if (WITH_GRPC)
 	set(HEADERS ${HEADERS} src/merge_mining_client_tari.h)
