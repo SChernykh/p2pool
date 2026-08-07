@@ -153,12 +153,12 @@ TEST(pool_block, verify)
 		bool m_shuffle;
 		hash m_templateBlobsHash;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("c84a85eebf17ab266e8a81b347dd7490043ede3a055c0dbe85e9cd378905845a") },
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("c84a85eebf17ab266e8a81b347dd7490043ede3a055c0dbe85e9cd378905845a") },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("08debd1378bae899017eb58362f4c638d78e5218558025142dcbc2651c76b27e") },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("dd667c41eb15ffb0eb662065545dc0dfbbcac8393348a4fc0a7367040319b0d5") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("059e6440230d9206d8e05a13e0834872f21ee7f5d539101364a4ae735f21cb60") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("059e6440230d9206d8e05a13e0834872f21ee7f5d539101364a4ae735f21cb60") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("d9260bf29a8a957e74f787cfd3811772208e44af5b71835a77452a045a4eaed7") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("d9260bf29a8a957e74f787cfd3811772208e44af5b71835a77452a045a4eaed7") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("8a88ce3cf87386a33cf0b6973517d86933c96fffaede37c137b6f06157eca496") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("8a88ce3cf87386a33cf0b6973517d86933c96fffaede37c137b6f06157eca496") },
 	};
 
 	for (const STest& t : tests)

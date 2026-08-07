@@ -22,6 +22,7 @@
 #include "block_template.h"
 #include "pow_hash.h"
 #include "randomx.h"
+#include "virtual_machine.hpp"
 #include "params.h"
 #include "p2pool_api.h"
 #include "side_chain.h"
@@ -251,7 +252,21 @@ void Miner::run(WorkerData* data)
 
 		hash h;
 		try {
+			// randomx_calculate_hash_next calculates the hash for the previous job which is in "j" now,
+			// and fills the scratchpad for the next job which is in "job[index]" now
+			// So V2 flag and commitment calculation are decided by j.m_blob[0]
+			if (j.m_blob[0] >= HARDFORK_VERSION_RANDOMX_V2) {
+				vm->setFlagV2();
+			}
+			else {
+				vm->clearFlagV2();
+			}
+
 			randomx_calculate_hash_next(vm, job[index].m_blob, job[index].m_blobSize, &h);
+
+			if (j.m_blob[0] >= HARDFORK_VERSION_RANDOMX_V2) {
+				randomx_calculate_commitment(j.m_blob, j.m_blobSize, &h, &h);
+			}
 		}
 		catch (const std::exception& e) {
 			LOGERR(0, "Failed to calculate RandomX hash: exception \"" << e.what() << "\". Is your CPU/RAM unstable?" <<
