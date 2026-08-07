@@ -427,6 +427,8 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 				});
 		}
 
+		// TODO: check the RandomX V2 commitment here using randomx_calculate_commitment or a standalone Blake2b when WITH_RANDOMX=OFF
+
 		if (mainchain_diff.check_pow(resultHash)) {
 			const char* s = client->m_customUser;
 			LOGINFO(0, log::Green() << "client " << static_cast<char*>(client->m_addrString) << (*s ? " user " : "") << s << " found a mainchain block at height " << height << ", submitting it");
@@ -1544,6 +1546,9 @@ bool StratumServer::StratumClient::process_login(T& doc, uint32_t id)
 		return false;
 	}
 
+	// TODO: check "algo" list and reject miners which don't support "rx/2" to force the user to update them
+	// "algo" list can be missing entirely when XMRig-proxy connects, so don't reject such logins
+
 	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString());
 }
 
@@ -1619,6 +1624,9 @@ bool StratumServer::StratumClient::process_submit(T& doc, uint32_t id)
 		LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('result' field has invalid length)");
 		return false;
 	}
+
+	// TODO: read the RandomX V2's "commitment" field (if it exists) and pass it to on_submit
+	// on_submit will check that it's present and correct when the algo is rx/2
 
 	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
 }
