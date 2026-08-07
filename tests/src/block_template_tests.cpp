@@ -63,7 +63,7 @@ TEST(block_template, update)
 	ASSERT_EQ(tpl.get_reward(), 600000000000ULL);
 
 	const PoolBlock* b = tpl.pool_block_template();
-	ASSERT_EQ(b->m_sidechainId, H("2c90c1926a75c81afd49bf4a4b63e9de7b4c153866411c47e7af864b547c23ec"));
+	ASSERT_EQ(b->m_sidechainId, H("d7f65ee9fd858ce9eec01e38289084fa4b8587e87044e176794eebabd42c921c"));
 
 	std::vector<uint8_t> blobs;
 	uint64_t height;
@@ -82,7 +82,7 @@ TEST(block_template, update)
 
 	hash blobs_hash;
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("da11e1ee86779a559df63a55e0b238ce5a67b977e0f68a0b347a39d37096a4bc"));
+	ASSERT_EQ(blobs_hash, H("343b1525a0f68da61f3c94cce02db67a022a48d80ff25b808be97bb1047779c6"));
 
 	// Test 2: mempool with high fee and low fee transactions, it must choose high fee transactions
 	for (uint64_t i = 0; i < 513; ++i) {
@@ -117,7 +117,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, params);
 	ASSERT_EQ(tpl.get_reward(), 612054770773ULL);
 
-	ASSERT_EQ(b->m_sidechainId, H("c9df4853003ab436416b9fc9a5a072d16b4dede849e697a8be2ebb9c88c8ec72"));
+	ASSERT_EQ(b->m_sidechainId, H("5fcd597c6061bae558c25e85435766b20e411265032dc401652a53524165f56a"));
 	ASSERT_EQ(b->m_transactions.size(), 203);
 
 	for (size_t i = 1; i < b->m_transactions.size(); ++i) {
@@ -134,7 +134,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 2U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("20aa6a98ca92bc4564bcdc367c078425d4b44b156c2bc7bb703ef055e4fd2c1b"));
+	ASSERT_EQ(blobs_hash, H("f58ef83eaa5d9d16f5a5cb7f7a82e2521ea6d28001a8584b5cc2716612296d79"));
 
 	// Test 3: small but not empty mempool, and aux chains
 
@@ -158,7 +158,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, params);
 	ASSERT_EQ(tpl.get_reward(), 600300000000ULL);
 
-	ASSERT_EQ(b->m_sidechainId, H("9317e0557a0ba99eac25bb5f4c43b7bbc0b0176d0c777adfac6486bfc46072e5"));
+	ASSERT_EQ(b->m_sidechainId, H("318543c2020c1154ec4b8127c1849777ef7d9cfe255ebbf8806f2e0231c82adb"));
 	ASSERT_EQ(b->m_transactions.size(), 11);
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
@@ -171,7 +171,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 3U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("af2b1d6547ba91fe9cf38a6cc0cf5a8a8de1badfbf62846287865e4db3e0bb58"));
+	ASSERT_EQ(blobs_hash, H("be3bfe1033ff3959c7b7cbaae2eb1ab90bc2696ff7cc1206fa3a792a92c279de"));
 
 	// Test 4: mempool with a lot of transactions with various fees, all parts of transaction picking algorithm should be tested
 
@@ -195,7 +195,7 @@ TEST(block_template, update)
 	tpl.update(data, mempool, params);
 	ASSERT_EQ(tpl.get_reward(), 619742028747ULL);
 
-	ASSERT_EQ(b->m_sidechainId, H("69e7dd43dd99ac6be3f57ca333cc0d814189e83aee1773c99a341aca085c0d46"));
+	ASSERT_EQ(b->m_sidechainId, H("76e680114a10a0499a78f9160f12f27bdc86453f8a5f2b25726b7dc91bd4809b"));
 	ASSERT_EQ(b->m_transactions.size(), 174);
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
@@ -208,7 +208,7 @@ TEST(block_template, update)
 	ASSERT_EQ(template_id, 4U);
 
 	keccak(blobs.data(), static_cast<int>(blobs.size()), blobs_hash.h);
-	ASSERT_EQ(blobs_hash, H("4f62562aa84400eb085f58447d8daa45257369f1ec046b2150212329c9e86ae4"));
+	ASSERT_EQ(blobs_hash, H("a99583f1c602609e61cc5045c88237f1eaf8c1a54a358cadf2784e350b126f0a"));
 	}
 	thread_pool_destroy();
 	destroy_crypto_cache();
@@ -286,7 +286,7 @@ TEST(block_template, submit_sidechain_block)
 	ASSERT_EQ(tip->m_txinGenHeight, data.height);
 	ASSERT_EQ(tip->m_sidechainHeight, sidechain.chain_window_size() * 3 - 1);
 
-	ASSERT_EQ(tip->m_sidechainId, H("12d57571a28d62d2b6dca3a647500d23ac22864138b22a133f237b459a0862da"));
+	ASSERT_EQ(tip->m_sidechainId, H("9288f32340aefc06db63db2b31342c87d5ce8e9c7b5e476b01bc2caf860be924"));
 	}
 	thread_pool_destroy();
 	destroy_crypto_cache();
@@ -337,7 +337,7 @@ TEST(block_template, genesis_block_max_timestamp)
 	ASSERT_EQ(tip->m_txinGenHeight, data.height);
 	ASSERT_EQ(tip->m_sidechainHeight, 0);
 
-	ASSERT_EQ(tip->m_sidechainId, H("cd83d28671cfdad7e86b07debc45737e4bec40e4555023634a9921d7687e504e"));
+	ASSERT_EQ(tip->m_sidechainId, H("dd61acdbeae1eab72880aab278428c4fafcbfecc67028b1f228a788eaf13b3f9"));
 	}
 	thread_pool_destroy();
 	destroy_crypto_cache();
