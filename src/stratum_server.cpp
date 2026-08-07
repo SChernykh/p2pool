@@ -336,12 +336,14 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 				target_hex.m_size -= sizeof(uint32_t);
 			}
 
+			const char* algo = (hashing_blob[0] >= HARDFORK_VERSION_RANDOMX_V2) ? "rx/2" : "rx/0";
+
 			log::Stream s(buf, buf_size);
 			s << "{\"id\":" << id << ",\"jsonrpc\":\"2.0\",\"result\":{\"id\":\"";
 			s << log::Hex(rpc_id) << "\",\"job\":{\"blob\":\"";
 			s << log::hex_buf(hashing_blob, blob_size) << "\",\"job_id\":\"";
 			s << log::Hex(job_id) << "\",\"target\":\"";
-			s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
+			s << target_hex << "\",\"algo\":\"" << algo << "\",\"height\":";
 			s << height << ",\"seed_hash\":\"";
 			s << seed_hash << "\"},\"extensions\":[\"algo\"],\"status\":\"OK\"}}\n";
 			return s.m_pos;
@@ -937,11 +939,13 @@ void StratumServer::on_blobs_ready()
 					target_hex.m_size -= sizeof(uint32_t);
 				}
 
+				const char* algo = (hashing_blob[0] >= HARDFORK_VERSION_RANDOMX_V2) ? "rx/2" : "rx/0";
+
 				log::Stream s(buf, buf_size);
 				s << "{\"jsonrpc\":\"2.0\",\"method\":\"job\",\"params\":{\"blob\":\"";
 				s << log::hex_buf(hashing_blob, blobSize) << "\",\"job_id\":\"";
 				s << log::Hex(job_id) << "\",\"target\":\"";
-				s << target_hex << "\",\"algo\":\"rx/0\",\"height\":";
+				s << target_hex << "\",\"algo\":\"" << algo << "\",\"height\":";
 				s << height << ",\"seed_hash\":\"";
 				s << seedHash << "\"}}\n";
 				return s.m_pos;
