@@ -2,7 +2,7 @@ name: Code coverage
 
 on:
   push:
-    branches: ["master"]
+    branches: ["v5"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'
@@ -72,16 +72,16 @@ jobs:
 
     - name: Copy coverage report to GitHub Pages repo
       run: |
-        rm -rf gh-pages/p2pool-coverage
-        cp -r tests/build/coverage gh-pages/p2pool-coverage
-        cp tests/build/coverage.info tests/build/coverage.txt gh-pages/p2pool-coverage/
+        rm -rf gh-pages/p2pool-coverage-v5
+        cp -r tests/build/coverage gh-pages/p2pool-coverage-v5
+        cp tests/build/coverage.info tests/build/coverage.txt gh-pages/p2pool-coverage-v5/
 
     - name: Commit and push coverage report
       run: |
         cd gh-pages
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add p2pool-coverage
+        git add p2pool-coverage-v5
         git commit -m "Update p2pool coverage report"
         git push
 
@@ -89,5 +89,5 @@ jobs:
       if: '!cancelled()'
       uses: actions/upload-artifact@v7
       with:
-        name: p2pool-coverage
+        name: p2pool-coverage-v5
         path: tests/build/coverage

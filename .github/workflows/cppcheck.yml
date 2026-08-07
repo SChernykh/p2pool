@@ -2,7 +2,7 @@ name: cppcheck
 
 on:
   push:
-    branches: ["master"]
+    branches: ["v5"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'
@@ -10,8 +10,8 @@ on:
 
   pull_request:
 
-  schedule:
-    - cron: '57 0 * * *'
+#  schedule:
+#    - cron: '57 0 * * *'
 
 jobs:
   cppcheck-ubuntu:
