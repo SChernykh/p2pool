@@ -10,8 +10,8 @@ on:
 
   pull_request:
 
-  schedule:
-    - cron: '47 0/3 * * *'
+#  schedule:
+#    - cron: '47 0/3 * * *'
 
 jobs:
   sync-test-ubuntu-tsan:

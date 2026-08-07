@@ -335,10 +335,29 @@ void RandomX_Hasher::sync_wait()
 
 static bool randomx_calculate_hash_safe(randomx_vm* machine, const void* input, size_t inputSize, void* output)
 {
+	if (inputSize == 0) {
+		return false;
+	}
+
+	// Use the correct RandomX version: first byte of the hashing blob is "major version".
+	const bool is_v2 = (reinterpret_cast<const uint8_t*>(input)[0] >= HARDFORK_VERSION_RANDOMX_V2);
+
+	if (is_v2) {
+		machine->setFlagV2();
+	}
+	else {
+		machine->clearFlagV2();
+	}
+
 	// Try to calculate the hash again if something went wrong the first time (for example, because of an unstable CPU)
 	for (size_t i = 0; i < 2; ++i) {
 		try {
 			randomx_calculate_hash(machine, input, inputSize, output);
+
+			if (is_v2) {
+				randomx_calculate_commitment(input, inputSize, output, output);
+			}
+
 			return true;
 		}
 		catch (const std::exception& e) {

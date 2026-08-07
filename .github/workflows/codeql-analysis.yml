@@ -13,7 +13,7 @@ name: "CodeQL"
 
 on:
   push:
-    branches: ["master"]
+    branches: ["v5"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'
@@ -21,8 +21,8 @@ on:
 
   pull_request:
 
-  schedule:
-    - cron: '44 11 * * 0'
+#  schedule:
+#    - cron: '44 11 * * 0'
 
 jobs:
   analyze:

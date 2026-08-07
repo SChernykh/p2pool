@@ -2,7 +2,7 @@ name: C/C++ CI
 
 on:
   push:
-    branches: ["master"]
+    branches: ["v5"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'

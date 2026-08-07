@@ -2,7 +2,7 @@ name: source-snapshot
 
 on:
   push:
-    branches: ["master"]
+    branches: ["v5"]
 
   pull_request:
 
