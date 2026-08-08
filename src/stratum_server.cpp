@@ -1546,8 +1546,34 @@ bool StratumServer::StratumClient::process_login(T& doc, uint32_t id)
 		return false;
 	}
 
-	// TODO: check "algo" list and reject miners which don't support "rx/2" to force the user to update them
-	// "algo" list can be missing entirely when XMRig-proxy connects, so don't reject such logins
+	const auto algo_it = params.FindMember("algo");
+	if (algo_it != params.MemberEnd()) {
+		const auto& algo_list = algo_it->value;
+
+		if (!algo_list.IsArray()) {
+			LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('algo' field is not an array)");
+			return false;
+		}
+
+		bool supports_rx_v2 = false;
+
+		for (const auto& algo : algo_list.GetArray()) {
+			if (!algo.IsString()) {
+				LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('algo[]' element is not a string)");
+				return false;
+			}
+
+			if (strcmp(algo.GetString(), "rx/2") == 0) {
+				supports_rx_v2 = true;
+				break;
+			}
+		}
+
+		if (!supports_rx_v2) {
+			LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " doesn't support RandomX v2");
+			return false;
+		}
+	}
 
 	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString());
 }
