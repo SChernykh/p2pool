@@ -63,12 +63,30 @@ if (NOT MSVC)
 		target_compile_options(cryptonight PRIVATE -maes)
 	endif()
 
-	# IMPORTANT: cap optimization at -O2. The vendored cn_slow_hash has undefined
-	# behavior that gcc/clang miscompile at -O3, producing a WRONG hash for ~1 in 4
-	# blobs. In a Release build (-O3) this made p2pool reject ~23% of valid shares
-	# as "invalid PoW" (and ban miners). -O0/-O1/-O2 all match xmrig and the daemon;
-	# only -O3 diverges. This -O2 comes after the build-type flags so it wins.
-	target_compile_options(cryptonight PRIVATE -O2)
+	# IMPORTANT: the vendored cn_slow_hash has a strict-aliasing (type-punning)
+	# undefined-behavior bug that the compiler miscompiles under -fstrict-aliasing
+	# (implied by -O2 and up), producing a WRONG hash for ~1 in 4 blobs. Symptom:
+	# p2pool rejects that fraction of perfectly valid shares/blocks as "invalid PoW"
+	# and bans the peers that sent them.
+	#
+	# Capping at -O2 alone is NOT enough: on x86 the miscompile only shows at -O3,
+	# but on aarch64 (Apple Silicon) it already fires at -O2/-Os — the exact flags
+	# the macOS-arm64 CI build uses — so an arm64 node rejects valid blocks from its
+	# correct x86 peers. Fix the actual UB instead of chasing -O levels:
+	# -fno-strict-aliasing makes the type-punning defined and produces bit-identical
+	# hashes to the daemon/xmrig on every target (this is how Monero/xmrig build the
+	# same code). Keep -O2 for validation throughput.
+	if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+		# On aarch64 (Apple Silicon) the UB miscompiles even at -O2 (with or without
+		# -fno-strict-aliasing) — verified: it computes a wrong hash that disagrees
+		# with the daemon/xmrig and the -O0 golden vectors, so an arm64 node rejects
+		# valid blocks from its correct peers. -O0 is the level the C/Go golden
+		# vectors were validated at. p2pool only hashes for validation (not mining),
+		# so this is not a throughput concern.
+		target_compile_options(cryptonight PRIVATE -O0 -fno-strict-aliasing)
+	else()
+		target_compile_options(cryptonight PRIVATE -O2 -fno-strict-aliasing)
+	endif()
 else()
 	# Same optimization miscompile on MSVC: a Release (/O2) Windows build computes
 	# the wrong hash / side-chain id for some blobs, so a Windows p2pool NODE
