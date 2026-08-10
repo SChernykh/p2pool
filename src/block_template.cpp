@@ -129,6 +129,17 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_minerTxSize = b.m_minerTxSize;
 	m_nonceOffset = b.m_nonceOffset;
 	m_extraNonceOffsetInTemplate = b.m_extraNonceOffsetInTemplate;
+	// XKR: these side-chain-id zeroing offsets are set in update() but were not
+	// copied here, so old templates (m_oldTemplates, saved via operator=) carried
+	// 0. A share submitted against an old template then computed a wrong side-chain
+	// id in calc_sidechain_hash (zeroing the first bytes instead of the real
+	// nonce/aux-hash/extra-nonce/mm-root regions), so its committed merkle root did
+	// not match the id a peer recomputes -> peers rejected it as an invalid block
+	// (merkle-proof failure) and banned the sender, breaking every fresh sync.
+	m_sidechainNonceOffset = b.m_sidechainNonceOffset;
+	m_sidechainAuxHashOffset = b.m_sidechainAuxHashOffset;
+	m_sidechainExtraNonceOffset = b.m_sidechainExtraNonceOffset;
+	m_sidechainMmRootOffset = b.m_sidechainMmRootOffset;
 	m_numTransactionHashes = b.m_numTransactionHashes;
 	m_prevId = b.m_prevId;
 	m_height = b.m_height.load();
