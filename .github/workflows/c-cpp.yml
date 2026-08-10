@@ -3,6 +3,7 @@ name: C/C++ CI
 on:
   push:
     branches: ["master", "kryptokrona"]
+    tags: ["v*"]
     paths-ignore:
       - 'docker-compose/**'
       - 'docs/**'
@@ -443,3 +444,49 @@ jobs:
       with:
         name: p2pool-macos-aarch64
         path: build/p2pool
+
+  release:
+    name: Draft release
+    # Only run for version tags (e.g. v4.17.1). On branch/PR pushes this job is
+    # skipped, so master merges behave exactly like before.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-alpine-static
+      - build-ubuntu
+      - build-windows-msys2
+      - build-windows-msbuild
+      - build-macos
+      - build-macos-aarch64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download all build artifacts
+      uses: actions/download-artifact@v7
+      with:
+        path: artifacts
+
+    - name: Collect release assets
+      run: |
+        mkdir -p release
+        # Each artifact is downloaded into artifacts/<artifact-name>/<binary>.
+        # The artifact name already encodes the target (and .exe where relevant),
+        # so use it as the release asset filename.
+        for d in artifacts/*/; do
+          name="$(basename "$d")"
+          f="$(find "$d" -maxdepth 1 -type f | head -n1)"
+          if [ -n "$f" ]; then
+            cp "$f" "release/${name}"
+          fi
+        done
+        (cd release && sha256sum * | tee SHA256SUMS.txt)
+        ls -la release
+
+    - name: Publish draft release
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        fail_on_unmatched_files: true
+        generate_release_notes: true
+        files: release/*
