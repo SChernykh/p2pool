@@ -30,6 +30,7 @@ LOG_CATEGORY(PoolBlock)
 namespace p2pool {
 
 ReadWriteLock* PoolBlock::s_precalculatedSharesLock = nullptr;
+uint64_t PoolBlock::s_coinbaseUnlockWindow = 20;
 
 PoolBlock::PoolBlock()
 	: m_majorVersion(0)
@@ -137,120 +138,191 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	return *this;
 }
 
-std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
+// ---------------------------------------------------------------------------
+//  Kryptokrona (XKR) block serialization helpers
+//
+//  XKR blocks (major_version >= 2) are a nested ForkNote structure, unlike
+//  Monero's flat block. See docs/kryptokrona_block_format.md for the full,
+//  byte-validated layout. These file-local helpers are shared by
+//  serialize_mainchain_data() (the submit blob) and get_pow_hash() (the PoW
+//  input), which must build identical coinbases.
+// ---------------------------------------------------------------------------
+namespace {
+
+// coinbase.unlock_time = height + this. The authoritative value comes from the
+// daemon (get_miner_data), since kryptokrona addresses don't encode a network.
+static FORCEINLINE uint64_t xkr_coinbase_unlock_window()
+{
+	return PoolBlock::s_coinbaseUnlockWindow;
+}
+
+// The REAL coinbase (the multi-output PPLNS payout). CryptoNote format:
+// version 1, TXOUT_TO_KEY outputs (no view tag), no RingCT byte. The p2pool
+// sidechain merkle root is appended to the extra_nonce so it's the last 32
+// bytes of `extra` (where handle_chain_main reads it back).
+static void xkr_serialize_real_coinbase(const PoolBlock& b, uint32_t extra_nonce, std::vector<uint8_t>& out)
+{
+	writeVarint(static_cast<uint64_t>(coin::COINBASE_TX_VERSION), out);
+	writeVarint(b.m_txinGenHeight + xkr_coinbase_unlock_window(), out);
+	out.push_back(1);          // vin count
+	out.push_back(TXIN_GEN);   // 0xff
+	writeVarint(b.m_txinGenHeight, out);
+
+	writeVarint(b.m_outputAmounts.size(), out);
+	for (size_t i = 0, n = b.m_outputAmounts.size(); i < n; ++i) {
+		writeVarint(b.m_outputAmounts[i].m_reward, out);
+		out.push_back(coin::TXOUT_TO_KEY);     // 0x02, no view tag
+		const hash k = b.m_ephPublicKeys[i];
+		out.insert(out.end(), k.h, k.h + HASH_SIZE);
+	}
+
+	// extra = [PUBKEY, txkeyPub][NONCE, size, extra_nonce(4) ++ sidechain_root(32)]
+	std::vector<uint8_t> extra;
+	extra.push_back(TX_EXTRA_TAG_PUBKEY);
+	extra.insert(extra.end(), b.m_txkeyPub.h, b.m_txkeyPub.h + HASH_SIZE);
+	extra.push_back(TX_EXTRA_NONCE);
+	writeVarint(static_cast<uint64_t>(EXTRA_NONCE_SIZE + HASH_SIZE), extra);
+	extra.insert(extra.end(), reinterpret_cast<const uint8_t*>(&extra_nonce), reinterpret_cast<const uint8_t*>(&extra_nonce) + EXTRA_NONCE_SIZE);
+	extra.insert(extra.end(), b.m_merkleRoot.h, b.m_merkleRoot.h + HASH_SIZE);
+
+	writeVarint(extra.size(), out);
+	out.insert(out.end(), extra.begin(), extra.end());
+	// No RingCT type byte (CryptoNote coinbase ends here).
+}
+
+// aux hash = keccak(getBlockHashingBinaryArray) — must equal the parent
+// coinbase merge-mining tag merkleRoot (checkProofOfWorkV2).
+static hash xkr_aux_header_hash(const PoolBlock& b, const std::vector<uint8_t>& real_coinbase)
+{
+	hash coinbase_hash;
+	keccak(real_coinbase.data(), static_cast<int>(real_coinbase.size()), coinbase_hash.h);
+
+	std::vector<hash> tx_hashes;
+	tx_hashes.reserve(b.m_transactions.size());
+	tx_hashes.push_back(coinbase_hash);
+	for (size_t i = 1, n = b.m_transactions.size(); i < n; ++i) {
+		tx_hashes.emplace_back(b.m_transactions[i]);
+	}
+
+	root_hash tree_hash;
+	merkle_hash(tx_hashes, tree_hash);
+
+	std::vector<uint8_t> bha;
+	writeVarint(static_cast<uint64_t>(b.m_majorVersion), bha);
+	writeVarint(static_cast<uint64_t>(b.m_minorVersion), bha);
+	bha.insert(bha.end(), b.m_prevId.h, b.m_prevId.h + HASH_SIZE);
+	bha.insert(bha.end(), tree_hash.h, tree_hash.h + HASH_SIZE);
+	writeVarint(static_cast<uint64_t>(b.m_transactions.size()), bha); // transactionHashes.size() + 1
+
+	// The daemon's getAuxiliaryBlockHeaderHash is getObjectHash(blockHashingArray),
+	// i.e. cn_fast_hash of the array serialized as an object = keccak of
+	// varint(length) ++ array (NOT keccak of the array directly).
+	std::vector<uint8_t> obj;
+	writeVarint(bha.size(), obj);
+	obj.insert(obj.end(), bha.begin(), bha.end());
+
+	hash aux;
+	keccak(obj.data(), static_cast<int>(obj.size()), aux.h);
+	return aux;
+}
+
+// The (self-referential) parent coinbase: version/unlock/vin/vout all 0, extra
+// holds only the merge-mining tag [0x03, size=33, depth=0, aux_hash(32)].
+static void xkr_serialize_parent_coinbase(const hash& aux_hash, std::vector<uint8_t>& out)
+{
+	out.push_back(0); // version
+	out.push_back(0); // unlock_time
+	out.push_back(0); // vin count
+	out.push_back(0); // vout count
+
+	std::vector<uint8_t> mm;
+	writeVarint(static_cast<uint64_t>(coin::PARENT_MM_TAG_DEPTH), mm);
+	mm.insert(mm.end(), aux_hash.h, aux_hash.h + HASH_SIZE);
+
+	std::vector<uint8_t> extra;
+	extra.push_back(TX_EXTRA_MERGE_MINING_TAG); // 0x03
+	writeVarint(mm.size(), extra);              // 33
+	extra.insert(extra.end(), mm.begin(), mm.end());
+
+	writeVarint(extra.size(), out);             // 35
+	out.insert(out.end(), extra.begin(), extra.end());
+}
+
+// The parent-block hashing blob fed to CryptoNight-Turtle for the PoW hash.
+static void xkr_serialize_pow_blob(const PoolBlock& b, uint32_t nonce, const hash& parent_coinbase_hash, std::vector<uint8_t>& out)
+{
+	writeVarint(static_cast<uint64_t>(0), out); // parent major (0, see format doc)
+	writeVarint(static_cast<uint64_t>(0), out); // parent minor
+	writeVarint(b.m_timestamp, out);
+	out.insert(out.end(), HASH_SIZE, 0);        // parent prev hash (zero)
+	out.insert(out.end(), reinterpret_cast<const uint8_t*>(&nonce), reinterpret_cast<const uint8_t*>(&nonce) + NONCE_SIZE);
+	out.insert(out.end(), parent_coinbase_hash.h, parent_coinbase_hash.h + HASH_SIZE); // merkleRoot
+	writeVarint(static_cast<uint64_t>(1), out); // numberOfTransactions (parent has 1)
+}
+
+} // namespace
+
+std::vector<uint8_t> PoolBlock::serialize_mainchain_data(int* nonce_offset, int* aux_hash_offset, int* extra_nonce_offset, int* mm_root_offset, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	if (m_transactions.empty()) {
 		LOGERR(1, "Trying to serialize an uninitialized block, fix the code!");
 		return {};
 	}
 
-	std::vector<uint8_t> data;
-	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + m_transactions.size() * HASH_SIZE, 131072));
+	const uint32_t nonce_val = nonce ? *nonce : m_nonce;
+	const uint32_t extra_nonce_val = extra_nonce ? *extra_nonce : m_extraNonce;
 
-	// Header
-	data.push_back(m_majorVersion);
-	data.push_back(m_minorVersion);
-	writeVarint(m_timestamp, data);
+	// Build the real (PPLNS) coinbase, then the aux hash and the parent
+	// coinbase that commits to it.
+	std::vector<uint8_t> real_coinbase;
+	xkr_serialize_real_coinbase(*this, extra_nonce_val, real_coinbase);
+
+	const hash aux_hash = xkr_aux_header_hash(*this, real_coinbase);
+
+	std::vector<uint8_t> parent_coinbase;
+	xkr_serialize_parent_coinbase(aux_hash, parent_coinbase);
+
+	std::vector<uint8_t> data;
+	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 38 + m_transactions.size() * HASH_SIZE, 131072));
+
+	// Outer block header (v>=2): major, minor, prevHash only.
+	writeVarint(static_cast<uint64_t>(m_majorVersion), data);
+	writeVarint(static_cast<uint64_t>(m_minorVersion), data);
 	data.insert(data.end(), m_prevId.h, m_prevId.h + HASH_SIZE);
 
-	if (!nonce) {
-		nonce = &m_nonce;
-	}
-	data.insert(data.end(), reinterpret_cast<const uint8_t*>(nonce), reinterpret_cast<const uint8_t*>(nonce) + NONCE_SIZE);
+	// Parent block header.
+	writeVarint(static_cast<uint64_t>(0), data); // parent major (0)
+	writeVarint(static_cast<uint64_t>(0), data); // parent minor
+	writeVarint(m_timestamp, data);
+	data.insert(data.end(), HASH_SIZE, 0);       // parent prev hash (zero)
+	const int nonce_off = static_cast<int>(data.size());
+	data.insert(data.end(), reinterpret_cast<const uint8_t*>(&nonce_val), reinterpret_cast<const uint8_t*>(&nonce_val) + NONCE_SIZE);
+	writeVarint(static_cast<uint64_t>(1), data); // parent txCount
+	// baseTransactionBranch: tree_depth(1) == 0 -> nothing
 
-	const size_t header_size0 = data.size();
-	if (header_size) {
-		*header_size = header_size0;
-	}
+	// Parent coinbase ends with the 32-byte aux hash.
+	const int parent_cb_off = static_cast<int>(data.size());
+	data.insert(data.end(), parent_coinbase.begin(), parent_coinbase.end());
+	const int aux_hash_off = parent_cb_off + static_cast<int>(parent_coinbase.size()) - static_cast<int>(HASH_SIZE);
+	// blockchainBranch: depth 0 -> nothing
 
-	// Miner tx
-	data.push_back(TX_VERSION);
-	writeVarint(m_txinGenHeight + MINER_REWARD_UNLOCK_TIME, data);
-	data.push_back(1);
-	data.push_back(TXIN_GEN);
-	writeVarint(m_txinGenHeight, data);
+	// Real coinbase extra ends with [extra_nonce(4)][sidechain_root(32)].
+	const int real_cb_off = static_cast<int>(data.size());
+	data.insert(data.end(), real_coinbase.begin(), real_coinbase.end());
+	const int mm_root_off = real_cb_off + static_cast<int>(real_coinbase.size()) - static_cast<int>(HASH_SIZE);
+	const int extra_nonce_off = mm_root_off - static_cast<int>(EXTRA_NONCE_SIZE);
 
-	const int outputs_offset0 = static_cast<int>(data.size());
-	if (outputs_offset) {
-		*outputs_offset = outputs_offset0;
-	}
-
-	writeVarint(m_outputAmounts.size(), data);
-
-	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
-		const TxOutput& output = m_outputAmounts[i];
-
-		writeVarint(output.m_reward, data);
-		data.push_back(TXOUT_TO_TAGGED_KEY);
-		const hash h = m_ephPublicKeys[i];
-		data.insert(data.end(), h.h, h.h + HASH_SIZE);
-		data.push_back(static_cast<uint8_t>(output.m_viewTag));
-	}
-
-	if (outputs_blob_size) {
-		*outputs_blob_size = static_cast<int>(data.size()) - outputs_offset0;
-	}
-
-	uint8_t tx_extra[128];
-	uint8_t* p = tx_extra;
-
-	*(p++) = TX_EXTRA_TAG_PUBKEY;
-	memcpy(p, m_txkeyPub.h, HASH_SIZE);
-	p += HASH_SIZE;
-
-	uint64_t extra_nonce_size = m_extraNonceSize;
-	if (extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
-		LOGERR(1, "extra nonce size is too large (" << extra_nonce_size << "), fix the code!");
-		extra_nonce_size = EXTRA_NONCE_MAX_SIZE;
-	}
-
-	*(p++) = TX_EXTRA_NONCE;
-	writeVarint(extra_nonce_size, [&p](uint8_t value) { *(p++) = value; });
-
-	if (!extra_nonce) {
-		extra_nonce = &m_extraNonce;
-	}
-	memcpy(p, extra_nonce, EXTRA_NONCE_SIZE);
-	p += EXTRA_NONCE_SIZE;
-	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
-		memset(p, 0, extra_nonce_size - EXTRA_NONCE_SIZE);
-		p += extra_nonce_size - EXTRA_NONCE_SIZE;
-	}
-
-	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
-
-	*(p++) = static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE);
-	writeVarint(m_merkleTreeData, [&p](const uint8_t b) { *(p++) = b; });
-	memcpy(p, m_merkleRoot.h, HASH_SIZE);
-	p += HASH_SIZE;
-
-	writeVarint(static_cast<size_t>(p - tx_extra), data);
-	data.insert(data.end(), tx_extra, p);
-
-	data.push_back(0);
-
-	if (miner_tx_size) {
-		*miner_tx_size = data.size() - header_size0;
-	}
-
+	// Non-coinbase transaction hashes.
 	writeVarint(m_transactions.size() - 1, data);
-
-#ifdef WITH_INDEXED_HASHES
 	for (size_t i = 1, n = m_transactions.size(); i < n; ++i) {
 		const hash h = m_transactions[i];
 		data.insert(data.end(), h.h, h.h + HASH_SIZE);
 	}
-#else
-	const uint8_t* t = reinterpret_cast<const uint8_t*>(m_transactions.data());
-	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
-#endif
 
-#if POOL_BLOCK_DEBUG
-	if ((nonce == &m_nonce) && (extra_nonce == &m_extraNonce) && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
-		LOGERR(1, "serialize_mainchain_data() has a bug, fix it!");
-		PANIC_STOP();
-	}
-#endif
+	if (nonce_offset) { *nonce_offset = nonce_off; }
+	if (aux_hash_offset) { *aux_hash_offset = aux_hash_off; }
+	if (extra_nonce_offset) { *extra_nonce_offset = extra_nonce_off; }
+	if (mm_root_offset) { *mm_root_offset = mm_root_off; }
 
 	return data;
 }
@@ -355,70 +427,12 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		return false;
 	}
 
-	// Calculate the coinbase tx hash, then the merkle root of all transactions in the block - this merkle root is what goes into the hashing blob
-
-	// Monero transactions are hashed in 3 separate parts, the resulting 3 hashes are then hashed together to get the final result
-	// For the reference, see "calculate_transaction_hash" in Monero's src/cryptonote_basic/cryptonote_format_utils.cpp
-
-	alignas(8) uint8_t hashes[HASH_SIZE * 3];
-
-	// Second hash is keccak of base rct data (it doesn't exist for the coinbase transaction, so it's a hash of a single 0x00 byte)
-	memcpy(hashes + HASH_SIZE, keccak_0x00.h, HASH_SIZE);
-
-	// Third hash is null because there is no rct data in the coinbase transaction
-	memset(hashes + HASH_SIZE * 2, 0, HASH_SIZE);
-
-	uint64_t count;
-
+	// Kryptokrona (XKR) PoW: CryptoNight-Turtle over the parent-block hashing
+	// blob. build_pow_blob() also records the real coinbase hash at
+	// m_transactions[0]. See docs/kryptokrona_block_format.md.
 	uint8_t blob[HASHING_BLOB_MAX_SIZE];
-	size_t blob_size = 0;
-
-	{
-		size_t header_size, miner_tx_size;
-		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(&header_size, &miner_tx_size, nullptr, nullptr, nullptr, nullptr);
-
-		if (!header_size || !miner_tx_size || (mainchain_data.size() < header_size + miner_tx_size)) {
-			LOGERR(1, "tried to calculate PoW of uninitialized block");
-			return false;
-		}
-
-		blob_size = header_size;
-		memcpy(blob, mainchain_data.data(), blob_size);
-
-		const uint8_t* miner_tx = mainchain_data.data() + header_size;
-		hash tmp;
-
-		// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
-		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, tmp.h);
-		memcpy(hashes, tmp.h, HASH_SIZE);
-
-		count = m_transactions.size();
-
-		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
-
-		// Save the coinbase tx hash into the first element of m_transactions
-		m_transactions[0] = static_cast<indexed_hash>(tmp);
-
-		root_hash tmp_root;
-
-#ifdef WITH_INDEXED_HASHES
-		std::vector<hash> transactions;
-		transactions.reserve(m_transactions.size());
-
-		for (const auto& h : m_transactions) {
-			transactions.emplace_back(h);
-		}
-
-		merkle_hash(transactions, tmp_root);
-#else
-		merkle_hash(m_transactions, tmp_root);
-#endif
-
-		memcpy(blob + blob_size, tmp_root.h, HASH_SIZE);
-		blob_size += HASH_SIZE;
-	}
-
-	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
+	size_t nonce_offset;
+	const size_t blob_size = build_pow_blob(m_extraNonce, m_nonce, blob, nonce_offset);
 
 	// cppcheck-suppress danglingLifetime
 	m_hashingBlob.assign(blob, blob + blob_size);
@@ -426,8 +440,42 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash, force_light_mode, lane);
 }
 
+size_t PoolBlock::build_pow_blob(uint32_t extra_nonce, uint32_t nonce, uint8_t* blob, size_t& nonce_offset) const
+{
+	std::vector<uint8_t> real_coinbase;
+	xkr_serialize_real_coinbase(*this, extra_nonce, real_coinbase);
+
+	// Record the real coinbase hash at index 0 of m_transactions (used elsewhere).
+	hash coinbase_hash;
+	keccak(real_coinbase.data(), static_cast<int>(real_coinbase.size()), coinbase_hash.h);
+	const_cast<PoolBlock*>(this)->m_transactions[0] = static_cast<indexed_hash>(coinbase_hash);
+
+	const hash aux_hash = xkr_aux_header_hash(*this, real_coinbase);
+
+	std::vector<uint8_t> parent_coinbase;
+	xkr_serialize_parent_coinbase(aux_hash, parent_coinbase);
+
+	hash parent_coinbase_hash;
+	keccak(parent_coinbase.data(), static_cast<int>(parent_coinbase.size()), parent_coinbase_hash.h);
+
+	std::vector<uint8_t> pow_blob;
+	xkr_serialize_pow_blob(*this, nonce, parent_coinbase_hash, pow_blob);
+
+	// nonce sits after: pb.major(1) + pb.minor(1) + varint(timestamp) + pb.prev(32)
+	size_t timestamp_len = 1;
+	for (uint64_t t = m_timestamp; t >= 0x80; t >>= 7) { ++timestamp_len; }
+	nonce_offset = 2 + timestamp_len + HASH_SIZE;
+
+	memcpy(blob, pow_blob.data(), pow_blob.size());
+	return pow_blob.size();
+}
+
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
+	// A miner's reward is decomposed into several canonical-denomination outputs, so
+	// sum every output that derives to this wallet rather than returning the first.
+	uint64_t payout = 0;
+
 	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
 		const TxOutput& out = m_outputAmounts[i];
 
@@ -436,11 +484,11 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 		uint8_t view_tag;
 		const uint8_t expected_view_tag = out.m_viewTag;
 		if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (m_ephPublicKeys[i] == eph_public_key)) {
-			return out.m_reward;
+			payout += out.m_reward;
 		}
 	}
 
-	return 0;
+	return payout;
 }
 
 hash PoolBlock::calculate_tx_key_seed() const

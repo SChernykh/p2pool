@@ -34,7 +34,10 @@ static thread_local const char* log_category_prefix = "MergeMiningClient ";
 
 namespace p2pool {
 
-static constexpr hash Tari_ChainID{ "01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990" };
+// Only referenced by the Tari merge-mining client, which is compiled in under
+// WITH_GRPC. Marked maybe_unused so a GRPC-less build (e.g. the XKR port) still
+// compiles clean with -Werror.
+[[maybe_unused]] static constexpr hash Tari_ChainID{ "01f0cf665bd4cd31cbb2b2470236389c483522b350335e10a4a5dca34cb85990" };
 
 IMergeMiningClient* IMergeMiningClient::create(p2pool* pool, const std::string& host, const std::string& wallet, const std::string& spkiFingerprint) noexcept
 {
@@ -238,7 +241,7 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 
 	// nonce_offset and blob
 
-	size_t header_size = 0;
+	int header_size = 0;
 	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&header_size);
 
 	if (header_size <= NONCE_SIZE) {

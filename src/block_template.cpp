@@ -29,7 +29,6 @@
 #include "pool_block.h"
 #include "merkle.h"
 #include "pow_hash.h"
-#include <zmq.hpp>
 #include <ctime>
 #include <numeric>
 
@@ -130,6 +129,17 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_minerTxSize = b.m_minerTxSize;
 	m_nonceOffset = b.m_nonceOffset;
 	m_extraNonceOffsetInTemplate = b.m_extraNonceOffsetInTemplate;
+	// XKR: these side-chain-id zeroing offsets are set in update() but were not
+	// copied here, so old templates (m_oldTemplates, saved via operator=) carried
+	// 0. A share submitted against an old template then computed a wrong side-chain
+	// id in calc_sidechain_hash (zeroing the first bytes instead of the real
+	// nonce/aux-hash/extra-nonce/mm-root regions), so its committed merkle root did
+	// not match the id a peer recomputes -> peers rejected it as an invalid block
+	// (merkle-proof failure) and banned the sender, breaking every fresh sync.
+	m_sidechainNonceOffset = b.m_sidechainNonceOffset;
+	m_sidechainAuxHashOffset = b.m_sidechainAuxHashOffset;
+	m_sidechainExtraNonceOffset = b.m_sidechainExtraNonceOffset;
+	m_sidechainMmRootOffset = b.m_sidechainMmRootOffset;
 	m_numTransactionHashes = b.m_numTransactionHashes;
 	m_prevId = b.m_prevId;
 	m_height = b.m_height.load();
@@ -168,8 +178,10 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 
 static FORCEINLINE uint64_t get_base_reward(uint64_t already_generated_coins)
 {
-	const uint64_t result = ~already_generated_coins >> 19;
-	return (result < BASE_BLOCK_REWARD) ? BASE_BLOCK_REWARD : result;
+	// Kryptokrona (CryptoNote) emission, matching the daemon's getBlockReward:
+	//   (MONEY_SUPPLY - already_generated_coins) >> EMISSION_SPEED_FACTOR
+	// No Monero-style tail-emission floor.
+	return (coin::MONEY_SUPPLY - already_generated_coins) >> coin::EMISSION_SPEED_FACTOR;
 }
 
 static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t median_weight, uint64_t fees, uint64_t weight)
@@ -338,13 +350,17 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
+	// create_miner_tx decomposes each miner's reward into several outputs, and counts
+	// the byte width of every output amount varint. Reserve against the same decomposed
+	// output list so the dry-run reservation matches the real run.
 	auto get_reward_amounts_weight = [this]() {
-		return std::accumulate(m_rewards.begin(), m_rewards.end(), 0ULL,
-			[](uint64_t a, uint64_t b)
-			{
-				writeVarint(b, [&a](uint8_t) { ++a; });
-				return a;
-			});
+		std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+		SideChain::decompose_outputs(m_shares, m_rewards, outputs);
+		uint64_t weight = 0;
+		for (const auto& o : outputs) {
+			writeVarint(o.first, [&weight](uint8_t) { ++weight; });
+		}
+		return weight;
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
@@ -513,8 +529,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			LOGINFO(4, "Readjusting miner_tx to reduce extra nonce size");
 
 			// The difference between max possible reward and the actual reward can't reduce the size of output amount varints by more than 1 byte each
-			// So block weight will be >= current weight - number of outputs
-			const uint64_t w = (final_weight > m_rewards.size()) ? (final_weight - m_rewards.size()) : 0;
+			// So block weight will be >= current weight - number of outputs (after reward decomposition, several outputs per miner)
+			std::vector<std::pair<uint64_t, const Wallet*>> outputs_tmp;
+			SideChain::decompose_outputs(m_shares, m_rewards, outputs_tmp);
+			const uint64_t num_outputs = outputs_tmp.size();
+			const uint64_t w = (final_weight > num_outputs) ? (final_weight - num_outputs) : 0;
 
 			// Block reward will be <= r due to how block size penalty works
 			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
@@ -570,8 +589,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_minerTx.begin(), m_minerTx.end());
 	writeVarint(m_numTransactionHashes, m_blockTemplateBlob);
 
-	// Miner tx hash is skipped here because it's not a part of block template
-	m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	// Miner tx hash is skipped here because it's not a part of block template.
+	// Guard against m_transactionHashes being shorter than one hash: begin() +
+	// HASH_SIZE would then be past end(), and vector::insert would compute a
+	// wildly negative range length (std::length_error / crash). With no extra
+	// tx hashes there is simply nothing to append.
+	if (m_transactionHashes.size() > HASH_SIZE) {
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	}
 
 	m_poolBlockTemplate->m_transactions.clear();
 	m_poolBlockTemplate->m_transactions.resize(1);
@@ -641,27 +666,16 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
 
-	m_sidechainHashBlob = m_poolBlockTemplate->serialize_mainchain_data();
+	m_sidechainHashBlob = m_poolBlockTemplate->serialize_mainchain_data(
+		&m_sidechainNonceOffset, &m_sidechainAuxHashOffset, &m_sidechainExtraNonceOffset, &m_sidechainMmRootOffset);
 	m_sidechainHashBlob.insert(m_sidechainHashBlob.end(), sidechain_data.begin(), sidechain_data.end());
 	m_sidechainHashBlob.insert(m_sidechainHashBlob.end(), consensus_id.begin(), consensus_id.end());
 
-	{
-		m_sidechainHashKeccakState = {};
-
-		const size_t extra_nonce_offset = m_sidechainHashBlob.size() - HASH_SIZE - EXTRA_NONCE_SIZE;
-		if (extra_nonce_offset >= KeccakParams::HASH_DATA_AREA) {
-			// Sidechain data is big enough to cache keccak state up to extra_nonce
-			m_sidechainHashInputLength = (extra_nonce_offset / KeccakParams::HASH_DATA_AREA) * KeccakParams::HASH_DATA_AREA;
-
-			const uint8_t* in = m_sidechainHashBlob.data();
-			int inlen = static_cast<int>(m_sidechainHashInputLength);
-
-			keccak_step(in, inlen, m_sidechainHashKeccakState);
-		}
-		else {
-			m_sidechainHashInputLength = 0;
-		}
-	}
+	// XKR: the varying/derived regions are mid-block (nested layout), so the
+	// Monero incremental-keccak caching up to a trailing extra_nonce doesn't
+	// apply. calc_sidechain_hash always uses the O(N) path.
+	m_sidechainHashKeccakState = {};
+	m_sidechainHashInputLength = 0;
 
 	m_fullDataBlob = m_blockTemplateBlob;
 	m_fullDataBlob.insert(m_fullDataBlob.end(), sidechain_data.begin(), sidechain_data.end());
@@ -884,7 +898,13 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Miner transaction (coinbase)
 	m_minerTx.clear();
 
-	const size_t num_outputs = shares.size();
+	// Decompose each miner's reward into canonical denominations so every coinbase
+	// output has same-amount decoys on-chain and stays spendable at the network's
+	// minimum ring size. This produces several outputs per miner instead of one.
+	std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+	SideChain::decompose_outputs(shares, m_rewards, outputs);
+
+	const size_t num_outputs = outputs.size();
 	m_minerTx.reserve(num_outputs * 39 + 55);
 
 	// tx version
@@ -903,7 +923,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	writeVarint(data.height, m_minerTx);
 	m_poolBlockTemplate->m_txinGenHeight = data.height;
 
-	// Number of outputs (1 output per miner)
+	// Number of outputs (several per miner after reward decomposition)
 	writeVarint(num_outputs, m_minerTx);
 
 	m_poolBlockTemplate->m_ephPublicKeys.clear();
@@ -914,7 +934,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
-		writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
+		writeVarint(outputs[i].first, [this, &reward_amounts_weight](uint8_t b)
 			{
 				m_minerTx.push_back(b);
 				++reward_amounts_weight;
@@ -928,12 +948,12 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		}
 		else {
 			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
+			if (!outputs[i].second->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 			m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
-			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i], view_tag);
+			m_poolBlockTemplate->m_outputAmounts.emplace_back(outputs[i].first, view_tag);
 		}
 
 		m_minerTx.emplace_back(view_tag);
@@ -994,53 +1014,46 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	return 1;
 }
 
-hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
+hash BlockTemplate::calc_sidechain_hash(uint32_t /*sidechain_extra_nonce*/) const
 {
-	// Calculate side-chain hash (all block template bytes + all side-chain bytes + consensus ID, replacing NONCE, EXTRA_NONCE and HASH itself with 0's)
+	// Side-chain hash = keccak(all block template bytes + all side-chain bytes +
+	// consensus ID), with the mining/derived regions replaced by 0's so the id
+	// is stable across mining. For XKR these are four mid-block regions: the
+	// parent-block nonce, the parent-coinbase aux hash, the real-coinbase
+	// extra_nonce, and the real-coinbase sidechain merkle root. This must match
+	// the zeroing done in PoolBlock::deserialize.
 	const size_t size = m_sidechainHashBlob.size();
-	const size_t N = m_sidechainHashInputLength;
 
-	const size_t sidechain_extra_nonce_offset = size - HASH_SIZE - EXTRA_NONCE_SIZE;
-	const uint8_t sidechain_extra_nonce_buf[EXTRA_NONCE_SIZE] = {
-		static_cast<uint8_t>(sidechain_extra_nonce >> 0),
-		static_cast<uint8_t>(sidechain_extra_nonce >> 8),
-		static_cast<uint8_t>(sidechain_extra_nonce >> 16),
-		static_cast<uint8_t>(sidechain_extra_nonce >> 24)
-	};
+	const int nonce_off = m_sidechainNonceOffset;
+	const int aux_off = m_sidechainAuxHashOffset;
+	const int en_off = m_sidechainExtraNonceOffset;
+	const int mm_off = m_sidechainMmRootOffset;
+
+	// The side-chain extra_nonce is m_sidechainExtraBuf[3] — the last 4 bytes of
+	// the side-chain data, i.e. right before the appended consensus id in the
+	// cached blob. It is finalized PER SHARE at submit time, but the side-chain id
+	// and the merge-mining merkle root are fixed BEFORE mining (the stratum blob
+	// the miner hashes commits to them), so the id must NOT depend on it: baking a
+	// per-share extra_nonce into the id would (a) break verify_merkle_proof on a
+	// peer and (b) make the peer's build_pow_blob reconstruct a different blob than
+	// was mined ("not enough PoW"). Zero it here, and PoolBlock::deserialize must
+	// zero the same region so a peer recomputes the identical id.
+	const int se_off = static_cast<int>(size - m_sidechain->consensus_id().size() - sizeof(uint32_t));
 
 	hash result;
-	uint8_t buf[288];
-
-	const bool b = N && (N <= sidechain_extra_nonce_offset) && (N < size) && (size - N <= sizeof(buf));
-
-	// Slow path: O(N)
-	if (!b || pool_block_debug()) {
-		keccak_custom([this, sidechain_extra_nonce_offset, &sidechain_extra_nonce_buf](int offset) -> uint8_t {
-			const uint32_t k = static_cast<uint32_t>(offset - sidechain_extra_nonce_offset);
-			if (k < EXTRA_NONCE_SIZE) {
-				// cppcheck-suppress objectIndex
-				return sidechain_extra_nonce_buf[k];
-			}
-			return m_sidechainHashBlob[offset];
-		}, static_cast<int>(size), result.h, HASH_SIZE);
-	}
-
-	// Fast path: O(1)
-	if (b) {
-		const int inlen = static_cast<int>(size - N);
-
-		memcpy(buf, m_sidechainHashBlob.data() + N, size - N);
-		memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
-
-		std::array<uint64_t, 25> st = m_sidechainHashKeccakState;
-		keccak_finish(buf, inlen, st);
-
-		if (pool_block_debug() && (memcmp(st.data(), result.h, HASH_SIZE) != 0)) {
-			LOGERR(1, "calc_sidechain_hash fast path is broken. Fix the code!");
-		}
-
-		memcpy(result.h, st.data(), HASH_SIZE);
-	}
+	keccak_custom([this, nonce_off, aux_off, en_off, mm_off, se_off](int offset) -> uint8_t {
+		uint32_t k = static_cast<uint32_t>(offset - nonce_off);
+		if (k < NONCE_SIZE) return 0;
+		k = static_cast<uint32_t>(offset - aux_off);
+		if (k < HASH_SIZE) return 0;
+		k = static_cast<uint32_t>(offset - en_off);
+		if (k < EXTRA_NONCE_SIZE) return 0;
+		k = static_cast<uint32_t>(offset - mm_off);
+		if (k < HASH_SIZE) return 0;
+		k = static_cast<uint32_t>(offset - se_off);
+		if (k < sizeof(uint32_t)) return 0;
+		return m_sidechainHashBlob[offset];
+	}, static_cast<int>(size), result.h, HASH_SIZE);
 
 	return result;
 }
@@ -1248,31 +1261,10 @@ uint32_t BlockTemplate::get_hashing_blob(uint32_t extra_nonce, uint8_t (&blob)[H
 
 uint32_t BlockTemplate::get_hashing_blob_nolock(uint32_t extra_nonce, uint8_t* blob) const
 {
-	uint8_t* p = blob;
-
-	// Block header
-	memcpy(p, m_blockTemplateBlob.data(), m_blockHeaderSize);
-	p += m_blockHeaderSize;
-
-	// Merkle tree hash
-	hash root_hash = calc_miner_tx_hash(extra_nonce);
-
-	for (size_t i = 0; i < m_merkleTreeMainBranch.size(); i += HASH_SIZE) {
-		uint8_t h[HASH_SIZE * 2];
-
-		memcpy(h, root_hash.h, HASH_SIZE);
-		memcpy(h + HASH_SIZE, m_merkleTreeMainBranch.data() + i, HASH_SIZE);
-
-		keccak(h, HASH_SIZE * 2, root_hash.h);
-	}
-
-	memcpy(p, root_hash.h, HASH_SIZE);
-	p += HASH_SIZE;
-
-	// Total number of transactions in this block (including the miner tx)
-	writeVarint(m_numTransactionHashes + 1, [&p](uint8_t b) { *(p++) = b; });
-
-	return static_cast<uint32_t>(p - blob);
+	// Kryptokrona: what the miner hashes (with CryptoNight-Turtle) is the
+	// parent-block hashing blob, not Monero's flat header+merkle blob.
+	size_t nonce_offset;
+	return static_cast<uint32_t>(m_poolBlockTemplate->build_pow_blob(extra_nonce, 0, blob, nonce_offset));
 }
 
 uint32_t BlockTemplate::get_hashing_blobs(uint32_t extra_nonce_start, uint32_t count, std::vector<uint8_t>& blobs, uint64_t& height, difficulty_type& difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty, hash& seed_hash, size_t& nonce_offset, uint32_t& template_id) const
@@ -1406,14 +1398,14 @@ bool BlockTemplate::get_aux_proof(const uint32_t template_id, uint32_t extra_non
 	return result;
 }
 
-std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const
+std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id, uint32_t nonce, uint32_t sidechain_extra_nonce, size_t& nonce_offset, size_t& extra_nonce_offset, size_t& merkle_root_offset, hash& merge_mining_root, const BlockTemplate** pThis) const
 {
 	ReadLock lock(m_lock);
 
 	if (template_id != m_templateId) {
 		const BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 		if (old && (template_id == old->m_templateId)) {
-			return old->get_block_template_blob(template_id, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, pThis);
+			return old->get_block_template_blob(template_id, nonce, sidechain_extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, pThis);
 		}
 
 		nonce_offset = 0;
@@ -1423,19 +1415,21 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 		return std::vector<uint8_t>();
 	}
 
-	nonce_offset = m_nonceOffset;
-	extra_nonce_offset = m_extraNonceOffsetInTemplate;
+	// Kryptokrona: the block is serialized with the final nonce AND extra_nonce
+	// so the (derived) parent-coinbase aux hash is correct. It cannot be patched
+	// in-place afterwards like Monero's flat block, so all patch offsets are 0.
+	nonce_offset = 0;
+	extra_nonce_offset = 0;
+	merkle_root_offset = 0;
 
 	const hash sidechain_id = calc_sidechain_hash(sidechain_extra_nonce);
 	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
 	const uint32_t aux_slot = get_aux_slot(m_sidechain->consensus_hash(), m_poolBlockTemplate->m_auxNonce, n_aux_chains);
 	merge_mining_root = get_root_from_proof(sidechain_id, m_poolBlockTemplate->m_merkleProof, aux_slot, n_aux_chains);
 
-	merkle_root_offset = m_extraNonceOffsetInTemplate + m_poolBlockTemplate->m_extraNonceSize + 2 + m_poolBlockTemplate->m_merkleTreeDataSize;
-
 	*pThis = this;
 
-	return m_blockTemplateBlob;
+	return m_poolBlockTemplate->serialize_mainchain_data(nullptr, nullptr, nullptr, nullptr, &nonce, &sidechain_extra_nonce);
 }
 
 bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)

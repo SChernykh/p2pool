@@ -27,6 +27,9 @@
 #include "configuration.h"
 #include "intrin_portable.h"
 #endif
+extern "C" {
+#include "xkr_pow.h"
+}
 #include "keccak.h"
 #include "p2p_server.h"
 #include "stratum_server.h"
@@ -139,45 +142,13 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 		m_consensusId.assign(nano_consensus_id, nano_consensus_id + HASH_SIZE);
 	}
 	else {
-#ifdef WITH_RANDOMX
-		const randomx_flags flags = randomx_get_flags();
-		randomx_cache* cache = randomx_alloc_cache(flags | RANDOMX_FLAG_LARGE_PAGES);
-		if (!cache) {
-			LOGWARN(1, "couldn't allocate RandomX cache using large pages");
-			cache = randomx_alloc_cache(flags);
-			if (!cache) {
-				LOGERR(1, "couldn't allocate RandomX cache, aborting");
-				PANIC_STOP();
-			}
-		}
-
-		randomx_init_cache(cache, buf, s.m_pos);
-
-		// Intentionally not a power of 2
-		constexpr size_t scratchpad_size = 1009;
-
-		rx_vec_i128* scratchpad = reinterpret_cast<rx_vec_i128*>(cache->memory);
-		rx_vec_i128* scratchpad_end = scratchpad + scratchpad_size;
-		rx_vec_i128* scratchpad_ptr = scratchpad;
-		rx_vec_i128* cache_ptr = scratchpad_end;
-
-		for (uint64_t i = scratchpad_size, n = static_cast<uint64_t>(RANDOMX_ARGON_MEMORY * 1024) / sizeof(rx_vec_i128); i < n; ++i) {
-			*scratchpad_ptr = rx_xor_vec_i128(*scratchpad_ptr, *cache_ptr);
-			++cache_ptr;
-			++scratchpad_ptr;
-			if (scratchpad_ptr == scratchpad_end) {
-				scratchpad_ptr = scratchpad;
-			}
-		}
-
+		// Kryptokrona: derive a custom sidechain's consensus ID with
+		// CryptoNight-Turtle (a slow hash - Monero used RandomX here) over the
+		// serialized sidechain parameters, so it's expensive to brute-force a
+		// colliding config.
 		hash id;
-		keccak(reinterpret_cast<uint8_t*>(scratchpad), static_cast<int>(scratchpad_size * sizeof(rx_vec_i128)), id.h);
-		randomx_release_cache(cache);
+		xkr_cn_turtle_pow(buf, s.m_pos, id.h);
 		m_consensusId.assign(id.h, id.h + HASH_SIZE);
-#else
-		LOGERR(1, "Can't calculate consensus ID without RandomX library");
-		PANIC_STOP();
-#endif
 	}
 
 	s.m_pos = 0;
@@ -378,7 +349,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 		LOGINFO(6, "get_shares: parent = " << tip->m_parent
 			<< ", height = " << tip->m_sidechainHeight
-			<< ", Monero height = " << tip->m_txinGenHeight
+			<< ", Kryptokrona height = " << tip->m_txinGenHeight
 			<< ", seed height = " << h
 			<< ", mainchain_diff = " << mainchain_diff
 		);
@@ -611,7 +582,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	// Check if it has the correct parent and difficulty to go right to monerod for checking
 	MinerData miner_data = m_pool->miner_data();
 	if ((block.m_prevId == miner_data.prev_id) && miner_data.difficulty.check_pow(block.m_powHash)) {
-		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero network, submitting it");
+		LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Kryptokrona network, submitting it");
 		m_pool->submit_block_async(block.serialize_mainchain_data());
 	}
 	else {
@@ -620,7 +591,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 			LOGWARN(3, "add_external_block: couldn't get mainchain difficulty for height = " << block.m_txinGenHeight);
 		}
 		else if (diff.check_pow(block.m_powHash)) {
-			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Monero height " << block.m_txinGenHeight << ", submitting it");
+			LOGINFO(0, log::LightGreen() << "add_external_block: block " << block.m_sidechainId << " has enough PoW for Kryptokrona height " << block.m_txinGenHeight << ", submitting it");
 			m_pool->submit_block_async(block.serialize_mainchain_data());
 		}
 	}
@@ -899,7 +870,14 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 	}
 
-	const size_t n = tmpShares.size();
+	// Decompose the per-share rewards into the same flattened output list that block
+	// creation and verification use, so the reconstructed coinbase blob matches the
+	// original byte-for-byte. Each output's eph public key is derived at its running
+	// output index (not the share index).
+	std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+	decompose_outputs(tmpShares, tmpRewards, outputs);
+
+	const size_t n = outputs.size();
 
 	LOGINFO(6, "get_outputs_blob batch start");
 
@@ -908,7 +886,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in.emplace_back(tmpShares[i].m_wallet->view_public_key(), i);
+		in.emplace_back(outputs[i].second->view_public_key(), i);
 	}
 
 	if (!batch_derivations(in, txkeySec, out)) {
@@ -927,7 +905,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in2.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in2.emplace_back(out[i].first, i, tmpShares[i].m_wallet->spend_public_key());
+		in2.emplace_back(out[i].first, i, outputs[i].second->spend_public_key());
 	}
 
 	if (!batch_public_keys(in2, out2)) {
@@ -952,7 +930,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_outputAmounts.reserve(n);
 
 	for (size_t i = 0; i < n; ++i) {
-		writeVarint(tmpRewards[i], blob);
+		writeVarint(outputs[i].first, blob);
 
 		const hash& eph_public_key = out2[i].first;
 		const uint8_t view_tag = static_cast<uint8_t>(out[i].second);
@@ -963,7 +941,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		blob.emplace_back(view_tag);
 
 		block->m_ephPublicKeys.emplace_back(eph_public_key);
-		block->m_outputAmounts.emplace_back(tmpRewards[i], view_tag);
+		block->m_outputAmounts.emplace_back(outputs[i].first, view_tag);
 	}
 
 	block->m_ephPublicKeys.shrink_to_fit();
@@ -1120,7 +1098,7 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 #endif
 
 	LOGINFO(0, "status" <<
-		"\nMonero node               = " << m_pool->current_host().m_displayName << fingerprint <<
+		"\nKryptokrona node               = " << m_pool->current_host().m_displayName << fingerprint <<
 		"\nMain chain height         = " << m_pool->block_template().get_height() <<
 		"\nMain chain hashrate       = " << log::Hashrate(network_hashrate) <<
 		"\nSide chain ID             = " << (is_default() ? "default" : (is_mini() ? "mini" : (is_nano() ? "nano" : m_consensusIdDisplayStr.c_str()))) <<
@@ -1148,12 +1126,12 @@ double SideChain::get_reward_share(const Wallet& w) const
 			hash eph_public_key;
 			for (size_t i = 0, n = tip->m_outputAmounts.size(); i < n; ++i) {
 				const PoolBlock::TxOutput& out = tip->m_outputAmounts[i];
-				if (!reward) {
-					uint8_t view_tag;
-					const uint8_t expected_view_tag = out.m_viewTag;
-					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (tip->m_ephPublicKeys[i] == eph_public_key)) {
-						reward = out.m_reward;
-					}
+				// A wallet owns several outputs now (its reward is decomposed into
+				// denominations), so sum every output that derives to it.
+				uint8_t view_tag;
+				const uint8_t expected_view_tag = out.m_viewTag;
+				if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (tip->m_ephPublicKeys[i] == eph_public_key)) {
+					reward += out.m_reward;
 				}
 				total_reward += out.m_reward;
 			}
@@ -1305,6 +1283,33 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	}
 
 	return true;
+}
+
+void SideChain::decompose_outputs(const std::vector<MinerShare>& shares, const std::vector<uint64_t>& rewards, std::vector<std::pair<uint64_t, const Wallet*>>& outputs)
+{
+	outputs.clear();
+
+	const size_t n = std::min(shares.size(), rewards.size());
+	outputs.reserve(n * 4);
+
+	for (size_t i = 0; i < n; ++i) {
+		const Wallet* w = shares[i].m_wallet;
+
+		// decompose_amount_into_digits with a zero dust threshold: every non-zero
+		// decimal digit becomes one output of value (digit * 10^k), smallest first.
+		// With a zero threshold there is never a dust remainder, so all outputs are
+		// canonical denominations. This mirrors the daemon's constructMinerTx.
+		uint64_t amount = rewards[i];
+		uint64_t order = 1;
+		while (amount != 0) {
+			const uint64_t chunk = (amount % 10) * order;
+			amount /= 10;
+			order *= 10;
+			if (chunk != 0) {
+				outputs.emplace_back(chunk, w);
+			}
+		}
+	}
 }
 
 bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
@@ -1867,15 +1872,6 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (shares.size() != block->m_outputAmounts.size()) {
-		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
-			", id = " << block->m_sidechainId <<
-			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << shares.size());
-		block->m_invalid = true;
-		return;
-	}
-
 	uint64_t total_reward = std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL,
 		[](uint64_t a, const PoolBlock::TxOutput& b)
 		{
@@ -1891,30 +1887,39 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (rewards.size() != block->m_outputAmounts.size()) {
+	// Reconstruct the expected coinbase outputs by decomposing each share's reward
+	// into canonical denominations, exactly as block-template creation does. Because
+	// the block's outputs always sum to the reward that was split, split_reward here
+	// reproduces the same per-share rewards, and decompose_outputs reproduces the same
+	// flattened output list — so a correct block matches byte-for-byte and a crafted
+	// one does not.
+	std::vector<std::pair<uint64_t, const Wallet*>> expected_outputs;
+	decompose_outputs(shares, rewards, expected_outputs);
+
+	if (expected_outputs.size() != block->m_outputAmounts.size()) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << rewards.size());
+			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << expected_outputs.size());
 		block->m_invalid = true;
 		return;
 	}
 
-	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
+	for (size_t i = 0, n = expected_outputs.size(); i < n; ++i) {
 		const PoolBlock::TxOutput& out = block->m_outputAmounts[i];
 
-		if (rewards[i] != out.m_reward) {
+		if (expected_outputs[i].first != out.m_reward) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
-				" has invalid reward at index " << i << ": got " << out.m_reward << ", expected " << rewards[i]);
+				" has invalid reward at index " << i << ": got " << out.m_reward << ", expected " << expected_outputs[i].first);
 			block->m_invalid = true;
 			return;
 		}
 
 		hash eph_public_key;
 		uint8_t view_tag;
-		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
+		if (!expected_outputs[i].second->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
@@ -1923,14 +1928,13 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		if (out.m_viewTag != view_tag) {
-			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
-				", id = " << block->m_sidechainId <<
-				", mainchain height = " << block->m_txinGenHeight <<
-				" has an incorrect view tag at index " << i);
-			block->m_invalid = true;
-			return;
-		}
+		// XKR: coinbase outputs are TXOUT_TO_KEY (0x02) with NO view tag (unlike
+		// Monero's tagged keys), so the view tag is not serialized —
+		// PoolBlock::deserialize sets m_viewTag = 0 for every output. Checking it
+		// here would reject every relayed/synced block (the miner has the derived
+		// view tag in memory and passes, but a peer parses 0 and fails). Output
+		// ownership is still fully verified by the eph public key check below.
+		(void) view_tag;
 
 		if (eph_public_key != block->m_ephPublicKeys[i]) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
@@ -2190,7 +2194,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 
 	// Candidate chain must have been mined on top of at least half as many known Monero blocks, compared to the current chain
 	if ((candidate_chain_monero_blocks.size() * 2 < current_chain_monero_blocks.size()) || (candidate_mainchain_height < candidate_mainchain_min_height)) {
-		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Monero blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
+		LOGWARN(3, "received a longer alternative chain but it wasn't mined on current Kryptokrona blockchain: only " << candidate_chain_monero_blocks.size() << '/' << current_chain_monero_blocks.size() << " blocks found");
 		return false;
 	}
 
@@ -2236,7 +2240,7 @@ bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* c
 	// Candidate's timestamps span must be between 2/3 and 4/3 of Monero's timestamps span
 	if ((candidate_span > std::numeric_limits<uint64_t>::max() / 3) || // overflow check
 		(candidate_span * 3 < candidate_monero_span * 2) || (candidate_span * 3 > candidate_monero_span * 4)) {
-		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: span " << candidate_span << " vs Monero span " << candidate_monero_span);
+		LOGWARN(3, "received a longer alternative chain but it was mined with fake timestamps: span " << candidate_span << " vs Kryptokrona span " << candidate_monero_span);
 		return false;
 	}
 

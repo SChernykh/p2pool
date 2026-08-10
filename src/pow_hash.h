@@ -104,6 +104,21 @@ private:
 };
 #endif
 
+// Kryptokrona (XKR) PoW hasher: CryptoNight-Turtle-Lite variant 2.
+//
+// Unlike RandomX, CN-Turtle is a stateless hash of the block hashing blob, so
+// the height/seed/lane/force_light_mode arguments (all RandomX seed-epoch and
+// VM-lane concepts) are ignored. This keeps the RandomX_Hasher_Base interface
+// intact so callers (block_template, miner, side_chain) don't change.
+class CnTurtle_Hasher : public RandomX_Hasher_Base
+{
+public:
+	explicit CnTurtle_Hasher(p2pool* pool);
+	~CnTurtle_Hasher() override;
+
+	bool calculate(const void* data, size_t size, uint64_t height, const hash& seed, hash& result, bool force_light_mode, size_t lane) override;
+};
+
 class RandomX_Hasher_RPC : public RandomX_Hasher_Base
 {
 public:

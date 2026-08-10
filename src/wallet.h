@@ -24,10 +24,14 @@ namespace p2pool {
 class Wallet
 {
 public:
-	// public keys: 64 bytes -> 88 characters in base58
-	// prefix (1 byte) + checksum (4 bytes) -> 7 characters in base58
-	// 95 characters in total
-	static constexpr int ADDRESS_LENGTH = 95;
+	// Kryptokrona addresses use a multi-byte VARINT base58 prefix, unlike
+	// Monero's single byte. The default SEKR prefix (2239254) is a 4-byte
+	// varint => 4 + 64 keys + 4 checksum = 72 bytes => 99 base58 chars (exactly
+	// 9 full CryptoNote blocks). The Xkr prefix (45239) is a 3-byte varint =>
+	// 98 chars. encode() emits the wallet's own prefix (so both forms round-trip)
+	// and returns the actual length; ADDRESS_LENGTH is the buffer size (the
+	// longest, SEKR, form). decode() accepts both lengths.
+	static constexpr int ADDRESS_LENGTH = 99;
 
 	explicit Wallet(const char* address);
 
@@ -39,13 +43,17 @@ public:
 	[[nodiscard]] bool decode(const char* address);
 	[[nodiscard]] bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress);
 
-	void encode(char (&buf)[ADDRESS_LENGTH]) const;
+	// Writes the address into buf and returns the number of characters written
+	// (99 for a SEKR-prefix wallet, 98 for an Xkr-prefix one). buf is sized for
+	// the longest (SEKR) form; callers must use the returned length, not
+	// ADDRESS_LENGTH.
+	int encode(char (&buf)[ADDRESS_LENGTH]) const;
 
 	[[nodiscard]] FORCEINLINE std::string encode() const
 	{
 		char buf[ADDRESS_LENGTH];
-		encode(buf);
-		return std::string(buf, buf + ADDRESS_LENGTH);
+		const int len = encode(buf);
+		return std::string(buf, buf + len);
 	}
 
 	[[nodiscard]] bool get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag = nullptr) const;

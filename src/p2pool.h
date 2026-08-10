@@ -33,7 +33,6 @@ class P2PServer;
 class Miner;
 class ConsoleCommands;
 class p2pool_api;
-class ZMQReader;
 class IMergeMiningClient;
 struct PoolBlock;
 
@@ -133,8 +132,7 @@ public:
 	void stop_mining();
 #endif
 
-	bool zmq_running() const;
-	uint64_t zmq_last_active() const { return m_zmqLastActive; }
+	uint64_t last_active() const { return m_lastActive; }
 	uint64_t start_time() const { return m_startTime; }
 	void reconnect_to_host();
 
@@ -273,7 +271,7 @@ private:
 
 	std::atomic<bool> m_isAlternativeBlock{ false };
 
-	std::atomic<uint64_t> m_zmqLastActive;
+	std::atomic<uint64_t> m_lastActive;
 	uint64_t m_startTime;
 	uv_async_t m_reconnectToHostAsync;
 
@@ -283,11 +281,6 @@ private:
 	mutable std::vector<uint64_t> m_missingHeights;
 
 	void get_missing_heights();
-
-#ifndef P2POOL_UNIT_TESTS
-	mutable uv_rwlock_t m_ZMQReaderLock;
-	ZMQReader* m_ZMQReader = nullptr;
-#endif
 
 	mutable uv_rwlock_t m_mergeMiningClientsLock;
 	std::vector<IMergeMiningClient*> m_mergeMiningClients;

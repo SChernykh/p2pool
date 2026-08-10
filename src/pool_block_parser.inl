@@ -61,20 +61,53 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 #define READ_BUF(buf, size) do { if (!read_buf((buf), (size))) return __LINE__; } while(0)
 
+		// ---- Outer block header (XKR v>=2: major, minor, prevId) ----
+		// Unlike Monero, timestamp and nonce are NOT here - they live in the
+		// parent block. See docs/kryptokrona_block_format.md.
 		READ_BYTE(m_majorVersion);
 		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
 
 		READ_BYTE(m_minorVersion);
-		if (m_minorVersion < m_majorVersion) return __LINE__;
 		if (m_minorVersion > 127) return __LINE__;
 
-		READ_VARINT(m_timestamp);
 		READ_BUF(m_prevId.h, HASH_SIZE);
+
+		// ---- Parent block header ----
+		EXPECT_BYTE(0); // parent major_version (serialized as 0, see format doc)
+		EXPECT_BYTE(0); // parent minor_version
+		READ_VARINT(m_timestamp);
+		for (size_t i = 0; i < HASH_SIZE; ++i) { EXPECT_BYTE(0); } // parent prev hash (zero)
 
 		const int nonce_offset = static_cast<int>(data - data_begin);
 		READ_BUF(&m_nonce, NONCE_SIZE);
+		EXPECT_BYTE(1); // parent transactionCount
 
-		EXPECT_BYTE(TX_VERSION);
+		// ---- Parent coinbase: version/unlock/vin/vout all 0, extra = mm tag ----
+		EXPECT_BYTE(0); // version
+		EXPECT_BYTE(0); // unlock_time
+		EXPECT_BYTE(0); // vin count
+		EXPECT_BYTE(0); // vout count
+		{
+			uint64_t parent_extra_size;
+			READ_VARINT(parent_extra_size);
+			EXPECT_BYTE(TX_EXTRA_MERGE_MINING_TAG);
+			uint64_t mm_field_size;
+			READ_VARINT(mm_field_size);
+			uint64_t mm_depth;
+			READ_VARINT(mm_depth);
+			if (mm_depth != coin::PARENT_MM_TAG_DEPTH) return __LINE__;
+		}
+		// The parent coinbase merge-mining root is the derived aux header hash.
+		// It's a function of extra_nonce, so it is zeroed (like nonce/extra_nonce)
+		// when computing the stable sidechain id below.
+		const int aux_hash_offset = static_cast<int>(data - data_begin);
+		{
+			hash parent_aux_hash;
+			READ_BUF(parent_aux_hash.h, HASH_SIZE);
+		}
+
+		// ---- Real coinbase ----
+		EXPECT_BYTE(coin::COINBASE_TX_VERSION);
 
 		uint64_t unlock_height;
 		READ_VARINT(unlock_height);
@@ -86,7 +119,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_txinGenHeight);
 		if (m_txinGenHeight > CRYPTONOTE_MAX_BLOCK_NUMBER) return __LINE__;
 		if (m_majorVersion != sidechain.network_major_version(m_txinGenHeight)) return __LINE__;
-		if (unlock_height != m_txinGenHeight + MINER_REWARD_UNLOCK_TIME) return __LINE__;
+		// unlock window is network-dependent (20 mainnet / 1 testnet); not enforced here.
 
 		std::vector<uint8_t> outputs_blob;
 		const int outputs_offset = static_cast<int>(data - data_begin);
@@ -98,10 +131,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		int outputs_blob_size;
 
 		if (num_outputs > 0) {
-			// Outputs are in the buffer, just read them
-			// Each output is at least 35 bytes, exit early if there's not enough data left
-			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key, 1 byte for view_tag
-			constexpr uint64_t MIN_OUTPUT_SIZE = 35;
+			// Outputs are in the buffer, just read them.
+			// XKR (CryptoNote) output is at least 34 bytes: 1 reward, 1 tx_type
+			// (TXOUT_TO_KEY), 32 eph_pub_key. No view tag (unlike Monero's 35).
+			constexpr uint64_t MIN_OUTPUT_SIZE = 34;
 
 			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < num_outputs * MIN_OUTPUT_SIZE) return __LINE__;
@@ -128,15 +161,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				if (total_reward + reward < total_reward) return __LINE__;
 				total_reward += reward;
 
-				EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
+				EXPECT_BYTE(coin::TXOUT_TO_KEY);
 
 				hash ephPublicKey;
 				READ_BUF(ephPublicKey.h, HASH_SIZE);
 				m_ephPublicKeys[i] = ephPublicKey;
 
-				uint8_t view_tag;
-				READ_BYTE(view_tag);
-				t.m_viewTag = view_tag;
+				t.m_viewTag = 0; // no view tags in CryptoNote
 			}
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
@@ -171,9 +202,15 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 		}
 
-		// Technically some p2pool node could keep stuffing block with transactions until reward is less than 0.6 XMR
-		// But default transaction picking algorithm never does that. It's better to just ban such nodes
-		if (total_reward < BASE_BLOCK_REWARD) {
+		// Monero rejected blocks whose reward dropped below its constant 0.6 XMR
+		// tail emission (a node stuffing txs to shrink the reward). Kryptokrona
+		// has no tail emission: the block reward is (MONEY_SUPPLY - already
+		// generated) >> EMISSION_SPEED_FACTOR, which decreases every block and is
+		// already far below the genesis emission (BASE_BLOCK_REWARD) at current
+		// heights. Using that as a floor rejected every real block (parser error
+		// 208). The daemon is authoritative on the exact reward, so here we only
+		// reject a degenerate zero-reward coinbase.
+		if (total_reward == 0) {
 			return __LINE__;
 		}
 
@@ -195,41 +232,27 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		EXPECT_BYTE(TX_EXTRA_NONCE);
 		READ_VARINT(m_extraNonceSize);
 
-		// Sanity check
-		if ((m_extraNonceSize < EXTRA_NONCE_SIZE) || (m_extraNonceSize > EXTRA_NONCE_MAX_SIZE)) return __LINE__;
+		// XKR: extra_nonce field is [4-byte extra_nonce][32-byte sidechain merkle
+		// root]. There is no Monero-style merge-mining tag in the real coinbase;
+		// the sidechain root is simply the tail of the extra_nonce.
+		if (m_extraNonceSize != EXTRA_NONCE_SIZE + HASH_SIZE) return __LINE__;
 
 		const int extra_nonce_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
 		READ_BUF(&m_extraNonce, EXTRA_NONCE_SIZE);
-		for (uint64_t i = EXTRA_NONCE_SIZE; i < m_extraNonceSize; ++i) {
-			EXPECT_BYTE(0);
-		}
 
-		EXPECT_BYTE(TX_EXTRA_MERGE_MINING_TAG);
-
-		int mm_root_hash_offset;
-		uint32_t mm_n_aux_chains, mm_nonce;
-
-		uint64_t mm_field_size;
-		READ_VARINT(mm_field_size);
-
-		const uint8_t* const mm_field_begin = data;
-
-		READ_VARINT(m_merkleTreeData);
-
-		m_merkleTreeDataSize = static_cast<uint32_t>(data - mm_field_begin);
-
-		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
-
-		mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+		const int mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
 		READ_BUF(m_merkleRoot.h, HASH_SIZE);
 
-		if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
-			return __LINE__;
-		}
+		// Base XKR port does not merge-mine other chains: a single aux chain
+		// (the sidechain itself), which decode_merkle_tree_data yields from 0.
+		m_merkleTreeData = 0;
+		m_merkleTreeDataSize = 0;
+
+		uint32_t mm_n_aux_chains, mm_nonce;
+		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
 
 		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
-
-		EXPECT_BYTE(0);
+		// No RingCT type byte for a CryptoNote coinbase.
 
 		uint64_t num_transactions;
 		READ_VARINT(num_transactions);
@@ -454,6 +477,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 
+		// Offset of the side-chain extra_nonce (m_sidechainExtraBuf[3], the last 4
+		// bytes just read) in the raw block. It is finalized per share at submit
+		// time and must be zeroed when computing the side-chain id below, matching
+		// BlockTemplate::calc_sidechain_hash — otherwise the recomputed id would not
+		// match the miner's (breaking the merkle proof) and the block's PoW.
+		const int sidechain_extra_nonce_offset = static_cast<int>((data - data_begin) - static_cast<ptrdiff_t>(sizeof(uint32_t)));
+
 #undef READ_BYTE
 #undef EXPECT_BYTE
 #undef READ_VARINT
@@ -481,11 +511,23 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 
+		// Side-chain extra_nonce offset in the reconstructed (outputs/tx-reindexed)
+		// coordinate space used by the lambda below.
+		const int se_nonce_off_recon = sidechain_extra_nonce_offset + outputs_blob_size_diff + transactions_blob_size_diff;
+
 		keccak_custom(
-			[nonce_offset, extra_nonce_offset, mm_root_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
+			[nonce_offset, aux_hash_offset, extra_nonce_offset, mm_root_hash_offset, se_nonce_off_recon, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
 			{
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
+					return 0;
+				}
+
+				// XKR: the parent coinbase aux hash is derived from extra_nonce,
+				// so it too is zeroed to keep the sidechain id stable across
+				// mining. (Monero has no equivalent region.)
+				k = static_cast<uint32_t>(offset - aux_hash_offset);
+				if (k < HASH_SIZE) {
 					return 0;
 				}
 
@@ -496,6 +538,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				k = static_cast<uint32_t>(offset - mm_root_hash_offset);
 				if (k < HASH_SIZE) {
+					return 0;
+				}
+
+				// XKR: the per-share side-chain extra_nonce (m_sidechainExtraBuf[3])
+				// is not part of the side-chain id (see calc_sidechain_hash).
+				k = static_cast<uint32_t>(offset - se_nonce_off_recon);
+				if (k < sizeof(uint32_t)) {
 					return 0;
 				}
 
@@ -523,6 +572,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			m_sidechainId = check;
 		}
 		else if (m_sidechainId != check) {
+			LOGWARN(1, "side-chain id mismatch: received " << m_sidechainId << " but recomputed " << check
+				<< " (stale/mismatched build or wrong consensus config?)");
 			return __LINE__;
 		}
 
@@ -533,6 +584,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const uint32_t mm_aux_slot = get_aux_slot(sidechain.consensus_hash(), mm_nonce, mm_n_aux_chains);
 
 		if (!verify_merkle_proof(check, m_merkleProof, mm_aux_slot, mm_n_aux_chains, m_merkleRoot)) {
+			LOGWARN(1, "merkle proof failed for side-chain id " << check << ": merkle root " << static_cast<const hash&>(m_merkleRoot)
+				<< ", n_aux_chains " << mm_n_aux_chains << ", slot " << mm_aux_slot << ", proof len " << m_merkleProof.size()
+				<< " (stale/mismatched build?)");
 			return __LINE__;
 		}
 	}

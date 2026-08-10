@@ -566,6 +566,7 @@ struct MinerData
 		, median_weight(0)
 		, already_generated_coins(0)
 		, median_timestamp(0)
+		, unlock_window(20)
 		, aux_nonce(0)
 	{}
 
@@ -577,6 +578,7 @@ struct MinerData
 	uint64_t median_weight;
 	uint64_t already_generated_coins;
 	uint64_t median_timestamp;
+	uint64_t unlock_window;
 	std::vector<TxMempoolData> tx_backlog;
 
 	std::vector<AuxChainData> aux_chains;

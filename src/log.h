@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "coin_config.h"
+
 namespace p2pool {
 
 class Wallet;
@@ -414,15 +416,15 @@ template<> struct log::Stream::Entry<XMRAmount>
 {
 	static NOINLINE void put(XMRAmount value, Stream* wrapper)
 	{
-		constexpr uint64_t denomination = 1000000000000ULL;
+		constexpr uint64_t denomination = coin::ATOMIC_UNITS;
 
 		const int w = wrapper->getNumberWidth();
 
 		wrapper->setNumberWidth(1);
 		*wrapper << value.m_data / denomination << '.';
 
-		wrapper->setNumberWidth(12);
-		*wrapper << value.m_data % denomination << " XMR";
+		wrapper->setNumberWidth(coin::DISPLAY_DECIMAL_POINT);
+		*wrapper << value.m_data % denomination << ' ' << coin::COIN_TICKER;
 
 		wrapper->setNumberWidth(w);
 	}

@@ -22,6 +22,7 @@
 #include "wallet.h"
 #include "keccak.h"
 #include "crypto.h"
+#include "coin_config.h"
 
 extern "C" {
 #include "crypto-ops.h"
@@ -33,15 +34,12 @@ LOG_CATEGORY(Wallet)
 
 namespace {
 
-// Allow only regular addresses (no integrated addresses, no subaddresses)
-// Values taken from cryptonote_config.h (CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX)
-constexpr uint64_t valid_prefixes[] = { 18, 53, 24 };
-
-constexpr uint64_t valid_prefixes_subaddress[] = { 42, 63, 36 };
+// Kryptokrona public address prefixes (varints). Both encode the same keys;
+// the daemon accepts either. There are no sub/integrated addresses here, and
+// the same prefix is used on every network (mainnet/testnet).
+constexpr uint64_t valid_prefixes[] = { p2pool::coin::ADDRESS_PREFIX_SEKR, p2pool::coin::ADDRESS_PREFIX_XKR };
 
 constexpr std::array<int, 9> block_sizes{ 0, 2, 3, 5, 6, 7, 9, 10, 11 };
-constexpr int num_full_blocks = p2pool::Wallet::ADDRESS_LENGTH / block_sizes.back();
-constexpr int last_block_size = p2pool::Wallet::ADDRESS_LENGTH % block_sizes.back();
 
 constexpr int block_sizes_lookup[11] = { 0, -1, 1, 2, -1, 3, 4, 5, -1, 6, 7 };
 
@@ -114,144 +112,181 @@ Wallet& Wallet::operator=(const Wallet& w)
 bool Wallet::decode(const char* address)
 {
 	m_type = NetworkType::Invalid;
+	m_subaddress = false;
 
-	if (!address || (strlen(address) != ADDRESS_LENGTH)) {
+	if (!address) {
 		return false;
 	}
 
-	constexpr int last_block_size_index = block_sizes_lookup[last_block_size];
+	// Kryptokrona addresses are 98 (Xkr) or 99 (SEKR) base58 chars; both encode
+	// varint(prefix) + spend_pub(32) + view_pub(32) + checksum(4).
+	const size_t addr_len = strlen(address);
+	if ((addr_len != 98) && (addr_len != 99)) {
+		return false;
+	}
 
-	static_assert(last_block_size_index >= 0, "Check ADDRESS_LENGTH");
+	// CryptoNote base58 decode of an arbitrary-length address into bytes.
+	const int n_blocks = static_cast<int>(addr_len) / block_sizes.back();
+	const int last_chars = static_cast<int>(addr_len) % block_sizes.back();
+	const int last_bytes = (last_chars == 0) ? 0 : block_sizes_lookup[last_chars];
+	if ((last_chars != 0) && (last_bytes < 0)) {
+		return false;
+	}
 
-	uint8_t data[static_cast<size_t>(num_full_blocks) * sizeof(uint64_t) + last_block_size_index] = {};
-	int data_index = 0;
+	uint8_t data[9 * sizeof(uint64_t)] = {}; // max 72 bytes (99-char address)
+	size_t data_size = 0;
 
-	for (int i = 0; i <= num_full_blocks; ++i) {
+	for (int i = 0; i <= n_blocks; ++i) {
+		const int chars = (i < n_blocks) ? block_sizes.back() : last_chars;
+		if (chars == 0) {
+			break;
+		}
+
 		uint64_t num = 0;
 		uint64_t order = 1;
-
-		for (int j = ((i < num_full_blocks) ? block_sizes.back() : last_block_size) - 1; j >= 0; --j) {
-			const int8_t digit = rev_alphabet.data[static_cast<uint8_t>(address[j])];
+		for (int j = chars - 1; j >= 0; --j) {
+			const int8_t digit = rev_alphabet.data[static_cast<uint8_t>(address[i * block_sizes.back() + j])];
 			if (digit < 0) {
 				return false;
 			}
-
 			uint64_t hi;
 			const uint64_t tmp = num + umul128(order, static_cast<uint64_t>(digit), &hi);
 			if ((tmp < num) || hi) {
 				return false;
 			}
-
 			num = tmp;
 			order *= alphabet_size;
 		}
 
-		address += block_sizes.back();
-
-		for (int j = static_cast<int>((i < num_full_blocks) ? sizeof(num) : last_block_size_index) - 1; j >= 0; --j) {
-			data[data_index++] = static_cast<uint8_t>(num >> (j * 8));
+		const int nbytes = (i < n_blocks) ? static_cast<int>(sizeof(uint64_t)) : last_bytes;
+		for (int j = nbytes - 1; j >= 0; --j) {
+			data[data_size++] = static_cast<uint8_t>(num >> (j * 8));
 		}
 	}
 
-	m_prefix = data[0];
+	// Read the varint prefix.
+	uint64_t prefix = 0;
+	int shift = 0;
+	size_t pos = 0;
+	for (;;) {
+		if (pos >= data_size) {
+			return false;
+		}
+		const uint8_t c = data[pos++];
+		prefix |= static_cast<uint64_t>(c & 0x7f) << shift;
+		if ((c & 0x80) == 0) {
+			break;
+		}
+		shift += 7;
+		if (shift > 63) {
+			return false;
+		}
+	}
+	m_prefix = prefix;
 
-	switch (m_prefix)
-	{
-	case valid_prefixes[0]: m_type = NetworkType::Mainnet;  break;
-	case valid_prefixes[1]: m_type = NetworkType::Testnet;  break;
-	case valid_prefixes[2]: m_type = NetworkType::Stagenet; break;
-
-	case valid_prefixes_subaddress[0]: m_type = NetworkType::Mainnet;  m_subaddress = true; break;
-	case valid_prefixes_subaddress[1]: m_type = NetworkType::Testnet;  m_subaddress = true; break;
-	case valid_prefixes_subaddress[2]: m_type = NetworkType::Stagenet; m_subaddress = true; break;
-
-	default:
+	if ((prefix != valid_prefixes[0]) && (prefix != valid_prefixes[1])) {
 		return false;
 	}
 
-	memcpy(m_keys[0].h, data + 1, HASH_SIZE);
-	memcpy(m_keys[1].h, data + 1 + HASH_SIZE, HASH_SIZE);
-	memcpy(&m_checksum, data + 1 + HASH_SIZE * 2, sizeof(m_checksum));
+	// Remaining bytes: spend(32) + view(32) + checksum(4).
+	if (data_size != pos + HASH_SIZE * 2 + sizeof(m_checksum)) {
+		return false;
+	}
 
-	uint8_t md[200];
-	keccak(data, sizeof(data) - sizeof(m_checksum), md);
+	memcpy(m_keys[0].h, data + pos, HASH_SIZE);
+	memcpy(m_keys[1].h, data + pos + HASH_SIZE, HASH_SIZE);
+	memcpy(&m_checksum, data + pos + HASH_SIZE * 2, sizeof(m_checksum));
 
-	if (memcmp(&m_checksum, md, sizeof(m_checksum)) != 0) {
-		m_type = NetworkType::Invalid;
+	// checksum = first 4 bytes of keccak(varint(prefix) + spend + view).
+	hash md;
+	keccak(data, static_cast<int>(pos + HASH_SIZE * 2), md.h);
+	if (memcmp(&m_checksum, md.h, sizeof(m_checksum)) != 0) {
+		return false;
 	}
 
 	ge_p3 point;
 	if ((ge_frombytes_vartime(&point, m_keys[0].h) != 0) || (ge_frombytes_vartime(&point, m_keys[1].h) != 0)) {
-		m_type = NetworkType::Invalid;
+		return false;
 	}
 
-	if (!torsion_check()) {
-		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");
-		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
-	}
+	// Kryptokrona uses one address prefix for all networks; treat a valid
+	// address as belonging to whatever network the pool is running on.
+	m_type = NetworkType::Mainnet;
 
 	return valid();
 }
 
-bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress)
+bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool /*subaddress*/)
 {
 	ge_p3 point;
 	if ((ge_frombytes_vartime(&point, spend_pub_key.h) != 0) || (ge_frombytes_vartime(&point, view_pub_key.h) != 0)) {
 		return false;
 	}
 
-	switch (type)
-	{
-	case NetworkType::Mainnet:  m_prefix = subaddress ? valid_prefixes_subaddress[0] : valid_prefixes[0]; break;
-	case NetworkType::Testnet:  m_prefix = subaddress ? valid_prefixes_subaddress[1] : valid_prefixes[1]; break;
-	case NetworkType::Stagenet: m_prefix = subaddress ? valid_prefixes_subaddress[2] : valid_prefixes[2]; break;
-	default:                    m_prefix = 0;                 break;
-	}
+	// Kryptokrona uses one prefix for every network; ignore `subaddress` (no
+	// subaddresses) and always assign the canonical SEKR prefix.
+	m_prefix = coin::ADDRESS_PREFIX_DEFAULT;
+	m_subaddress = false;
 
 	m_keys[0] = spend_pub_key;
 	m_keys[1] = view_pub_key;
 
-	uint8_t data[1 + HASH_SIZE * 2];
-	data[0] = static_cast<uint8_t>(m_prefix);
-	memcpy(data + 1, spend_pub_key.h, HASH_SIZE);
-	memcpy(data + 1 + HASH_SIZE, view_pub_key.h, HASH_SIZE);
+	// data = varint(prefix) + spend + view (checksum is over this)
+	uint8_t data[10 + HASH_SIZE * 2];
+	size_t n = 0;
+	for (uint64_t p = m_prefix; p >= 0x80; p >>= 7) { data[n++] = static_cast<uint8_t>(p & 0x7f) | 0x80; }
+	data[n] = static_cast<uint8_t>(m_prefix >> (7 * n)); ++n;
+	memcpy(data + n, spend_pub_key.h, HASH_SIZE);
+	memcpy(data + n + HASH_SIZE, view_pub_key.h, HASH_SIZE);
 
-	uint8_t md[200];
-	keccak(data, sizeof(data), md);
-
-	memcpy(&m_checksum, md, sizeof(m_checksum));
+	hash md;
+	keccak(data, static_cast<int>(n + HASH_SIZE * 2), md.h);
+	memcpy(&m_checksum, md.h, sizeof(m_checksum));
 
 	m_type = type;
-	m_subaddress = subaddress;
-
-	if (!torsion_check()) {
-		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");		
-		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
-	}
 
 	return true;
 }
 
-void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
+int Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const
 {
-	uint8_t data[1 + HASH_SIZE * 2 + sizeof(m_checksum)];
+	// Emit the wallet's own prefix so both address formats round-trip exactly:
+	// SEKR (4-byte prefix varint) -> 99 chars, Xkr (3-byte prefix) -> 98 chars.
+	// Layout: varint(prefix) + spend + view + checksum. Returns the number of
+	// base58 characters actually written (<= ADDRESS_LENGTH).
+	uint8_t data[10 + HASH_SIZE * 2 + sizeof(m_checksum)] = {};
+	size_t n = 0;
+	for (uint64_t p = m_prefix; p >= 0x80; p >>= 7) { data[n++] = static_cast<uint8_t>(p & 0x7f) | 0x80; }
+	data[n] = static_cast<uint8_t>(m_prefix >> (7 * n)); ++n;
+	memcpy(data + n, m_keys[0].h, HASH_SIZE);
+	memcpy(data + n + HASH_SIZE, m_keys[1].h, HASH_SIZE);
+	// Recompute the checksum for the prefix we emit. The stored m_checksum is
+	// prefix-specific; recomputing keeps encode() correct for any m_prefix and
+	// makes decode()->encode() a bit-exact round-trip for both SEKR and Xkr.
+	hash cs;
+	keccak(data, static_cast<int>(n + HASH_SIZE * 2), cs.h);
+	memcpy(data + n + HASH_SIZE * 2, cs.h, sizeof(m_checksum));
+	const int data_size = static_cast<int>(n + HASH_SIZE * 2 + sizeof(m_checksum));
 
-	data[0] = static_cast<uint8_t>(m_prefix);
-	memcpy(data + 1, m_keys[0].h, HASH_SIZE);
-	memcpy(data + 1 + HASH_SIZE, m_keys[1].h, HASH_SIZE);
-	memcpy(data + 1 + HASH_SIZE * 2, &m_checksum, sizeof(m_checksum));
-
-	for (int i = 0; i <= num_full_blocks; ++i) {
-		uint64_t n = 0;
-		for (int j = 0; (j < 8) && (i * sizeof(uint64_t) + j < sizeof(data)); ++j) {
-			n = (n << 8) | data[i * sizeof(uint64_t) + j];
+	const int nblk = data_size / static_cast<int>(sizeof(uint64_t));
+	for (int i = 0; i <= nblk; ++i) {
+		const int nbytes = (i < nblk) ? static_cast<int>(sizeof(uint64_t)) : (data_size % static_cast<int>(sizeof(uint64_t)));
+		if (nbytes == 0) {
+			break;
 		}
-		for (int j = ((i < num_full_blocks) ? block_sizes.back() : last_block_size) - 1; j >= 0; --j) {
-			const int digit = static_cast<int>(n % alphabet_size);
-			n /= alphabet_size;
-			buf[i * block_sizes.back() + j] = alphabet[digit];
+		uint64_t num = 0;
+		for (int j = 0; j < nbytes; ++j) {
+			num = (num << 8) | data[i * sizeof(uint64_t) + j];
+		}
+		const int chars = (i < nblk) ? block_sizes.back() : block_sizes[nbytes];
+		for (int j = chars - 1; j >= 0; --j) {
+			buf[i * block_sizes.back() + j] = alphabet[num % alphabet_size];
+			num /= alphabet_size;
 		}
 	}
+
+	const int rem = data_size % static_cast<int>(sizeof(uint64_t));
+	return nblk * block_sizes.back() + (rem ? block_sizes[rem] : 0);
 }
 
 bool Wallet::get_eph_public_key(const hash& txkey_sec, size_t output_index, hash& eph_public_key, uint8_t& view_tag, const uint8_t* expected_view_tag) const

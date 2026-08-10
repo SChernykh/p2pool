@@ -19,6 +19,7 @@
 
 #include "uv_util.h"
 #include "wallet.h"
+#include "coin_config.h"
 
 #include <map>
 
@@ -53,8 +54,11 @@ struct MinerShare;
 // 128 KB minus BLOCK_RESPONSE P2P protocol header (5 bytes)
 static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
 
-// 0.6 XMR
-static constexpr uint64_t BASE_BLOCK_REWARD = 600000000000ULL;
+// Approximate base block reward, used only as a fallback/estimate; the
+// authoritative reward always comes from the daemon's getblocktemplate.
+// Monero hard-coded 0.6 XMR here; for kryptokrona we derive it from the
+// coin's emission (see coin_config.h).
+static constexpr uint64_t BASE_BLOCK_REWARD = coin::APPROX_BASE_BLOCK_REWARD;
 
 // Because these values are stored in a 56 bit field
 static constexpr uint64_t MAX_OUTPUT_VALUE = (1ULL << 56) - 1;
@@ -183,6 +187,10 @@ struct PoolBlock
 
 	bool m_precalculated;
 
+	// Kryptokrona coinbase unlock window (height + this = coinbase unlock_time).
+	// Set from the daemon's get_miner_data (20 mainnet / 1 testnet).
+	static uint64_t s_coinbaseUnlockWindow;
+
 	static ReadWriteLock* s_precalculatedSharesLock;
 	std::vector<MinerShare> m_precalculatedShares;
 
@@ -199,13 +207,23 @@ struct PoolBlock
 	// Used to speed up SideChain::get_difficulty
 	mutable difficulty_type m_cachedNextDifficulty;
 
-	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
+	// The four *_offset out-params report byte offsets (into the returned blob)
+	// of the mining/derived regions that get zeroed when computing the stable
+	// sidechain id: the parent-block nonce, the parent-coinbase aux hash, the
+	// real-coinbase extra_nonce, and the real-coinbase sidechain merkle root.
+	std::vector<uint8_t> serialize_mainchain_data(int* nonce_offset = nullptr, int* aux_hash_offset = nullptr, int* extra_nonce_offset = nullptr, int* mm_root_offset = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
 	[[nodiscard]] int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, bool compact, bool allow_pruned);
 	void reset_offchain_data();
 
 	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane);
+
+	// Builds the CryptoNight-Turtle PoW hashing blob (the kryptokrona parent-block
+	// hashing serialization) for the given extra_nonce and nonce into `blob`
+	// (>= HASHING_BLOB_MAX_SIZE), returning its size and the byte offset of the
+	// 4-byte nonce within it. This is what stratum miners hash.
+	size_t build_pow_blob(uint32_t extra_nonce, uint32_t nonce, uint8_t* blob, size_t& nonce_offset) const;
 
 	uint64_t get_payout(const Wallet& w) const;
 

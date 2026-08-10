@@ -45,9 +45,16 @@ LOG_CATEGORY(P2PServer)
 static constexpr char saved_peer_list_file_name[] = "p2pool_peers.txt";
 static constexpr char saved_onion_peer_list_file_name[] = "p2pool_onion_peers.txt";
 static constexpr char saved_i2p_peer_list_file_name[] = "p2pool_i2p_peers.txt";
-static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "" };
-static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "" };
-static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpeers.net", ""};
+// Kryptokrona has no public P2Pool seed-node DNS infrastructure yet, so the
+// Monero seed nodes are removed. Peers are found via --addpeers / the local
+// peer cache. Add "seeds.<domain>" entries here once XKR seed nodes exist.
+// Kryptokrona (XKR) seed nodes for the default sidechain. Entries may be
+// "host" (default p2p port) or "host:port". The kth VPS publishes its p2pool
+// p2p on external port 20211, so new nodes auto-discover the network without
+// needing --addpeers.
+static const char* seed_nodes[] = { "deploy.cloud.cbh.kth.se:20211", "" };
+static const char* seed_nodes_mini[] = { "" };
+static const char* seed_nodes_nano[] = { "" };
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
@@ -441,7 +448,7 @@ void P2PServer::update_peer_connections()
 		m_seenGoodPeers = true;
 	}
 	else if (!m_peerListMonero.empty()) {
-		LOGINFO(3, "Scanning monerod peers, " << m_peerListMonero.size() << " left");
+		LOGINFO(3, "Scanning kryptokronad peers, " << m_peerListMonero.size() << " left");
 		for (uint32_t i = 0; (i < 25) && !m_peerListMonero.empty(); ++i) {
 			peer_list.push_back(m_peerListMonero.back());
 			m_peerListMonero.pop_back();
@@ -533,7 +540,7 @@ void P2PServer::update_peer_connections()
 	}
 
 	if (!has_good_peers && ((m_timerCounter % 10) == 0) && (SideChain::network_type() == NetworkType::Mainnet)) {
-		LOGERR(1, "no connections to other p2pool nodes, check your monerod/p2pool/network/firewall setup!!!");
+		LOGERR(1, "no connections to other p2pool nodes, check your kryptokronad/p2pool/network/firewall setup!!!");
 		load_peer_list();
 		if (m_peerListMonero.empty()) {
 			load_monerod_peer_list();
@@ -734,8 +741,25 @@ void P2PServer::load_peer_list()
 	// Load peers from seed nodes if we're on the default or mini sidechain
 	auto load_from_seed_nodes = [&saved_list](const char** nodes, int p2p_port) {
 		for (size_t i = 0; nodes[i][0]; ++i) {
-			const char* cur_node = nodes[i];
-			LOGINFO(4, "loading peers from " << cur_node);
+			// Kryptokrona: allow "host:port" seed entries. p2pool's seeds are
+			// host-only with a fixed default p2p port, but XKR nodes may publish
+			// their p2p on a non-default external port (e.g. the kth VPS mapping),
+			// so parse a trailing :<port> and use it for this seed if present.
+			std::string host_str = nodes[i];
+			int node_port = p2p_port;
+			{
+				const size_t colon = host_str.find_last_of(':');
+				// Skip IPv6 literals like [::1]:port (handled by their own brackets)
+				if ((colon != std::string::npos) && (host_str.find(']') == std::string::npos)) {
+					const int parsed = atoi(host_str.c_str() + colon + 1);
+					if ((parsed > 0) && (parsed <= 65535)) {
+						node_port = parsed;
+						host_str.resize(colon);
+					}
+				}
+			}
+			const char* cur_node = host_str.c_str();
+			LOGINFO(4, "loading peers from " << cur_node << " (port " << node_port << ')');
 
 			// Prefer DNS TXT records
 			const bool has_txt = get_dns_txt_records(cur_node, [&saved_list, cur_node](const char* s, size_t n) {
@@ -775,13 +799,13 @@ void P2PServer::load_peer_list()
 					if (r->ai_family == AF_INET6) {
 						addr_str = inet_ntop(AF_INET6, &reinterpret_cast<sockaddr_in6*>(r->ai_addr)->sin6_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << '[' << addr_str << "]:" << p2p_port << '\0';
+							s << '[' << addr_str << "]:" << node_port << '\0';
 						}
 					}
 					else {
 						addr_str = inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in*>(r->ai_addr)->sin_addr, addr_str_buf, sizeof(addr_str_buf));
 						if (addr_str) {
-							s << addr_str << ':' << p2p_port << '\0';
+							s << addr_str << ':' << node_port << '\0';
 						}
 					}
 
@@ -989,7 +1013,7 @@ void P2PServer::load_monerod_peer_list()
 			// Put recently active peers last in the list (it will be scanned backwards)
 			std::sort(m_peerListMonero.begin(), m_peerListMonero.end(), [](const Peer& a, const Peer& b) { return a.m_lastSeen < b.m_lastSeen; });
 
-			LOGINFO(4, "monerod peer list loaded (" << m_peerListMonero.size() << " peers)");
+			LOGINFO(4, "kryptokronad peer list loaded (" << m_peerListMonero.size() << " peers)");
 		},
 		[](const JSONRPCRequest::CallbackData& data)
 		{
@@ -1067,6 +1091,21 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 
 	int outputs_offset, outputs_blob_size;
 	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
+
+	// NOTE: the Monero-style coinbase-output pruning below assumes serialize_
+	// mainchain_data returns the output offset/size, but for the XKR coinbase
+	// layout the 3rd/4th params are the extra-nonce and merge-mining offsets, so
+	// these values don't delimit the outputs. Clamp them to valid ranges so the
+	// insert/assign calls below can't compute a negative (huge) length and crash
+	// (std::length_error). The resulting pruned/compact blobs are not valid XKR
+	// blocks, but the self-check further down deserializes each candidate and
+	// falls back to the full blob, so the block still broadcasts correctly.
+	// TODO(xkr): report the real coinbase output offset/size and prune properly.
+	{
+		const int mc = static_cast<int>(mainchain_data.size());
+		outputs_offset = std::min(std::max(outputs_offset, 0), mc);
+		outputs_blob_size = std::min(std::max(outputs_blob_size, 0), mc - outputs_offset);
+	}
 	const std::vector<uint8_t> sidechain_data = block.serialize_sidechain_data();
 
 	data->blob.reserve(mainchain_data.size() + sidechain_data.size());
@@ -1092,8 +1131,13 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 
 	const size_t N = block.m_transactions.size();
-	if ((N > 1) && parent && (parent->m_transactions.size() > 1)) {
-		const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+	const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+	// Also require the blobs to be at least tx_list_size so end() - tx_list_size
+	// below can't wrap past begin() (same crash class as above). If the pruned
+	// blob came out short because of the clamp, skip compact and let the self-
+	// check fall back to the full blob.
+	if ((N > 1) && parent && (parent->m_transactions.size() > 1) &&
+		(tx_list_size <= data->pruned_blob.size()) && (tx_list_size <= mainchain_data.size())) {
 
 		unordered_map<hash, size_t> parent_transactions;
 		parent_transactions.reserve(parent->m_transactions.size());
@@ -1301,6 +1345,19 @@ void P2PServer::on_broadcast()
 						cur_broadcast_size = data->compact_unpruned_blob.size();
 					}
 				}
+
+				// XKR: the pruned/compact broadcast blobs are NOT valid blocks — the
+				// Monero coinbase-output pruning relies on serialize_mainchain_data()
+				// reporting the output offset/size, but for the XKR coinbase layout
+				// those out-params are the extra-nonce/merge-mining offsets (see the
+				// Broadcast() constructor). A peer therefore rejects a pruned blob
+				// (e.g. parser error 290, "not enough data for the transaction list").
+				// The Monero release build has no self-check to fall back to the full
+				// blob, so force the full blob here until pruning is ported properly.
+				// TODO(xkr): implement correct coinbase-output pruning and restore
+				// the size-based selection above.
+				what = Broadcast::FULL;
+				cur_broadcast_size = data->blob.size();
 
 				static constexpr char broadcast_names[4][19] = {
 					"(full)            ",
@@ -1636,35 +1693,19 @@ void P2PServer::check_host()
 		return;
 	}
 
-	if (!m_pool->zmq_running()) {
-		LOGERR(1, "ZMQ is not running, restarting it");
-		m_pool->reconnect_to_host();
-		return;
-	}
+	// Poll kryptokronad for fresh miner data every tick so new main-chain
+	// blocks are picked up (the request is deduplicated and self-guarded).
+	LOGINFO(6, "polling daemon for new miner data");
+	m_pool->reconnect_to_host();
 
-	const uint64_t height = m_pool->miner_data().height;
-	const SideChain& side_chain = m_pool->side_chain();
-
-	// If the latest 5 side chain blocks are 2 or more Monero blocks ahead, then the node is probably stuck
-	uint32_t counter = 5;
-	for (const PoolBlock* b = side_chain.chainTip(); b && (b->m_txinGenHeight >= height + 2); b = side_chain.find_block(b->m_parent)) {
-		if (--counter == 0) {
-			const Params::Host& host = m_pool->current_host();
-			LOGERR(1, "Host " << host.m_displayName << " seems to be stuck, reconnecting");
-			m_pool->reconnect_to_host();
-			return;
-		}
-	}
-
+	// If no fresh data has arrived from the node in 5 minutes, it's probably
+	// stuck or unreachable.
 	const uint64_t cur_time = seconds_since_epoch();
-	const uint64_t last_active = m_pool->zmq_last_active();
-
-	// If there were no ZMQ messages in the last 5 minutes, then the node is probably stuck
-	if (cur_time >= last_active + 300) {
+	const uint64_t last_active = m_pool->last_active();
+	if (last_active && (cur_time >= last_active + 300)) {
 		const uint64_t dt = static_cast<uint64_t>(cur_time - last_active);
 		const Params::Host& host = m_pool->current_host();
-		LOGERR(1, "no ZMQ messages received from host " << host.m_displayName << " in the last " << dt << " seconds, check your monerod/p2pool/network/firewall setup!!!");
-		m_pool->reconnect_to_host();
+		LOGERR(1, "no fresh data received from host " << host.m_displayName << " in the last " << dt << " seconds, check your kryptokronad/p2pool/network/firewall setup!!!");
 	}
 }
 
@@ -1697,7 +1738,7 @@ void P2PServer::check_for_updates(bool forced) const
 
 	if ((forced || s.precalcFinished()) && m_newP2PoolVersionDetected && s.p2pool_update_available()) {
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
-		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit p2pool.io for more information *");
+		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit github.com/kryptokrona/p2pool for more information *");
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
 	}
 }
@@ -1819,7 +1860,7 @@ void P2PServer::api_update_local_stats()
 				}
 			}
 
-			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"zmq_last_active\":" << (seconds_since_epoch() - m_pool->zmq_last_active()) << '}';
+			s << "],\"uptime\":" << cur_time - m_pool->start_time() << ",\"last_active\":" << (seconds_since_epoch() - m_pool->last_active()) << '}';
 		});
 }
 
@@ -1961,7 +2002,7 @@ void P2PServer::submit_monero_blocks()
 		return;
 	}
 
-	LOGINFO(6, "submit_monero_blocks: started, queue size = " << m_MoneroBlocksToSubmit.size());
+	LOGINFO(6, "submit_kryptokrona_blocks: started, queue size = " << m_MoneroBlocksToSubmit.size());
 
 	const Params::Host& host = m_pool->current_host();
 
@@ -1979,16 +2020,16 @@ void P2PServer::submit_monero_blocks()
 		[this, t1](const JSONRPCRequest::CallbackData& data)
 		{
 			if (!data.m_error.empty()) {
-				LOGERR(3, "submit_monero_blocks: submit_block RPC request failed, error " << data.m_error);
+				LOGERR(3, "submit_kryptokrona_blocks: submit_block RPC request failed, error " << data.m_error);
 			}
 			else {
-				LOGINFO(4, "submit_monero_blocks: submit_block RPC completed in " << static_cast<double>(microseconds_since_epoch() - t1) / 1e3 << " ms");
+				LOGINFO(4, "submit_kryptokrona_blocks: submit_block RPC completed in " << static_cast<double>(microseconds_since_epoch() - t1) / 1e3 << " ms");
 			}
 
 			if (!m_MoneroBlocksToSubmit.empty()) {
 				m_MoneroBlocksToSubmit.pop_front();
 			}
-			LOGINFO(6, "submit_monero_blocks: finished, queue size = " << m_MoneroBlocksToSubmit.size());
+			LOGINFO(6, "submit_kryptokrona_blocks: finished, queue size = " << m_MoneroBlocksToSubmit.size());
 
 			submit_monero_blocks();
 		},
@@ -2039,12 +2080,12 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 	check_event_loop_thread(__func__);
 
 	if (data_size < sizeof(MoneroBlockBroadcastHeader)) {
-		LOGWARN(3, "broadcast_monero_block: data_size is too small: " << data_size);
+		LOGWARN(3, "broadcast_kryptokrona_block: data_size is too small: " << data_size);
 		return;
 	}
 
 	if (data_size > MAX_BLOCK_SIZE) {
-		LOGWARN(3, "broadcast_monero_block: data_size is too big: " << data_size);
+		LOGWARN(3, "broadcast_kryptokrona_block: data_size is too big: " << data_size);
 		return;
 	}
 
@@ -2052,7 +2093,7 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 	SHA256(data + sizeof(MoneroBlockBroadcastHeader), data_size - sizeof(MoneroBlockBroadcastHeader), digest.h);
 
 	if (!duplicate_check_done && !store_monero_block_broadcast(digest)) {
-		LOGINFO(6, "broadcast_monero_block: skipping duplicate broadcast");
+		LOGINFO(6, "broadcast_kryptokrona_block: skipping duplicate broadcast");
 		return;
 	}
 
@@ -3248,7 +3289,7 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 		}
 		else if (peer_height > our_height) {
 			if (peer_height >= our_height + 2) {
-				LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your monerod stuck or lagging?");
+				LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " is ahead on mainchain (height " << peer_height << ", your height " << our_height << "). Is your kryptokronad stuck or lagging?");
 			}
 		}
 		else {
@@ -3730,10 +3771,10 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 	}
 
 	const uint64_t height = unlock_height - MINER_REWARD_UNLOCK_TIME;
-	LOGINFO(6, "on_monero_block_broadcast: height = " << height);
+	LOGINFO(6, "on_kryptokrona_block_broadcast: height = " << height);
 
 	if (server->m_pendingMoneroBlockBroadcasts.size() >= MAX_PENDING_MONERO_BLOCK_BROADCASTS) {
-		LOGWARN(6, "Too many pending Monero block broadcasts, ignoring this one");
+		LOGWARN(6, "Too many pending Kryptokrona block broadcasts, ignoring this one");
 		return true;
 	}
 
@@ -3793,7 +3834,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		const int err = uv_queue_work(&server->m_loop, &work->req, monero_block_broadcast_work_cb, monero_block_broadcast_after_work_cb);
 
 		if (err) {
-			LOGERR(1, "on_monero_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
+			LOGERR(1, "on_kryptokrona_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
 			server->forget_monero_block_broadcast(m_lastMoneroBlockBroadcastDigest);
 			server->m_pendingMoneroBlockBroadcasts.pop_back();
 			delete work;
@@ -3856,7 +3897,7 @@ void P2PServer::monero_block_broadcast_work_cb(uv_work_t* req)
 		return;
 	}
 
-	LOGINFO(6, "on_monero_block_broadcast: PoW check passed for height = " << work->height);
+	LOGINFO(6, "on_kryptokrona_block_broadcast: PoW check passed for height = " << work->height);
 	work->pow_check_passed = true;
 };
 
@@ -3931,7 +3972,7 @@ void P2PServer::monero_block_broadcast_after_work_cb(uv_work_t* req, int /*statu
 		const int err = uv_queue_work(&server->m_loop, &next_work->req, monero_block_broadcast_work_cb, monero_block_broadcast_after_work_cb);
 
 		if (err) {
-			LOGERR(1, "on_monero_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
+			LOGERR(1, "on_kryptokrona_block_broadcast: uv_queue_work failed, error " << uv_err_name(err));
 
 			// If uv_queue_work failed, we can't do much here.
 			// MONERO_BLOCK_BROADCAST messages are "best effort", not obligatory
@@ -4185,23 +4226,17 @@ template<> struct log::Stream::Entry<P2PServer::P2PClient::SoftwareDisplayName>
 		case SoftwareID::P2Pool:
 		case SoftwareID::GoObserver:
 			if (value.m_id == SoftwareID::P2Pool) {
-				*wrapper << "P2Pool v";
+				*wrapper << "p2pool XKR v";
 			}
 			else {
 				*wrapper << "GoObserver v";
 			}
 
-			if (value.m_version <= 0x3000A) {
-				// Encoding for versions <= 3.10
-				*wrapper << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
-			}
-			else {
-				// Encoding for versions > 3.10
-				*wrapper << (value.m_version >> 16) << '.' << ((value.m_version >> 8) & 0xFF);
-				if (value.m_version & 0xFF) {
-					*wrapper << '.' << (value.m_version & 0xFF);
-				}
-			}
+			// XKR fork versions are major.minor.patch (major<<16 | minor<<8 | patch).
+			// There are no legacy (<= 3.10) peers here, so always decode 3 parts;
+			// otherwise a low version like 0.0.1 would be misread by the old 2-part
+			// encoding and shown as "0.1".
+			*wrapper << (value.m_version >> 16) << '.' << ((value.m_version >> 8) & 0xFF) << '.' << (value.m_version & 0xFF);
 
 			break;
 

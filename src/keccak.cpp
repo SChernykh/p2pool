@@ -17,7 +17,13 @@
 
 #include "common.h"
 #include "keccak.h"
+#ifdef WITH_RANDOMX
+// Only used to detect BMI support to select the BMI-optimized keccakf. XKR
+// builds without RandomX, so this include (and the randomx::Cpu probe below)
+// is compiled out and we fall back to keccakf_plain. keccak is not on XKR's
+// PoW hot path (CryptoNight-Turtle is), so the plain path costs nothing here.
 #include "RandomX/src/cpu.hpp"
+#endif
 
 namespace p2pool {
 
@@ -117,7 +123,7 @@ NOINLINE void keccakf_plain(std::array<uint64_t, 25>& st)
 }
 
 keccakf_func keccakf = []() {
-#if defined(__x86_64__) || defined(_M_AMD64)
+#if defined(WITH_RANDOMX) && (defined(__x86_64__) || defined(_M_AMD64))
 	if (randomx::Cpu().hasBmi()) {
 		return keccakf_bmi;
 	}

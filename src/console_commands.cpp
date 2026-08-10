@@ -180,8 +180,8 @@ static cmd cmds[] = {
 	{ STRCONST("peers"), "", "show all peers", do_showpeers },
 	{ STRCONST("workers"), "", "show all connected workers", do_showworkers },
 	{ STRCONST("bans"), "", "show all banned IPs", do_showbans },
-	{ STRCONST("hosts"), "", "show Monero hosts", do_showhosts },
-	{ STRCONST("next_host"), "", "switch to the next Monero host", do_nexthost },
+	{ STRCONST("hosts"), "", "show Kryptokrona hosts", do_showhosts },
+	{ STRCONST("next_host"), "", "switch to the next Kryptokrona host", do_nexthost },
 	{ STRCONST("outpeers"), "<N>", "set maximum number of outgoing connections", do_outpeers },
 	{ STRCONST("inpeers"), "<N>", "set maximum number of incoming connections", do_inpeers },
 	{ STRCONST("inpeers_localhost"), "<N>", "set maximum number of incoming localhost connections", do_inpeers_localhost },
@@ -272,7 +272,7 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 	if (tip) {
 		if (data.height < tip->m_txinGenHeight) {
 			node_health -= 5;
-			comments.push_back("Your Monero node is lagging");
+			comments.push_back("Your Kryptokrona node is lagging");
 		}
 
 		if (seconds_since_epoch() >= c.last_updated() + c.block_time() * 30) {

@@ -18,7 +18,6 @@
 #include "common.h"
 #include "p2pool.h"
 #ifndef P2POOL_UNIT_TESTS
-#include "zmq_reader.h"
 #endif
 #include "mempool.h"
 #include "json_rpc_request.h"
@@ -66,7 +65,7 @@ p2pool::p2pool(const Params& params)
 	, m_params(params)
 	, m_updateSeed(true)
 	, m_submitBlockData{}
-	, m_zmqLastActive(0)
+	, m_lastActive(0)
 	, m_startTime(seconds_since_epoch())
 	, m_lastMinerDataReceived(0)
 {
@@ -155,9 +154,6 @@ p2pool::p2pool(const Params& params)
 
 	uv_rwlock_init_checked(&m_mainchainLock);
 	uv_rwlock_init_checked(&m_minerDataLock);
-#ifndef P2POOL_UNIT_TESTS
-	uv_rwlock_init_checked(&m_ZMQReaderLock);
-#endif
 	uv_rwlock_init_checked(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -195,16 +191,10 @@ p2pool::p2pool(const Params& params)
 	// Update it for non-standard sidechain configs (including P2Pool-nano)
 	BLOCK_HEADERS_REQUIRED = std::max(BLOCK_HEADERS_REQUIRED, m_sideChain->monero_headers_required());
 
-#ifdef WITH_RANDOMX
-	if (m_params.m_disableRandomX) {
-		m_hasher = new RandomX_Hasher_RPC(this);
-	}
-	else {
-		m_hasher = new RandomX_Hasher(this);
-	}
-#else
-	m_hasher = new RandomX_Hasher_RPC(this);
-#endif
+	// Kryptokrona uses CryptoNight-Turtle-Lite v2 (not Monero's RandomX). The
+	// hasher is a stateless local CN-Turtle implementation; there is no seed
+	// epoch, dataset, or optional RPC (calc_pow) fallback to configure.
+	m_hasher = new CnTurtle_Hasher(this);
 
 	PoolBlock::s_precalculatedSharesLock = new ReadWriteLock();
 
@@ -246,9 +236,6 @@ p2pool::~p2pool()
 
 	uv_rwlock_destroy(&m_mainchainLock);
 	uv_rwlock_destroy(&m_minerDataLock);
-#ifndef P2POOL_UNIT_TESTS
-	uv_rwlock_destroy(&m_ZMQReaderLock);
-#endif
 	uv_rwlock_destroy(&m_mergeMiningClientsLock);
 
 #ifdef WITH_MERGE_MINING_DONATION
@@ -396,7 +383,7 @@ void p2pool::handle_tx(TxMempoolData& tx)
 	m_blockTemplate->update(miner_data(), *m_mempool, &m_params.m_wallet);
 #endif
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 }
 
 void p2pool::handle_miner_data(MinerData& data)
@@ -468,7 +455,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		update_block_template();
 	}
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 
 	if (m_serversStarted.load()) {
 		std::vector<uint64_t> missing_heights;
@@ -530,11 +517,11 @@ void p2pool::get_missing_heights()
 		m_missingHeights.pop_back();
 	}
 
-	LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from monerod again");
+	LOGWARN(3, "Mainchain data for height " << h << " is missing, requesting it from kryptokronad again");
 
 	char buf[log::Stream::BUF_SIZE + 1] = {};
 	log::Stream s(buf);
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << h << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << h << "}}" << '\0';
 
 	const Params::Host& host = current_host();
 
@@ -639,7 +626,7 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra, const std::ve
 
 	api_update_network_stats();
 
-	m_zmqLastActive = seconds_since_epoch();
+	m_lastActive = seconds_since_epoch();
 }
 
 void p2pool::handle_monero_block_broadcast(std::vector<std::vector<uint8_t>>&& blobs)
@@ -957,7 +944,7 @@ void p2pool::submit_aux_block() const
 		root_hash merge_mining_root;
 		const BlockTemplate* block_tpl = nullptr;
 
-		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
+		std::vector<uint8_t> blob = m_blockTemplate->get_block_template_blob(template_id, nonce, extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 		uint8_t hashing_blob[HASHING_BLOB_MAX_SIZE] = {};
 		uint64_t height = 0;
@@ -1085,7 +1072,7 @@ void p2pool::submit_block() const
 	bool is_external = false;
 
 	if (submit_data.blob.empty()) {
-		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
+		submit_data.blob = m_blockTemplate->get_block_template_blob(submit_data.template_id, submit_data.nonce, submit_data.extra_nonce, nonce_offset, extra_nonce_offset, merkle_root_offset, merge_mining_root, &block_tpl);
 
 		LOGINFO(0, log::LightGreen() << "submit_block: height = " << height
 			<< ", template id = " << submit_data.template_id
@@ -1106,7 +1093,7 @@ void p2pool::submit_block() const
 	std::string request;
 	request.reserve(submit_data.blob.size() * 2 + 128);
 
-	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submit_block\",\"params\":[\"";
+	request = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"submitblock\",\"params\":[\"";
 
 	const uint32_t template_id = submit_data.template_id;
 	const uint32_t nonce = submit_data.nonce;
@@ -1265,7 +1252,7 @@ void p2pool::download_block_headers1(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << prev_seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, prev_seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
@@ -1298,7 +1285,7 @@ void p2pool::download_block_headers2(uint64_t current_height)
 	const Params::Host& host = current_host();
 
 	s.m_pos = 0;
-	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_block_header_by_height\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
+	s << "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"getblockheaderbyheight\",\"params\":{\"height\":" << seed_height << "}}" << '\0';
 
 	JSONRPCRequest::call(host.m_address, host.m_rpcPort, buf, host.m_rpcLogin, m_params.m_socks5Proxy, host.m_rpcSSL, host.m_rpcSSL_Fingerprint,
 		[this, seed_height, current_height](const JSONRPCRequest::CallbackData& data) {
@@ -1322,8 +1309,10 @@ void p2pool::download_block_headers2(uint64_t current_height)
 
 void p2pool::download_block_headers3(uint64_t start_height, uint64_t current_height)
 {
-	// Workaround the restricted RPC limit
-	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 1000;
+	// Workaround the restricted RPC limit. kryptokronad's get_block_headers_range
+	// fetches a full block per header, so large batches (Monero used 1000) time
+	// out; a smaller batch keeps each request well within the RPC timeout.
+	constexpr uint64_t RESTRICTED_BLOCK_HEADER_RANGE = 100;
 
 	if (current_height - start_height > RESTRICTED_BLOCK_HEADER_RANGE + 1) {
 		char buf[log::Stream::BUF_SIZE + 1] = {};
@@ -1380,18 +1369,6 @@ void p2pool::download_block_headers4(uint64_t start_height, uint64_t current_hei
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 					if (m_params.m_minerThreads) {
 						start_mining(m_params.m_minerThreads);
-					}
-					{
-						WriteLock lock(m_ZMQReaderLock);
-
-						try {
-							m_ZMQReader = new ZMQReader(host.m_address, host.m_zmqPort, m_params.m_socks5Proxy, this);
-							m_zmqLastActive = seconds_since_epoch();
-						}
-						catch (const std::exception& e) {
-							LOGERR(1, "Couldn't start ZMQ reader: exception " << e.what());
-							PANIC_STOP();
-						}
 					}
 #endif
 
@@ -1597,15 +1574,14 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 
 	const auto& result = doc["result"];
 
+	// Kryptokrona's get_info exposes `synced` and `testnet` (bool) instead of
+	// Monero's busy_syncing/synchronized/mainnet/testnet/stagenet quartet.
 	struct {
-		bool busy_syncing, synchronized, mainnet, testnet, stagenet;
+		bool synced, testnet;
 	} info;
 
-	if (!PARSE(result, info, busy_syncing) ||
-		!PARSE(result, info, synchronized) ||
-		!PARSE(result, info, mainnet) ||
-		!PARSE(result, info, testnet) ||
-		!PARSE(result, info, stagenet)) {
+	if (!PARSE(result, info, synced) ||
+		!PARSE(result, info, testnet)) {
 		LOGWARN(1, "get_info RPC response is invalid, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		switch_host();
@@ -1613,28 +1589,30 @@ void p2pool::parse_get_info_rpc(const char* data, size_t size)
 		return;
 	}
 
-	if (info.busy_syncing || !info.synchronized) {
-		LOGINFO(1, "monerod is " << (info.busy_syncing ? "busy syncing" : "not synchronized") << ", trying again in 1 second");
+	if (!info.synced) {
+		LOGINFO(1, "kryptokronad is not synchronized, trying again in 1 second");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		switch_host();
 		get_info();
 		return;
 	}
 
-	NetworkType monero_network = NetworkType::Invalid;
-
-	if (info.mainnet)  monero_network = NetworkType::Mainnet;
-	if (info.testnet)  monero_network = NetworkType::Testnet;
-	if (info.stagenet) monero_network = NetworkType::Stagenet;
+	// Kryptokrona has no stagenet; mainnet is simply "not testnet".
+	const NetworkType node_network = info.testnet ? NetworkType::Testnet : NetworkType::Mainnet;
 
 	const NetworkType sidechain_network = m_sideChain->network_type();
 
-	if (monero_network != sidechain_network) {
-		LOGERR(1, "monerod is on " << monero_network << ", but you're mining to a " << sidechain_network << " sidechain");
-		PANIC_STOP();
+	// Kryptokrona addresses do not encode a network, so the sidechain network is
+	// derived from the mining wallet (always Mainnet on decode). Mining a
+	// mainnet-typed sidechain against a testnet daemon is fine for local
+	// testing, so this is a warning rather than a hard stop.
+	if (node_network != sidechain_network) {
+		LOGWARN(1, "kryptokronad is on " << node_network << ", but the sidechain is typed " << sidechain_network << " (ok for local testing)");
 	}
 
-	get_version();
+	// Kryptokrona has no get_version JSON-RPC (and no Monero RPC-version gate to
+	// enforce), so go straight to fetching miner data.
+	get_miner_data();
 }
 
 void p2pool::get_version()
@@ -1702,7 +1680,7 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 		const uint64_t version_lo = version & 65535;
 		const uint64_t required_version_hi = required >> 16;
 		const uint64_t required_version_lo = required & 65535;
-		LOGERR(1, "monerod RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (Monero v0.18.0.0 or newer)");
+		LOGERR(1, "kryptokronad RPC v" << version_hi << '.' << version_lo << " is incompatible, update to RPC >= v" << required_version_hi << '.' << required_version_lo << " (update kryptokronad to a newer version)");
 		PANIC_STOP();
 	}
 
@@ -1784,6 +1762,11 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 		return;
 	}
 
+	// Kryptokrona coinbase unlock window (20 mainnet / 1 testnet). Optional for
+	// backward compat; defaults to 20. Used when building the coinbase.
+	parseValue(result, "unlock_window", minerData.unlock_window);
+	PoolBlock::s_coinbaseUnlockWindow = minerData.unlock_window;
+
 	auto it = result.FindMember("tx_backlog");
 
 	if ((it != result.MemberEnd()) && it->value.IsArray()) {
@@ -1831,7 +1814,11 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 
 	const auto& v = it2->value;
 
-	if (!parseValue(v, "difficulty", c.difficulty.lo) || !parseValue(v, "difficulty_top64", c.difficulty.hi)) {
+	// Kryptokrona difficulty is 64-bit (a plain number); there is no Monero-style
+	// difficulty_top64 high word, so it defaults to 0.
+	c.difficulty.hi = 0;
+	parseValue(v, "difficulty_top64", c.difficulty.hi);
+	if (!parseValue(v, "difficulty", c.difficulty.lo)) {
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse difficulty");
 		return false;
 	}
@@ -1885,7 +1872,9 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 
 		ChainMain c;
 
-		if (!parseValue(*i, "difficulty", c.difficulty.lo) || !parseValue(*i, "difficulty_top64", c.difficulty.hi)) {
+		c.difficulty.hi = 0;
+		parseValue(*i, "difficulty_top64", c.difficulty.hi);
+		if (!parseValue(*i, "difficulty", c.difficulty.lo)) {
 			continue;
 		}
 
@@ -2316,16 +2305,6 @@ void p2pool::stop()
 	}
 }
 
-bool p2pool::zmq_running() const
-{
-#ifdef P2POOL_UNIT_TESTS
-	return true;
-#else
-	ReadLock lock(m_ZMQReaderLock);
-	return m_ZMQReader && m_ZMQReader->is_running();
-#endif
-}
-
 const Params::Host& p2pool::switch_host()
 {
 	const std::vector<Params::Host>& v = m_params.m_hosts;
@@ -2345,25 +2324,11 @@ void p2pool::reconnect_to_host()
 	}
 
 #ifndef P2POOL_UNIT_TESTS
-	const Params::Host& new_host = switch_host();
-
-	WriteLock lock(m_ZMQReaderLock);
-
-	delete m_ZMQReader;
-	m_ZMQReader = nullptr;
-
-	try {
-		ZMQReader* new_reader = new ZMQReader(new_host.m_address, new_host.m_zmqPort, m_params.m_socks5Proxy, this);
-		m_zmqLastActive = seconds_since_epoch();
-		m_ZMQReader = new_reader;
-	}
-	catch (const std::exception& e) {
-		LOGERR(1, "Couldn't restart ZMQ reader: exception " << e.what());
-	}
-
-	if (m_ZMQReader) {
-		get_miner_data(false);
-	}
+	// The node is driven by polling kryptokronad for fresh miner data.
+	// get_miner_data() is deduplicated (by response hash) and self-guarded
+	// against overlap, and its handler refreshes m_lastActive, which serves as
+	// the "node is alive" signal.
+	get_miner_data(false);
 #endif
 }
 
@@ -2400,13 +2365,6 @@ int p2pool::run()
 		load_found_blocks();
 		const int rc = uv_run(uv_default_loop_checked(), UV_RUN_DEFAULT);
 		LOGINFO(1, "uv_run exited, result = " << rc);
-
-#ifndef P2POOL_UNIT_TESTS
-		WriteLock lock(m_ZMQReaderLock);
-
-		delete m_ZMQReader;
-		m_ZMQReader = nullptr;
-#endif
 	}
 	catch (const std::exception& e) {
 		LOGERR(1, "exception " << e.what());
