@@ -58,7 +58,7 @@
 
 void p2pool_usage()
 {
-	printf("P2Pool %s\n"
+	printf("p2pool XKR %s\n"
 		"\nUsage:\n\n" \
 		"--wallet                  Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress\n"
 		"--subaddress              Subaddress to mine to. It must belong to the same wallet that was specified with --wallet parameter\n"

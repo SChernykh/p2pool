@@ -4226,23 +4226,17 @@ template<> struct log::Stream::Entry<P2PServer::P2PClient::SoftwareDisplayName>
 		case SoftwareID::P2Pool:
 		case SoftwareID::GoObserver:
 			if (value.m_id == SoftwareID::P2Pool) {
-				*wrapper << "P2Pool v";
+				*wrapper << "p2pool XKR v";
 			}
 			else {
 				*wrapper << "GoObserver v";
 			}
 
-			if (value.m_version <= 0x3000A) {
-				// Encoding for versions <= 3.10
-				*wrapper << (value.m_version >> 16) << '.' << (value.m_version & 0xFFFF);
-			}
-			else {
-				// Encoding for versions > 3.10
-				*wrapper << (value.m_version >> 16) << '.' << ((value.m_version >> 8) & 0xFF);
-				if (value.m_version & 0xFF) {
-					*wrapper << '.' << (value.m_version & 0xFF);
-				}
-			}
+			// XKR fork versions are major.minor.patch (major<<16 | minor<<8 | patch).
+			// There are no legacy (<= 3.10) peers here, so always decode 3 parts;
+			// otherwise a low version like 0.0.1 would be misread by the old 2-part
+			// encoding and shown as "0.1".
+			*wrapper << (value.m_version >> 16) << '.' << ((value.m_version >> 8) & 0xFF) << '.' << (value.m_version & 0xFF);
 
 			break;
 

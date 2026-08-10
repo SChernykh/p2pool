@@ -98,7 +98,7 @@ std::string p2pool_version()
 	char buf[384] = {};
 	log::Stream s(buf);
 
-	s << "P2Pool " << VERSION << '\n'
+	s << "p2pool XKR " << VERSION << '\n'
 		<< "\nDependencies:\n"
 #ifdef HAVE_GLIBC
 		<< " - glibc " << gnu_get_libc_version() << '-' << gnu_get_libc_release() << '\n'
