@@ -472,6 +472,10 @@ size_t PoolBlock::build_pow_blob(uint32_t extra_nonce, uint32_t nonce, uint8_t* 
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
+	// A miner's reward is decomposed into several canonical-denomination outputs, so
+	// sum every output that derives to this wallet rather than returning the first.
+	uint64_t payout = 0;
+
 	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
 		const TxOutput& out = m_outputAmounts[i];
 
@@ -480,11 +484,11 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 		uint8_t view_tag;
 		const uint8_t expected_view_tag = out.m_viewTag;
 		if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (m_ephPublicKeys[i] == eph_public_key)) {
-			return out.m_reward;
+			payout += out.m_reward;
 		}
 	}
 
-	return 0;
+	return payout;
 }
 
 hash PoolBlock::calculate_tx_key_seed() const

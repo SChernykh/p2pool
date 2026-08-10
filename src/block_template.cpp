@@ -350,13 +350,17 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
+	// create_miner_tx decomposes each miner's reward into several outputs, and counts
+	// the byte width of every output amount varint. Reserve against the same decomposed
+	// output list so the dry-run reservation matches the real run.
 	auto get_reward_amounts_weight = [this]() {
-		return std::accumulate(m_rewards.begin(), m_rewards.end(), 0ULL,
-			[](uint64_t a, uint64_t b)
-			{
-				writeVarint(b, [&a](uint8_t) { ++a; });
-				return a;
-			});
+		std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+		SideChain::decompose_outputs(m_shares, m_rewards, outputs);
+		uint64_t weight = 0;
+		for (const auto& o : outputs) {
+			writeVarint(o.first, [&weight](uint8_t) { ++weight; });
+		}
+		return weight;
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
@@ -525,8 +529,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			LOGINFO(4, "Readjusting miner_tx to reduce extra nonce size");
 
 			// The difference between max possible reward and the actual reward can't reduce the size of output amount varints by more than 1 byte each
-			// So block weight will be >= current weight - number of outputs
-			const uint64_t w = (final_weight > m_rewards.size()) ? (final_weight - m_rewards.size()) : 0;
+			// So block weight will be >= current weight - number of outputs (after reward decomposition, several outputs per miner)
+			std::vector<std::pair<uint64_t, const Wallet*>> outputs_tmp;
+			SideChain::decompose_outputs(m_shares, m_rewards, outputs_tmp);
+			const uint64_t num_outputs = outputs_tmp.size();
+			const uint64_t w = (final_weight > num_outputs) ? (final_weight - num_outputs) : 0;
 
 			// Block reward will be <= r due to how block size penalty works
 			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
@@ -891,7 +898,13 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Miner transaction (coinbase)
 	m_minerTx.clear();
 
-	const size_t num_outputs = shares.size();
+	// Decompose each miner's reward into canonical denominations so every coinbase
+	// output has same-amount decoys on-chain and stays spendable at the network's
+	// minimum ring size. This produces several outputs per miner instead of one.
+	std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+	SideChain::decompose_outputs(shares, m_rewards, outputs);
+
+	const size_t num_outputs = outputs.size();
 	m_minerTx.reserve(num_outputs * 39 + 55);
 
 	// tx version
@@ -910,7 +923,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	writeVarint(data.height, m_minerTx);
 	m_poolBlockTemplate->m_txinGenHeight = data.height;
 
-	// Number of outputs (1 output per miner)
+	// Number of outputs (several per miner after reward decomposition)
 	writeVarint(num_outputs, m_minerTx);
 
 	m_poolBlockTemplate->m_ephPublicKeys.clear();
@@ -921,7 +934,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
-		writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
+		writeVarint(outputs[i].first, [this, &reward_amounts_weight](uint8_t b)
 			{
 				m_minerTx.push_back(b);
 				++reward_amounts_weight;
@@ -935,12 +948,12 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 		}
 		else {
 			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
+			if (!outputs[i].second->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
 				LOGERR(1, "get_eph_public_key failed at index " << i);
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 			m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
-			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i], view_tag);
+			m_poolBlockTemplate->m_outputAmounts.emplace_back(outputs[i].first, view_tag);
 		}
 
 		m_minerTx.emplace_back(view_tag);

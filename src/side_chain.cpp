@@ -870,7 +870,14 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 	}
 
-	const size_t n = tmpShares.size();
+	// Decompose the per-share rewards into the same flattened output list that block
+	// creation and verification use, so the reconstructed coinbase blob matches the
+	// original byte-for-byte. Each output's eph public key is derived at its running
+	// output index (not the share index).
+	std::vector<std::pair<uint64_t, const Wallet*>> outputs;
+	decompose_outputs(tmpShares, tmpRewards, outputs);
+
+	const size_t n = outputs.size();
 
 	LOGINFO(6, "get_outputs_blob batch start");
 
@@ -879,7 +886,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in.emplace_back(tmpShares[i].m_wallet->view_public_key(), i);
+		in.emplace_back(outputs[i].second->view_public_key(), i);
 	}
 
 	if (!batch_derivations(in, txkeySec, out)) {
@@ -898,7 +905,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in2.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in2.emplace_back(out[i].first, i, tmpShares[i].m_wallet->spend_public_key());
+		in2.emplace_back(out[i].first, i, outputs[i].second->spend_public_key());
 	}
 
 	if (!batch_public_keys(in2, out2)) {
@@ -923,7 +930,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_outputAmounts.reserve(n);
 
 	for (size_t i = 0; i < n; ++i) {
-		writeVarint(tmpRewards[i], blob);
+		writeVarint(outputs[i].first, blob);
 
 		const hash& eph_public_key = out2[i].first;
 		const uint8_t view_tag = static_cast<uint8_t>(out[i].second);
@@ -934,7 +941,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		blob.emplace_back(view_tag);
 
 		block->m_ephPublicKeys.emplace_back(eph_public_key);
-		block->m_outputAmounts.emplace_back(tmpRewards[i], view_tag);
+		block->m_outputAmounts.emplace_back(outputs[i].first, view_tag);
 	}
 
 	block->m_ephPublicKeys.shrink_to_fit();
@@ -1119,12 +1126,12 @@ double SideChain::get_reward_share(const Wallet& w) const
 			hash eph_public_key;
 			for (size_t i = 0, n = tip->m_outputAmounts.size(); i < n; ++i) {
 				const PoolBlock::TxOutput& out = tip->m_outputAmounts[i];
-				if (!reward) {
-					uint8_t view_tag;
-					const uint8_t expected_view_tag = out.m_viewTag;
-					if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (tip->m_ephPublicKeys[i] == eph_public_key)) {
-						reward = out.m_reward;
-					}
+				// A wallet owns several outputs now (its reward is decomposed into
+				// denominations), so sum every output that derives to it.
+				uint8_t view_tag;
+				const uint8_t expected_view_tag = out.m_viewTag;
+				if (w.get_eph_public_key(tip->m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (tip->m_ephPublicKeys[i] == eph_public_key)) {
+					reward += out.m_reward;
 				}
 				total_reward += out.m_reward;
 			}
@@ -1276,6 +1283,33 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 	}
 
 	return true;
+}
+
+void SideChain::decompose_outputs(const std::vector<MinerShare>& shares, const std::vector<uint64_t>& rewards, std::vector<std::pair<uint64_t, const Wallet*>>& outputs)
+{
+	outputs.clear();
+
+	const size_t n = std::min(shares.size(), rewards.size());
+	outputs.reserve(n * 4);
+
+	for (size_t i = 0; i < n; ++i) {
+		const Wallet* w = shares[i].m_wallet;
+
+		// decompose_amount_into_digits with a zero dust threshold: every non-zero
+		// decimal digit becomes one output of value (digit * 10^k), smallest first.
+		// With a zero threshold there is never a dust remainder, so all outputs are
+		// canonical denominations. This mirrors the daemon's constructMinerTx.
+		uint64_t amount = rewards[i];
+		uint64_t order = 1;
+		while (amount != 0) {
+			const uint64_t chunk = (amount % 10) * order;
+			amount /= 10;
+			order *= 10;
+			if (chunk != 0) {
+				outputs.emplace_back(chunk, w);
+			}
+		}
+	}
 }
 
 bool SideChain::get_difficulty(const PoolBlock* const tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const
@@ -1838,15 +1872,6 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (shares.size() != block->m_outputAmounts.size()) {
-		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
-			", id = " << block->m_sidechainId <<
-			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << shares.size());
-		block->m_invalid = true;
-		return;
-	}
-
 	uint64_t total_reward = std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL,
 		[](uint64_t a, const PoolBlock::TxOutput& b)
 		{
@@ -1862,30 +1887,39 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (rewards.size() != block->m_outputAmounts.size()) {
+	// Reconstruct the expected coinbase outputs by decomposing each share's reward
+	// into canonical denominations, exactly as block-template creation does. Because
+	// the block's outputs always sum to the reward that was split, split_reward here
+	// reproduces the same per-share rewards, and decompose_outputs reproduces the same
+	// flattened output list — so a correct block matches byte-for-byte and a crafted
+	// one does not.
+	std::vector<std::pair<uint64_t, const Wallet*>> expected_outputs;
+	decompose_outputs(shares, rewards, expected_outputs);
+
+	if (expected_outputs.size() != block->m_outputAmounts.size()) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << rewards.size());
+			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << expected_outputs.size());
 		block->m_invalid = true;
 		return;
 	}
 
-	for (size_t i = 0, n = rewards.size(); i < n; ++i) {
+	for (size_t i = 0, n = expected_outputs.size(); i < n; ++i) {
 		const PoolBlock::TxOutput& out = block->m_outputAmounts[i];
 
-		if (rewards[i] != out.m_reward) {
+		if (expected_outputs[i].first != out.m_reward) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
-				" has invalid reward at index " << i << ": got " << out.m_reward << ", expected " << rewards[i]);
+				" has invalid reward at index " << i << ": got " << out.m_reward << ", expected " << expected_outputs[i].first);
 			block->m_invalid = true;
 			return;
 		}
 
 		hash eph_public_key;
 		uint8_t view_tag;
-		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
+		if (!expected_outputs[i].second->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<

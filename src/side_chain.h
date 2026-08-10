@@ -110,6 +110,19 @@ public:
 
 	[[nodiscard]] static bool split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
 
+	// Expands per-share rewards into individual coinbase outputs, decomposing each
+	// share's reward into canonical (single-digit x 10^k) denominations. XKR is a
+	// pre-RingCT CryptoNote chain that picks ring-signature decoys by matching the
+	// exact output amount, so an arbitrary (non-decomposed) amount has no decoys and
+	// is unspendable at the network minimum mixin. Decomposing makes every output a
+	// standard denomination with plenty of on-chain decoys. Deterministic and used
+	// identically by block-template creation and block verification, so create/verify
+	// stay byte-for-byte in agreement. Output order: shares in PPLNS order, and within
+	// each share the denominations smallest-to-largest (matching the daemon's
+	// decompose_amount_into_digits with a zero dust threshold, which XKR always uses
+	// past DUST_THRESHOLD_V2_HEIGHT).
+	static void decompose_outputs(const std::vector<MinerShare>& shares, const std::vector<uint64_t>& rewards, std::vector<std::pair<uint64_t, const Wallet*>>& outputs);
+
 	[[nodiscard]] FORCEINLINE uint64_t monero_headers_required() const { return m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME; }
 
 private:
