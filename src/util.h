@@ -407,6 +407,7 @@ template<uint64_t MIN_GRANULARITY = 6, uint64_t BITS_TO_USE = 4>
 }
 
 bool str_to_ip(bool is_v6, const char* ip, raw_ip& result);
+bool is_private_address(bool is_v6, const raw_ip& addr);
 bool is_private_address(const std::string& host);
 
 #ifdef WITH_UPNP

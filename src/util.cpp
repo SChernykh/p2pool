@@ -768,6 +768,11 @@ bool is_private_address(const std::string& host)
 		return false;
 	}
 
+	return is_private_address(is_v6, addr);
+}
+
+bool is_private_address(bool is_v6, const raw_ip& addr)
+{
 	if (is_v6) {
 		const uint8_t a = addr.data[0];
 		const uint8_t b = addr.data[1];
