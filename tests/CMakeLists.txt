@@ -27,9 +27,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address")
 endif()
 
-add_subdirectory(googletest)
-set(LIBS gtest)
-
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	include(cmake/msvc_libs.cmake)
 endif()
@@ -48,6 +45,9 @@ add_definitions(-DP2POOL_UNIT_TESTS)
 add_definitions(-DP2POOL_SIDECHAIN_EXTRA_1=1)
 
 include(cmake/flags.cmake)
+
+add_subdirectory(googletest)
+set(LIBS ${LIBS} gtest)
 
 set(HEADERS
 )
