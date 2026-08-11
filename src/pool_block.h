@@ -109,19 +109,29 @@ struct PoolBlock
 	// Miner transaction
 	uint64_t m_txinGenHeight;
 
-	struct TxOutput
-	{
-		FORCEINLINE TxOutput() : m_reward(0), m_viewTag(0) {}
-		FORCEINLINE TxOutput(uint64_t r, uint8_t view_tag) : m_reward(r), m_viewTag(view_tag) {}
+	std::vector<indexed_hash> m_ephPublicKeys;
+	std::vector<uint64_t> m_outputAmounts;
+	std::vector<uint8_t> m_viewTags;
 
-		uint64_t m_reward : 56;
-		uint64_t m_viewTag : 8;
+	struct carrot_view_tag
+	{
+		uint8_t bytes[CARROT_VIEW_TAG_BYTES];
 	};
 
-	static_assert(sizeof(TxOutput) == sizeof(uint64_t), "TxOutput bit packing didn't work with this compiler, fix the code!");
+	static_assert(sizeof(carrot_view_tag) == CARROT_VIEW_TAG_BYTES);
+	static_assert(alignof(carrot_view_tag) == 1);
 
-	std::vector<indexed_hash> m_ephPublicKeys;
-	std::vector<TxOutput> m_outputAmounts;
+	std::vector<carrot_view_tag> m_carrotViewTags;
+
+	struct alignas(CARROT_JANUS_ANCHOR_BYTES) carrot_janus_anchor
+	{
+		uint8_t bytes[CARROT_JANUS_ANCHOR_BYTES];
+	};
+
+	static_assert(sizeof(carrot_janus_anchor) == CARROT_JANUS_ANCHOR_BYTES);
+	static_assert(alignof(carrot_janus_anchor) == CARROT_JANUS_ANCHOR_BYTES);
+
+	std::vector<carrot_janus_anchor> m_carrotJanusAnchors;
 
 	hash m_txkeyPub;
 	uint64_t m_extraNonceSize;
@@ -131,8 +141,11 @@ struct PoolBlock
 	uint64_t m_merkleTreeData;
 	root_hash m_merkleRoot;
 
-	// All block transaction hashes including the miner transaction hash at index 0
+	// All block transaction hashes
 	std::vector<indexed_hash> m_transactions;
+
+	uint8_t m_fcmp_pp_n_tree_layers;
+	hash m_fcmp_pp_tree_root;
 
 	// Miner's wallet
 	Wallet m_minerWallet{ nullptr };
@@ -198,6 +211,8 @@ struct PoolBlock
 
 	// Used to speed up SideChain::get_difficulty
 	mutable difficulty_type m_cachedNextDifficulty;
+
+	hash m_coinbase_tx_hash;
 
 	std::vector<uint8_t> serialize_mainchain_data(size_t* header_size = nullptr, size_t* miner_tx_size = nullptr, int* outputs_offset = nullptr, int* outputs_blob_size = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;

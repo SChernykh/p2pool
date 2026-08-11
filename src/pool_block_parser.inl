@@ -109,34 +109,58 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			m_ephPublicKeys.resize(num_outputs);
 			m_outputAmounts.resize(num_outputs);
 
+			if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+				m_viewTags.clear();
+				m_carrotViewTags.resize(num_outputs);
+				m_carrotJanusAnchors.resize(num_outputs);
+			}
+			else {
+				m_viewTags.resize(num_outputs);
+				m_carrotViewTags.clear();
+				m_carrotJanusAnchors.clear();
+			}
+
 			m_ephPublicKeys.shrink_to_fit();
 			m_outputAmounts.shrink_to_fit();
+			m_viewTags.shrink_to_fit();
+			m_carrotViewTags.shrink_to_fit();
+			m_carrotJanusAnchors.shrink_to_fit();
 
 			for (uint64_t i = 0; i < num_outputs; ++i) {
-				TxOutput& t = m_outputAmounts[i];
-
 				uint64_t reward;
 				READ_VARINT(reward);
 
 				// TxOutput max value check
-				if (reward > MAX_OUTPUT_VALUE) {
+				if ((m_majorVersion < HARDFORK_VERSION_CARROT) && (reward > MAX_OUTPUT_VALUE)) {
 					return __LINE__;
 				}
 
-				t.m_reward = reward;
+				m_outputAmounts[i] = reward;
 
 				if (total_reward + reward < total_reward) return __LINE__;
 				total_reward += reward;
 
-				EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
+				if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+					EXPECT_BYTE(TXOUT_TO_CARROT_V1);
 
-				hash ephPublicKey;
-				READ_BUF(ephPublicKey.h, HASH_SIZE);
-				m_ephPublicKeys[i] = ephPublicKey;
+					hash ephPublicKey;
+					READ_BUF(ephPublicKey.h, HASH_SIZE);
+					m_ephPublicKeys[i] = ephPublicKey;
 
-				uint8_t view_tag;
-				READ_BYTE(view_tag);
-				t.m_viewTag = view_tag;
+					READ_BUF(m_carrotViewTags[i].bytes, CARROT_VIEW_TAG_BYTES);
+					READ_BUF(m_carrotJanusAnchors[i].bytes, CARROT_JANUS_ANCHOR_BYTES);
+				}
+				else {
+					EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
+
+					hash ephPublicKey;
+					READ_BUF(ephPublicKey.h, HASH_SIZE);
+					m_ephPublicKeys[i] = ephPublicKey;
+
+					uint8_t view_tag;
+					READ_BYTE(view_tag);
+					m_viewTags[i] = view_tag;
+				}
 			}
 
 			outputs_blob_size = static_cast<int>(data - data_begin) - outputs_offset;
@@ -188,6 +212,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(tx_extra_size);
 
 		const uint8_t* tx_extra_begin = data;
+
+		// TODO: additional pubkeys must be deserialized here for Carrot transactions
 
 		EXPECT_BYTE(TX_EXTRA_TAG_PUBKEY);
 		READ_BUF(m_txkeyPub.h, HASH_SIZE);
@@ -243,12 +269,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			if (static_cast<uint64_t>(data_end - data) < num_transactions) return __LINE__;
 
 			// limit reserved memory size because we can't check "num_transactions" properly here
-			const uint64_t k = std::min<uint64_t>(num_transactions + 1, 256);
+			const uint64_t k = std::min<uint64_t>(num_transactions, 256);
 			transactions.reserve(k);
 			parent_indices.reserve(k);
-
-			transactions.resize(1);
-			parent_indices.resize(1);
 
 			for (uint64_t i = 0; i < num_transactions; ++i) {
 				uint64_t parent_index;
@@ -266,8 +289,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		else {
 			if (static_cast<uint64_t>(data_end - data) < num_transactions * HASH_SIZE) return __LINE__;
 
-			transactions.reserve(num_transactions + 1);
-			transactions.resize(1);
+			transactions.reserve(num_transactions);
 
 			for (uint64_t i = 0; i < num_transactions; ++i) {
 				hash id;
@@ -279,6 +301,16 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const int transactions_actual_blob_size = static_cast<int>(data - data_begin) - transactions_offset;
 		const int transactions_blob_size = static_cast<int>(num_transactions) * HASH_SIZE;
 		const int transactions_blob_size_diff = transactions_blob_size - transactions_actual_blob_size;
+
+		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+			READ_BYTE(m_fcmp_pp_n_tree_layers);
+
+			if (m_fcmp_pp_n_tree_layers > FCMP_PLUS_PLUS_MAX_LAYERS) {
+				return __LINE__;
+			}
+
+			READ_BUF(m_fcmp_pp_tree_root.h, HASH_SIZE);
+		}
 
 		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
 
@@ -317,15 +349,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				return __LINE__;
 			}
 
-			const uint64_t n = transactions.size();
-
-			if (n > 0) {
-				m_transactions.emplace_back(transactions[0]);
-			}
-
-			for (uint64_t i = 1; i < n; ++i) {
-				const uint64_t parent_index = parent_indices[i];
+			for (uint64_t i = 0, n = transactions.size(); i < n; ++i) {
+				uint64_t parent_index = parent_indices[i];
 				if (parent_index) {
+					--parent_index;
 					if (parent_index >= parent->m_transactions.size()) {
 						return __LINE__;
 					}
@@ -471,7 +498,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		const uint8_t* transactions_blob = reinterpret_cast<uint8_t*>(transactions.data() + 1);
+		const uint8_t* transactions_blob = reinterpret_cast<uint8_t*>(transactions.data());
 
 #if POOL_BLOCK_DEBUG
 		memcpy(m_mainChainDataDebug.data() + outputs_offset, outputs_blob.data(), outputs_blob_size);

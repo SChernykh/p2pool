@@ -372,6 +372,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 		m_numTransactionHashes = m_mempoolTxsOrder.size();
 		m_transactionHashes.assign(HASH_SIZE, 0);
+
+		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+			// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+			// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+		}
+
 		m_transactionHashesSet.clear();
 		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
 		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
@@ -454,6 +462,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 		m_numTransactionHashes = m_mempoolTxsOrder.size();
 		m_transactionHashes.assign(HASH_SIZE, 0);
+
+		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+			// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+			// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+		}
+
 		m_transactionHashesSet.clear();
 		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
 		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
@@ -571,11 +587,19 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	writeVarint(m_numTransactionHashes, m_blockTemplateBlob);
 
 	// Miner tx hash is skipped here because it's not a part of block template
-	m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE * 3, m_transactionHashes.end());
+		// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
+		m_blockTemplateBlob.push_back(0);
+		// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), HASH_SIZE, 0);
+	}
+	else {
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
+	}
 
 	m_poolBlockTemplate->m_transactions.clear();
-	m_poolBlockTemplate->m_transactions.resize(1);
-	m_poolBlockTemplate->m_transactions.reserve(m_mempoolTxsOrder.size() + 1);
+	m_poolBlockTemplate->m_transactions.reserve(m_mempoolTxsOrder.size());
 	for (size_t i = 0, n = m_mempoolTxsOrder.size(); i < n;  ++i) {
 		m_poolBlockTemplate->m_transactions.push_back(m_mempoolTxs[m_mempoolTxsOrder[i]].id);
 	}
@@ -804,6 +828,14 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 
 	m_mempoolTxsOrder.clear();
 	m_transactionHashes.assign(HASH_SIZE, 0);
+
+	if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+		// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
+		m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+		// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
+		m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+	}
+
 	for (int i = static_cast<int>(n); (i > 0) && (best_weight > 0); --i) {
 		if (m_knapsack[i * max_weight + best_weight] > m_knapsack[(i - 1) * max_weight + best_weight]) {
 			m_mempoolTxsOrder.push_back(i - 1);
@@ -842,9 +874,9 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 
 	PoolBlock* b = m_poolBlockTemplate;
 	b->m_transactions.clear();
-	b->m_transactions.resize(1);
 	b->m_ephPublicKeys.clear();
 	b->m_outputAmounts.clear();
+	b->m_viewTags.clear();
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
 	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
@@ -906,11 +938,15 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Number of outputs (1 output per miner)
 	writeVarint(num_outputs, m_minerTx);
 
+	// TODO: fill in m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
+
 	m_poolBlockTemplate->m_ephPublicKeys.clear();
 	m_poolBlockTemplate->m_outputAmounts.clear();
+	m_poolBlockTemplate->m_viewTags.clear();
 
 	m_poolBlockTemplate->m_ephPublicKeys.reserve(num_outputs);
 	m_poolBlockTemplate->m_outputAmounts.reserve(num_outputs);
+	m_poolBlockTemplate->m_viewTags.reserve(num_outputs);
 
 	uint64_t reward_amounts_weight = 0;
 	for (size_t i = 0; i < num_outputs; ++i) {
@@ -933,7 +969,8 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 			}
 			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
 			m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
-			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i], view_tag);
+			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i]);
+			m_poolBlockTemplate->m_viewTags.emplace_back(view_tag);
 		}
 
 		m_minerTx.emplace_back(view_tag);
@@ -1139,7 +1176,7 @@ void BlockTemplate::calc_merkle_tree_main_branch()
 {
 	m_merkleTreeMainBranch.clear();
 
-	const uint64_t count = m_numTransactionHashes + 1;
+	const uint64_t count = m_transactionHashes.size() / HASH_SIZE;
 	if (count == 1) {
 		return;
 	}

@@ -1090,9 +1090,9 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->pruned_blob.push_back(0);
 
 	const uint64_t total_reward = std::accumulate(block.m_outputAmounts.begin(), block.m_outputAmounts.end(), 0ULL,
-		[](uint64_t a, const PoolBlock::TxOutput& b)
+		[](uint64_t a, uint64_t b)
 		{
-			return a + b.m_reward;
+			return a + b;
 		});
 
 	writeVarint(total_reward, data->pruned_blob);
@@ -1102,30 +1102,31 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
 
 	const size_t N = block.m_transactions.size();
-	if ((N > 1) && parent && (parent->m_transactions.size() > 1)) {
-		const uint32_t tx_list_size = static_cast<uint32_t>((N - 1) * HASH_SIZE);
+	if ((N > 0) && parent && (parent->m_transactions.size() > 0)) {
+		const uint32_t tx_list_size = static_cast<uint32_t>(N * HASH_SIZE);
+		const uint32_t fcmp_pp_size = (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) ? (1 + HASH_SIZE) : 0;
 
 		unordered_map<hash, size_t> parent_transactions;
 		parent_transactions.reserve(parent->m_transactions.size());
 
-		for (size_t i = 1; i < parent->m_transactions.size(); ++i) {
-			parent_transactions.emplace(parent->m_transactions[i], i);
+		for (size_t i = 0; i < parent->m_transactions.size(); ++i) {
+			parent_transactions.emplace(parent->m_transactions[i], i + 1);
 		}
 
 		// Reserve 1 additional byte per transaction to be ready for the worst case (all transactions are different in the parent block)
-		data->compact_blob.reserve(data->pruned_blob.capacity() + (N - 1));
-		data->compact_unpruned_blob.reserve(data->blob.capacity() + (N - 1));
+		data->compact_blob.reserve(data->pruned_blob.capacity() + N);
+		data->compact_unpruned_blob.reserve(data->blob.capacity() + N);
 
 		// Copy pruned_blob and mainchain_data without the transaction list
-		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - tx_list_size);
-		data->compact_unpruned_blob.assign(mainchain_data.begin(), mainchain_data.end() - tx_list_size);
+		data->compact_blob.assign(data->pruned_blob.begin(), data->pruned_blob.end() - tx_list_size - fcmp_pp_size);
+		data->compact_unpruned_blob.assign(mainchain_data.begin(), mainchain_data.end() - tx_list_size - fcmp_pp_size);
 
 		std::vector<uint8_t> compact_transactions;
-		compact_transactions.reserve(tx_list_size + (N - 1));
+		compact_transactions.reserve(tx_list_size + N);
 
 		// Process transaction hashes one by one
 		size_t num_found = 0;
-		for (size_t i = 1; i < N; ++i) {
+		for (size_t i = 0; i < N; ++i) {
 			const hash& tx = block.m_transactions[i];
 			auto it = parent_transactions.find(tx);
 			if (it != parent_transactions.end()) {
@@ -1137,12 +1138,24 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 				compact_transactions.insert(compact_transactions.end(), tx.h, tx.h + HASH_SIZE);
 			}
 		}
-		LOGINFO(6, "compact blob: " << num_found << '/' << (N - 1) << " transactions were found in the parent block");
+		LOGINFO(6, "compact blob: " << num_found << '/' << N << " transactions were found in the parent block");
 
 		data->compact_blob.insert(data->compact_blob.end(), compact_transactions.begin(), compact_transactions.end());
+
+		if (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+			data->compact_blob.push_back(block.m_fcmp_pp_n_tree_layers);
+			data->compact_blob.insert(data->compact_blob.end(), block.m_fcmp_pp_tree_root.h, block.m_fcmp_pp_tree_root.h + HASH_SIZE);
+		}
+
 		data->compact_blob.insert(data->compact_blob.end(), sidechain_data.begin(), sidechain_data.end());
 
 		data->compact_unpruned_blob.insert(data->compact_unpruned_blob.end(), compact_transactions.begin(), compact_transactions.end());
+
+		if (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+			data->compact_unpruned_blob.push_back(block.m_fcmp_pp_n_tree_layers);
+			data->compact_unpruned_blob.insert(data->compact_unpruned_blob.end(), block.m_fcmp_pp_tree_root.h, block.m_fcmp_pp_tree_root.h + HASH_SIZE);
+		}
+
 		data->compact_unpruned_blob.insert(data->compact_unpruned_blob.end(), sidechain_data.begin(), sidechain_data.end());
 	}
 

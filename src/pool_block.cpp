@@ -44,6 +44,7 @@ PoolBlock::PoolBlock()
 	, m_merkleTreeDataSize(1)
 	, m_merkleTreeData(0)
 	, m_merkleRoot{}
+	, m_fcmp_pp_n_tree_layers(0)
 	, m_txkeySecSeed{}
 	, m_txkeySec{}
 	, m_parent{}
@@ -91,6 +92,9 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_txinGenHeight = b.m_txinGenHeight;
 	m_ephPublicKeys = b.m_ephPublicKeys;
 	m_outputAmounts = b.m_outputAmounts;
+	m_viewTags = b.m_viewTags;
+	m_carrotViewTags = b.m_carrotViewTags;
+	m_carrotJanusAnchors = b.m_carrotJanusAnchors;
 	m_txkeyPub = b.m_txkeyPub;
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
@@ -98,6 +102,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_merkleTreeData = b.m_merkleTreeData;
 	m_merkleRoot = b.m_merkleRoot;
 	m_transactions = b.m_transactions;
+	m_fcmp_pp_n_tree_layers = b.m_fcmp_pp_n_tree_layers;
+	m_fcmp_pp_tree_root = b.m_fcmp_pp_tree_root;
 	m_minerWallet = b.m_minerWallet;
 	m_txkeySecSeed = b.m_txkeySecSeed;
 	m_txkeySec = b.m_txkeySec;
@@ -134,18 +140,15 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_cachedNextDifficulty = b.m_cachedNextDifficulty;
 
+	m_coinbase_tx_hash = b.m_coinbase_tx_hash;
+
 	return *this;
 }
 
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
-	if (m_transactions.empty()) {
-		LOGERR(1, "Trying to serialize an uninitialized block, fix the code!");
-		return {};
-	}
-
 	std::vector<uint8_t> data;
-	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + m_transactions.size() * HASH_SIZE, 131072));
+	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + (m_transactions.size() + 1) * HASH_SIZE, 131072));
 
 	// Header
 	data.push_back(m_majorVersion);
@@ -177,14 +180,24 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 
 	writeVarint(m_outputAmounts.size(), data);
 
-	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
-		const TxOutput& output = m_outputAmounts[i];
-
-		writeVarint(output.m_reward, data);
-		data.push_back(TXOUT_TO_TAGGED_KEY);
-		const hash h = m_ephPublicKeys[i];
-		data.insert(data.end(), h.h, h.h + HASH_SIZE);
-		data.push_back(static_cast<uint8_t>(output.m_viewTag));
+	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
+			writeVarint(m_outputAmounts[i], data);
+			data.push_back(TXOUT_TO_CARROT_V1);
+			const hash h = m_ephPublicKeys[i];
+			data.insert(data.end(), h.h, h.h + HASH_SIZE);
+			data.insert(data.end(), m_carrotViewTags[i].bytes, m_carrotViewTags[i].bytes + CARROT_VIEW_TAG_BYTES);
+			data.insert(data.end(), m_carrotJanusAnchors[i].bytes, m_carrotJanusAnchors[i].bytes + CARROT_JANUS_ANCHOR_BYTES);
+		}
+	}
+	else {
+		for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
+			writeVarint(m_outputAmounts[i], data);
+			data.push_back(TXOUT_TO_TAGGED_KEY);
+			const hash h = m_ephPublicKeys[i];
+			data.insert(data.end(), h.h, h.h + HASH_SIZE);
+			data.push_back(m_viewTags[i]);
+		}
 	}
 
 	if (outputs_blob_size) {
@@ -193,6 +206,8 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 
 	uint8_t tx_extra[128];
 	uint8_t* p = tx_extra;
+
+	// TODO: additional pubkeys must be serialized here for Carrot transactions
 
 	*(p++) = TX_EXTRA_TAG_PUBKEY;
 	memcpy(p, m_txkeyPub.h, HASH_SIZE);
@@ -233,18 +248,17 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		*miner_tx_size = data.size() - header_size0;
 	}
 
-	writeVarint(m_transactions.size() - 1, data);
+	writeVarint(m_transactions.size(), data);
 
-#ifdef WITH_INDEXED_HASHES
-	for (size_t i = 1, n = m_transactions.size(); i < n; ++i) {
+	for (size_t i = 0, n = m_transactions.size(); i < n; ++i) {
 		const hash h = m_transactions[i];
 		data.insert(data.end(), h.h, h.h + HASH_SIZE);
 	}
-#else
-	const uint8_t* t = reinterpret_cast<const uint8_t*>(m_transactions.data());
-	// cppcheck-suppress pointerOutOfBounds
-	data.insert(data.end(), t + HASH_SIZE, t + m_transactions.size() * HASH_SIZE);
-#endif
+
+	if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		data.push_back(m_fcmp_pp_n_tree_layers);
+		data.insert(data.end(), m_fcmp_pp_tree_root.h, m_fcmp_pp_tree_root.h + HASH_SIZE);
+	}
 
 #if POOL_BLOCK_DEBUG
 	if ((nonce == &m_nonce) && (extra_nonce == &m_extraNonce) && !m_mainChainDataDebug.empty() && (data != m_mainChainDataDebug)) {
@@ -347,15 +361,12 @@ void PoolBlock::reset_offchain_data()
 	m_seed = {};
 
 	m_cachedNextDifficulty = {};
+
+	m_coinbase_tx_hash = {};
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane)
 {
-	if (m_transactions.empty()) {
-		LOGERR(1, "Trying to calculate PoW hash of an uninitialized block, fix the code!");
-		return false;
-	}
-
 	// Calculate the coinbase tx hash, then the merkle root of all transactions in the block - this merkle root is what goes into the hashing blob
 
 	// Monero transactions are hashed in 3 separate parts, the resulting 3 hashes are then hashed together to get the final result
@@ -368,8 +379,6 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 	// Third hash is null because there is no rct data in the coinbase transaction
 	memset(hashes + HASH_SIZE * 2, 0, HASH_SIZE);
-
-	uint64_t count;
 
 	uint8_t blob[HASHING_BLOB_MAX_SIZE];
 	size_t blob_size = 0;
@@ -387,38 +396,46 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		memcpy(blob, mainchain_data.data(), blob_size);
 
 		const uint8_t* miner_tx = mainchain_data.data() + header_size;
-		hash tmp;
 
 		// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
+		hash tmp;
 		keccak(miner_tx, static_cast<int>(miner_tx_size) - 1, tmp.h);
 		memcpy(hashes, tmp.h, HASH_SIZE);
 
-		count = m_transactions.size();
+		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, m_coinbase_tx_hash.h);
 
-		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, tmp.h);
-
-		// Save the coinbase tx hash into the first element of m_transactions
-		m_transactions[0] = static_cast<indexed_hash>(tmp);
-
-		root_hash tmp_root;
-
-#ifdef WITH_INDEXED_HASHES
 		std::vector<hash> transactions;
-		transactions.reserve(m_transactions.size());
+		transactions.reserve(m_transactions.size() + 3);
+
+		// Layout (from Monero code):
+		//
+		// 1. Miner tx
+		// 2. n tree layers in FCMP++ tree
+		// 3. FCMP++ tree root
+		// 4. All other txs
+
+		transactions.emplace_back(m_coinbase_tx_hash);
+
+		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+			transactions.emplace_back();
+			transactions.back().h[0] = m_fcmp_pp_n_tree_layers;
+
+			transactions.emplace_back(m_fcmp_pp_tree_root);
+		}
 
 		for (const auto& h : m_transactions) {
 			transactions.emplace_back(h);
 		}
 
+		root_hash tmp_root;
 		merkle_hash(transactions, tmp_root);
-#else
-		merkle_hash(m_transactions, tmp_root);
-#endif
 
 		memcpy(blob + blob_size, tmp_root.h, HASH_SIZE);
 		blob_size += HASH_SIZE;
 	}
 
+	// +1 for coinbase tx
+	const uint64_t count = m_transactions.size() + 1;
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
 
 	// cppcheck-suppress danglingLifetime
@@ -429,15 +446,18 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
-	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
-		const TxOutput& out = m_outputAmounts[i];
+	// TODO: add code to check Carrot transactions
+	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		return 0;
+	}
 
+	for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
 		hash eph_public_key;
 
 		uint8_t view_tag;
-		const uint8_t expected_view_tag = out.m_viewTag;
+		const uint8_t expected_view_tag = m_viewTags[i];
 		if (w.get_eph_public_key(m_txkeySec, i, eph_public_key, view_tag, &expected_view_tag) && (m_ephPublicKeys[i] == eph_public_key)) {
-			return out.m_reward;
+			return m_outputAmounts[i];
 		}
 	}
 

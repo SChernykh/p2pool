@@ -83,8 +83,8 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 	ON_SCOPE_LEAVE([old_log_category_prefix]() { log_category_prefix = old_log_category_prefix; });
 
 	// Sanity check
-	if (block.m_transactions.empty() || (block.m_hashingBlob.size() < HASHING_BLOB_MIN_SIZE) || (block.m_hashingBlob.size() > HASHING_BLOB_MAX_SIZE)) {
-		LOGWARN(3, "on_external_block: sanity check failed - " << block.m_transactions.size() << " transactions, hashing blob size = " << block.m_hashingBlob.size());
+	if ((block.m_hashingBlob.size() < HASHING_BLOB_MIN_SIZE) || (block.m_hashingBlob.size() > HASHING_BLOB_MAX_SIZE)) {
+		LOGWARN(3, "on_external_block: sanity check failed - hashing blob size = " << block.m_hashingBlob.size());
 		return;
 	}
 
@@ -203,16 +203,28 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 	std::vector<hash> proof;
 	uint32_t path;
 
-#ifdef WITH_INDEXED_HASHES
 	std::vector<hash> transactions;
-	transactions.reserve(block.m_transactions.size());
+	transactions.reserve(block.m_transactions.size() + 3);
+
+	// Layout (from Monero code):
+	//
+	// 1. Miner tx
+	// 2. n tree layers in FCMP++ tree
+	// 3. FCMP++ tree root
+	// 4. All other txs
+
+	transactions.emplace_back(block.m_coinbase_tx_hash);
+
+	if (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		transactions.emplace_back();
+		transactions.back().h[0] = block.m_fcmp_pp_n_tree_layers;
+
+		transactions.emplace_back(block.m_fcmp_pp_tree_root);
+	}
 
 	for (const auto& h : block.m_transactions) {
 		transactions.emplace_back(h);
 	}
-#else
-	const std::vector<hash>& transactions = block.m_transactions;
-#endif
 
 	if (!merkle_hash_with_proof(transactions, 0, proof, path, root)) {
 		LOGWARN(3, "on_external_block: merkle_hash_with_proof failed for coinbase transaction");
