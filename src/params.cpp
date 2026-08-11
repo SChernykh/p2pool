@@ -358,6 +358,11 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		return true;
 	}
 
+	if ((arg[0] == "p2p-allow-same-ip") || (arg[0] == "no-ip-limit")) {
+		m_p2pAllowSameIP = true;
+		return true;
+	}
+
 	if ((arg[0] == "start-mining") && has1(arg)) {
 		m_minerThreads = std::min(std::max(strtoul(arg[1].c_str(), nullptr, 10), 1UL), 64UL);
 		return true;

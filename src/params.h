@@ -127,6 +127,10 @@ struct Params
 
 	bool m_dns = true;
 	int32_t m_p2pExternalPort = 0;
+	// Allow more than one p2p connection from the same IP. Needed for a seed node
+	// behind a NAT/cloud that source-NATs all external peers to one address, where
+	// the default one-per-IP rule would otherwise limit it to a single external peer.
+	bool m_p2pAllowSameIP = false;
 #ifdef WITH_UPNP
 	bool m_upnp = true;
 	bool m_upnpStratum = false;

@@ -254,6 +254,7 @@ private:
 	uint32_t m_maxOutgoingPeers;
 	uint32_t m_maxIncomingPeers;
 	uint32_t m_maxIncomingPeersLocalhost;
+	bool m_allowSameIP;
 
 	uv_rwlock_t m_cachedBlocksLock;
 	unordered_map<hash, PoolBlock*>* m_cachedBlocks;

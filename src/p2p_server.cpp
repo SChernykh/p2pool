@@ -129,6 +129,7 @@ P2PServer::P2PServer(p2pool* pool)
 	set_max_outgoing_peers(params.m_maxOutgoingPeers);
 	set_max_incoming_peers(params.m_maxIncomingPeers);
 	set_max_incoming_peers_localhost(params.m_maxIncomingPeersLocalhost);
+	m_allowSameIP = params.m_p2pAllowSameIP;
 
 	uv_mutex_init_checked(&m_blockLock);
 	uv_mutex_init_checked(&m_peerListLock);
@@ -2230,8 +2231,9 @@ bool P2PServer::P2PClient::on_connect()
 		return false;
 	}
 
-	// Don't allow multiple connections to/from the same IP or domain (except localhost which can have up to 10 incoming connections)
-	if ((m_addressType == AddressType::DomainName) || !m_addr.is_localhost()) {
+	// Don't allow multiple connections to/from the same IP or domain (except localhost which can have up to 10 incoming connections).
+	// --p2p-allow-same-ip disables this entirely, for a seed node behind a NAT/cloud that source-NATs all external peers to one IP.
+	if (!server->m_allowSameIP && ((m_addressType == AddressType::DomainName) || !m_addr.is_localhost())) {
 		for (P2PClient* client = static_cast<P2PClient*>(server->m_connectedClientsList->m_next); client != server->m_connectedClientsList; client = static_cast<P2PClient*>(client->m_next)) {
 			if (client == this) {
 				continue;
