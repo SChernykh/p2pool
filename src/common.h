@@ -128,6 +128,8 @@ namespace p2pool {
 
 constexpr size_t HASH_SIZE = 32;
 constexpr uint8_t HARDFORK_VERSION_RANDOMX_V2 = 17;
+constexpr uint8_t HARDFORK_VERSION_FCMP_PP = 17;
+constexpr uint8_t HARDFORK_VERSION_CARROT = 17;
 constexpr uint8_t HARDFORK_SUPPORTED_VERSION = 18;
 constexpr uint8_t MINER_REWARD_UNLOCK_TIME = 60;
 constexpr uint8_t NONCE_SIZE = 4;
@@ -136,9 +138,13 @@ constexpr uint8_t EXTRA_NONCE_MAX_SIZE = EXTRA_NONCE_SIZE + 10;
 constexpr uint8_t TX_VERSION = 2;
 constexpr uint8_t TXIN_GEN = 0xFF;
 constexpr uint8_t TXOUT_TO_TAGGED_KEY = 3;
+constexpr uint8_t TXOUT_TO_CARROT_V1 = 1;
 constexpr uint8_t TX_EXTRA_TAG_PUBKEY = 1;
 constexpr uint8_t TX_EXTRA_NONCE = 2;
 constexpr uint8_t TX_EXTRA_MERGE_MINING_TAG = 3;
+constexpr uint8_t FCMP_PLUS_PLUS_MAX_LAYERS = 12;
+constexpr size_t CARROT_VIEW_TAG_BYTES = 3;
+constexpr size_t CARROT_JANUS_ANCHOR_BYTES = 16;
 
 #ifdef _MSC_VER
 #define umul128 _umul128

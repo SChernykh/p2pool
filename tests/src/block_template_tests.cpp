@@ -118,9 +118,9 @@ TEST(block_template, update)
 	ASSERT_EQ(tpl.get_reward(), 612054770773ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("5fcd597c6061bae558c25e85435766b20e411265032dc401652a53524165f56a"));
-	ASSERT_EQ(b->m_transactions.size(), 203);
+	ASSERT_EQ(b->m_transactions.size(), 202);
 
-	for (size_t i = 1; i < b->m_transactions.size(); ++i) {
+	for (size_t i = 0; i < b->m_transactions.size(); ++i) {
 		ASSERT_GE(static_cast<hash>(b->m_transactions[i]).u64()[0], 256);
 	}
 
@@ -159,7 +159,7 @@ TEST(block_template, update)
 	ASSERT_EQ(tpl.get_reward(), 600300000000ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("318543c2020c1154ec4b8127c1849777ef7d9cfe255ebbf8806f2e0231c82adb"));
-	ASSERT_EQ(b->m_transactions.size(), 11);
+	ASSERT_EQ(b->m_transactions.size(), 10);
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
 
@@ -196,7 +196,7 @@ TEST(block_template, update)
 	ASSERT_EQ(tpl.get_reward(), 619742028747ULL);
 
 	ASSERT_EQ(b->m_sidechainId, H("76e680114a10a0499a78f9160f12f27bdc86453f8a5f2b25726b7dc91bd4809b"));
-	ASSERT_EQ(b->m_transactions.size(), 174);
+	ASSERT_EQ(b->m_transactions.size(), 173);
 
 	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
 
