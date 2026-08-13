@@ -3443,7 +3443,7 @@ void P2PServer::P2PClient::on_peer_list_response(const uint8_t* buf)
 
 					if (m_SoftwareID == SoftwareID::Unknown) {
 						LOGWARN(4, "peer " << log::Gray() << static_cast<char*>(m_addrString) << log::NoColor()
-							<< "runs an unknown software with id = " << log::Hex(id_value)
+							<< " runs an unknown software with id = " << log::Hex(id_value)
 						);
 					}
 
