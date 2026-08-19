@@ -37,6 +37,13 @@ bool derive_public_key(const hash& derivation, size_t output_index, const hash& 
 bool batch_public_keys(const std::vector<batch_public_key_input>& in, std::vector<std::pair<hash, bool>>& out);
 void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_tag);
 
+class Wallet;
+
+// TODO: when adding it to block generation/verification, make sure retry_counter is the smallest possible value
+// that makes generated anchors pass all Carrot checks (no zero/duplicate anchors, no zero/duplicate D_e, no duplicate K_o)
+// retry_counter is transaction-wide and must have a single canonical value, just like txkey_sec
+janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w);
+
 void init_crypto_cache();
 void destroy_crypto_cache();
 void clear_crypto_cache(uint64_t timestamp = 0);

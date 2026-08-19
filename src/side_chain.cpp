@@ -242,6 +242,7 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_sidechainHeight = 0;
 		block.m_difficulty = m_minDifficulty;
 		block.m_cumulativeDifficulty = m_minDifficulty;
+		// TODO: use block.m_txkeySecSeed = keccak(domain separator | Monero height (uint64 le) | consensus id) after FCMP++ fork
 		block.m_txkeySecSeed = m_consensusHash;
 		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
@@ -1646,6 +1647,7 @@ void SideChain::verify(PoolBlock* block)
 			!block->m_uncles.empty() ||
 			(block->m_difficulty != m_minDifficulty) ||
 			(block->m_cumulativeDifficulty != m_minDifficulty) ||
+			// TODO: use block.m_txkeySecSeed = keccak(domain separator | Monero height (uint64 le) | consensus id) after FCMP++ fork
 			(block->m_txkeySecSeed != m_consensusHash))
 		{
 			block->m_invalid = true;
