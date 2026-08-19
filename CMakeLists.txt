@@ -207,6 +207,10 @@ else()
 	set(SOURCES ${SOURCES} external/src/RandomX/src/cpu.cpp)
 	set(HEADERS ${HEADERS} external/src/RandomX/src/blake2/blake2.h)
 	set(SOURCES ${SOURCES} external/src/RandomX/src/blake2/blake2b.c)
+
+	if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+		set_source_files_properties(external/src/RandomX/src/blake2/blake2b.c PROPERTIES COMPILE_OPTIONS "/wd4820")
+	endif()
 endif()
 
 if (WITH_GRPC)
