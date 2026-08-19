@@ -24,6 +24,7 @@ extern "C" {
 #include "fcmp_pp_crypto.h"
 #include "thread_pool.h"
 #include "keccak.h"
+#include "wallet.h"
 
 #include "gtest/gtest.h"
 #include <fstream>
@@ -239,6 +240,19 @@ TEST(crypto, batch)
 #ifdef WITH_INDEXED_HASHES
 	indexed_hash::cleanup_storage();
 #endif
+}
+
+TEST(crypto, gen_janus_anchor)
+{
+	constexpr hash txkey_sec = keccak("gen_janus_anchor test");
+	Wallet w("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
+
+	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
+	log::Stream s(buf);
+
+	s << gen_janus_anchor(txkey_sec, 0, w);
+
+	ASSERT_EQ(memcmp(buf, "69408f4a8e57cc31408f90ff5fc958a6", CARROT_JANUS_ANCHOR_BYTES * 2), 0);
 }
 
 }
