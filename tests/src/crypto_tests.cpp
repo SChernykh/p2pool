@@ -252,7 +252,7 @@ TEST(crypto, gen_janus_anchor)
 
 	s << gen_janus_anchor(txkey_sec, 0, w);
 
-	ASSERT_EQ(memcmp(buf, "69408f4a8e57cc31408f90ff5fc958a6", CARROT_JANUS_ANCHOR_BYTES * 2), 0);
+	ASSERT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "b45ba3471efd4d621b70009b48e2dc73");
 }
 
 }

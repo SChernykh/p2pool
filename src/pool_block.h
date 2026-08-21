@@ -134,6 +134,8 @@ struct PoolBlock
 	std::vector<carrot_janus_anchor> m_carrotJanusAnchors;
 
 	hash m_txkeyPub;
+	std::vector<hash> m_carrotTxPubKeys;
+
 	uint64_t m_extraNonceSize;
 	uint32_t m_extraNonce;
 

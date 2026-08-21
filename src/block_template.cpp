@@ -877,6 +877,11 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	b->m_ephPublicKeys.clear();
 	b->m_outputAmounts.clear();
 	b->m_viewTags.clear();
+	b->m_carrotTxPubKeys.clear();
+
+	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		b->m_carrotTxPubKeys.resize(m_shares.size());
+	}
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
 	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
@@ -886,7 +891,12 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
-	k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
+	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* eph pub key */ + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES);
+	}
+	else {
+		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
+	}
 
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	{
@@ -938,7 +948,14 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Number of outputs (1 output per miner)
 	writeVarint(num_outputs, m_minerTx);
 
-	// TODO: fill in m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
+	// TODO: fill in m_carrotTxPubKeys, m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
+	if (m_poolBlockTemplate->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		const size_t N = shares.size();
+
+		m_poolBlockTemplate->m_carrotTxPubKeys.resize(N);
+		m_poolBlockTemplate->m_carrotViewTags.resize(N);
+		m_poolBlockTemplate->m_carrotJanusAnchors.resize(N);
+	}
 
 	m_poolBlockTemplate->m_ephPublicKeys.clear();
 	m_poolBlockTemplate->m_outputAmounts.clear();
@@ -990,8 +1007,25 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// TX_EXTRA begin
 	m_minerTxExtra.clear();
 
-	m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
-	m_minerTxExtra.insert(m_minerTxExtra.end(), m_poolBlockTemplate->m_txkeyPub.h, m_poolBlockTemplate->m_txkeyPub.h + HASH_SIZE);
+	if (m_poolBlockTemplate->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		const size_t N = m_poolBlockTemplate->m_carrotTxPubKeys.size();
+
+		if (N > 1) {
+			m_minerTxExtra.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
+			writeVarint(N, m_minerTxExtra);
+		}
+		else {
+			m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
+		}
+
+		for (const hash& pub_key : m_poolBlockTemplate->m_carrotTxPubKeys) {
+			m_minerTxExtra.insert(m_minerTxExtra.end(), pub_key.h, pub_key.h + HASH_SIZE);
+		}
+	}
+	else {
+		m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
+		m_minerTxExtra.insert(m_minerTxExtra.end(), m_poolBlockTemplate->m_txkeyPub.h, m_poolBlockTemplate->m_txkeyPub.h + HASH_SIZE);
+	}
 
 	m_minerTxExtra.push_back(TX_EXTRA_NONCE);
 

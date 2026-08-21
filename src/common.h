@@ -142,6 +142,7 @@ constexpr uint8_t TXOUT_TO_CARROT_V1 = 1;
 constexpr uint8_t TX_EXTRA_TAG_PUBKEY = 1;
 constexpr uint8_t TX_EXTRA_NONCE = 2;
 constexpr uint8_t TX_EXTRA_MERGE_MINING_TAG = 3;
+constexpr uint8_t TX_EXTRA_TAG_ADDITIONAL_PUBKEYS = 4;
 constexpr uint8_t FCMP_PLUS_PLUS_MAX_LAYERS = 12;
 constexpr size_t CARROT_VIEW_TAG_BYTES = 3;
 constexpr size_t CARROT_JANUS_ANCHOR_BYTES = 16;
@@ -274,7 +275,7 @@ static_assert(sizeof(root_hash) == HASH_SIZE, "struct root_hash has invalid size
 static_assert(std::is_standard_layout<hash>::value, "struct hash is not a POD, check your compiler options");
 static_assert(std::is_standard_layout<root_hash>::value, "struct root_hash is not a POD, check your compiler options");
 
-struct alignas(uint64_t) janus_anchor
+struct alignas(CARROT_JANUS_ANCHOR_BYTES) janus_anchor
 {
 	uint8_t data[CARROT_JANUS_ANCHOR_BYTES];
 };

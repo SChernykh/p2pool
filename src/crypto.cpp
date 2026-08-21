@@ -1078,10 +1078,11 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w)
 {
 	constexpr char domain[] = "P2Pool Janus anchor";
-	constexpr char personal[] = "Monero";
+	constexpr uint8_t domain_len = static_cast<uint8_t>(sizeof(domain) - 1);
 
 	constexpr size_t N =
-		sizeof(domain) +     // domain (20 bytes, including \0 in the end)
+		1 +                  // domain length
+		domain_len +         // domain
 		HASH_SIZE +          // txkey_sec
 		1 +                  // retry_counter
 		HASH_SIZE * 2;       // spend and view public keys
@@ -1093,8 +1094,10 @@ janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, cons
 	uint8_t buf[N];
 	uint8_t* p = buf;
 
-	memcpy(p, domain, sizeof(domain));
-	p += sizeof(domain);
+	*(p++) = domain_len;
+
+	memcpy(p, domain, domain_len);
+	p += domain_len;
 
 	memcpy(p, txkey_sec.h, HASH_SIZE);
 	p += HASH_SIZE;
@@ -1123,6 +1126,7 @@ janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, cons
 	param.fanout = 1;
 	param.depth = 1;
 
+	constexpr char personal[] = "Monero";
 	memcpy(param.personal, personal, sizeof(personal) - 1);
 
 	blake2b_init_param(&state, &param);
