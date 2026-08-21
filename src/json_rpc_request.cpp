@@ -420,8 +420,17 @@ int CurlContext::on_timer(CURLM* /*multi*/, long timeout_ms)
 	}
 
 	if (timeout_ms < 0) {
-		uv_timer_stop(m_timer);
-		return 0;
+		// curl says it needs no timeout right now -- but do NOT stop the timer
+		// entirely. If this request's socket poll later dies (e.g. uv_poll returns
+		// EBADF), no socket events arrive and, with the timer stopped,
+		// curl_multi_socket_action() is never called again. Then even the
+		// per-request CURLOPT_TIMEOUT is never enforced and the transfer hangs
+		// forever: it neither completes nor errors, so its completion callback
+		// never fires. For get_miner_data that leaves m_getMinerDataPending stuck
+		// true and deadlocks the whole node (it serves stale templates and gets
+		// banned by peers). Keep a slow periodic tick instead, so curl always
+		// re-checks the transfer and can time it out and complete normally.
+		timeout_ms = 5000;
 	}
 
 	const int result = uv_timer_start(m_timer, on_timeout, timeout_ms, 0);

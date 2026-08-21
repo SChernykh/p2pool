@@ -1689,10 +1689,24 @@ void p2pool::parse_get_version_rpc(const char* data, size_t size)
 
 void p2pool::get_miner_data(bool retry)
 {
+	// Only one get_miner_data request is normally in flight at a time. But if a
+	// request wedges -- its JSONRPCRequest completion callback never fires (e.g.
+	// uv_poll returns EBADF on the curl socket, orphaning the request so it
+	// neither completes nor times out) -- m_getMinerDataPending would stay true
+	// forever, suppressing every future poll. The node then serves stale
+	// templates and gets banned by peers. Guard against that: a healthy request
+	// completes in milliseconds, so if one has been "pending" for far longer,
+	// treat it as wedged and issue a fresh request instead of returning.
+	constexpr uint64_t STUCK_TIMEOUT = 30; // seconds
 	if (m_getMinerDataPending) {
-		return;
+		const uint64_t now = seconds_since_epoch();
+		if (!m_getMinerDataPendingSince || (now < m_getMinerDataPendingSince + STUCK_TIMEOUT)) {
+			return;
+		}
+		LOGWARN(1, "get_miner_data has been pending for " << (now - m_getMinerDataPendingSince) << " seconds (RPC wedged); forcing a new request");
 	}
 	m_getMinerDataPending = true;
+	m_getMinerDataPendingSince = seconds_since_epoch();
 
 	const Params::Host& host = current_host();
 
@@ -1709,6 +1723,7 @@ void p2pool::get_miner_data(bool retry)
 				if (!m_stopped && retry) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					m_getMinerDataPending = false;
+					m_getMinerDataPendingSince = 0;
 					get_miner_data();
 					return;
 				}
@@ -1722,6 +1737,7 @@ void p2pool::get_miner_data(bool retry)
 #endif
 
 			m_getMinerDataPending = false;
+			m_getMinerDataPendingSince = 0;
 		});
 }
 

@@ -297,6 +297,12 @@ private:
 
 	hash m_getMinerDataHash;
 	bool m_getMinerDataPending = false;
+	// When the current get_miner_data request was issued. Used to break the
+	// overlap guard if the underlying JSONRPCRequest wedges (its completion
+	// callback never fires, e.g. uv_poll EBADF on the curl socket), which would
+	// otherwise leave m_getMinerDataPending stuck true and suppress all further
+	// polls forever -> the node serves stale templates and gets banned by peers.
+	uint64_t m_getMinerDataPendingSince = 0;
 
 	std::atomic<uint64_t> m_lastMinerDataReceived;
 
