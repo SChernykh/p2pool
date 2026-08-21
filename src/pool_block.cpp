@@ -96,6 +96,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_carrotViewTags = b.m_carrotViewTags;
 	m_carrotJanusAnchors = b.m_carrotJanusAnchors;
 	m_txkeyPub = b.m_txkeyPub;
+	m_carrotTxPubKeys = b.m_carrotTxPubKeys;
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
 	m_merkleTreeDataSize = b.m_merkleTreeDataSize;
@@ -204,14 +205,26 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		*outputs_blob_size = static_cast<int>(data.size()) - outputs_offset0;
 	}
 
-	uint8_t tx_extra[128];
-	uint8_t* p = tx_extra;
+	std::vector<uint8_t> tx_extra;
+	tx_extra.reserve(128 + m_carrotTxPubKeys.size() * HASH_SIZE);
 
-	// TODO: additional pubkeys must be serialized here for Carrot transactions
+	if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		if (m_carrotTxPubKeys.size() > 1) {
+			tx_extra.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
+			writeVarint(m_carrotTxPubKeys.size(), tx_extra);
+		}
+		else {
+			tx_extra.push_back(TX_EXTRA_TAG_PUBKEY);
+		}
 
-	*(p++) = TX_EXTRA_TAG_PUBKEY;
-	memcpy(p, m_txkeyPub.h, HASH_SIZE);
-	p += HASH_SIZE;
+		for (const hash& pub_key : m_carrotTxPubKeys) {
+			tx_extra.insert(tx_extra.end(), pub_key.h, pub_key.h + HASH_SIZE);
+		}
+	}
+	else {
+		tx_extra.push_back(TX_EXTRA_TAG_PUBKEY);
+		tx_extra.insert(tx_extra.end(), m_txkeyPub.h, m_txkeyPub.h + HASH_SIZE);
+	}
 
 	uint64_t extra_nonce_size = m_extraNonceSize;
 	if (extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
@@ -219,28 +232,25 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		extra_nonce_size = EXTRA_NONCE_MAX_SIZE;
 	}
 
-	*(p++) = TX_EXTRA_NONCE;
-	writeVarint(extra_nonce_size, [&p](uint8_t value) { *(p++) = value; });
+	tx_extra.push_back(TX_EXTRA_NONCE);
+	writeVarint(extra_nonce_size, tx_extra);
 
 	if (!extra_nonce) {
 		extra_nonce = &m_extraNonce;
 	}
-	memcpy(p, extra_nonce, EXTRA_NONCE_SIZE);
-	p += EXTRA_NONCE_SIZE;
+	tx_extra.insert(tx_extra.end(), reinterpret_cast<const uint8_t*>(extra_nonce), reinterpret_cast<const uint8_t*>(extra_nonce) + EXTRA_NONCE_SIZE);
 	if (extra_nonce_size > EXTRA_NONCE_SIZE) {
-		memset(p, 0, extra_nonce_size - EXTRA_NONCE_SIZE);
-		p += extra_nonce_size - EXTRA_NONCE_SIZE;
+		tx_extra.resize(tx_extra.size() + extra_nonce_size - EXTRA_NONCE_SIZE);
 	}
 
-	*(p++) = TX_EXTRA_MERGE_MINING_TAG;
+	tx_extra.push_back(TX_EXTRA_MERGE_MINING_TAG);
 
-	*(p++) = static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE);
-	writeVarint(m_merkleTreeData, [&p](const uint8_t b) { *(p++) = b; });
-	memcpy(p, m_merkleRoot.h, HASH_SIZE);
-	p += HASH_SIZE;
+	tx_extra.push_back(static_cast<uint8_t>(m_merkleTreeDataSize + HASH_SIZE));
+	writeVarint(m_merkleTreeData, tx_extra);
+	tx_extra.insert(tx_extra.end(), m_merkleRoot.h, m_merkleRoot.h + HASH_SIZE);
 
-	writeVarint(static_cast<size_t>(p - tx_extra), data);
-	data.insert(data.end(), tx_extra, p);
+	writeVarint(tx_extra.size(), data);
+	data.insert(data.end(), tx_extra.begin(), tx_extra.end());
 
 	data.push_back(0);
 

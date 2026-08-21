@@ -213,10 +213,41 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		const uint8_t* tx_extra_begin = data;
 
-		// TODO: additional pubkeys must be deserialized here for Carrot transactions
+		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+			uint8_t tag;
+			READ_BYTE(tag);
 
-		EXPECT_BYTE(TX_EXTRA_TAG_PUBKEY);
-		READ_BUF(m_txkeyPub.h, HASH_SIZE);
+			if (tag == TX_EXTRA_TAG_PUBKEY) {
+				m_carrotTxPubKeys.resize(1);
+				READ_BUF(m_carrotTxPubKeys[0].h, HASH_SIZE);
+			}
+			else if (tag == TX_EXTRA_TAG_ADDITIONAL_PUBKEYS) {
+				uint64_t num_pub_keys;
+				READ_VARINT(num_pub_keys);
+
+				if (num_pub_keys <= 1) return __LINE__;
+				if (num_pub_keys > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
+				if (static_cast<uint64_t>(data_end - data) < num_pub_keys * HASH_SIZE) return __LINE__;
+
+				m_carrotTxPubKeys.clear();
+				m_carrotTxPubKeys.reserve(num_pub_keys);
+
+				for (uint64_t i = 0; i < num_pub_keys; ++i) {
+					hash pub_key;
+					READ_BUF(pub_key.h, HASH_SIZE);
+					m_carrotTxPubKeys.emplace_back(pub_key);
+				}
+			}
+			else {
+				return __LINE__;
+			}
+
+			m_carrotTxPubKeys.shrink_to_fit();
+		}
+		else {
+			EXPECT_BYTE(TX_EXTRA_TAG_PUBKEY);
+			READ_BUF(m_txkeyPub.h, HASH_SIZE);
+		}
 
 		EXPECT_BYTE(TX_EXTRA_NONCE);
 		READ_VARINT(m_extraNonceSize);
@@ -418,12 +449,18 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		hash pub;
 		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
-		if (pub != m_txkeyPub) {
-			return __LINE__;
-		}
 
-		if (!check_keys(m_txkeyPub, m_txkeySec)) {
-			return __LINE__;
+		// TODO: check m_carrotTxPubKeys here
+		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		}
+		else {
+			if (pub != m_txkeyPub) {
+				return __LINE__;
+			}
+
+			if (!check_keys(m_txkeyPub, m_txkeySec)) {
+				return __LINE__;
+			}
 		}
 
 		m_merkleProof.clear();
@@ -495,6 +532,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		if (static_cast<int>(outputs_blob.size()) != outputs_blob_size) {
+			return __LINE__;
+		}
+
+		// TODO: make sure get_outputs_blob reconstructs all new Carrot fields for pruned blocks
+		if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (m_carrotTxPubKeys.size() != m_outputAmounts.size())) {
 			return __LINE__;
 		}
 
