@@ -74,6 +74,7 @@ set(SOURCES
 	../external/src/siphash/siphash.c
 	../src/block_cache.cpp
 	../src/block_template.cpp
+	../src/carrot.cpp
 	../src/crypto.cpp
 	../src/keccak.cpp
 	../src/log.cpp

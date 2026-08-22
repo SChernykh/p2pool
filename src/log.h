@@ -278,9 +278,9 @@ template<> struct Stream::Entry<hash>
 	}
 };
 
-template<> struct Stream::Entry<janus_anchor>
+template<> struct Stream::Entry<carrot::janus_anchor>
 {
-	static NOINLINE void put(const janus_anchor& data, Stream* wrapper)
+	static NOINLINE void put(const carrot::janus_anchor& data, Stream* wrapper)
 	{
 		char buf[sizeof(data) * 2];
 		for (size_t i = 0; i < sizeof(data.data); ++i) {
