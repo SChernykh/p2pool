@@ -146,6 +146,7 @@ constexpr uint8_t TX_EXTRA_TAG_ADDITIONAL_PUBKEYS = 4;
 constexpr uint8_t FCMP_PLUS_PLUS_MAX_LAYERS = 12;
 constexpr size_t CARROT_VIEW_TAG_BYTES = 3;
 constexpr size_t CARROT_JANUS_ANCHOR_BYTES = 16;
+constexpr size_t CARROT_HASH_KEY_BYTES = 32;
 
 #ifdef _MSC_VER
 #define umul128 _umul128
@@ -275,12 +276,16 @@ static_assert(sizeof(root_hash) == HASH_SIZE, "struct root_hash has invalid size
 static_assert(std::is_standard_layout<hash>::value, "struct hash is not a POD, check your compiler options");
 static_assert(std::is_standard_layout<root_hash>::value, "struct root_hash is not a POD, check your compiler options");
 
+namespace carrot {
+
 struct alignas(CARROT_JANUS_ANCHOR_BYTES) janus_anchor
 {
 	uint8_t data[CARROT_JANUS_ANCHOR_BYTES];
 };
 
 static_assert(sizeof(janus_anchor) == CARROT_JANUS_ANCHOR_BYTES, "struct janus_anchor has invalid size, check your compiler options");
+
+} // namespace carrot
 
 struct
 #ifdef __GNUC__

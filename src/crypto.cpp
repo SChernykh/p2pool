@@ -20,7 +20,7 @@
 #include "keccak.h"
 #include "uv_util.h"
 #include "wallet.h"
-#include "blake2/blake2.h"
+#include "carrot.h"
 #include <map>
 
 extern "C" {
@@ -1075,65 +1075,13 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 	view_tag = view_tag_full.h[0];
 }
 
-janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w)
+carrot::janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w)
 {
-	constexpr char domain[] = "P2Pool Janus anchor";
-	constexpr uint8_t domain_len = static_cast<uint8_t>(sizeof(domain) - 1);
+	auto t = carrot::transcript("P2Pool Janus anchor", txkey_sec, retry_counter, w.spend_public_key(), w.view_public_key());
 
-	constexpr size_t N =
-		1 +                  // domain length
-		domain_len +         // domain
-		HASH_SIZE +          // txkey_sec
-		1 +                  // retry_counter
-		HASH_SIZE * 2;       // spend and view public keys
+	carrot::janus_anchor result;
+	carrot::hash_to_bytes(t.data(), t.size(), result.data, CARROT_JANUS_ANCHOR_BYTES);
 
-	static_assert(N == 117);
-	static_assert(N <= BLAKE2B_BLOCKBYTES);
-	static_assert(CARROT_JANUS_ANCHOR_BYTES <= BLAKE2B_OUTBYTES);
-
-	uint8_t buf[N];
-	uint8_t* p = buf;
-
-	*(p++) = domain_len;
-
-	memcpy(p, domain, domain_len);
-	p += domain_len;
-
-	memcpy(p, txkey_sec.h, HASH_SIZE);
-	p += HASH_SIZE;
-
-	*(p++) = retry_counter;
-
-	memcpy(p, w.spend_public_key().h, HASH_SIZE);
-	p += HASH_SIZE;
-
-	memcpy(p, w.view_public_key().h, HASH_SIZE);
-
-#ifdef P2POOL_DEBUGGING
-	p += HASH_SIZE;
-
-	if (p != buf + N) {
-		PANIC_STOP();
-	}
-#endif
-
-	// Equivalent to carrot::derive_bytes_16(buf, sizeof(buf), nullptr, result.data);
-
-	blake2b_state state;
-	blake2b_param param{};
-
-	param.digest_length = static_cast<uint8_t>(CARROT_JANUS_ANCHOR_BYTES);
-	param.fanout = 1;
-	param.depth = 1;
-
-	constexpr char personal[] = "Monero";
-	memcpy(param.personal, personal, sizeof(personal) - 1);
-
-	blake2b_init_param(&state, &param);
-	blake2b_update(&state, buf, sizeof(buf));
-
-	janus_anchor result;
-	blake2b_final(&state, result.data, CARROT_JANUS_ANCHOR_BYTES);
 	return result;
 }
 

@@ -106,6 +106,7 @@ set(HEADERS
 	external/src/siphash/siphash.h
 	src/block_cache.h
 	src/block_template.h
+	src/carrot.h
 	src/common.h
 	src/console_commands.h
 	src/crypto.h
@@ -144,6 +145,7 @@ set(SOURCES
 	external/src/siphash/siphash.c
 	src/block_cache.cpp
 	src/block_template.cpp
+	src/carrot.cpp
 	src/console_commands.cpp
 	src/crypto.cpp
 	src/json_rpc_request.cpp
