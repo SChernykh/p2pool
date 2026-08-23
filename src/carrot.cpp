@@ -29,7 +29,7 @@ namespace carrot {
 
 bool hash_to_bytes(const void* input, size_t in_len, void* output, size_t out_len, const void* key)
 {
-	if (!input || !output || (out_len > BLAKE2B_OUTBYTES)) {
+	if (!input || !output || !out_len || (out_len > BLAKE2B_OUTBYTES)) {
 		return false;
 	}
 
@@ -66,7 +66,7 @@ bool hash_to_scalar(const void *data, const std::size_t data_length, void *hash_
 {
 	uint8_t buf[64];
 
-	if (!hash_to_bytes(data, data_length, buf, 64, key)) {
+	if (!hash_out || !hash_to_bytes(data, data_length, buf, 64, key)) {
 		return false;
 	}
 
