@@ -54,6 +54,7 @@ set(HEADERS
 
 set(SOURCES
 	src/block_template_tests.cpp
+	src/carrot_tests.cpp
 	src/crypto_tests.cpp
 	src/difficulty_type_tests.cpp
 	src/hash_tests.cpp
