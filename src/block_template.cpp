@@ -333,7 +333,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
-	if (!SideChain::split_reward(max_reward, m_shares, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, max_reward, m_shares, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -517,7 +517,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 #endif
 	}
 
-	if (!SideChain::split_reward(final_reward, m_shares, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -535,7 +535,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			// Block reward will be <= r due to how block size penalty works
 			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
 
-			if (!SideChain::split_reward(r, m_shares, m_rewards)) {
+			if (!SideChain::split_reward(data.major_version, r, m_shares, m_rewards)) {
 				use_old_template();
 				return;
 			}
@@ -553,7 +553,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
 
-			if (!SideChain::split_reward(final_reward, m_shares, m_rewards)) {
+			if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_rewards)) {
 				use_old_template();
 				return;
 			}

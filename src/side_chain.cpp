@@ -910,7 +910,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		txkeySec = block->m_txkeySec;
 
-		if (!get_shares(block, tmpShares) || !split_reward(total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
+		if (!get_shares(block, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
 			return false;
 		}
 	}
@@ -1296,7 +1296,7 @@ uint64_t SideChain::get_bottom_height(const PoolBlock* tip) const
 	return bottom_height;
 }
 
-bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
+bool SideChain::split_reward(uint8_t major_version, uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
 {
 	const size_t num_shares = shares.size();
 
@@ -1320,7 +1320,7 @@ bool SideChain::split_reward(uint64_t reward, const std::vector<MinerShare>& sha
 		const uint64_t r = next_value.lo - reward_given;
 		reward_given = next_value.lo;
 
-		if (r > MAX_OUTPUT_VALUE) {
+		if ((major_version < HARDFORK_VERSION_CARROT) && (r > MAX_OUTPUT_VALUE)) {
 			LOGERR(1, "Reward of " << log::XMRAmount(reward) << " is too big for the current split.");
 			return false;
 		}
@@ -1936,7 +1936,7 @@ void SideChain::verify(PoolBlock* block)
 		});
 
 	std::vector<uint64_t> rewards;
-	if (!split_reward(total_reward, shares, rewards)) {
+	if (!split_reward(block->m_majorVersion, total_reward, shares, rewards)) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight << ": split_reward failed");
