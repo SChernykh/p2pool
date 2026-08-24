@@ -242,6 +242,49 @@ TEST(crypto, batch)
 #endif
 }
 
+TEST(crypto, t_base_table)
+{
+	// unbiased_hash_to_ec(keccak("Monero Generator T"))
+	constexpr uint8_t T_bytes[32] = {
+		97, 183, 54, 206, 147, 182, 42, 61, 55, 120, 171, 32, 77, 168, 93, 59,
+		76, 220, 7, 37, 15, 93, 167, 227, 223, 38, 41, 146, 129, 52, 213, 38
+	};
+
+	ge_p3 T;
+	ASSERT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
+
+	for (size_t i = 0; i < 32; ++i) {
+		for (size_t j = 0; j < 8; ++j) {
+			uint8_t scalar[32] = {};
+			scalar[i] = static_cast<uint8_t>(j + 1);
+
+			ge_p2 expected;
+			ge_scalarmult(&expected, scalar, &T);
+
+			const ge_precomp& entry = ge_T_base[i][j];
+			ge_p3 actual;
+			fe_add(actual.Y, entry.yplusx, entry.yminusx);
+			fe_mul(actual.Y, actual.Y, fe_inv2);
+			fe_sub(actual.X, entry.yplusx, entry.yminusx);
+			fe_mul(actual.X, actual.X, fe_inv2);
+			fe_1(actual.Z);
+			fe_mul(actual.T, actual.X, actual.Y);
+
+			uint8_t expected_bytes[32];
+			uint8_t actual_bytes[32];
+			ge_tobytes(expected_bytes, &expected);
+			ge_p3_tobytes(actual_bytes, &actual);
+			ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "i = " << i << ", j = " << j;
+
+			fe expected_xy2d;
+			fe_mul(expected_xy2d, actual.T, fe_d2);
+			fe_tobytes(expected_bytes, expected_xy2d);
+			fe_tobytes(actual_bytes, entry.xy2d);
+			ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "i = " << i << ", j = " << j;
+		}
+	}
+}
+
 TEST(crypto, gen_janus_anchor)
 {
 	constexpr hash txkey_sec = keccak("gen_janus_anchor test");
