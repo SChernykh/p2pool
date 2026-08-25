@@ -39,7 +39,7 @@ docker compose up
 * Many optional configurations and customizations are available by running './configure'
 
 
-#### Other usefull commands
+#### Other useful commands
 * You can **run everything in the background** by adding the "-d" argument to the "docker compose up" command: ```docker compose up -d```
 * You can **stop everything** with CTRL-C or ```docker compose down```
 * You can **update** by building new images with the ```--no-cache``` option.  Example: ```docker compose build --no-cache``` or just update Monero with: ```docker compose build --no-cache monero``` followed by ```docker compose up```

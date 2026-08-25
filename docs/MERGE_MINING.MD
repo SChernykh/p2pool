@@ -36,7 +36,7 @@ Each of the aux chains must provide a 32-byte value `unique_id` that singles it 
 
 `unique_id` is used to enforce the order in which aux hashes are added to the Merkle tree. This prevents an attack where miners can mine two versions of the same chain (for example when double spending) without any additional cost.
 
-Forked chains can choose whether to keep their `unique_id` or change it. If they keep it, it will be impossible to merge mine with the chain they forked from beause they will always be assigned the same slot in the Merkle tree.
+Forked chains can choose whether to keep their `unique_id` or change it. If they keep it, it will be impossible to merge mine with the chain they forked from because they will always be assigned the same slot in the Merkle tree.
 
 A deterministic pseudo-random function `SHA256(unique_id|nonce|"m") % N` is applied to determine which slot is used by which chain. `nonce` is brute-forced until all `N` chains are assigned different slots. This limits `N` to no more than 15-16 in practice.
 
