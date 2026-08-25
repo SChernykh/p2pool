@@ -166,4 +166,4 @@ P2Pool prints the Monero node's fingerprint when it connects to it, but this fin
 `--full-validation` is a boolean flag and will set the value to true; by default it is false to reduce CPU usage
 
 Enable this if untrusted sources can submit shares to your p2pool server and you want to verify the validity of the shares PoW.  Increases CPU usage.
-This option is for shared mining services, and not neccessary in local setups.
+This option is for shared mining services, and not necessary in local setups.
