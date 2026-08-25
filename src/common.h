@@ -147,6 +147,8 @@ constexpr uint8_t FCMP_PLUS_PLUS_MAX_LAYERS = 12;
 constexpr size_t CARROT_VIEW_TAG_BYTES = 3;
 constexpr size_t CARROT_JANUS_ANCHOR_BYTES = 16;
 constexpr size_t CARROT_HASH_KEY_BYTES = 32;
+constexpr size_t CARROT_INPUT_CONTEXT_PADDING_BYTES = 24;
+constexpr size_t LEGACY_PAYMENT_ID_BYTES = 8;
 
 #ifdef _MSC_VER
 #define umul128 _umul128

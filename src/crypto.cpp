@@ -19,8 +19,6 @@
 #include "crypto.h"
 #include "keccak.h"
 #include "uv_util.h"
-#include "wallet.h"
-#include "carrot.h"
 #include <map>
 
 extern "C" {
@@ -1073,16 +1071,6 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 	hash view_tag_full;
 	keccak(buf, static_cast<int>(p - buf), view_tag_full.h);
 	view_tag = view_tag_full.h[0];
-}
-
-carrot::janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w)
-{
-	auto t = carrot::transcript("P2Pool Janus anchor", txkey_sec, retry_counter, w.spend_public_key(), w.view_public_key());
-
-	carrot::janus_anchor result;
-	carrot::hash_to_bytes(t.data(), t.size(), result.data, CARROT_JANUS_ANCHOR_BYTES);
-
-	return result;
 }
 
 void init_crypto_cache()

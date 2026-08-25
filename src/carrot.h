@@ -21,9 +21,13 @@
 
 namespace p2pool {
 
+class Wallet;
+
 namespace carrot {
 	template<size_t N, typename T>
 	struct transcript_serializer {
+		static constexpr size_t size = sizeof(T);
+
 		FORCEINLINE static constexpr void run(const T& data, std::array<uint8_t, N>& output, size_t& offset)
 		{
 			static_assert(!std::is_pointer_v<T>);
@@ -43,6 +47,8 @@ namespace carrot {
 
 	template<size_t N>
 	struct transcript_serializer<N, uint8_t> {
+		static constexpr size_t size = 1;
+
 		FORCEINLINE static constexpr void run(const uint8_t& data, std::array<uint8_t, N>& output, size_t& offset)
 		{
 			output[offset++] = data;
@@ -50,13 +56,49 @@ namespace carrot {
 	};
 
 	template<size_t N>
+	struct transcript_serializer<N, char> {
+		static constexpr size_t size = 1;
+
+		FORCEINLINE static constexpr void run(const char& data, std::array<uint8_t, N>& output, size_t& offset)
+		{
+			output[offset++] = static_cast<uint8_t>(data);
+		}
+	};
+
+	template<size_t N>
 	struct transcript_serializer<N, hash> {
+		static constexpr size_t size = HASH_SIZE;
+
 		FORCEINLINE static constexpr void run(const hash& data, std::array<uint8_t, N>& output, size_t& offset)
 		{
-			static_assert(sizeof(data) == HASH_SIZE);
-
 			for (size_t i = 0; i < HASH_SIZE; ++i, ++offset) {
 				output[offset] = data.h[i];
+			}
+		}
+	};
+
+	template<size_t N>
+	struct transcript_serializer<N, janus_anchor> {
+		static constexpr size_t size = CARROT_JANUS_ANCHOR_BYTES;
+
+		FORCEINLINE static constexpr void run(const janus_anchor& data, std::array<uint8_t, N>& output, size_t& offset)
+		{
+			for (size_t i = 0; i < CARROT_JANUS_ANCHOR_BYTES; ++i, ++offset) {
+				output[offset] = data.data[i];
+			}
+		}
+	};
+
+	template<size_t N, uint8_t value = 0> struct padding {};
+
+	template<size_t N, size_t M, uint8_t value>
+	struct transcript_serializer<N, padding<M, value>> {
+		static constexpr size_t size = M;
+
+		FORCEINLINE static constexpr void run(const padding<M, value>&, std::array<uint8_t, N>& output, size_t& offset)
+		{
+			for (size_t e = offset + M; offset < e; ++offset) {
+				output[offset] = value;
 			}
 		}
 	};
@@ -75,7 +117,7 @@ namespace carrot {
 		static_assert(domain_len > 0, "Domain must be non-empty");
 		static_assert(domain_len <= 255, "Domain length must fit in one byte");
 
-		constexpr size_t total_size = 1 + domain_len + (sizeof(std::decay_t<T>) + ...);
+		constexpr size_t total_size = 1 + domain_len + (transcript_serializer<N, std::decay_t<T>>::size + ...);
 
 		std::array<uint8_t, total_size> result{};
 
@@ -98,6 +140,12 @@ namespace carrot {
 
 	bool hash_to_bytes(const void* input, size_t in_len, void* output, size_t out_len, const void* key = nullptr);
 	bool hash_to_scalar(const void *data, const std::size_t data_length, void *hash_out, const void *key = nullptr);
+
+	// TODO: when adding it to block generation/verification, make sure retry_counter is the smallest possible value
+	// that makes generated anchors pass all Carrot checks (no zero/duplicate anchors, no zero/duplicate D_e, no duplicate K_o)
+	// retry_counter is transaction-wide and must have a single canonical value, just like txkey_sec
+	carrot::janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w);
+	bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wallet& w, hash& eph_priv_key);
 } // namespace carrot
 
 } // namespace p2pool

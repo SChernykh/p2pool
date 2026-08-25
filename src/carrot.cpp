@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "carrot.h"
+#include "wallet.h"
 #include "blake2/blake2.h"
 
 extern "C" {
@@ -74,6 +75,33 @@ bool hash_to_scalar(const void *data, const std::size_t data_length, void *hash_
 	memcpy(hash_out, buf, 32);
 
 	return true;
+}
+
+janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w)
+{
+	auto t = transcript(
+		"P2Pool Janus anchor",
+		txkey_sec, retry_counter,
+		w.spend_public_key(), w.view_public_key()
+	);
+
+	janus_anchor result;
+	hash_to_bytes(t.data(), t.size(), result.data, CARROT_JANUS_ANCHOR_BYTES);
+
+	return result;
+}
+
+bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wallet& w, hash& eph_priv_key)
+{
+	auto t = transcript(
+		"Carrot sending key normal",
+		anchor_norm,
+		'C', height, padding<CARROT_INPUT_CONTEXT_PADDING_BYTES>(),
+		w.spend_public_key(),
+		padding<LEGACY_PAYMENT_ID_BYTES>()
+	);
+
+	return hash_to_scalar(t.data(), t.size(), eph_priv_key.h);
 }
 
 } // namespace carrot

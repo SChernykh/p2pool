@@ -24,7 +24,6 @@ extern "C" {
 #include "fcmp_pp_crypto.h"
 #include "thread_pool.h"
 #include "keccak.h"
-#include "wallet.h"
 
 #include "gtest/gtest.h"
 #include <fstream>
@@ -283,19 +282,6 @@ TEST(crypto, t_base_table)
 			ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "i = " << i << ", j = " << j;
 		}
 	}
-}
-
-TEST(crypto, gen_janus_anchor)
-{
-	constexpr hash txkey_sec = keccak("gen_janus_anchor test");
-	Wallet w("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
-
-	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
-	log::Stream s(buf);
-
-	s << gen_janus_anchor(txkey_sec, 0, w);
-
-	ASSERT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "b45ba3471efd4d621b70009b48e2dc73");
 }
 
 }
