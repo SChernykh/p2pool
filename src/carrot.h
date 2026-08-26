@@ -146,6 +146,9 @@ namespace carrot {
 	// retry_counter is transaction-wide and must have a single canonical value, just like txkey_sec
 	carrot::janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w);
 	bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wallet& w, hash& eph_priv_key);
+
+	bool gen_eph_pubkey(const hash& eph_priv_key, hash& eph_pub_key);
+	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<hash>& eph_pub_keys);
 } // namespace carrot
 
 } // namespace p2pool
