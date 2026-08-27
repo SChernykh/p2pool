@@ -17,9 +17,7 @@
 
 #include "common.h"
 #include "util.h"
-extern "C" {
-#include "crypto-ops.h"
-}
+#include "crypto.h"
 #include "gtest/gtest.h"
 
 namespace p2pool {

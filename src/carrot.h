@@ -148,7 +148,10 @@ namespace carrot {
 	bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wallet& w, hash& eph_priv_key);
 
 	bool gen_eph_pubkey(const hash& eph_priv_key, hash& eph_pub_key);
-	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<hash>& eph_pub_keys);
+	bool gen_sender_receiver_secret(const hash& eph_priv_key, const hash& view_public_key, hash& secret);
+
+	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys);
+	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets);
 } // namespace carrot
 
 } // namespace p2pool

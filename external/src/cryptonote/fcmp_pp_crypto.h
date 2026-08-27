@@ -28,6 +28,10 @@
 
 #pragma once
 
+extern "C" {
+#include "crypto-ops.h"
+}
+
 namespace fcmp_pp
 {
 bool sqrt(fe y, const fe x);
