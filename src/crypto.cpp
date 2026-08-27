@@ -17,23 +17,31 @@
 
 #include "common.h"
 #include "crypto.h"
+#include "carrot.h"
 #include "keccak.h"
 #include "uv_util.h"
 #include <map>
-
-extern "C" {
-#include "crypto-ops.h"
-}
 
 #ifdef P2POOL_DEBUGGING
 LOG_CATEGORY(Crypto)
 #endif
 
-// l = 2^252 + 27742317777372353535851937790883648493.
+// The prime order l = 2^252 + 27742317777372353535851937790883648493 of Ed25519's main subgroup,
+// encoded as a 32-byte little-endian integer. A point P is in the main subgroup if [l]P is the identity.
+static constexpr uint8_t curve_order[32] = { 0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
+
 // l fits 15 times in 32 bytes (iow, 15 l is the highest multiple of l that fits in 32 bytes)
 static constexpr uint8_t limit[32] = { 0xe3, 0x6a, 0x67, 0x72, 0x8b, 0xce, 0x13, 0x29, 0x8f, 0x30, 0x82, 0x8c, 0x0b, 0xa4, 0x10, 0x39, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0 };
 
 namespace p2pool {
+
+bool is_in_main_subgroup(const ge_p3& point)
+{
+	ge_p3 result;
+	ge_scalarmult_p3(&result, curve_order, &point);
+
+	return ge_p3_is_point_at_infinity_vartime(&result);
+}
 
 static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
 {
@@ -113,11 +121,15 @@ class Cache : public nocopy_nomove
 public:
 	Cache()
 		: derivations(new DerivationsMap())
+		, carrot_public_keys(new CarrotPublicKeysMap())
+		, sender_receiver_secrets(new SenderReceiverSecretsMap())
 		, public_keys(new PublicKeysMap())
 		, tx_keys(new TxKeysMap())
 		, from_bytes(new FromBytesMap())
 	{
 		uv_rwlock_init_checked(&derivations_lock);
+		uv_rwlock_init_checked(&carrot_public_keys_lock);
+		uv_rwlock_init_checked(&sender_receiver_secrets_lock);
 		uv_rwlock_init_checked(&public_keys_lock);
 		uv_rwlock_init_checked(&tx_keys_lock);
 		uv_rwlock_init_checked(&from_bytes_lock);
@@ -126,11 +138,15 @@ public:
 	~Cache()
 	{
 		delete derivations;
+		delete carrot_public_keys;
+		delete sender_receiver_secrets;
 		delete public_keys;
 		delete tx_keys;
 		delete from_bytes;
 
 		uv_rwlock_destroy(&derivations_lock);
+		uv_rwlock_destroy(&carrot_public_keys_lock);
+		uv_rwlock_destroy(&sender_receiver_secrets_lock);
 		uv_rwlock_destroy(&public_keys_lock);
 		uv_rwlock_destroy(&tx_keys_lock);
 		uv_rwlock_destroy(&from_bytes_lock);
@@ -138,30 +154,45 @@ public:
 
 	bool get_from_bytes(const hash& h, ge_p3& p, ge_cached* Ai)
 	{
+		ge_p3 point = {};
+
+		bool valid = false;
+		bool point_cached = false;
+		bool precomp_cached = false;
+
 		{
 			ReadLock lock(from_bytes_lock);
 
 			auto it = from_bytes->find(h);
 
 			if (it != from_bytes->end()) {
-				if (!it->second.m_valid) {
+				const FromBytesEntry& entry = it->second;
+
+				if (!entry.m_valid) {
 					return false;
 				}
 
-				if (!Ai || it->second.m_hasAi) {
-					p = it->second.m_point;
-					if (Ai) {
-						memcpy(Ai, it->second.m_Ai, sizeof(ge_dsmp));
-					}
+				valid = true;
+				point_cached = true;
+				point = entry.m_point;
+
+				if (Ai && entry.m_hasAi) {
+					memcpy(Ai, entry.m_Ai, sizeof(ge_dsmp));
+					precomp_cached = true;
+				}
+
+				if (!Ai || precomp_cached) {
+					p = point;
 					return true;
 				}
 			}
 		}
 
-		ge_p3 point = {};
-		const bool valid = (ge_frombytes_vartime(&point, h.h) == 0);
+		if (!point_cached) {
+			valid = (ge_frombytes_vartime(&point, h.h) == 0);
+		}
 
-		if (valid && Ai) {
+		if (valid && Ai && !precomp_cached) {
 			ge_dsm_precomp(Ai, &point);
 		}
 
@@ -169,7 +200,7 @@ public:
 		{
 			WriteLock lock(from_bytes_lock);
 
-			auto it = from_bytes->emplace(h, FromBytesEntry(valid, point, t, Ai));
+			auto it = from_bytes->emplace(h, FromBytesEntry(valid, point, t, Ai, false, false));
 
 			if (valid && Ai && !it.first->second.m_hasAi) {
 				it.first->second.m_hasAi = true;
@@ -187,6 +218,591 @@ public:
 
 		return valid;
 	}
+
+	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys)
+	{
+		eph_pub_keys.clear();
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastCarrotPublicKeyBatchSize.store(0);
+#endif
+
+		const size_t N = eph_priv_keys.size();
+
+		if (N == 0) {
+			return true;
+		}
+
+		eph_pub_keys.assign(N, { hash(), true });
+
+		// First read all already cached public keys and save the indices we will need to fill in.
+		std::vector<size_t> batch;
+		batch.reserve(N);
+		{
+			ReadLock lock(carrot_public_keys_lock);
+
+			for (size_t i = 0; i < N; ++i) {
+				auto it = carrot_public_keys->find(eph_priv_keys[i]);
+
+				if (it == carrot_public_keys->end()) {
+					batch.emplace_back(i);
+				}
+				else {
+					eph_pub_keys[i].first = it->second.m_key;
+				}
+			}
+		}
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastCarrotPublicKeyBatchSize.store(batch.size());
+#endif
+
+		if (batch.empty()) {
+			return true;
+		}
+
+		const size_t batch_size = batch.size();
+
+		struct M {
+			fe Y;
+			fe Z;
+			fe D; // Z - Y
+			fe P; // partial products of D (segmented, P_i = D_a*D_{a+1}*...*D_i for a <= i < b)
+			fe Q; // inverses of D (Q_i = D_i^-1 for 0 <= i < batch_size). Calculated in segments.
+		};
+
+		// batch_size*200 bytes for the inversion scratchpad
+		std::vector<M> scratchpad(batch_size);
+
+		std::atomic<uint32_t> counter = 0;
+		std::atomic<bool> result = true;
+
+		// Montgomery's trick to batch invert all Z - Y values with a single fe_invert call (parallel version)
+		parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
+			// Always have at least 1 element per active thread
+			const uint32_t thread_count = static_cast<uint32_t>(std::min<size_t>(total_thread_count, batch_size));
+
+			if (thread_index >= thread_count) {
+				return;
+			}
+
+			// 0 <= thread_index < thread_count <= batch_size at this point, so
+			// 0 <= a < b <= batch_size (non-empty segments with valid bounds) is guaranteed
+			const size_t a = (batch_size * thread_index) / thread_count;
+			const size_t b = (batch_size * (thread_index + 1)) / thread_count;
+
+			uint32_t next_counter = thread_count;
+
+			for (size_t i = a; i < b; ++i) {
+				ge_p3 point;
+				ge_scalarmult_base_vartime(&point, eph_priv_keys[batch[i]].h);
+
+				memcpy(scratchpad[i].Y, point.Y, sizeof(fe));
+				memcpy(scratchpad[i].Z, point.Z, sizeof(fe));
+				fe_sub(scratchpad[i].D, point.Z, point.Y);
+
+				hash denominator;
+				fe_tobytes(denominator.h, scratchpad[i].D);
+
+				// d_e * G is the point at infinity, so ConvertPointE is not defined for it.
+				if (denominator.empty()) {
+					eph_pub_keys[batch[i]].second = false;
+					result = false;
+
+					fe_0(scratchpad[i].Y);
+					fe_1(scratchpad[i].Z);
+					fe_1(scratchpad[i].D);
+				}
+
+				if (i == a) {
+					memcpy(scratchpad[i].P, scratchpad[i].D, sizeof(fe));
+				}
+				else {
+					fe_mul(scratchpad[i].P, scratchpad[i - 1].P, scratchpad[i].D);
+				}
+			}
+
+			const bool last = sync_point(counter, next_counter);
+			next_counter += thread_count;
+
+			// Last thread at the sync point is likely the first one to continue execution,
+			// so make it calculate each segment end's inverse using Montgomery's trick
+			if (last) {
+				// Work over the whole miss batch, but inverse only each segment's end
+				// One fe_invert, thread_count*3 - 3 fe_mul calls
+
+				// Calculate partial products of segment ends
+				size_t k = batch_size * (0 + 1) / thread_count - 1;
+				memcpy(scratchpad[k].Q, scratchpad[k].P, sizeof(fe));
+
+				for (uint32_t i = 1; i < thread_count; ++i) {
+					const size_t next_k = batch_size * (i + 1) / thread_count - 1;
+					fe_mul(scratchpad[next_k].Q, scratchpad[k].Q, scratchpad[next_k].P);
+					k = next_k;
+				}
+
+				// Invert the product of all segment ends. k == batch_size - 1 here (because see how the loop above exits).
+				fe t;
+				fe_invert(t, scratchpad[k].Q);
+
+				// Walk back to calculate inverses of segment ends
+				for (uint32_t i = thread_count - 1; i > 0; --i) {
+					const size_t prev_k = batch_size * i / thread_count - 1;
+
+					fe_mul(scratchpad[k].Q, t, scratchpad[prev_k].Q);
+					fe_mul(t, t, scratchpad[k].P);
+
+					k = prev_k;
+				}
+
+				// k is now the end index of the first segment (because see how the loop above exits).
+				memcpy(scratchpad[k].Q, t, sizeof(fe));
+			}
+
+			sync_point(counter, next_counter);
+
+			// Each segment has scratchpad[b - 1].Q = (D_a*D_{a+1}*...*D_{b-1})^-1 now
+			fe t;
+			memcpy(t, scratchpad[b - 1].Q, sizeof(fe));
+
+			for (size_t i = b - 1; i > a; --i) {
+				fe_mul(scratchpad[i].Q, t, scratchpad[i - 1].P);
+				fe_mul(t, t, scratchpad[i].D);
+			}
+
+			memcpy(scratchpad[a].Q, t, sizeof(fe));
+
+			// D_e = ConvertPointE(d_e * G) = (Z + Y) / (Z - Y)
+			for (size_t i = a; i < b; ++i) {
+				if (!eph_pub_keys[batch[i]].second) {
+					continue;
+				}
+
+				fe numerator;
+
+				fe_add(numerator, scratchpad[i].Z, scratchpad[i].Y);
+				fe_mul(numerator, numerator, scratchpad[i].Q);
+				fe_tobytes(eph_pub_keys[batch[i]].first.h, numerator);
+			}
+		}, true);
+
+		// When debugging, don't pollute the cache with the values calculated here.
+		// Instead, compare them with gen_eph_pubkey() output below.
+		// Unit test builds keep the cache because the tests check cache behavior explicitly,
+		// and they compare every element (cached or not) against gen_eph_pubkey() themselves.
+#if !defined(P2POOL_DEBUGGING) || defined(P2POOL_UNIT_TESTS)
+		{
+			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+			WriteLock lock(carrot_public_keys_lock);
+
+			for (const size_t i : batch) {
+				if (eph_pub_keys[i].second) {
+					carrot_public_keys->emplace(eph_priv_keys[i], CarrotPublicKeyEntry{ eph_pub_keys[i].first, t });
+				}
+			}
+
+			// There is normally one ephemeral key per wallet for each Monero height/tx key.
+			limit_size(carrot_public_keys, 10'000, 5'000);
+		}
+#endif
+
+#ifdef P2POOL_DEBUGGING
+		for (size_t i = 0; i < N; ++i) {
+			hash eph_pub_key;
+			const bool b = carrot::gen_eph_pubkey(eph_priv_keys[i], eph_pub_key);
+
+			if (b != eph_pub_keys[i].second) {
+				LOGERR(1, "batch_eph_pubkeys error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << eph_pub_keys[i].second);
+				PANIC_STOP();
+			}
+
+			if (b && (eph_pub_key != eph_pub_keys[i].first)) {
+				LOGERR(1, "batch_eph_pubkeys error: wrong ephemeral public key at position " << i << '/' << N);
+				PANIC_STOP();
+			}
+		}
+#endif
+
+		return result;
+	}
+
+	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets)
+	{
+		secrets.clear();
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastSenderReceiverSecretBatchSize.store(0);
+#endif
+
+		const size_t N = eph_priv_keys.size();
+
+		if (view_public_keys.size() != N) {
+			return false;
+		}
+
+		if (N == 0) {
+			return true;
+		}
+
+		secrets.assign(N, { hash(), true });
+
+		std::array<uint8_t, HASH_SIZE * 2> index;
+		std::vector<size_t> secret_batch;
+
+		secret_batch.reserve(N);
+
+		// First read all already cached secrets and save the indices we will need to fill in.
+		{
+			ReadLock lock(sender_receiver_secrets_lock);
+
+			for (size_t i = 0; i < N; ++i) {
+				memcpy(index.data(), view_public_keys[i].h, HASH_SIZE);
+				memcpy(index.data() + HASH_SIZE, eph_priv_keys[i].h, HASH_SIZE);
+
+				auto it = sender_receiver_secrets->find(index);
+				if (it == sender_receiver_secrets->end()) {
+					secret_batch.emplace_back(i);
+				}
+				else {
+					secrets[i].first = it->second.m_secret;
+				}
+			}
+		}
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastSenderReceiverSecretBatchSize.store(secret_batch.size());
+#endif
+
+		if (secret_batch.empty()) {
+			return true;
+		}
+
+		const size_t batch_size = secret_batch.size();
+
+		struct PublicKeyData {
+			ge_p3 point = {};
+			ge_dsmp precomp = {};
+
+			bool valid = false;
+			bool has_point = false;
+			bool has_precomp = false;
+			bool main_subgroup_checked = false;
+			bool main_subgroup = false;
+			bool cache_update = false;
+		};
+
+		std::vector<PublicKeyData> public_key_data(batch_size);
+
+		// Copy all available cache data while holding the read lock only once.
+		{
+			ReadLock lock(from_bytes_lock);
+
+			for (size_t i = 0; i < batch_size; ++i) {
+				const size_t j = secret_batch[i];
+				auto it = from_bytes->find(view_public_keys[j]);
+
+				if (it == from_bytes->end()) {
+					continue;
+				}
+
+				const FromBytesEntry& entry = it->second;
+
+				PublicKeyData& data = public_key_data[i];
+
+				data.point = entry.m_point;
+				data.valid = entry.m_valid;
+				data.has_point = true;
+
+				if (!entry.m_valid) {
+					continue;
+				}
+
+				data.main_subgroup_checked = entry.m_mainSubgroupChecked;
+				data.main_subgroup = entry.m_mainSubgroup;
+
+				if (entry.m_hasAi) {
+					memcpy(data.precomp, entry.m_Ai, sizeof(ge_dsmp));
+					data.has_precomp = true;
+				}
+			}
+		}
+
+		struct M {
+			fe Y;
+			fe Z;
+			fe D; // Z - Y
+			fe P; // partial products of D (segmented, P_i = D_a*D_{a+1}*...*D_i for a <= i < b)
+			fe Q; // inverses of D (Q_i = D_i^-1 for 0 <= i < batch_size). Calculated in segments.
+		};
+
+		// batch_size*200 bytes for the inversion scratchpad
+		std::vector<M> scratchpad(batch_size);
+
+		std::atomic<uint32_t> counter = 0;
+		std::atomic<bool> result = true;
+
+		// Montgomery's trick to batch invert all Z - Y values with a single fe_invert call (parallel version)
+		parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
+			// Always have at least 1 element per active thread
+			const uint32_t thread_count = static_cast<uint32_t>(std::min<size_t>(total_thread_count, batch_size));
+
+			if (thread_index >= thread_count) {
+				return;
+			}
+
+			// 0 <= thread_index < thread_count <= batch_size at this point, so
+			// 0 <= a < b <= batch_size (non-empty segments with valid bounds) is guaranteed
+			const size_t a = (batch_size * thread_index) / thread_count;
+			const size_t b = (batch_size * (thread_index + 1)) / thread_count;
+
+			uint32_t next_counter = thread_count;
+
+			for (size_t i = a; i < b; ++i) {
+				const size_t j = secret_batch[i];
+				PublicKeyData& data = public_key_data[i];
+
+				bool ok = false;
+
+				if (!data.has_point) {
+					data.valid = (ge_frombytes_vartime(&data.point, view_public_keys[j].h) == 0);
+					data.has_point = true;
+					data.cache_update = true;
+				}
+
+				if (data.valid) {
+					if (!data.main_subgroup_checked) {
+						data.main_subgroup = is_in_main_subgroup(data.point);
+						data.main_subgroup_checked = true;
+						data.cache_update = true;
+					}
+
+					if (data.main_subgroup) {
+						if (!data.has_precomp) {
+							ge_dsm_precomp(data.precomp, &data.point);
+							data.has_precomp = true;
+							data.cache_update = true;
+						}
+
+						signed char scalar_slide[256];
+						ge_scalarmult_slide(scalar_slide, eph_priv_keys[j].h);
+
+						ge_p2 point;
+						ge_scalarmult_vartime_precomp(&point, data.precomp, scalar_slide);
+
+						memcpy(scratchpad[i].Y, point.Y, sizeof(fe));
+						memcpy(scratchpad[i].Z, point.Z, sizeof(fe));
+						fe_sub(scratchpad[i].D, point.Z, point.Y);
+
+						hash denominator;
+						fe_tobytes(denominator.h, scratchpad[i].D);
+
+						// d_e * K_v is the point at infinity, so ConvertPointE is not defined for it
+						ok = !denominator.empty();
+					}
+				}
+
+				if (!ok) {
+					secrets[j].second = false;
+					result = false;
+
+					fe_0(scratchpad[i].Y);
+					fe_1(scratchpad[i].Z);
+					fe_1(scratchpad[i].D);
+				}
+
+				if (i == a) {
+					memcpy(scratchpad[i].P, scratchpad[i].D, sizeof(fe));
+				}
+				else {
+					fe_mul(scratchpad[i].P, scratchpad[i - 1].P, scratchpad[i].D);
+				}
+			}
+
+			const bool last = sync_point(counter, next_counter);
+			next_counter += thread_count;
+
+			// Last thread at the sync point is likely the first one to continue execution,
+			// so make it calculate each segment end's inverse using Montgomery's trick
+			if (last) {
+				// Work over the whole miss batch, but inverse only each segment's end
+				// One fe_invert, thread_count*3 - 3 fe_mul calls
+
+				// Calculate partial products of segment ends
+				size_t k = batch_size * (0 + 1) / thread_count - 1;
+				memcpy(scratchpad[k].Q, scratchpad[k].P, sizeof(fe));
+
+				for (uint32_t i = 1; i < thread_count; ++i) {
+					const size_t next_k = batch_size * (i + 1) / thread_count - 1;
+					fe_mul(scratchpad[next_k].Q, scratchpad[k].Q, scratchpad[next_k].P);
+					k = next_k;
+				}
+
+				// Invert the product of all segment ends. k == batch_size - 1 here (because see how the loop above exits).
+				fe t;
+				fe_invert(t, scratchpad[k].Q);
+
+				// Walk back to calculate inverses of segment ends
+				for (uint32_t i = thread_count - 1; i > 0; --i) {
+					const size_t prev_k = batch_size * i / thread_count - 1;
+
+					fe_mul(scratchpad[k].Q, t, scratchpad[prev_k].Q);
+					fe_mul(t, t, scratchpad[k].P);
+
+					k = prev_k;
+				}
+
+				// k is now the end index of the first segment (because see how the loop above exits).
+				memcpy(scratchpad[k].Q, t, sizeof(fe));
+			}
+
+			sync_point(counter, next_counter);
+
+			// Each segment has scratchpad[b - 1].Q = (D_a*D_{a+1}*...*D_{b-1})^-1 now
+			fe t;
+			memcpy(t, scratchpad[b - 1].Q, sizeof(fe));
+
+			for (size_t i = b - 1; i > a; --i) {
+				fe_mul(scratchpad[i].Q, t, scratchpad[i - 1].P);
+				fe_mul(t, t, scratchpad[i].D);
+			}
+
+			memcpy(scratchpad[a].Q, t, sizeof(fe));
+
+			// s_sr = ConvertPointE(d_e * K_v) = (Z + Y) / (Z - Y)
+			for (size_t i = a; i < b; ++i) {
+				const size_t j = secret_batch[i];
+
+				if (!secrets[j].second) {
+					continue;
+				}
+
+				fe numerator;
+				fe_add(numerator, scratchpad[i].Z, scratchpad[i].Y);
+				fe_mul(numerator, numerator, scratchpad[i].Q);
+				fe_tobytes(secrets[j].first.h, numerator);
+			}
+		}, true);
+
+		bool cache_update = false;
+
+		for (const PublicKeyData& data : public_key_data) {
+			if (data.cache_update) {
+				cache_update = true;
+				break;
+			}
+		}
+
+		if (cache_update) {
+			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+			WriteLock lock(from_bytes_lock);
+
+			for (size_t i = 0; i < batch_size; ++i) {
+				const size_t j = secret_batch[i];
+				const PublicKeyData& data = public_key_data[i];
+
+				if (!data.cache_update) {
+					continue;
+				}
+
+				const ge_cached* precomp = data.has_precomp ? data.precomp : nullptr;
+
+				auto it = from_bytes->emplace(view_public_keys[j], FromBytesEntry(data.valid, data.point, t, precomp, data.main_subgroup_checked, data.main_subgroup));
+				FromBytesEntry& entry = it.first->second;
+
+				if (data.valid && data.has_precomp && !entry.m_hasAi) {
+					entry.m_hasAi = true;
+					memcpy(entry.m_Ai, data.precomp, sizeof(ge_dsmp));
+				}
+
+				if (data.valid && data.main_subgroup_checked && !entry.m_mainSubgroupChecked) {
+					entry.m_mainSubgroupChecked = true;
+					entry.m_mainSubgroup = data.main_subgroup;
+				}
+			}
+
+			limit_size(from_bytes, 20'000, 10'000);
+		}
+
+		// When debugging, don't pollute the cache with the values calculated here.
+		// Instead, compare them with gen_sender_receiver_secret() output below.
+		// Unit test builds keep the cache because the tests check cache behavior explicitly,
+		// and they compare every element (cached or not) against gen_sender_receiver_secret() themselves.
+#if !defined(P2POOL_DEBUGGING) || defined(P2POOL_UNIT_TESTS)
+		// Finally cache only the secrets that were missing when this batch started.
+		{
+			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+			WriteLock lock(sender_receiver_secrets_lock);
+
+			for (size_t i = 0; i < batch_size; ++i) {
+				const size_t j = secret_batch[i];
+
+				if (!secrets[j].second) {
+					continue;
+				}
+
+				memcpy(index.data(), view_public_keys[j].h, HASH_SIZE);
+				memcpy(index.data() + HASH_SIZE, eph_priv_keys[j].h, HASH_SIZE);
+				sender_receiver_secrets->emplace(index, SenderReceiverSecretEntry{ secrets[j].first, t });
+			}
+
+			// There is normally one secret per wallet for each Monero height/tx key, and cache cleanup
+			// retains no more than the current and previous miner-data generations.
+			limit_size(sender_receiver_secrets, 10'000, 5'000);
+		}
+#endif
+
+#ifdef P2POOL_DEBUGGING
+		for (size_t i = 0; i < N; ++i) {
+			hash secret;
+			const bool b = carrot::gen_sender_receiver_secret(eph_priv_keys[i], view_public_keys[i], secret);
+
+			if (b != secrets[i].second) {
+				LOGERR(1, "batch_sender_receiver_secrets error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << secrets[i].second);
+				PANIC_STOP();
+			}
+
+			if (b && (secret != secrets[i].first)) {
+				LOGERR(1, "batch_sender_receiver_secrets error: wrong secret at position " << i << '/' << N);
+				PANIC_STOP();
+			}
+		}
+#endif
+
+		return result;
+	}
+
+#ifdef P2POOL_UNIT_TESTS
+	size_t get_last_carrot_public_key_batch_size() const
+	{
+		return m_lastCarrotPublicKeyBatchSize.load();
+	}
+
+	size_t get_last_sender_receiver_secret_batch_size() const
+	{
+		return m_lastSenderReceiverSecretBatchSize.load();
+	}
+
+	uint32_t get_from_bytes_cache_state(const hash& public_key)
+	{
+		ReadLock lock(from_bytes_lock);
+
+		auto it = from_bytes->find(public_key);
+		if (it == from_bytes->end()) {
+			return 0;
+		}
+
+		const FromBytesEntry& entry = it->second;
+		return
+			1U |
+			(entry.m_valid ? 2U : 0U) |
+			(entry.m_hasAi ? 4U : 0U) |
+			(entry.m_mainSubgroupChecked ? 8U : 0U) |
+			(entry.m_mainSubgroup ? 16U : 0U);
+	}
+#endif
 
 	bool get_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag)
 	{
@@ -883,6 +1499,14 @@ public:
 				clean_old(derivations, t);
 			}
 			{
+				WriteLock lock(carrot_public_keys_lock);
+				clean_old(carrot_public_keys, t);
+			}
+			{
+				WriteLock lock(sender_receiver_secrets_lock);
+				clean_old(sender_receiver_secrets, t);
+			}
+			{
 				WriteLock lock(public_keys_lock);
 				clean_old(public_keys, t);
 			}
@@ -900,6 +1524,18 @@ public:
 			delete derivations;
 			derivations = new DerivationsMap();
 			derivations->reserve(5000);
+		}
+		{
+			WriteLock lock(carrot_public_keys_lock);
+			delete carrot_public_keys;
+			carrot_public_keys = new CarrotPublicKeysMap();
+			carrot_public_keys->reserve(5000);
+		}
+		{
+			WriteLock lock(sender_receiver_secrets_lock);
+			delete sender_receiver_secrets;
+			sender_receiver_secrets = new SenderReceiverSecretsMap();
+			sender_receiver_secrets->reserve(5000);
 		}
 		{
 			WriteLock lock(public_keys_lock);
@@ -971,6 +1607,20 @@ private:
 
 	static_assert(sizeof(DerivationEntry) == 64, "Invalid DerivationEntry size");
 
+	struct CarrotPublicKeyEntry
+	{
+		hash m_key;
+		// cppcheck-suppress unusedStructMember
+		uint32_t m_timestamp = 0;
+	};
+
+	struct SenderReceiverSecretEntry
+	{
+		hash m_secret;
+		// cppcheck-suppress unusedStructMember
+		uint32_t m_timestamp = 0;
+	};
+
 	struct PublicKeyEntry
 	{
 		indexed_hash m_key;
@@ -988,10 +1638,12 @@ private:
 
 	struct FromBytesEntry
 	{
-		FORCEINLINE FromBytesEntry(bool b, const ge_p3& p, uint32_t t, const ge_cached* Ai)
+		FORCEINLINE FromBytesEntry(bool b, const ge_p3& p, uint32_t t, const ge_cached* Ai, bool main_subgroup_checked, bool main_subgroup)
 			: m_valid(b)
 			, m_point(p)
 			, m_hasAi(b && (Ai != nullptr))
+			, m_mainSubgroupChecked(b && main_subgroup_checked)
+			, m_mainSubgroup(b && main_subgroup_checked && main_subgroup)
 			, m_timestamp(t)
 		{
 			if (m_hasAi) {
@@ -1008,17 +1660,28 @@ private:
 		bool m_hasAi;
 		ge_dsmp m_Ai;
 
+		bool m_mainSubgroupChecked;
+		bool m_mainSubgroup;
+
 		// cppcheck-suppress unusedStructMember
 		uint32_t m_timestamp;
 	};
 
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> DerivationsMap;
+	typedef unordered_map<hash, CarrotPublicKeyEntry> CarrotPublicKeysMap;
+	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, SenderReceiverSecretEntry> SenderReceiverSecretsMap;
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, PublicKeyEntry> PublicKeysMap;
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, TxKeyEntry> TxKeysMap;
 	typedef unordered_map<hash, FromBytesEntry> FromBytesMap;
 
 	uv_rwlock_t derivations_lock;
 	DerivationsMap* derivations;
+
+	uv_rwlock_t carrot_public_keys_lock;
+	CarrotPublicKeysMap* carrot_public_keys;
+
+	uv_rwlock_t sender_receiver_secrets_lock;
+	SenderReceiverSecretsMap* sender_receiver_secrets;
 
 	uv_rwlock_t public_keys_lock;
 	PublicKeysMap* public_keys;
@@ -1028,9 +1691,45 @@ private:
 
 	uv_rwlock_t from_bytes_lock;
 	FromBytesMap* from_bytes;
+
+#ifdef P2POOL_UNIT_TESTS
+	std::atomic<size_t> m_lastCarrotPublicKeyBatchSize{ 0 };
+	std::atomic<size_t> m_lastSenderReceiverSecretBatchSize{ 0 };
+#endif
 };
 
 static Cache* cache = nullptr;
+
+namespace carrot {
+
+bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys)
+{
+	return cache->batch_eph_pubkeys(eph_priv_keys, eph_pub_keys);
+}
+
+bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets)
+{
+	return cache->batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, secrets);
+}
+
+} // namespace carrot
+
+#ifdef P2POOL_UNIT_TESTS
+size_t get_last_carrot_public_key_batch_size()
+{
+	return cache->get_last_carrot_public_key_batch_size();
+}
+
+size_t get_last_sender_receiver_secret_batch_size()
+{
+	return cache->get_last_sender_receiver_secret_batch_size();
+}
+
+uint32_t get_from_bytes_cache_state(const hash& public_key)
+{
+	return cache->get_from_bytes_cache_state(public_key);
+}
+#endif
 
 bool generate_key_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag)
 {

@@ -30,10 +30,8 @@
 #pragma warning(disable: 4800)
 #endif
 
-extern "C" {
-#include "crypto-ops.h"
-}
-
+#include "common.h"
+#include "crypto.h"
 #include "fcmp_pp_crypto.h"
 #include <cstring>
 

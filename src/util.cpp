@@ -17,12 +17,9 @@
 
 #include "common.h"
 #include "util.h"
+#include "crypto.h"
 #include "uv_util.h"
 #include "keccak.h"
-
-extern "C" {
-#include "crypto-ops.h"
-}
 
 #include <map>
 #include <istream>

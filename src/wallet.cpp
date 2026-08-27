@@ -23,10 +23,6 @@
 #include "keccak.h"
 #include "crypto.h"
 
-extern "C" {
-#include "crypto-ops.h"
-}
-
 #include "fcmp_pp_crypto.h"
 
 LOG_CATEGORY(Wallet)

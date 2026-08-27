@@ -17,6 +17,10 @@
 
 #pragma once
 
+extern "C" {
+#include "crypto-ops.h"
+}
+
 namespace p2pool {
 
 struct batch_public_key_input
@@ -31,6 +35,7 @@ struct batch_public_key_input
 void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, size_t len);
 void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id);
 bool check_keys(const hash& pub, const hash& sec);
+bool is_in_main_subgroup(const ge_p3& point);
 bool generate_key_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag);
 bool batch_derivations(const std::vector<std::pair<hash, size_t>>& in, const hash& txkey_sec, std::vector<std::pair<hash, int32_t>>& out);
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key);
@@ -40,5 +45,11 @@ void derive_view_tag(const hash& derivation, size_t output_index, uint8_t& view_
 void init_crypto_cache();
 void destroy_crypto_cache();
 void clear_crypto_cache(uint64_t timestamp = 0);
+
+#ifdef P2POOL_UNIT_TESTS
+size_t get_last_carrot_public_key_batch_size();
+size_t get_last_sender_receiver_secret_batch_size();
+uint32_t get_from_bytes_cache_state(const hash& public_key);
+#endif
 
 } // namespace p2pool

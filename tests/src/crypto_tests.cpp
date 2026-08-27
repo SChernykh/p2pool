@@ -18,9 +18,6 @@
 #include "common.h"
 #include "crypto.h"
 #include "util.h"
-extern "C" {
-#include "crypto-ops.h"
-}
 #include "fcmp_pp_crypto.h"
 #include "thread_pool.h"
 #include "keccak.h"
@@ -142,6 +139,59 @@ TEST(crypto, ops)
 #ifdef WITH_INDEXED_HASHES
 	indexed_hash::cleanup_storage();
 #endif
+}
+
+TEST(crypto, is_in_main_subgroup)
+{
+	// -1 = doesn't decode to a curve point at all, 0 = valid point outside the main subgroup, 1 = main subgroup
+	auto check = [](const char (&public_key)[HASH_SIZE * 2 + 1]) -> int
+	{
+		ge_p3 point;
+		if (ge_frombytes_vartime(&point, hash(public_key).h) != 0) {
+			return -1;
+		}
+		return is_in_main_subgroup(point) ? 1 : 0;
+	};
+
+	// Ed25519 base point
+	ASSERT_EQ(check("5866666666666666666666666666666666666666666666666666666666666666"), 1);
+
+	// l*O = O, so the identity is in the main subgroup.
+	// Callers that need a usable key must reject it separately, just like Monero's verify_point_is_in_main_subgroup does.
+	ASSERT_EQ(check("0100000000000000000000000000000000000000000000000000000000000000"), 1);
+
+	// All points of order 2, 4 and 8
+	ASSERT_EQ(check("ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"), 0);
+	ASSERT_EQ(check("0000000000000000000000000000000000000000000000000000000000000000"), 0);
+	ASSERT_EQ(check("0000000000000000000000000000000000000000000000000000000000000080"), 0);
+	ASSERT_EQ(check("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"), 0);
+	ASSERT_EQ(check("c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a"), 0);
+	ASSERT_EQ(check("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85"), 0);
+	ASSERT_EQ(check("c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa"), 0);
+
+	// Large order, but not l: G + (order 2 point) has order 2*l, G + (order 8 point) has order 8*l
+	ASSERT_EQ(check("9599999999999999999999999999999999999999999999999999999999999999"), 0);
+	ASSERT_EQ(check("da99e28ba529cdde35a25fba9059e78ecaee239f99755b9b1aa4f65df00803e2"), 0);
+
+	// Not a curve point
+	ASSERT_EQ(check("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), -1);
+
+	// Deterministically generated public keys are always sec*G, so they are always in the main subgroup,
+	// and so are their negations
+	for (uint64_t i = 0; i < 32; ++i) {
+		hash pub, sec;
+		generate_keys_deterministic(pub, sec, reinterpret_cast<const uint8_t*>(&i), sizeof(i));
+
+		for (int negated = 0; negated < 2; ++negated) {
+			if (negated) {
+				pub.h[HASH_SIZE - 1] ^= 0x80;
+			}
+
+			ge_p3 point;
+			ASSERT_EQ(ge_frombytes_vartime(&point, pub.h), 0) << "i = " << i << ", negated = " << negated;
+			ASSERT_TRUE(is_in_main_subgroup(point)) << "i = " << i << ", negated = " << negated;
+		}
+	}
 }
 
 TEST(crypto, batch)
