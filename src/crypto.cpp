@@ -40,7 +40,7 @@ bool is_in_main_subgroup(const ge_p3& point)
 	ge_p3 result;
 	ge_scalarmult_p3(&result, curve_order, &point);
 
-	return ge_p3_is_point_at_infinity_vartime(&result);
+	return ge_p3_is_point_at_infinity_vartime(&result) != 0;
 }
 
 static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
@@ -1641,12 +1641,12 @@ private:
 		FORCEINLINE FromBytesEntry(bool b, const ge_p3& p, uint32_t t, const ge_cached* Ai, bool main_subgroup_checked, bool main_subgroup)
 			: m_valid(b)
 			, m_point(p)
-			, m_hasAi(b && (Ai != nullptr))
+			, m_hasAi(b && Ai)
 			, m_mainSubgroupChecked(b && main_subgroup_checked)
 			, m_mainSubgroup(b && main_subgroup_checked && main_subgroup)
 			, m_timestamp(t)
 		{
-			if (m_hasAi) {
+			if (b && Ai) {
 				memcpy(m_Ai, Ai, sizeof(m_Ai));
 			}
 			else {
