@@ -113,25 +113,8 @@ struct PoolBlock
 	std::vector<uint64_t> m_outputAmounts;
 	std::vector<uint8_t> m_viewTags;
 
-	struct carrot_view_tag
-	{
-		uint8_t bytes[CARROT_VIEW_TAG_BYTES];
-	};
-
-	static_assert(sizeof(carrot_view_tag) == CARROT_VIEW_TAG_BYTES);
-	static_assert(alignof(carrot_view_tag) == 1);
-
-	std::vector<carrot_view_tag> m_carrotViewTags;
-
-	struct alignas(CARROT_JANUS_ANCHOR_BYTES) carrot_janus_anchor
-	{
-		uint8_t bytes[CARROT_JANUS_ANCHOR_BYTES];
-	};
-
-	static_assert(sizeof(carrot_janus_anchor) == CARROT_JANUS_ANCHOR_BYTES);
-	static_assert(alignof(carrot_janus_anchor) == CARROT_JANUS_ANCHOR_BYTES);
-
-	std::vector<carrot_janus_anchor> m_carrotJanusAnchors;
+	std::vector<carrot::view_tag> m_carrotViewTags;
+	std::vector<carrot::janus_anchor> m_carrotJanusAnchors;
 
 	hash m_txkeyPub;
 	std::vector<hash> m_carrotTxPubKeys;

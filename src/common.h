@@ -286,6 +286,15 @@ struct alignas(CARROT_JANUS_ANCHOR_BYTES) janus_anchor
 };
 
 static_assert(sizeof(janus_anchor) == CARROT_JANUS_ANCHOR_BYTES, "struct janus_anchor has invalid size, check your compiler options");
+static_assert(alignof(janus_anchor) == CARROT_JANUS_ANCHOR_BYTES, "struct janus_anchor has invalid alignment, check your compiler options");
+
+struct view_tag
+{
+	uint8_t data[CARROT_VIEW_TAG_BYTES];
+};
+
+static_assert(sizeof(view_tag) == CARROT_VIEW_TAG_BYTES, "struct view_tag has invalid size, check your compiler options");
+static_assert(alignof(view_tag) == 1, "struct view_tag has invalid alignment, check your compiler options");
 
 } // namespace carrot
 

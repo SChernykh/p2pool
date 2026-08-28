@@ -27,8 +27,6 @@
 #include "merge_mining_client_tari.h"
 #endif
 
-LOG_CATEGORY(Params)
-
 void p2pool_usage();
 
 namespace p2pool {
@@ -55,7 +53,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 		m_onionPubkey = from_onion_v3(m_onionAddress);
 
 		if (m_onionPubkey.empty()) {
-			LOGERR(1, "Failed to parse \"" << m_onionAddress << '"');
+			fprintf(stderr, "Failed to parse \"%s\"\n", m_onionAddress.c_str());
 			throw std::exception();
 		}
 	}
@@ -64,7 +62,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 		m_i2pDestinationHash = from_i2p_b32(m_i2pAddress);
 
 		if (m_i2pDestinationHash.empty()) {
-			LOGERR(1, "Failed to parse \"" << m_i2pAddress << '"');
+			fprintf(stderr, "Failed to parse \"%s\"\n", m_i2pAddress.c_str());
 			throw std::exception();
 		}
 	}
@@ -72,7 +70,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	auto invalid_host = [](const Host& h)
 	{
 		if (!h.valid()) {
-			LOGERR(1, "Invalid host " << h.m_address << ':' << h.m_rpcPort << ":ZMQ:" << h.m_zmqPort << ". Try \"p2pool --help\".");
+			fprintf(stderr, "Invalid host %s:%d:ZMQ:%d. Try \"p2pool --help\".\n", h.m_address.c_str(), h.m_rpcPort, h.m_zmqPort);
 			return true;
 		}
 		return false;
@@ -112,10 +110,10 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 	}
 
 	if(m_stratumBanTime < MIN_STRATUM_BAN_TIME) {
-		LOGWARN(1, "Value for --stratum-ban-time is too low, adjusting to " << MIN_STRATUM_BAN_TIME);
+		fprintf(stderr, "Value for --stratum-ban-time is too low, adjusting to %llu\n", static_cast<unsigned long long>(MIN_STRATUM_BAN_TIME));
 		m_stratumBanTime = MIN_STRATUM_BAN_TIME;
 	} else if(m_stratumBanTime > MAX_STRATUM_BAN_TIME) {
-		LOGWARN(1, "Value for --stratum-ban-time is too high, adjusting to " << MAX_STRATUM_BAN_TIME);
+		fprintf(stderr, "Value for --stratum-ban-time is too high, adjusting to %llu\n", static_cast<unsigned long long>(MAX_STRATUM_BAN_TIME));
 		m_stratumBanTime = MAX_STRATUM_BAN_TIME;
 	}
 
@@ -123,7 +121,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 
 	if (m_mainWallet.valid() && m_subaddress.valid()) {
 		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.get_type(), false)) {
-			LOGERR(1, "Failed to configure the mining wallet, falling back to " << m_mainWallet);
+			fprintf(stderr, "Failed to configure the mining wallet, falling back to %s\n", m_mainWallet.encode().c_str());
 			m_miningWallet = m_mainWallet;
 			m_mainWallet.encode(display_wallet_buf);
 		}
@@ -252,20 +250,15 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 		const char* s = arg[1].c_str();
 
 		if (!m_mainWallet.decode(s)) {
-			LOGERR(1, "Wallet " << s << " failed to decode");
+			fprintf(stderr, "Wallet %s failed to decode\n", s);
 		}
 
 		return true;
 	}
 
-	if ((arg[0] == "subaddress") && has1(arg)) {
-		const char* s = arg[1].c_str();
-
-		if (!m_subaddress.decode(s)) {
-			LOGERR(1, "Subaddress " << s << " failed to decode");
-		}
-
-		return true;
+	if (arg[0] == "subaddress") {
+		fprintf(stderr, "--subaddress is no longer supported: Carrot doesn't allow subaddresses in coinbase transactions.\n");
+		return false;
 	}
 
 	if ((arg[0] == "stratum") && has1(arg)) {
@@ -522,55 +515,44 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 bool Params::valid() const
 {
 	if (!m_mainWallet.valid() || !m_miningWallet.valid()) {
-		LOGERR(1, "Invalid wallet address. Try \"p2pool --help\".");
+		fprintf(stderr, "Invalid wallet address. Try \"p2pool --help\".\n");
 		return false;
 	}
 
 	if (m_mainWallet.is_subaddress()) {
-		LOGERR(1, "Wallet address must be a main address (starting with 4...). Try \"p2pool --help\".");
+		fprintf(stderr, "Wallet address must be a main address (starting with 4...). Try \"p2pool --help\".\n");
 		return false;
 	}
 
 	if (m_subaddress.valid()) {
-		if (!m_subaddress.is_subaddress()) {
-			LOGERR(1, "Subaddress must start with 8... Try \"p2pool --help\".");
-			return false;
-		}
-		if (m_subaddress.get_type() != m_mainWallet.get_type()) {
-			LOGERR(1, "Subaddress must belong to the same network type as the main wallet address. Try \"p2pool --help\".");
-			return false;
-		}
-	}
-
-	if (!m_mainWallet.torsion_check()) {
-		LOGERR(1, m_mainWallet << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+		fprintf(stderr, "--subaddress is no longer supported: Carrot doesn't allow subaddresses in coinbase transactions.\n");
 		return false;
 	}
 
-	if (m_subaddress.valid() && !m_subaddress.torsion_check()) {
-		LOGERR(1, m_subaddress << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+	if (!m_mainWallet.torsion_check()) {
+		fprintf(stderr, "%s didn't pass the torsion check. It will be incompatible with FCMP++.\n", m_mainWallet.encode().c_str());
 		return false;
 	}
 
 	if (m_mergeMiningHosts.size() > 10) {
-		LOGERR(1, "Too many merge mining blockchains.");
+		fprintf(stderr, "Too many merge mining blockchains.\n");
 		return false;
 	}
 
 #ifdef WITH_TLS
 	if (m_tlsCert.empty() != m_tlsCertKey.empty()) {
-		LOGERR(1, "Both --tls-cert and --tls-cert-key files must be specified");
+		fprintf(stderr, "Both --tls-cert and --tls-cert-key files must be specified\n");
 		return false;
 	}
 #endif
 
 	if (m_mini && m_nano) {
-		LOGERR(1, "You can't have both --mini and --nano in the command line");
+		fprintf(stderr, "You can't have both --mini and --nano in the command line\n");
 		return false;
 	}
 
 	if (m_socks5ProxyType == ProxyType::INVALID) {
-		LOGERR(1, "Invalid SOCKS5 proxy type. Check the --socks5 and --socks5-proxy-type parameters.");
+		fprintf(stderr, "Invalid SOCKS5 proxy type. Check the --socks5 and --socks5-proxy-type parameters.\n");
 		return false;
 	}
 
@@ -599,12 +581,12 @@ bool Params::Host::init_display_name(const Params& p)
 		if (p.m_dns) {
 			bool is_v6;
 			if (!resolve_host(m_address, is_v6)) {
-				LOGERR(1, "resolve_host failed for " << m_address);
+				fprintf(stderr, "resolve_host failed for %s\n", m_address.c_str());
 				return false;
 			}
 		}
 		else if (m_address.find_first_not_of("0123456789.:") != std::string::npos) {
-			LOGERR(1, "Can't resolve hostname " << m_address << " with DNS disabled");
+			fprintf(stderr, "Can't resolve hostname %s with DNS disabled\n", m_address.c_str());
 			return false;
 		}
 	}
