@@ -135,6 +135,20 @@ bool gen_sender_receiver_secret(const hash& eph_priv_key, const hash& view_publi
 	return true;
 }
 
+hash gen_contextualized_sender_receiver_secret(const hash& sender_receiver_secret, const hash& eph_pub_key, uint64_t height)
+{
+	auto t = transcript(
+		"Carrot sender-receiver secret",
+		eph_pub_key,
+		'C', height, padding<CARROT_INPUT_CONTEXT_PADDING_BYTES>()
+	);
+
+	hash result;
+	hash_to_bytes(t.data(), t.size(), result.h, HASH_SIZE, sender_receiver_secret.h);
+
+	return result;
+}
+
 } // namespace carrot
 
 } // namespace p2pool
