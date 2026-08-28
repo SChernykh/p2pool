@@ -223,6 +223,48 @@ TEST(carrot, gen_sender_receiver_secret)
 	ASSERT_FALSE(gen_sender_receiver_secret(eph_priv_key, torsion_public_key, out));
 }
 
+TEST(carrot, gen_contextualized_sender_receiver_secret)
+{
+	const hash sender_receiver_secret("1f848f8384e7a9f217dc9dc2691703cf392eaf6c92931acd0fc840c900d3ed49");
+	const hash eph_pub_key("a3c3cdf84fd301cfc4675096f1c896543f2efc1001d899bbab3a0fd137f6a630");
+	const hash eph_pub_key_cryptonote("8df2a40a42ecc10348a461310c1afc2c2b1be7b29fd27a3921a1aefba5efa27b");
+	const hash view_public_key("369bdcf4f434f42eb09f4372cb6be30de7b17d21e4f98e244459a90b58cd0610");
+	const hash eph_priv_key("6aea0ed0c34ad3483415377658841a75e0da8b462e637d8bf783b9bcd320b303");
+
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 3812345),                              hash("25cb54120bdf74a519f8953c50c3ce5f00d0928ab83add4ec43b75af8dded1ac"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0),                                    hash("08a86fbc7ab62721ed896c56273944cf465086288c4947dd1b2e38d08afd35a0"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 1),                                    hash("4697636430bb5fa613bd46a619ccb90c4462a40f8b6ecf7ed61c1f48298ed6fe"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0xff),                                 hash("20f5f62e40926823d005c54b283a82666348d7aaae55a9346213cf017dcea55d"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0x100),                                hash("1a3709ff74a527fb54551f3434beec3d5395cdc86218a6bbddcc2a2b67792129"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0xffffffffUL),                         hash("36e5d243210c6300b1f99015534ee6475e714d248c331a0fa33df0d94b6ceae8"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0x100000000ULL),                       hash("45d1069cd97a3d50bb8d97aab8f25e10fdc8a790d3a1871b2f628e09844e2b5c"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0x100000000000000ULL),                 hash("d9af3e721e68a0811168eb8180f2f46fa922eeb13532fd4bc73b488db6e2f49b"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, std::numeric_limits<uint64_t>::max()), hash("3a14bdf375b0ff2163f8a5e61a384f57af7afa3ac28f5856db892626baf85e3d"));
+
+	ASSERT_NE(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 1),
+	          gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, 0x100000000000000ULL));
+
+	// D_e is hashed as data while s_sr is the hash key, so swapping them must not give the same secret
+	ASSERT_NE(gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key_cryptonote, 3812345),
+	          gen_contextualized_sender_receiver_secret(eph_pub_key_cryptonote, sender_receiver_secret, 3812345));
+
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(eph_pub_key_cryptonote, sender_receiver_secret, 3812345), hash("9404ae50361f3da6028e03078fe11c1caddc8b6940d4f5a39db31d9b8bd28c4c"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(hash(), eph_pub_key, 0), hash("f3898a68e2da50294286d29f7fd30d405f04ec961839a5706fc9901dd84b9c1d"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret, hash(), 0), hash("9dd4e5cb4a63419c744f2a0d59238c9bcf9d9ca5a8c2c297f2a97ad9b970233a"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(hash(), hash(), 0), hash("2fc1bf02347d71f095d7a1fb678234efe6e80eef7d2a7da49b9d2bdec942ce99"));
+
+	// The whole P2Pool coinbase derivation chain, checked against Monero's vectors at every step
+	hash eph_pub_key_out, sender_receiver_secret_out;
+
+	ASSERT_TRUE(gen_eph_pubkey(eph_priv_key, eph_pub_key_out));
+	ASSERT_EQ(eph_pub_key_out, eph_pub_key_cryptonote);
+
+	ASSERT_TRUE(gen_sender_receiver_secret(eph_priv_key, view_public_key, sender_receiver_secret_out));
+	ASSERT_EQ(sender_receiver_secret_out, sender_receiver_secret);
+
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret_out, eph_pub_key_out, 3812345), hash("422e64bff67b3c0be6a745556b6c1f01d769bd893a70689e82da83a4525ed429"));
+}
+
 static bool equal_values(const std::vector<std::pair<hash, bool>>& values, const std::vector<hash>& reference)
 {
 	if (values.size() != reference.size()) {
