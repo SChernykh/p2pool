@@ -149,6 +149,65 @@ hash gen_contextualized_sender_receiver_secret(const hash& sender_receiver_secre
 	return result;
 }
 
+hash gen_sender_extension_g(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key)
+{
+	auto t = transcript(
+		"Carrot coinbase extension G",
+		amount, spend_public_key
+	);
+
+	hash result;
+	hash_to_scalar(t.data(), t.size(), result.h, contextualized_sender_receiver_secret.h);
+
+	return result;
+}
+
+hash gen_sender_extension_t(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key)
+{
+	auto t = transcript(
+		"Carrot coinbase extension T",
+		amount, spend_public_key
+	);
+
+	hash result;
+	hash_to_scalar(t.data(), t.size(), result.h, contextualized_sender_receiver_secret.h);
+
+	return result;
+}
+
+view_tag gen_view_tag(const hash& sender_receiver_secret, uint64_t height, const hash& onetime_address)
+{
+	auto t = transcript(
+		"Carrot view tag",
+		'C', height, padding<CARROT_INPUT_CONTEXT_PADDING_BYTES>(),
+		onetime_address
+	);
+
+	view_tag result;
+	hash_to_bytes(t.data(), t.size(), result.data, CARROT_VIEW_TAG_BYTES, sender_receiver_secret.h);
+
+	return result;
+}
+
+janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiver_secret, const janus_anchor& anchor, const hash& onetime_address)
+{
+	auto t = transcript(
+		"Carrot encryption mask anchor",
+		onetime_address
+	);
+
+	janus_anchor mask;
+	hash_to_bytes(t.data(), t.size(), mask.data, CARROT_JANUS_ANCHOR_BYTES, contextualized_sender_receiver_secret.h);
+
+	janus_anchor result;
+
+	for (size_t i = 0; i < CARROT_JANUS_ANCHOR_BYTES; ++i) {
+		result.data[i] = anchor.data[i] ^ mask.data[i];
+	}
+
+	return result;
+}
+
 } // namespace carrot
 
 } // namespace p2pool

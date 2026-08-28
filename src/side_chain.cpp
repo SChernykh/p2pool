@@ -883,8 +883,8 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 					blob.emplace_back(TXOUT_TO_CARROT_V1);
 					const hash h = b->m_ephPublicKeys[i];
 					blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
-					blob.insert(blob.end(), b->m_carrotViewTags[i].bytes, b->m_carrotViewTags[i].bytes + CARROT_VIEW_TAG_BYTES);
-					blob.insert(blob.end(), b->m_carrotJanusAnchors[i].bytes, b->m_carrotJanusAnchors[i].bytes + CARROT_JANUS_ANCHOR_BYTES);
+					blob.insert(blob.end(), b->m_carrotViewTags[i].data, b->m_carrotViewTags[i].data + CARROT_VIEW_TAG_BYTES);
+					blob.insert(blob.end(), b->m_carrotJanusAnchors[i].data, b->m_carrotJanusAnchors[i].data + CARROT_JANUS_ANCHOR_BYTES);
 				}
 			}
 			else {

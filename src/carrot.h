@@ -151,6 +151,13 @@ namespace carrot {
 	bool gen_sender_receiver_secret(const hash& eph_priv_key, const hash& view_public_key, hash& secret);
 	hash gen_contextualized_sender_receiver_secret(const hash& sender_receiver_secret, const hash& eph_pub_key, uint64_t height);
 
+	hash gen_sender_extension_g(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key);
+	hash gen_sender_extension_t(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key);
+
+	view_tag gen_view_tag(const hash& sender_receiver_secret, uint64_t height, const hash& onetime_address);
+
+	janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiver_secret, const janus_anchor& anchor, const hash& onetime_address);
+
 	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys);
 	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets);
 } // namespace carrot

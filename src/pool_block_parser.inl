@@ -147,8 +147,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 					READ_BUF(ephPublicKey.h, HASH_SIZE);
 					m_ephPublicKeys[i] = ephPublicKey;
 
-					READ_BUF(m_carrotViewTags[i].bytes, CARROT_VIEW_TAG_BYTES);
-					READ_BUF(m_carrotJanusAnchors[i].bytes, CARROT_JANUS_ANCHOR_BYTES);
+					READ_BUF(m_carrotViewTags[i].data, CARROT_VIEW_TAG_BYTES);
+					READ_BUF(m_carrotJanusAnchors[i].data, CARROT_JANUS_ANCHOR_BYTES);
 				}
 				else {
 					EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);

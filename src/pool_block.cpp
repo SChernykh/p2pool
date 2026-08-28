@@ -187,8 +187,8 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 			data.push_back(TXOUT_TO_CARROT_V1);
 			const hash h = m_ephPublicKeys[i];
 			data.insert(data.end(), h.h, h.h + HASH_SIZE);
-			data.insert(data.end(), m_carrotViewTags[i].bytes, m_carrotViewTags[i].bytes + CARROT_VIEW_TAG_BYTES);
-			data.insert(data.end(), m_carrotJanusAnchors[i].bytes, m_carrotJanusAnchors[i].bytes + CARROT_JANUS_ANCHOR_BYTES);
+			data.insert(data.end(), m_carrotViewTags[i].data, m_carrotViewTags[i].data + CARROT_VIEW_TAG_BYTES);
+			data.insert(data.end(), m_carrotJanusAnchors[i].data, m_carrotJanusAnchors[i].data + CARROT_JANUS_ANCHOR_BYTES);
 		}
 	}
 	else {
