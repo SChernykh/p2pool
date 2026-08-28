@@ -79,6 +79,9 @@ static constexpr uint64_t HASHING_BLOB_MAX_SIZE = 128;
 // Anything more can be a sign of an attack
 static constexpr uint64_t MAX_UNCLES_PER_BLOCK = 5;
 
+// 256 chains, each gets 64 bytes. Or, several KiB per chain in more realistic scenarios - more than enough
+static constexpr int64_t MM_EXTRA_MAX_SIZE = 16384;
+
 struct DifficultyData
 {
 	FORCEINLINE DifficultyData(uint64_t t, const difficulty_type& d) : m_timestamp(t), m_cumulativeDifficulty(d) {}

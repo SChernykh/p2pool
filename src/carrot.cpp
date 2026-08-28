@@ -183,7 +183,7 @@ view_tag gen_view_tag(const hash& sender_receiver_secret, uint64_t height, const
 		onetime_address
 	);
 
-	view_tag result;
+	view_tag result{};
 	hash_to_bytes(t.data(), t.size(), result.data, CARROT_VIEW_TAG_BYTES, sender_receiver_secret.h);
 
 	return result;
@@ -196,10 +196,10 @@ janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiv
 		onetime_address
 	);
 
-	janus_anchor mask;
+	janus_anchor mask{};
 	hash_to_bytes(t.data(), t.size(), mask.data, CARROT_JANUS_ANCHOR_BYTES, contextualized_sender_receiver_secret.h);
 
-	janus_anchor result;
+	janus_anchor result{};
 
 	for (size_t i = 0; i < CARROT_JANUS_ANCHOR_BYTES; ++i) {
 		result.data[i] = anchor.data[i] ^ mask.data[i];
