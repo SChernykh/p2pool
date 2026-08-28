@@ -490,7 +490,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			if (static_cast<uint64_t>(data_end - data) < mm_extra_data_count * (HASH_SIZE + 1)) return __LINE__;
 
 			hash prev_chain_id;
-			
+
+			const uint8_t* mm_extra_begin = data;
+
 			for (uint64_t i = 0; i < mm_extra_data_count; ++i) {
 				hash chain_id;
 				READ_BUF(chain_id.h, HASH_SIZE);
@@ -513,6 +515,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				}
 
 				m_mergeMiningExtra.emplace(chain_id, std::move(t));
+			}
+
+			if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (data - mm_extra_begin > MM_EXTRA_MAX_SIZE)) {
+				return __LINE__;
 			}
 		}
 
