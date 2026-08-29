@@ -497,6 +497,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				hash chain_id;
 				READ_BUF(chain_id.h, HASH_SIZE);
 
+				if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (chain_id == keccak_subaddress_viewpub)) {
+					return __LINE__;
+				}
+
 				// IDs must be ordered to avoid duplicates
 				if (i && !(prev_chain_id < chain_id)) return __LINE__;
 				prev_chain_id = chain_id;
@@ -504,8 +508,11 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				uint64_t n;
 				READ_VARINT(n);
 
-				// Sanity check
+				// Sanity checks
 				if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
+				if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (static_cast<uint64_t>(data - mm_extra_begin) + n > MM_EXTRA_MAX_SIZE)) {
+					return __LINE__;
+				}
 
 				std::vector<uint8_t> t;
 
@@ -515,10 +522,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				}
 
 				m_mergeMiningExtra.emplace(chain_id, std::move(t));
-			}
-
-			if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (data - mm_extra_begin > MM_EXTRA_MAX_SIZE)) {
-				return __LINE__;
 			}
 		}
 

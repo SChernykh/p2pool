@@ -79,8 +79,9 @@ static constexpr uint64_t HASHING_BLOB_MAX_SIZE = 128;
 // Anything more can be a sign of an attack
 static constexpr uint64_t MAX_UNCLES_PER_BLOCK = 5;
 
-// 256 chains, each gets 64 bytes. Or, several KiB per chain in more realistic scenarios - more than enough
-static constexpr int64_t MM_EXTRA_MAX_SIZE = 16384;
+// Several KiB per chain in typical scenarios - more than enough
+// This limits the number of merge mined chains to 244 because each chain needs at least 67 bytes in MM extra
+static constexpr uint64_t MM_EXTRA_MAX_SIZE = 16384;
 
 struct DifficultyData
 {
