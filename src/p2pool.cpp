@@ -439,6 +439,17 @@ void p2pool::handle_miner_data(MinerData& data)
 
 	const Params::Host& host = current_host();
 
+	char fcmp_pp_buf[256] = {};
+
+#ifndef P2POOL_LOG_DISABLE
+	if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+		log::Stream s(fcmp_pp_buf);
+
+		s << "\nFCMP++ tree layers      = " << data.fcmp_pp_n_tree_layers <<
+		     "\nFCMP++ tree root        = " << log::LightBlue() << data.fcmp_pp_tree_root << log::NoColor();
+	}
+#endif
+
 	LOGINFO(2,
 		"new miner data\n---------------------------------------------------------------------------------------------------------------" <<
 		"\nhost                    = " << host.m_displayName <<
@@ -446,6 +457,7 @@ void p2pool::handle_miner_data(MinerData& data)
 		"\nheight                  = " << data.height <<
 		"\nprev_id                 = " << log::LightBlue() << data.prev_id << log::NoColor() <<
 		"\nseed_hash               = " << log::LightBlue() << data.seed_hash << log::NoColor() <<
+		static_cast<const char*>(fcmp_pp_buf) <<
 		"\ndifficulty              = " << data.difficulty <<
 		"\nmedian_weight           = " << data.median_weight <<
 		"\nalready_generated_coins = " << data.already_generated_coins <<
@@ -1782,6 +1794,14 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 		!PARSE(result, minerData, difficulty)) {
 		LOGWARN(1, "get_miner_data RPC response failed to parse, skipping it");
 		return;
+	}
+
+	if (minerData.major_version >= HARDFORK_VERSION_FCMP_PP) {
+		if (!PARSE(result, minerData, fcmp_pp_n_tree_layers) ||
+			!PARSE(result, minerData, fcmp_pp_tree_root)) {
+			LOGWARN(1, "get_miner_data RPC response failed to parse FCMP++ data, skipping it");
+			return;
+		}
 	}
 
 	auto it = result.FindMember("tx_backlog");

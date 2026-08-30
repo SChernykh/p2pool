@@ -1540,7 +1540,7 @@ TEST(carrot, batch_eph_privkeys)
 
 	// Sizes on both sides of the point where the function stops running inline and dispatches
 	// parallel_run. The two paths must agree exactly - the split is an optimization, not a behavior.
-	for (const size_t n : { 40U, 44U, 46U, 47U, 48U, 49U, 50U, 52U, 56U, 64U, 72U, 96U }) {
+	for (const size_t n : { 40U, 64U, 78U, 79U, 80U, 81U, 82U, 84U, 96U, 128U }) {
 		const std::vector<const Wallet*> range(pointers.begin(), pointers.begin() + n);
 
 		anchors.resize(1);
@@ -1670,7 +1670,7 @@ TEST(carrot, batch_contextualized_sender_receiver_secrets)
 	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
 
 	// Sizes on both sides of the inline/parallel_run switch, same reasoning as in batch_eph_privkeys
-	for (const size_t n : { 48U, 52U, 54U, 55U, 56U, 57U, 58U, 60U, 64U, 72U, 96U }) {
+	for (const size_t n : { 40U, 64U, 78U, 79U, 80U, 81U, 82U, 84U, 96U, 128U }) {
 		const std::vector<std::pair<hash, bool>> s_range(sender_receiver_secrets.begin(), sender_receiver_secrets.begin() + n);
 		const std::vector<std::pair<hash, bool>> e_range(eph_pub_keys.begin(), eph_pub_keys.begin() + n);
 		const std::vector<hash> range_reference(reference.begin(), reference.begin() + n);

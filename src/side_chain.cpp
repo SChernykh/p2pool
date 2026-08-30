@@ -486,21 +486,6 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	const uint64_t n = shares.size();
 
 	// Shuffle shares
-
-	// TODO: on the next hardfork change the shuffle to a better variant that churns only O(1) indices when wallets enter/leave
-	//
-	// The idea:
-	//
-	// Oldest wallet in the PPLNS window picks its index in [0, N) randomly by
-	// picking a random number in the [0, next_pow2(N + big enough margin)) range to workaround the changing N.
-	//
-	// The deterministic PRNG to be used for this must have uniformly distributed bits for any N consecutive bits it generates.
-	// Maybe PCG64 (permuted congruential generator) seeded with sha256(wallet keys||m_txkeySecSeed) will be good enough.
-	//
-	// The next wallet picks its index also in [0, N) and repeats if it conflicts, and so on.
-	// Tests have shown that each "wallet set change" churns ~5-6 indices, instead of 34-60% with the current algorithm.
-	// Fewer indices changed -> faster get_outputs_blob() because it has to do fewer new eph public key calculations.
-
 	if (n > 1) {
 		hash h;
 		keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);

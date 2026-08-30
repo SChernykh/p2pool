@@ -341,6 +341,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 
 			READ_BUF(m_fcmp_pp_tree_root.h, HASH_SIZE);
+
+			if (m_fcmp_pp_tree_root.empty()) {
+				return __LINE__;
+			}
 		}
 
 		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);

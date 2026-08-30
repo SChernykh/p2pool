@@ -598,6 +598,7 @@ struct MinerData
 		, already_generated_coins(0)
 		, median_timestamp(0)
 		, aux_nonce(0)
+		, fcmp_pp_n_tree_layers(0)
 	{}
 
 	uint8_t major_version;
@@ -612,6 +613,9 @@ struct MinerData
 
 	std::vector<AuxChainData> aux_chains;
 	uint32_t aux_nonce;
+
+	uint8_t fcmp_pp_n_tree_layers;
+	hash fcmp_pp_tree_root;
 
 	std::chrono::high_resolution_clock::time_point time_received;
 };

@@ -1001,14 +1001,12 @@ public:
 				fe_mul(x, scratchpad[i].p.X, r);
 				fe_mul(y, scratchpad[i].p.Y, r);
 
-				hash& onetime_address = out[i].onetime_address;
-
-				unsigned char* s = onetime_address.h;
+				unsigned char* s = out[i].onetime_address.h;
 				fe_tobytes(s, y);
 				s[31] ^= fe_isnegative(x) << 7;
 
-				out[i].vt = carrot::gen_view_tag(in[i].sender_receiver_secret, height, onetime_address);
-				out[i].anchor_enc = carrot::gen_encrypted_janus_anchor(in[i].contextualized_sender_receiver_secret, in[i].anchor, onetime_address);
+				out[i].vt = carrot::gen_view_tag(in[i].sender_receiver_secret, height, out[i].onetime_address);
+				out[i].anchor_enc = carrot::gen_encrypted_janus_anchor(in[i].contextualized_sender_receiver_secret, in[i].anchor, out[i].onetime_address);
 			}
 		}, true);
 
