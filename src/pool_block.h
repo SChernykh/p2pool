@@ -165,6 +165,7 @@ struct PoolBlock
 	// Some chain IDs are used for other purposes:
 	//
 	// - keccak("subaddress_viewpub") stores the public viewkey part of the subaddress, if it's used for mining ("merge mining hash" = viewkey, "difficulty" = 0,0)
+	//   this ID is rejected after FCMP++ hardfork
 	//
 	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 

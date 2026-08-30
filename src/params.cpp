@@ -43,8 +43,8 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 		}
 
 		if (!process_arg(arg)) {
-			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].c_str());
 			p2pool_usage();
+			fprintf(stderr, "Unknown or invalid command line parameter \"%s\"\n\n", arg[0].c_str());
 			throw std::exception();
 		}
 	}
@@ -119,17 +119,7 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 
 	char display_wallet_buf[Wallet::ADDRESS_LENGTH] = {};
 
-	if (m_mainWallet.valid() && m_subaddress.valid()) {
-		if (!m_miningWallet.assign(m_subaddress.spend_public_key(), m_mainWallet.view_public_key(), m_mainWallet.get_type(), false)) {
-			fprintf(stderr, "Failed to configure the mining wallet, falling back to %s\n", m_mainWallet.encode().c_str());
-			m_miningWallet = m_mainWallet;
-			m_mainWallet.encode(display_wallet_buf);
-		}
-		else {
-			m_subaddress.encode(display_wallet_buf);
-		}
-	}
-	else if (m_mainWallet.valid()) {
+	if (m_mainWallet.valid()) {
 		m_miningWallet = m_mainWallet;
 		m_mainWallet.encode(display_wallet_buf);
 	}
@@ -258,7 +248,7 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 
 	if (arg[0] == "subaddress") {
 		fprintf(stderr, "--subaddress is no longer supported: Carrot doesn't allow subaddresses in coinbase transactions.\n");
-		return false;
+		throw std::exception();
 	}
 
 	if ((arg[0] == "stratum") && has1(arg)) {
@@ -521,16 +511,6 @@ bool Params::valid() const
 
 	if (!m_mainWallet.valid() || !m_miningWallet.valid()) {
 		fprintf(stderr, "Invalid wallet address. Try \"p2pool --help\".\n");
-		return false;
-	}
-
-	if (m_mainWallet.is_subaddress()) {
-		fprintf(stderr, "Wallet address must be a main address (starting with 4...). Try \"p2pool --help\".\n");
-		return false;
-	}
-
-	if (m_subaddress.valid()) {
-		fprintf(stderr, "--subaddress is no longer supported: Carrot doesn't allow subaddresses in coinbase transactions.\n");
 		return false;
 	}
 

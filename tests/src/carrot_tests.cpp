@@ -577,7 +577,7 @@ TEST(carrot, coinbase_enote)
 
 	Wallet w(nullptr);
 
-	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet, false));
+	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet));
 
 	// d_e = H_n(anchor_norm, input_context, K_s, pid)
 	hash eph_priv_key_out;
@@ -719,7 +719,7 @@ TEST(carrot, coinbase_enote_vectors)
 		SCOPED_TRACE(testing::Message() << "height " << v.height << ", amount " << v.amount);
 
 		Wallet w(nullptr);
-		ASSERT_TRUE(w.assign(v.spend_public_key, v.view_public_key, NetworkType::Mainnet, false));
+		ASSERT_TRUE(w.assign(v.spend_public_key, v.view_public_key, NetworkType::Mainnet));
 
 		// d_e = H_n(anchor_norm, input_context, K_s, pid)
 		hash eph_priv_key;
@@ -1253,7 +1253,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	// The same enote as in carrot.coinbase_enote, one output at a time
 	Wallet w(nullptr);
-	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet, false));
+	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet));
 
 	hash eph_priv_key_out;
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, height, w, eph_priv_key_out));
@@ -1469,7 +1469,7 @@ static std::vector<Wallet> make_test_wallets(size_t n)
 		generate_keys_deterministic(view_pub, view_sec, reinterpret_cast<const uint8_t*>(&vi), sizeof(vi));
 
 		Wallet w(nullptr);
-		EXPECT_TRUE(w.assign(spend_pub, view_pub, NetworkType::Mainnet, false));
+		EXPECT_TRUE(w.assign(spend_pub, view_pub, NetworkType::Mainnet));
 
 		wallets.emplace_back(w);
 	}

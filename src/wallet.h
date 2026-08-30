@@ -37,7 +37,7 @@ public:
 	[[nodiscard]] FORCEINLINE bool valid() const { return m_type != NetworkType::Invalid; }
 
 	[[nodiscard]] bool decode(const char* address);
-	[[nodiscard]] bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type, bool subaddress);
+	[[nodiscard]] bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type);
 
 	void encode(char (&buf)[ADDRESS_LENGTH]) const;
 
@@ -59,7 +59,6 @@ public:
 	[[nodiscard]] FORCEINLINE const hash& view_public_key() const { return m_keys[1]; }
 	[[nodiscard]] FORCEINLINE uint32_t checksum() const { return m_checksum; }
 	[[nodiscard]] FORCEINLINE NetworkType get_type() const { return m_type; }
-	[[nodiscard]] FORCEINLINE bool is_subaddress() const { return m_subaddress; }
 	[[nodiscard]] FORCEINLINE bool is_torsioned() const { return m_torsioned; }
 
 	[[nodiscard]] bool torsion_check() const;
@@ -74,7 +73,6 @@ private:
 
 	uint32_t m_checksum;
 	NetworkType m_type;
-	bool m_subaddress;
 	bool m_torsioned;
 };
 

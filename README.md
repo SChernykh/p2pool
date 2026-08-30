@@ -97,7 +97,7 @@ In order to continue mining on P2Pool, you must update both Monero and P2Pool so
 
 - In order to mine on P2Pool, a synced Monero node using monerod v0.18.0.0 or newer is required. If you don't currently have one, you can download the [official Monero binaries](https://www.getmonero.org/downloads/), start `monerod` on your PC and wait until it's fully synced. Advanced Monero node setup instructions are [here](https://sethforprivacy.com/guides/run-a-monero-node-advanced/).
 - It is highly recommended that you create a separate restricted user account (in your OS) for mining. While P2Pool has been battle-tested for a long time now, any software may have unknown bugs/vulnerabilities.
-- You can mine to a primary wallet address (the one starting with `4`). If you want to mine to a subaddress, you will need to provide both the main address (starting with 4) and the subaddress (starting with 8) using `--wallet` and `--subaddress` command line parameters.
+- You can mine to a primary wallet address (the one starting with `4`).
 - You can add the `--mini` or `--nano` parameter to your P2Pool command to connect to the respective sidechain.
 > [!NOTE]
 > You cannot use both `--mini` and `--nano` together<br>
