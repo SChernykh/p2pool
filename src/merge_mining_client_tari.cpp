@@ -525,8 +525,6 @@ void MergeMiningClientTari::run()
 
 			NewBlockCoinbase* coinbase = request.add_coinbases();
 			coinbase->set_address(m_auxWallet);
-
-			// TODO this should be equal to the total weight of shares in the PPLNS window for each wallet
 			coinbase->set_value(1);
 
 			coinbase->set_stealth_payment(false);

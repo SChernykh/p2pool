@@ -275,6 +275,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_poolBlockTemplate->m_minerWallet = params.m_miningWallet;
 
+	m_poolBlockTemplate->m_fcmp_pp_n_tree_layers = data.fcmp_pp_n_tree_layers;
+	m_poolBlockTemplate->m_fcmp_pp_tree_root = data.fcmp_pp_tree_root;
+
 	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares)) {
 		use_old_template();
 		return;
@@ -374,10 +377,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		m_transactionHashes.assign(HASH_SIZE, 0);
 
 		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
-			// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
-			// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+			m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
+			m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
 		}
 
 		m_transactionHashesSet.clear();
@@ -464,10 +466,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		m_transactionHashes.assign(HASH_SIZE, 0);
 
 		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
-			// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
-			// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+			m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
+			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
+			m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
 		}
 
 		m_transactionHashesSet.clear();
@@ -589,10 +590,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	// Miner tx hash is skipped here because it's not a part of block template
 	if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
 		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE * 3, m_transactionHashes.end());
-		// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
-		m_blockTemplateBlob.push_back(0);
-		// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
-		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), HASH_SIZE, 0);
+		m_blockTemplateBlob.push_back(data.fcmp_pp_n_tree_layers);
+		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
 	}
 	else {
 		m_blockTemplateBlob.insert(m_blockTemplateBlob.end(), m_transactionHashes.begin() + HASH_SIZE, m_transactionHashes.end());
@@ -830,10 +829,9 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 	m_transactionHashes.assign(HASH_SIZE, 0);
 
 	if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
-		// TODO: use m_fcmp_pp_n_tree_layers from "MinerData data" here
-		m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
-		// TODO: use m_fcmp_pp_tree_root from "MinerData data" here
-		m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE, 0);
+		m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
+		m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
+		m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
 	}
 
 	for (int i = static_cast<int>(n); (i > 0) && (best_weight > 0); --i) {
@@ -1099,7 +1097,7 @@ hash BlockTemplate::calc_sidechain_hash(uint32_t sidechain_extra_nonce) const
 		const int inlen = static_cast<int>(size - N);
 
 		memcpy(buf, m_sidechainHashBlob.data() + N, size - N);
-		memcpy(buf + sidechain_extra_nonce_offset - N, sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
+		memcpy(buf + (sidechain_extra_nonce_offset - N), sidechain_extra_nonce_buf, EXTRA_NONCE_SIZE);
 
 		std::array<uint64_t, 25> st = m_sidechainHashKeccakState;
 		keccak_finish(buf, inlen, st);
@@ -1175,8 +1173,8 @@ hash BlockTemplate::calc_miner_tx_hash(uint32_t extra_nonce) const
 		const int inlen = static_cast<int>(tx_size - N);
 
 		memcpy(tx_buf, data + N, inlen);
-		memcpy(tx_buf + extra_nonce_offset - N, extra_nonce_buf, EXTRA_NONCE_SIZE);
-		memcpy(tx_buf + merkle_root_offset - N, merge_mining_root.h, HASH_SIZE);
+		memcpy(tx_buf + (extra_nonce_offset - N), extra_nonce_buf, EXTRA_NONCE_SIZE);
+		memcpy(tx_buf + (merkle_root_offset - N), merge_mining_root.h, HASH_SIZE);
 
 		std::array<uint64_t, 25> st = m_minerTxKeccakState;
 		keccak_finish(tx_buf, inlen, st);

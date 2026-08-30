@@ -516,6 +516,14 @@ void ZMQReader::parse(char* data, size_t size)
 			return;
 		}
 
+		if (m_minerData.major_version >= HARDFORK_VERSION_FCMP_PP) {
+			if (!PARSE(doc, m_minerData, fcmp_pp_n_tree_layers) ||
+				!PARSE(doc, m_minerData, fcmp_pp_tree_root)) {
+				LOGWARN(1, "json-full-miner_data failed to parse FCMP++ data, skipping it");
+				return;
+			}
+		}
+
 		if (!doc.HasMember("tx_backlog")) {
 			LOGWARN(1, "json-full-miner_data doesn't have 'tx_backlog', skipping it");
 			return;

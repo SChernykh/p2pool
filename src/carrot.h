@@ -177,15 +177,15 @@ namespace carrot {
 		hash spend_public_key;                       // K_s
 		hash sender_receiver_secret;                 // s_sr, keys the view tag
 		hash contextualized_sender_receiver_secret;  // s^ctx_sr, keys k^o_g, k^o_t and the anchor mask
-		janus_anchor anchor;                         // anchor_norm
-		uint64_t amount;
+		janus_anchor anchor = {};                    // anchor_norm
+		uint64_t amount = 0;
 	};
 
 	struct coinbase_output {
 		hash onetime_address;      // K_o
-		view_tag vt;
-		janus_anchor anchor_enc;
-		bool valid;
+		view_tag vt = {};
+		janus_anchor anchor_enc = {};
+		bool valid = false;
 	};
 
 	// out[i].valid == false means out[i] is invalid (gen_onetime_address would've returned false for in[i]), and the rest of out[i] is left zeroed.
