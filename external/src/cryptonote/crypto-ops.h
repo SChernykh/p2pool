@@ -34,7 +34,16 @@
 
 /* From fe.h */
 
-typedef int32_t fe[10];
+// The field is represented in radix 2^51 (5 unsigned 64-bit limbs).
+// That is about twice as fast as the portable radix 2^25.5 representation, which is kept as a fallback.
+
+#if !defined(FE_FORCE_RADIX_25_5) && (defined(__SIZEOF_INT128__) || (defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))))
+	#define FE_RADIX_51 1
+	typedef uint64_t fe[5];
+#else
+	#define FE_RADIX_51 0
+	typedef int32_t fe[10];
+#endif
 
 /* From ge.h */
 
@@ -123,6 +132,9 @@ extern const ge_precomp ge_T_base[32][8];
 void ge_scalarmult_base(ge_p3 *, const unsigned char *);
 
 void ge_scalarmult_base_vartime(ge_p3 *h, const unsigned char *a);
+
+/* h = a * B + b * T, where T is the FCMP++ generator */
+void ge_double_scalarmult_base_T_vartime(ge_p3 *h, const unsigned char *a, const unsigned char *b);
 
 /* From ge_tobytes.c */
 

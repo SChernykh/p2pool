@@ -20,6 +20,7 @@
 #include "carrot.h"
 #include "keccak.h"
 #include "uv_util.h"
+#include "fcmp_pp_crypto.h"
 #include <map>
 
 #ifdef P2POOL_DEBUGGING
@@ -41,6 +42,12 @@ bool is_in_main_subgroup(const ge_p3& point)
 	ge_scalarmult_p3(&result, curve_order, &point);
 
 	return ge_p3_is_point_at_infinity_vartime(&result) != 0;
+}
+
+static FORCEINLINE bool is_torsion_free(const ge_p3& point)
+{
+	// torsion_check_vartime() has a "point*8 is not the identity" pre-condition
+	return !fcmp_pp::mul8_is_identity(point) && fcmp_pp::torsion_check_vartime(point);
 }
 
 static FORCEINLINE bool less32(const uint8_t* k0, const uint8_t* k1)
@@ -200,7 +207,7 @@ public:
 		{
 			WriteLock lock(from_bytes_lock);
 
-			auto it = from_bytes->emplace(h, FromBytesEntry(valid, point, t, Ai, false, false));
+			auto it = from_bytes->emplace(h, FromBytesEntry(valid, point, t, Ai));
 
 			if (valid && Ai && !it.first->second.m_hasAi) {
 				it.first->second.m_hasAi = true;
@@ -217,6 +224,59 @@ public:
 		}
 
 		return valid;
+	}
+
+	bool check_public_key(const hash& h)
+	{
+		ge_p3 point = {};
+
+		bool valid = false;
+		bool point_cached = false;
+
+		{
+			ReadLock lock(from_bytes_lock);
+
+			auto it = from_bytes->find(h);
+
+			if (it != from_bytes->end()) {
+				const FromBytesEntry& entry = it->second;
+
+				if (!entry.m_valid) {
+					return false;
+				}
+
+				if (entry.m_torsionChecked) {
+					return entry.m_torsionFree;
+				}
+
+				valid = true;
+				point_cached = true;
+				point = entry.m_point;
+			}
+		}
+
+		if (!point_cached) {
+			valid = (ge_frombytes_vartime(&point, h.h) == 0);
+		}
+
+		const bool torsion_free = valid && is_torsion_free(point);
+
+		const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+		{
+			WriteLock lock(from_bytes_lock);
+
+			auto it = from_bytes->emplace(h, FromBytesEntry(valid, point, t, nullptr, true, torsion_free));
+			FromBytesEntry& entry = it.first->second;
+
+			if (valid && !entry.m_torsionChecked) {
+				entry.m_torsionChecked = true;
+				entry.m_torsionFree = torsion_free;
+			}
+
+			limit_size(from_bytes, 20'000, 10'000);
+		}
+
+		return torsion_free;
 	}
 
 	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys)
@@ -487,8 +547,6 @@ public:
 			bool valid = false;
 			bool has_point = false;
 			bool has_precomp = false;
-			bool main_subgroup_checked = false;
-			bool main_subgroup = false;
 			bool cache_update = false;
 		};
 
@@ -518,9 +576,6 @@ public:
 					continue;
 				}
 
-				data.main_subgroup_checked = entry.m_mainSubgroupChecked;
-				data.main_subgroup = entry.m_mainSubgroup;
-
 				if (entry.m_hasAi) {
 					memcpy(data.precomp, entry.m_Ai, sizeof(ge_dsmp));
 					data.has_precomp = true;
@@ -541,6 +596,7 @@ public:
 
 		std::atomic<uint32_t> counter = 0;
 		std::atomic<bool> result = true;
+		std::atomic<bool> cache_update = false;
 
 		// Montgomery's trick to batch invert all Z - Y values with a single fe_invert call (parallel version)
 		parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
@@ -568,38 +624,32 @@ public:
 					data.valid = (ge_frombytes_vartime(&data.point, view_public_keys[j].h) == 0);
 					data.has_point = true;
 					data.cache_update = true;
+					cache_update.store(true, std::memory_order_release);
 				}
 
 				if (data.valid) {
-					if (!data.main_subgroup_checked) {
-						data.main_subgroup = is_in_main_subgroup(data.point);
-						data.main_subgroup_checked = true;
+					if (!data.has_precomp) {
+						ge_dsm_precomp(data.precomp, &data.point);
+						data.has_precomp = true;
 						data.cache_update = true;
+						cache_update.store(true, std::memory_order_release);
 					}
 
-					if (data.main_subgroup) {
-						if (!data.has_precomp) {
-							ge_dsm_precomp(data.precomp, &data.point);
-							data.has_precomp = true;
-							data.cache_update = true;
-						}
+					signed char scalar_slide[256];
+					ge_scalarmult_slide(scalar_slide, eph_priv_keys[j].h);
 
-						signed char scalar_slide[256];
-						ge_scalarmult_slide(scalar_slide, eph_priv_keys[j].h);
+					ge_p2 point;
+					ge_scalarmult_vartime_precomp(&point, data.precomp, scalar_slide);
 
-						ge_p2 point;
-						ge_scalarmult_vartime_precomp(&point, data.precomp, scalar_slide);
+					memcpy(scratchpad[i].Y, point.Y, sizeof(fe));
+					memcpy(scratchpad[i].Z, point.Z, sizeof(fe));
+					fe_sub(scratchpad[i].D, point.Z, point.Y);
 
-						memcpy(scratchpad[i].Y, point.Y, sizeof(fe));
-						memcpy(scratchpad[i].Z, point.Z, sizeof(fe));
-						fe_sub(scratchpad[i].D, point.Z, point.Y);
+					hash denominator;
+					fe_tobytes(denominator.h, scratchpad[i].D);
 
-						hash denominator;
-						fe_tobytes(denominator.h, scratchpad[i].D);
-
-						// d_e * K_v is the point at infinity, so ConvertPointE is not defined for it
-						ok = !denominator.empty();
-					}
+					// d_e * K_v is the point at infinity, so ConvertPointE is not defined for it
+					ok = !denominator.empty();
 				}
 
 				if (!ok) {
@@ -684,16 +734,7 @@ public:
 			}
 		}, true);
 
-		bool cache_update = false;
-
-		for (const PublicKeyData& data : public_key_data) {
-			if (data.cache_update) {
-				cache_update = true;
-				break;
-			}
-		}
-
-		if (cache_update) {
+		if (cache_update.load(std::memory_order_acquire)) {
 			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
 
 			WriteLock lock(from_bytes_lock);
@@ -708,17 +749,12 @@ public:
 
 				const ge_cached* precomp = data.has_precomp ? data.precomp : nullptr;
 
-				auto it = from_bytes->emplace(view_public_keys[j], FromBytesEntry(data.valid, data.point, t, precomp, data.main_subgroup_checked, data.main_subgroup));
+				auto it = from_bytes->emplace(view_public_keys[j], FromBytesEntry(data.valid, data.point, t, precomp));
 				FromBytesEntry& entry = it.first->second;
 
 				if (data.valid && data.has_precomp && !entry.m_hasAi) {
 					entry.m_hasAi = true;
 					memcpy(entry.m_Ai, data.precomp, sizeof(ge_dsmp));
-				}
-
-				if (data.valid && data.main_subgroup_checked && !entry.m_mainSubgroupChecked) {
-					entry.m_mainSubgroupChecked = true;
-					entry.m_mainSubgroup = data.main_subgroup;
 				}
 			}
 
@@ -774,6 +810,266 @@ public:
 		return result;
 	}
 
+	// Calculates the entire amount-dependent part of a Carrot coinbase transaction in one go: K_o, the view tag
+	// and the encrypted Janus anchor for every output.
+	//
+	// Deliberately not cached: every new share re-splits the reward, and so does every transaction added to the
+	// block template, so two peers on the same sidechain tip will rarely be hashing the same amounts.
+	bool batch_coinbase_outputs(uint64_t height, const std::vector<carrot::coinbase_output_input>& in, std::vector<carrot::coinbase_output>& out)
+	{
+		out.clear();
+
+		const size_t N = in.size();
+
+		if (N == 0) {
+			return true;
+		}
+
+		out.assign(N, carrot::coinbase_output{});
+
+		std::atomic<bool> result = true;
+
+		struct SpendKeyData {
+			ge_p3 point = {};
+
+			bool valid = false;
+			bool has_point = false;
+			bool cache_update = false;
+		};
+
+		std::vector<SpendKeyData> spend_key_data(N);
+
+		// Copy all available cache data while holding the read lock only once, and write back below.
+		{
+			ReadLock lock(from_bytes_lock);
+
+			for (size_t i = 0; i < N; ++i) {
+				auto it = from_bytes->find(in[i].spend_public_key);
+
+				if (it == from_bytes->end()) {
+					continue;
+				}
+
+				const FromBytesEntry& entry = it->second;
+
+				SpendKeyData& data = spend_key_data[i];
+
+				data.point = entry.m_point;
+				data.valid = entry.m_valid;
+				data.has_point = true;
+			}
+		}
+
+		struct M {
+			ge_p2 p; // the original point p
+			fe P;    // partial products of p.Z (segmented, P_i = Z_a*Z_{a+1}*...*Z_i for a <= i < b)
+			fe Q;    // inverses of p.Z (Q_i = Z_i^-1 for 0 <= i < N). Calculated in segments.
+		};
+
+		// N*200 bytes for the scratchpad
+		std::vector<M> scratchpad(N);
+
+		std::atomic<uint32_t> counter = 0;
+		std::atomic<bool> cache_update = false;
+
+		// Montgomery's trick to batch invert all Z values with a single fe_invert call (parallel version)
+		parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
+			// Always have at least 1 element per thread
+			const uint32_t thread_count = static_cast<uint32_t>(std::min<size_t>(total_thread_count, N));
+
+			if (thread_index >= thread_count) {
+				return;
+			}
+
+			// 0 <= thread_index < thread_count <= N at this point, so
+			// 0 <= a < b <= N (non-empty segments with valid bounds) is guaranteed
+			const size_t a = (N * thread_index) / thread_count;
+			const size_t b = (N * (thread_index + 1)) / thread_count;
+
+			uint32_t next_counter = thread_count;
+
+			for (size_t i = a; i < b; ++i) {
+				const carrot::coinbase_output_input& t = in[i];
+
+				SpendKeyData& data = spend_key_data[i];
+
+				if (!data.has_point) {
+					data.valid = (ge_frombytes_vartime(&data.point, t.spend_public_key.h) == 0);
+					data.cache_update = true;
+					cache_update.store(true, std::memory_order_release);
+				}
+
+				ge_p2 point5;
+
+				if (!data.valid) {
+					result = false;
+					out[i].valid = false;
+
+					// A zero Z would zero the product chain and take every other output in the batch down with it,
+					// so invalid elements get a dummy point with Z = 1 and are skipped at the end.
+					fe_1(point5.X);
+					fe_1(point5.Y);
+					fe_1(point5.Z);
+				}
+				else {
+					out[i].valid = true;
+
+					// k^o_g and k^o_t
+					const hash sender_extension_g = carrot::gen_sender_extension_g(t.contextualized_sender_receiver_secret, t.amount, t.spend_public_key);
+					const hash sender_extension_t = carrot::gen_sender_extension_t(t.contextualized_sender_receiver_secret, t.amount, t.spend_public_key);
+
+					// K_o = K_s + k^o_g G + k^o_t T, kept projective until the final loop below
+					ge_p3 point2;
+					ge_cached point3;
+					ge_p1p1 point4;
+
+					ge_double_scalarmult_base_T_vartime(&point2, sender_extension_g.h, sender_extension_t.h);
+					ge_p3_to_cached(&point3, &point2);
+					ge_add(&point4, &data.point, &point3);
+					ge_p1p1_to_p2(&point5, &point4);
+				}
+
+				memcpy(&scratchpad[i].p, &point5, sizeof(ge_p2));
+
+				if (i == a) {
+					memcpy(&scratchpad[i].P, point5.Z, sizeof(fe));
+				}
+				else {
+					fe_mul(scratchpad[i].P, scratchpad[i - 1].P, point5.Z);
+				}
+			}
+
+			const bool last = sync_point(counter, next_counter);
+			next_counter += thread_count;
+
+			// Last thread at the sync point is likely the first one to continue execution,
+			// so make it calculate each segment end's inverse using Montgomery's trick
+			if (last) {
+				// Work over the whole range 0...N-1, but inverse only each segment's end
+				// One fe_invert, thread_count*3 - 3 fe_mul calls
+
+				// Calculate partial products of segment ends
+				size_t k = N * (0 + 1) / thread_count - 1;
+				memcpy(scratchpad[k].Q, scratchpad[k].P, sizeof(fe));
+
+				for (uint32_t i = 1; i < thread_count; ++i) {
+					const size_t next_k = N * (i + 1) / thread_count - 1;
+					fe_mul(scratchpad[next_k].Q, scratchpad[k].Q, scratchpad[next_k].P);
+					k = next_k;
+				}
+
+				// Invert the product of all segment ends. k == N - 1 here (because see how the loop above exits).
+				fe t;
+				fe_invert(t, scratchpad[k].Q);
+
+				// Walk back to calculate inverses of segment ends
+				for (uint32_t i = thread_count - 1; i > 0; --i) {
+					const size_t prev_k = N * i / thread_count - 1;
+
+					fe_mul(scratchpad[k].Q, t, scratchpad[prev_k].Q);
+					fe_mul(t, t, scratchpad[k].P);
+
+					k = prev_k;
+				}
+
+				// k is now the end index of the first segment (because see how the loop above exits).
+				memcpy(scratchpad[k].Q, t, sizeof(fe));
+			}
+
+			sync_point(counter, next_counter);
+
+			// Each segment has scratchpad[b - 1].Q = (Z_a*Z_{a+1}*...*Z_{b-1})^-1 now
+			fe t;
+			memcpy(t, scratchpad[b - 1].Q, sizeof(fe));
+
+			for (size_t i = b - 1; i > a; --i) {
+				fe_mul(scratchpad[i].Q, t, scratchpad[i - 1].P);
+				fe_mul(t, t, scratchpad[i].p.Z);
+			}
+
+			memcpy(scratchpad[a].Q, t, sizeof(fe));
+
+			// Last step - replicate ge_tobytes() code for each segment, then hash the encoded K_o twice
+			for (size_t i = a; i < b; ++i) {
+				if (!out[i].valid) {
+					continue;
+				}
+
+				const fe& r = scratchpad[i].Q;
+
+				fe x, y;
+				fe_mul(x, scratchpad[i].p.X, r);
+				fe_mul(y, scratchpad[i].p.Y, r);
+
+				hash& onetime_address = out[i].onetime_address;
+
+				unsigned char* s = onetime_address.h;
+				fe_tobytes(s, y);
+				s[31] ^= fe_isnegative(x) << 7;
+
+				out[i].vt = carrot::gen_view_tag(in[i].sender_receiver_secret, height, onetime_address);
+				out[i].anchor_enc = carrot::gen_encrypted_janus_anchor(in[i].contextualized_sender_receiver_secret, in[i].anchor, onetime_address);
+			}
+		}, true);
+
+		if (cache_update.load(std::memory_order_acquire)) {
+			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+			WriteLock lock(from_bytes_lock);
+
+			for (size_t i = 0; i < N; ++i) {
+				const SpendKeyData& data = spend_key_data[i];
+
+				if (data.cache_update) {
+					from_bytes->emplace(in[i].spend_public_key, FromBytesEntry(data.valid, data.point, t, nullptr));
+				}
+			}
+
+			limit_size(from_bytes, 20'000, 10'000);
+		}
+
+#ifdef P2POOL_DEBUGGING
+		for (size_t i = 0; i < N; ++i) {
+			const carrot::coinbase_output_input& t = in[i];
+
+			const hash sender_extension_g = carrot::gen_sender_extension_g(t.contextualized_sender_receiver_secret, t.amount, t.spend_public_key);
+			const hash sender_extension_t = carrot::gen_sender_extension_t(t.contextualized_sender_receiver_secret, t.amount, t.spend_public_key);
+
+			hash onetime_address;
+			const bool b = carrot::gen_onetime_address(t.spend_public_key, sender_extension_g, sender_extension_t, onetime_address);
+
+			if (b != out[i].valid) {
+				LOGERR(1, "batch_coinbase_outputs error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << out[i].valid);
+				PANIC_STOP();
+			}
+
+			if (!b) {
+				continue;
+			}
+
+			if (onetime_address != out[i].onetime_address) {
+				LOGERR(1, "batch_coinbase_outputs error: wrong one-time address at position " << i << '/' << N);
+				PANIC_STOP();
+			}
+
+			const carrot::view_tag vt = carrot::gen_view_tag(t.sender_receiver_secret, height, onetime_address);
+			const carrot::janus_anchor anchor_enc = carrot::gen_encrypted_janus_anchor(t.contextualized_sender_receiver_secret, t.anchor, onetime_address);
+
+			if (memcmp(&vt, &out[i].vt, sizeof(carrot::view_tag)) != 0) {
+				LOGERR(1, "batch_coinbase_outputs error: wrong view tag at position " << i << '/' << N);
+				PANIC_STOP();
+			}
+
+			if (memcmp(&anchor_enc, &out[i].anchor_enc, sizeof(carrot::janus_anchor)) != 0) {
+				LOGERR(1, "batch_coinbase_outputs error: wrong encrypted Janus anchor at position " << i << '/' << N);
+				PANIC_STOP();
+			}
+		}
+#endif
+
+		return result;
+	}
+
 #ifdef P2POOL_UNIT_TESTS
 	size_t get_last_carrot_public_key_batch_size() const
 	{
@@ -799,8 +1095,8 @@ public:
 			1U |
 			(entry.m_valid ? 2U : 0U) |
 			(entry.m_hasAi ? 4U : 0U) |
-			(entry.m_mainSubgroupChecked ? 8U : 0U) |
-			(entry.m_mainSubgroup ? 16U : 0U);
+			(entry.m_torsionChecked ? 8U : 0U) |
+			(entry.m_torsionFree ? 16U : 0U);
 	}
 #endif
 
@@ -1226,6 +1522,37 @@ public:
 		{
 			const size_t N = batch.size();
 
+			struct BaseKeyData {
+				ge_p3 point = {};
+
+				bool valid = false;
+				bool has_point = false;
+				bool cache_update = false;
+			};
+
+			std::vector<BaseKeyData> base_key_data(N);
+
+			// Copy all available cache data while holding the read lock only once, and write back below.
+			{
+				ReadLock lock(from_bytes_lock);
+
+				for (size_t i = 0; i < N; ++i) {
+					auto it = from_bytes->find(in[batch[i]].base);
+
+					if (it == from_bytes->end()) {
+						continue;
+					}
+
+					const FromBytesEntry& entry = it->second;
+
+					BaseKeyData& data = base_key_data[i];
+
+					data.point = entry.m_point;
+					data.valid = entry.m_valid;
+					data.has_point = true;
+				}
+			}
+
 			struct M {
 				ge_p2 p; // the original point p
 				fe P;    // partial products of p.Z (segmented, P_i = Z_a*Z_{a+1}*...*Z_i for a <= i < b)
@@ -1236,6 +1563,7 @@ public:
 			std::vector<M> scratchpad(N);
 
 			std::atomic<uint32_t> counter = 0;
+			std::atomic<bool> cache_update = false;
 
 			// Montgomery's trick to batch invert all Z values with a single fe_invert call (parallel version)
 			parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
@@ -1256,10 +1584,17 @@ public:
 				for (size_t i = a; i < b; ++i) {
 					const batch_public_key_input& t = in[batch[i]];
 
-					ge_p3 point1;
+					BaseKeyData& data = base_key_data[i];
+
+					if (!data.has_point) {
+						data.valid = (ge_frombytes_vartime(&data.point, t.base.h) == 0);
+						data.cache_update = true;
+						cache_update.store(true, std::memory_order_release);
+					}
+
 					ge_p2 point5;
 
-					if (!get_from_bytes(t.base, point1, nullptr)) {
+					if (!data.valid) {
 						result = false;
 						out[batch[i]].second = false;
 
@@ -1278,7 +1613,7 @@ public:
 						derivation_to_scalar(t.derivation, t.output_index, scalar);
 						ge_scalarmult_base_vartime(&point2, reinterpret_cast<uint8_t*>(&scalar));
 						ge_p3_to_cached(&point3, &point2);
-						ge_add(&point4, &point1, &point3);
+						ge_add(&point4, &data.point, &point3);
 						ge_p1p1_to_p2(&point5, &point4);
 					}
 
@@ -1355,6 +1690,22 @@ public:
 					s[31] ^= fe_isnegative(x) << 7;
 				}
 			}, true);
+
+			if (cache_update.load(std::memory_order_acquire)) {
+				const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+				WriteLock lock(from_bytes_lock);
+
+				for (size_t i = 0; i < N; ++i) {
+					const BaseKeyData& data = base_key_data[i];
+
+					if (data.cache_update) {
+						from_bytes->emplace(in[batch[i]].base, FromBytesEntry(data.valid, data.point, t, nullptr));
+					}
+				}
+
+				limit_size(from_bytes, 20'000, 10'000);
+			}
 
 			// Finally fill in the cache with all new values
 
@@ -1638,12 +1989,12 @@ private:
 
 	struct FromBytesEntry
 	{
-		FORCEINLINE FromBytesEntry(bool b, const ge_p3& p, uint32_t t, const ge_cached* Ai, bool main_subgroup_checked, bool main_subgroup)
+		FORCEINLINE FromBytesEntry(bool b, const ge_p3& p, uint32_t t, const ge_cached* Ai, bool torsion_checked = false, bool torsion_free = false)
 			: m_valid(b)
 			, m_point(p)
 			, m_hasAi(b && Ai)
-			, m_mainSubgroupChecked(b && main_subgroup_checked)
-			, m_mainSubgroup(b && main_subgroup_checked && main_subgroup)
+			, m_torsionChecked(b && torsion_checked)
+			, m_torsionFree(b && torsion_checked && torsion_free)
 			, m_timestamp(t)
 		{
 			if (b && Ai) {
@@ -1660,8 +2011,9 @@ private:
 		bool m_hasAi;
 		ge_dsmp m_Ai;
 
-		bool m_mainSubgroupChecked;
-		bool m_mainSubgroup;
+		// Whether this key has been through the FCMP++ torsion check, and the result
+		bool m_torsionChecked;
+		bool m_torsionFree;
 
 		// cppcheck-suppress unusedStructMember
 		uint32_t m_timestamp;
@@ -1712,6 +2064,11 @@ bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const
 	return cache->batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, secrets);
 }
 
+bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_output>& out)
+{
+	return cache->batch_coinbase_outputs(height, in, out);
+}
+
 } // namespace carrot
 
 #ifdef P2POOL_UNIT_TESTS
@@ -1749,6 +2106,21 @@ bool derive_public_key(const hash& derivation, size_t output_index, const hash& 
 bool batch_public_keys(const std::vector<batch_public_key_input>& in, std::vector<std::pair<hash, bool>>& out)
 {
 	return cache->batch_public_keys(in, out);
+}
+
+bool check_public_key(const hash& key)
+{
+	if (cache) {
+		return cache->check_public_key(key);
+	}
+
+	ge_p3 point;
+
+	if (ge_frombytes_vartime(&point, key.h) != 0) {
+		return false;
+	}
+
+	return is_torsion_free(point);
 }
 
 void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id)

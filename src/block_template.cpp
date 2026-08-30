@@ -891,12 +891,7 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
-	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* eph pub key */ + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES);
-	}
-	else {
-		k += m_shares.size() * (5 /* reward */ + 1 /* tx_type */ + HASH_SIZE /* stealth address */ + 1 /* viewtag */);
-	}
+	k += m_shares.size() * b->output_blob_size_estimate();
 
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	{
@@ -927,7 +922,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_minerTx.clear();
 
 	const size_t num_outputs = shares.size();
-	m_minerTx.reserve(num_outputs * 39 + 55);
+	m_minerTx.reserve(num_outputs * PoolBlock::output_blob_size_estimate(data.major_version) + 55);
 
 	// tx version
 	m_minerTx.push_back(TX_VERSION);
@@ -948,7 +943,10 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Number of outputs (1 output per miner)
 	writeVarint(num_outputs, m_minerTx);
 
-	// TODO: fill in m_carrotTxPubKeys, m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
+	// TODO: for Carrot transactions, fill in m_carrotTxPubKeys, m_carrotViewTags and m_carrotJanusAnchors instead
+	// of m_viewTags, and change the output loop below to write TXOUT_TO_CARROT_V1 followed by the 3-byte view tag
+	// and the 16-byte encrypted Janus anchor, instead of TXOUT_TO_TAGGED_KEY followed by a 1-byte view tag.
+	// serialize_mainchain_data() already writes that format, and the two must produce identical bytes.
 	if (m_poolBlockTemplate->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
 		const size_t N = shares.size();
 

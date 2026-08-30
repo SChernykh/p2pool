@@ -154,12 +154,42 @@ namespace carrot {
 	hash gen_sender_extension_g(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key);
 	hash gen_sender_extension_t(const hash& contextualized_sender_receiver_secret, uint64_t amount, const hash& spend_public_key);
 
+	bool gen_onetime_address(const hash& spend_public_key, const hash& sender_extension_g, const hash& sender_extension_t, hash& onetime_address);
+
 	view_tag gen_view_tag(const hash& sender_receiver_secret, uint64_t height, const hash& onetime_address);
 
 	janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiver_secret, const janus_anchor& anchor, const hash& onetime_address);
 
+	// anchor_norm and d_e for every output, in parallel. A failed element leaves a zero d_e, which batch_eph_pubkeys rejects on its own.
+	bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys);
+
 	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys);
 	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets);
+
+	// s^ctx_sr for every output, in parallel. secrets[i] is valid only if both of its inputs were.
+	bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<hash, bool>>& sender_receiver_secrets, const std::vector<std::pair<hash, bool>>& eph_pub_keys, uint64_t height, std::vector<std::pair<hash, bool>>& secrets);
+
+	// Everything in a Carrot coinbase output that depends on the amount: K_o, the view tag and the encrypted Janus anchor.
+	//
+	// Pre-condition: spend_public_key must be a valid point in the prime order subgroup (Wallet::decode and Wallet::assign
+	// guarantee it). Everything else is caller-supplied output of the amount-independent part.
+	struct coinbase_output_input {
+		hash spend_public_key;                       // K_s
+		hash sender_receiver_secret;                 // s_sr, keys the view tag
+		hash contextualized_sender_receiver_secret;  // s^ctx_sr, keys k^o_g, k^o_t and the anchor mask
+		janus_anchor anchor;                         // anchor_norm
+		uint64_t amount;
+	};
+
+	struct coinbase_output {
+		hash onetime_address;      // K_o
+		view_tag vt;
+		janus_anchor anchor_enc;
+		bool valid;
+	};
+
+	// out[i].valid == false means out[i] is invalid (gen_onetime_address would've returned false for in[i]), and the rest of out[i] is left zeroed.
+	bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_output>& out);
 } // namespace carrot
 
 } // namespace p2pool

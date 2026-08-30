@@ -36,6 +36,8 @@ void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, s
 void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id);
 bool check_keys(const hash& pub, const hash& sec);
 bool is_in_main_subgroup(const ge_p3& point);
+
+bool check_public_key(const hash& key);
 bool generate_key_derivation(const hash& key1, const hash& key2, size_t output_index, hash& derivation, uint8_t& view_tag);
 bool batch_derivations(const std::vector<std::pair<hash, size_t>>& in, const hash& txkey_sec, std::vector<std::pair<hash, int32_t>>& out);
 bool derive_public_key(const hash& derivation, size_t output_index, const hash& base, hash& derived_key);

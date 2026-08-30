@@ -24,6 +24,7 @@
 #include "blake2/blake2.h"
 
 #include "gtest/gtest.h"
+#include <random>
 
 namespace p2pool {
 
@@ -276,7 +277,8 @@ TEST(carrot, gen_sender_receiver_secret)
 	ASSERT_FALSE(gen_sender_receiver_secret(convergence_eph_priv_key, identity_public_key, out));
 	ASSERT_FALSE(gen_sender_receiver_secret(convergence_eph_priv_key, invalid_public_key, out));
 	ASSERT_FALSE(gen_sender_receiver_secret(convergence_eph_priv_key, torsion_public_key, out));
-	ASSERT_FALSE(gen_sender_receiver_secret(one, torsion_public_key, out));
+	ASSERT_FALSE(gen_sender_receiver_secret(two, torsion_public_key, out));
+	ASSERT_TRUE(gen_sender_receiver_secret(one, torsion_public_key, out));
 }
 
 TEST(carrot, gen_contextualized_sender_receiver_secret)
@@ -370,6 +372,135 @@ TEST(carrot, gen_sender_extension)
 		EXPECT_EQ(sc_check(ext_t.h), 0) << "amount " << amount;
 	}
 }
+
+// K_o = K_s + k^o_g G + k^o_t T, built from scratch with the generic scalar multiplication routines
+static hash reference_onetime_address(const hash& spend_public_key, const hash& sender_extension_g, const hash& sender_extension_t)
+{
+	ge_p3 T, spend_point;
+	EXPECT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
+	EXPECT_EQ(ge_frombytes_vartime(&spend_point, spend_public_key.h), 0);
+
+	ge_p3 extension_g_point, extension_t_point;
+	ge_scalarmult_base(&extension_g_point, sender_extension_g.h);
+	ge_scalarmult_p3(&extension_t_point, sender_extension_t.h, &T);
+
+	ge_cached tmp_cached;
+	ge_p1p1 tmp_p1p1;
+	ge_p3 result;
+
+	ge_p3_to_cached(&tmp_cached, &extension_g_point);
+	ge_add(&tmp_p1p1, &spend_point, &tmp_cached);
+	ge_p1p1_to_p3(&result, &tmp_p1p1);
+
+	ge_p3_to_cached(&tmp_cached, &extension_t_point);
+	ge_add(&tmp_p1p1, &result, &tmp_cached);
+	ge_p1p1_to_p3(&result, &tmp_p1p1);
+
+	hash out;
+	ge_p3_tobytes(out.h, &result);
+
+	return out;
+}
+
+TEST(carrot, gen_onetime_address)
+{
+	const hash& s = convergence_contextualized_secret;
+	const hash& k = convergence_spend_public_key;
+
+	const hash sender_extension_g = gen_sender_extension_g(s, convergence_amount, k);
+	const hash sender_extension_t = gen_sender_extension_t(s, convergence_amount, k);
+
+	hash onetime_address;
+
+	ASSERT_TRUE(gen_onetime_address(k, sender_extension_g, sender_extension_t, onetime_address));
+	ASSERT_EQ(onetime_address, convergence_onetime_address_coinbase);
+	ASSERT_EQ(onetime_address, reference_onetime_address(k, sender_extension_g, sender_extension_t));
+
+	// Zero extensions leave the spend public key untouched
+	{
+		hash h;
+		ASSERT_TRUE(gen_onetime_address(k, hash(), hash(), h));
+		ASSERT_EQ(h, k);
+	}
+
+	// The extensions are not interchangeable
+	{
+		hash h;
+		ASSERT_TRUE(gen_onetime_address(k, sender_extension_t, sender_extension_g, h));
+		ASSERT_NE(h, onetime_address);
+	}
+
+	// Only one of the two extensions
+	{
+		hash h1, h2;
+		ASSERT_TRUE(gen_onetime_address(k, sender_extension_g, hash(), h1));
+		ASSERT_TRUE(gen_onetime_address(k, hash(), sender_extension_t, h2));
+		ASSERT_NE(h1, onetime_address);
+		ASSERT_NE(h2, onetime_address);
+		ASSERT_NE(h1, h2);
+		ASSERT_EQ(h1, reference_onetime_address(k, sender_extension_g, hash()));
+		ASSERT_EQ(h2, reference_onetime_address(k, hash(), sender_extension_t));
+	}
+
+	// With the identity as the spend key, K_o is the sender extension point on its own
+	{
+		ge_p3 point;
+		ge_double_scalarmult_base_T_vartime(&point, sender_extension_g.h, sender_extension_t.h);
+
+		hash extension_point;
+		ge_p3_tobytes(extension_point.h, &point);
+
+		hash h;
+		ASSERT_TRUE(gen_onetime_address(identity_public_key, sender_extension_g, sender_extension_t, h));
+		ASSERT_EQ(h, extension_point);
+	}
+
+	// A spend public key which isn't a curve point at all
+	ASSERT_FALSE(gen_onetime_address(invalid_public_key, sender_extension_g, sender_extension_t, onetime_address));
+
+	// Points with torsion are accepted here: rejecting them is Wallet's job, because K_o has torsion if and only if K_s does
+	{
+		hash h;
+		ASSERT_TRUE(gen_onetime_address(torsion_public_key, sender_extension_g, sender_extension_t, h));
+		ASSERT_EQ(h, reference_onetime_address(torsion_public_key, sender_extension_g, sender_extension_t));
+	}
+
+	// Every amount must produce a different one-time address, since k^o_g and k^o_t depend on it
+	{
+		const std::array<uint64_t, 6> amounts = { 0, 1, 0xff, 0x100000000ULL, convergence_amount, std::numeric_limits<uint64_t>::max() };
+
+		std::vector<hash> addresses;
+
+		for (uint64_t amount : amounts) {
+			hash h;
+			ASSERT_TRUE(gen_onetime_address(k, gen_sender_extension_g(s, amount, k), gen_sender_extension_t(s, amount, k), h));
+			ASSERT_TRUE(std::find(addresses.begin(), addresses.end(), h) == addresses.end());
+			addresses.emplace_back(h);
+		}
+	}
+
+	// Random extensions, cross-checked against the generic routines
+	{
+		std::mt19937_64 rng(123);
+
+		for (int i = 0; i < 200; ++i) {
+			hash a, b;
+
+			for (size_t j = 0; j < HASH_SIZE / sizeof(uint64_t); ++j) {
+				a.u64()[j] = rng();
+				b.u64()[j] = rng();
+			}
+
+			sc_reduce32(a.h);
+			sc_reduce32(b.h);
+
+			hash h;
+			ASSERT_TRUE(gen_onetime_address(k, a, b, h));
+			ASSERT_EQ(h, reference_onetime_address(k, a, b));
+		}
+	}
+}
+
 
 TEST(carrot, gen_view_tag)
 {
@@ -469,28 +600,8 @@ TEST(carrot, coinbase_enote)
 	const hash sender_extension_t = gen_sender_extension_t(contextualized_secret, amount, w.spend_public_key());
 
 	// K_o = K_s + k^o_g G + k^o_t T
-	//
-	// TODO: replace this with gen_onetime_address() once it's implemented
-	ge_p3 T_point, spend_point, sender_extension_g_point, sender_extension_t_point, onetime_address_point;
-	ge_cached tmp_cached;
-	ge_p1p1 tmp_p1p1;
-
-	ASSERT_EQ(ge_frombytes_vartime(&T_point, T_bytes), 0);
-	ASSERT_EQ(ge_frombytes_vartime(&spend_point, w.spend_public_key().h), 0);
-
-	ge_scalarmult_base_vartime(&sender_extension_g_point, sender_extension_g.h);
-	ge_scalarmult_p3(&sender_extension_t_point, sender_extension_t.h, &T_point);
-
-	ge_p3_to_cached(&tmp_cached, &sender_extension_g_point);
-	ge_add(&tmp_p1p1, &spend_point, &tmp_cached);
-	ge_p1p1_to_p3(&onetime_address_point, &tmp_p1p1);
-
-	ge_p3_to_cached(&tmp_cached, &sender_extension_t_point);
-	ge_add(&tmp_p1p1, &onetime_address_point, &tmp_cached);
-	ge_p1p1_to_p3(&onetime_address_point, &tmp_p1p1);
-
 	hash onetime_address;
-	ge_p3_tobytes(onetime_address.h, &onetime_address_point);
+	ASSERT_TRUE(gen_onetime_address(w.spend_public_key(), sender_extension_g, sender_extension_t, onetime_address));
 	ASSERT_EQ(onetime_address, hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"));
 
 	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
@@ -513,6 +624,174 @@ TEST(carrot, coinbase_enote)
 		s << anchor_enc;
 
 		ASSERT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "246b90aaa7e33b9e1c0619d70860c56c");
+	}
+}
+
+TEST(carrot, coinbase_enote_vectors)
+{
+	// Known answers produced by Monero's own carrot_core, walking the coinbase chain for each case:
+	// make_carrot_enote_ephemeral_privkey, make_carrot_enote_ephemeral_pubkey_cryptonote,
+	// try_make_carrot_shared_key_sender, make_carrot_contextualized_sender_receiver_secret,
+	// try_make_carrot_onetime_address_coinbase, make_carrot_view_tag and make_carrot_anchor_encryption_mask,
+	// each with make_carrot_input_context_coinbase(height).
+	//
+	// Monero's carrot_convergence fixtures can't be reused directly for the whole chain: several of them
+	// take an input_context, and the one they use is an arbitrary 33 bytes, while a coinbase input context
+	// is "C" || height || zeros. These were regenerated from the same reference code for the coinbase case,
+	// which is the only shape p2pool ever builds.
+	struct Vector
+	{
+		hash spend_public_key;
+		hash view_public_key;
+		janus_anchor anchor;
+		uint64_t height;
+		uint64_t amount;
+		hash eph_priv_key;
+		hash eph_pub_key;
+		hash sender_receiver_secret;
+		hash contextualized_secret;
+		hash onetime_address;
+		const char* view_tag;
+		const char* anchor_enc;
+	};
+
+	static const Vector vectors[] = {
+		// convergence account, the vector carrot.coinbase_enote already uses
+		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
+		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
+		  3812345ULL, 600000000000ULL,
+		  hash("1d7e3ad3b7fb1ba4a935f1afd9715462b6bd7904a7cb386d1b3035660c0fcf0b"),
+		  hash("e665b92465a2c041a9ea58aeba5231402556b3d5e578ce6cdd29ff7c5dc75d68"),
+		  hash("81b0c5305287189d7e9ccf68e723cb7fb838d593874f925bc6cab59e906a7a05"),
+		  hash("f973ae7cd118cb988f5ee89410142c4894df1f49c138f33a0b1a5c27ee6eef44"),
+		  hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"),
+		  "3005d4", "246b90aaa7e33b9e1c0619d70860c56c" },
+		// height 0, amount 0
+		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
+		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
+		  0ULL, 0ULL,
+		  hash("43b0a2e192c6aae9fb02ec729fab9d1b8e8ea48542a980b516266961d5b29600"),
+		  hash("91faf11fe12752ffb90b2c637e377991dde3cc887eee56aca53d1b5e35c0e069"),
+		  hash("103d9cc297da5c6870a7c0f9d905e23396df938571bd64ebc379372d6a934d71"),
+		  hash("eb856676e772926a7544bc93a6ede7d67b9f520ff09bdbdee75f91300ab64373"),
+		  hash("f9fda7a4cc21b3d4eea22f7fde8527c1095f03759e3eeba0dc6d9463631aa3a9"),
+		  "62a6e7", "24925c2428114fc86fc8f6d50d1b44b2" },
+		// maximum amount
+		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
+		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
+		  1ULL, 18446744073709551615ULL,
+		  hash("74fb5c26d7c23e2e7be763394833d0d7d242275eef39b90f3a61db05c0564608"),
+		  hash("66b2f4c657732d604859272f3e601a8685e816e36f25eafc61189cc4220a0d3e"),
+		  hash("93d4f009b19de0da5064db77c3d404b7946c6a6ea0abb55194f8d6039777861e"),
+		  hash("ce840a7e9eb700aa836bbd3a12c0a641b50f6486e251c12148cbb1d4e33e89eb"),
+		  hash("67a9ba75af0680b750bd5c6eaf8ab811f871e73b558fe45b13cf541541f8b9fe"),
+		  "c893a8", "d3a0143df0f55753158443527b5bff2d" },
+		// test wallet, height 2^32, zero anchor
+		{ hash("48313a5b1865002b25225520212c24806ccb92347089a3fba869a8c7e6586e15"),
+		  hash("c24e9aa0f7aef7b37f4ad0a906210f78fc5794b4fa9f73f3ca2bf5a09423b12c"),
+		  { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
+		  4294967296ULL, 67000000000000ULL,
+		  hash("bd0f590dbe1084cecb8a6e9f0ccf8ccdd32d02c2a0463649319d078255891408"),
+		  hash("4295788adced1aee81ef7bebf2af71cc51b3ed37e6a94b493552c311158ac82a"),
+		  hash("9341ad2394d4d4022491e4400181547e97e8f1256f47b683d2a5b9601239671f"),
+		  hash("30218e47d03d4899b265191253c31a073327431cbbadeb11d4dc2d7aaad6aedd"),
+		  hash("7cecb3e0cff3524a3c6b5e667de847541ab9b559e5ae900a08bae8f689ae8e99"),
+		  "51df2b", "9fea1a0d41518bdc2d97b3ef1d5539e8" },
+		// test wallet, maximum height, all-ones anchor
+		{ hash("48313a5b1865002b25225520212c24806ccb92347089a3fba869a8c7e6586e15"),
+		  hash("c24e9aa0f7aef7b37f4ad0a906210f78fc5794b4fa9f73f3ca2bf5a09423b12c"),
+		  { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
+		  18446744073709551615ULL, 1ULL,
+		  hash("eb1f5bc40545c3cd7be4c45881c2bbbe55cf776c981ac6335624c53ab167070a"),
+		  hash("44543cb8a7182115c7079d9f42392704470074a59e5a7880138ff2381e1cc20f"),
+		  hash("eac4c77e893c9ee0d9f78ba2a23cd6dbdc9d070c899f0e4737a71bb3cc401b25"),
+		  hash("77daef1421818a739c8c0513b1d683efcbea2ad7a224db85c4bdc6203556af81"),
+		  hash("d090ec2d448bd4ea3a3db320b3e044e0c0e2bde34dc8bc4ba5d2ccb043337c72"),
+		  "6cf282", "eaf2251fd3ff70acf02766117355bd07" },
+	};
+
+	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
+
+	for (const Vector& v : vectors) {
+		SCOPED_TRACE(testing::Message() << "height " << v.height << ", amount " << v.amount);
+
+		Wallet w(nullptr);
+		ASSERT_TRUE(w.assign(v.spend_public_key, v.view_public_key, NetworkType::Mainnet, false));
+
+		// d_e = H_n(anchor_norm, input_context, K_s, pid)
+		hash eph_priv_key;
+		ASSERT_TRUE(gen_eph_privkey(v.anchor, v.height, w, eph_priv_key));
+		EXPECT_EQ(eph_priv_key, v.eph_priv_key);
+
+		// D_e = ConvertPointE(d_e G)
+		hash eph_pub_key;
+		ASSERT_TRUE(gen_eph_pubkey(eph_priv_key, eph_pub_key));
+		EXPECT_EQ(eph_pub_key, v.eph_pub_key);
+
+		// s_sr = ConvertPointE(d_e K_v)
+		hash sender_receiver_secret;
+		ASSERT_TRUE(gen_sender_receiver_secret(eph_priv_key, w.view_public_key(), sender_receiver_secret));
+		EXPECT_EQ(sender_receiver_secret, v.sender_receiver_secret);
+
+		// s^ctx_sr = H_32[s_sr](D_e, input_context)
+		const hash contextualized_secret = gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key, v.height);
+		EXPECT_EQ(contextualized_secret, v.contextualized_secret);
+
+		// K_o = K_s + k^o_g G + k^o_t T
+		const hash sender_extension_g = gen_sender_extension_g(contextualized_secret, v.amount, w.spend_public_key());
+		const hash sender_extension_t = gen_sender_extension_t(contextualized_secret, v.amount, w.spend_public_key());
+
+		hash onetime_address;
+		ASSERT_TRUE(gen_onetime_address(w.spend_public_key(), sender_extension_g, sender_extension_t, onetime_address));
+		EXPECT_EQ(onetime_address, v.onetime_address);
+
+		// vt = H_3[s_sr](input_context, K_o)
+		{
+			const view_tag vt = gen_view_tag(sender_receiver_secret, v.height, onetime_address);
+			log::Stream s1(buf);
+			s1 << log::hex_buf(&vt);
+			EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), v.view_tag);
+		}
+
+		// anchor_enc = anchor_norm XOR H_16[s^ctx_sr](K_o)
+		{
+			const janus_anchor anchor_enc = gen_encrypted_janus_anchor(contextualized_secret, v.anchor, onetime_address);
+			log::Stream s2(buf);
+			s2 << anchor_enc;
+			EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), v.anchor_enc);
+		}
+
+		// The batch function has to agree with the scalar chain on all three amount-dependent values
+		coinbase_output_input in{};
+		in.spend_public_key = w.spend_public_key();
+		in.sender_receiver_secret = sender_receiver_secret;
+		in.contextualized_sender_receiver_secret = contextualized_secret;
+		in.anchor = v.anchor;
+		in.amount = v.amount;
+
+		init_crypto_cache();
+		thread_pool_init();
+
+		std::vector<coinbase_output> out;
+		const bool ok = batch_coinbase_outputs(v.height, { in }, out);
+
+		thread_pool_destroy();
+		destroy_crypto_cache();
+
+		ASSERT_TRUE(ok);
+		ASSERT_EQ(out.size(), 1U);
+		EXPECT_EQ(out[0].onetime_address, v.onetime_address);
+
+		log::Stream s3(buf);
+		s3 << log::hex_buf(&out[0].vt);
+		EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), v.view_tag);
+
+		log::Stream s4(buf);
+		s4 << out[0].anchor_enc;
+		EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), v.anchor_enc);
 	}
 }
 
@@ -734,8 +1013,24 @@ TEST(carrot, batch_sender_receiver_secrets)
 	hash good_secret;
 	ASSERT_TRUE(gen_sender_receiver_secret(one, convergence_view_public_key, good_secret));
 
+	for (const hash& k : { convergence_view_public_key, torsion_public_key, identity_public_key, invalid_public_key }) {
+		hash scalar_secret;
+		const bool scalar_ok = gen_sender_receiver_secret(one, k, scalar_secret);
+
+		std::vector<std::pair<hash, bool>> batched;
+		const bool batch_ok = batch_sender_receiver_secrets({ one }, { k }, batched);
+
+		ASSERT_EQ(batched.size(), 1U);
+		ASSERT_EQ(scalar_ok, batch_ok);
+		ASSERT_EQ(scalar_ok, batched[0].second);
+
+		if (scalar_ok) {
+			ASSERT_EQ(scalar_secret, batched[0].first);
+		}
+	}
+
 	// Only the failed element is marked in each of these cases, the rest of the batch is still calculated
-	const std::array<hash, 3> invalid_view_public_keys = { identity_public_key, invalid_public_key, torsion_public_key };
+	const std::array<hash, 2> invalid_view_public_keys = { identity_public_key, invalid_public_key };
 
 	for (const hash& invalid_key : invalid_view_public_keys) {
 		for (size_t invalid_index = 0; invalid_index < 3; ++invalid_index) {
@@ -778,12 +1073,12 @@ TEST(carrot, batch_sender_receiver_secrets)
 		}
 	}
 
-	// The Carrot subgroup result is cached separately and must not change legacy point-cache behavior.
+	// Sharing the point cache with the legacy derivation code must not change its behavior
 	hash derivation;
 	uint8_t view_tag;
 
 	ASSERT_TRUE(generate_key_derivation(torsion_public_key, one, 0, derivation, view_tag));
-	ASSERT_FALSE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
+	ASSERT_TRUE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
 	ASSERT_TRUE(generate_key_derivation(torsion_public_key, two, 0, derivation, view_tag));
 
 	std::vector<hash> eph_priv_keys = { convergence_eph_priv_key };
@@ -852,7 +1147,7 @@ TEST(carrot, batch_sender_receiver_secrets)
 	// A single failed element doesn't hide the results for a large batch, and it isn't cached either
 	std::vector<hash> mixed_view_public_keys = view_public_keys;
 	const size_t mixed_index = view_public_keys.size() / 3;
-	mixed_view_public_keys[mixed_index] = torsion_public_key;
+	mixed_view_public_keys[mixed_index] = identity_public_key;
 
 	std::vector<hash> mixed_reference = reference;
 	mixed_reference[mixed_index] = hash();
@@ -910,6 +1205,519 @@ TEST(carrot, batch_sender_receiver_secrets)
 	}
 }
 
+static coinbase_output reference_coinbase_output(uint64_t height, const coinbase_output_input& in)
+{
+	coinbase_output result{};
+
+	const hash sender_extension_g = gen_sender_extension_g(in.contextualized_sender_receiver_secret, in.amount, in.spend_public_key);
+	const hash sender_extension_t = gen_sender_extension_t(in.contextualized_sender_receiver_secret, in.amount, in.spend_public_key);
+
+	result.valid = gen_onetime_address(in.spend_public_key, sender_extension_g, sender_extension_t, result.onetime_address);
+
+	if (result.valid) {
+		result.vt = gen_view_tag(in.sender_receiver_secret, height, result.onetime_address);
+		result.anchor_enc = gen_encrypted_janus_anchor(in.contextualized_sender_receiver_secret, in.anchor, result.onetime_address);
+	}
+	else {
+		result.onetime_address = hash();
+	}
+
+	return result;
+}
+
+static bool equal_outputs(const coinbase_output& a, const coinbase_output& b)
+{
+	return (a.valid == b.valid) &&
+		(a.onetime_address == b.onetime_address) &&
+		(memcmp(&a.vt, &b.vt, sizeof(view_tag)) == 0) &&
+		(memcmp(&a.anchor_enc, &b.anchor_enc, sizeof(janus_anchor)) == 0);
+}
+
+TEST(carrot, batch_coinbase_outputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	constexpr uint64_t height = 3812345;
+	constexpr uint64_t amount = 600000000000ULL;
+
+	std::vector<coinbase_output> out(1);
+
+	ASSERT_TRUE(batch_coinbase_outputs(height, {}, out));
+	ASSERT_TRUE(out.empty());
+
+	// The same enote as in carrot.coinbase_enote, one output at a time
+	Wallet w(nullptr);
+	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet, false));
+
+	hash eph_priv_key_out;
+	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, height, w, eph_priv_key_out));
+
+	hash eph_pub_key_out;
+	ASSERT_TRUE(gen_eph_pubkey(eph_priv_key_out, eph_pub_key_out));
+
+	hash sender_receiver_secret;
+	ASSERT_TRUE(gen_sender_receiver_secret(eph_priv_key_out, w.view_public_key(), sender_receiver_secret));
+
+	coinbase_output_input known{};
+	known.spend_public_key = w.spend_public_key();
+	known.sender_receiver_secret = sender_receiver_secret;
+	known.contextualized_sender_receiver_secret = gen_contextualized_sender_receiver_secret(sender_receiver_secret, eph_pub_key_out, height);
+	known.anchor = convergence_anchor;
+	known.amount = amount;
+
+	out.resize(1);
+
+	ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
+	ASSERT_EQ(out.size(), 1U);
+	ASSERT_TRUE(out[0].valid);
+	ASSERT_EQ(out[0].onetime_address, hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"));
+
+	{
+		char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
+
+		log::Stream s1(buf);
+		s1 << log::hex_buf(&out[0].vt);
+		EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), "3005d4");
+
+		log::Stream s2(buf);
+		s2 << out[0].anchor_enc;
+		EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "246b90aaa7e33b9e1c0619d70860c56c");
+	}
+
+	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
+
+	// Torsioned and identity spend keys are accepted here for the same reason gen_onetime_address accepts
+	// them: K_o has torsion if and only if K_s does, and rejecting that is Wallet's job
+	for (const hash& k : { identity_public_key, torsion_public_key }) {
+		coinbase_output_input t = known;
+		t.spend_public_key = k;
+
+		out.resize(1);
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, { t }, out)) << "spend key " << k;
+		ASSERT_EQ(out.size(), 1U);
+		EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, t))) << "spend key " << k;
+	}
+
+	// A spend public key which isn't a curve point at all only invalidates its own output.
+	// A zero Z there would zero the whole product chain, so this also checks that the dummy point holds.
+	for (size_t invalid_index = 0; invalid_index < 3; ++invalid_index) {
+		std::vector<coinbase_output_input> in(3, known);
+		in[invalid_index].spend_public_key = invalid_public_key;
+
+		// Make the other two differ from each other, so a mixed-up chain can't pass by accident
+		in[(invalid_index + 1) % 3].amount = amount + 1;
+
+		out.resize(1);
+
+		EXPECT_FALSE(batch_coinbase_outputs(height, in, out)) << "index " << invalid_index;
+		ASSERT_EQ(out.size(), 3U);
+
+		for (size_t i = 0; i < 3; ++i) {
+			EXPECT_EQ(out[i].valid, i != invalid_index) << "index " << invalid_index << ", element " << i;
+			EXPECT_TRUE(equal_outputs(out[i], reference_coinbase_output(height, in[i]))) << "index " << invalid_index << ", element " << i;
+		}
+
+		EXPECT_EQ(out[invalid_index].onetime_address, hash()) << "index " << invalid_index;
+	}
+
+	// Identical inputs produce identical K_o. That collision is exactly what the transaction-wide
+	// retry_counter has to detect, so the batch must not hide it.
+	out.resize(1);
+	ASSERT_TRUE(batch_coinbase_outputs(height, { known, known }, out));
+	ASSERT_EQ(out.size(), 2U);
+	EXPECT_EQ(out[0].onetime_address, out[1].onetime_address);
+
+	// The amount changes K_o, and everything downstream of it
+	{
+		coinbase_output_input other = known;
+		other.amount = amount + 1;
+
+		out.resize(1);
+		ASSERT_TRUE(batch_coinbase_outputs(height, { known, other }, out));
+		ASSERT_EQ(out.size(), 2U);
+		EXPECT_NE(out[0].onetime_address, out[1].onetime_address);
+	}
+
+	// The height only reaches the view tag: K_o and the encrypted anchor don't depend on it
+	{
+		std::vector<coinbase_output> out2;
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
+		ASSERT_TRUE(batch_coinbase_outputs(height + 1, { known }, out2));
+		ASSERT_EQ(out.size(), 1U);
+		ASSERT_EQ(out2.size(), 1U);
+
+		EXPECT_EQ(out[0].onetime_address, out2[0].onetime_address);
+		EXPECT_NE(memcmp(&out[0].vt, &out2[0].vt, sizeof(view_tag)), 0);
+		EXPECT_EQ(memcmp(&out[0].anchor_enc, &out2[0].anchor_enc, sizeof(janus_anchor)), 0);
+	}
+
+	// Batch sizes around all possible parallel_run thread-count boundaries exercise segmented inversion.
+	// Every size is checked against the scalar path, which doesn't depend on the thread count, so this
+	// also pins down that the segmented Montgomery chain gives the same bytes however it's split up.
+	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
+
+	std::vector<coinbase_output_input> inputs;
+	inputs.reserve(BOUNDARY_INPUTS);
+	inputs.emplace_back(known);
+
+	for (uint64_t i = 1; i < BOUNDARY_INPUTS; ++i) {
+		hash pub, sec;
+		generate_keys_deterministic(pub, sec, reinterpret_cast<const uint8_t*>(&i), sizeof(i));
+
+		coinbase_output_input t{};
+		t.spend_public_key = pub;
+		t.sender_receiver_secret = sec;
+		t.contextualized_sender_receiver_secret = gen_contextualized_sender_receiver_secret(sec, pub, height);
+		t.amount = amount + i;
+		memcpy(t.anchor.data, sec.h, CARROT_JANUS_ANCHOR_BYTES);
+
+		inputs.emplace_back(t);
+	}
+
+	std::vector<coinbase_output> reference(inputs.size());
+
+	for (size_t i = 0; i < reference.size(); ++i) {
+		reference[i] = reference_coinbase_output(height, inputs[i]);
+		ASSERT_TRUE(reference[i].valid) << "input index " << i;
+	}
+
+	size_t range_begin = 0;
+
+	for (size_t n = 1; n <= 33; ++n) {
+		const size_t range_end = range_begin + n;
+
+		const std::vector<coinbase_output_input> range(inputs.begin() + range_begin, inputs.begin() + range_end);
+
+		out.resize(1);
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, range, out)) << "batch size " << n;
+		ASSERT_EQ(out.size(), n);
+
+		for (size_t i = 0; i < n; ++i) {
+			EXPECT_TRUE(equal_outputs(out[i], reference[range_begin + i])) << "batch size " << n << ", element " << i;
+		}
+
+		range_begin = range_end;
+	}
+	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
+
+	ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
+	ASSERT_EQ(out.size(), inputs.size());
+
+	for (size_t i = 0; i < inputs.size(); ++i) {
+		EXPECT_TRUE(equal_outputs(out[i], reference[i])) << "element " << i;
+	}
+
+	// All one-time addresses are distinct, which is what makes the caller's duplicate check meaningful
+	{
+		std::vector<hash> onetime_addresses;
+		onetime_addresses.reserve(out.size());
+
+		for (const coinbase_output& t : out) {
+			onetime_addresses.emplace_back(t.onetime_address);
+		}
+
+		std::sort(onetime_addresses.begin(), onetime_addresses.end());
+		EXPECT_EQ(std::adjacent_find(onetime_addresses.begin(), onetime_addresses.end()), onetime_addresses.end());
+	}
+
+	// A single failed element in the middle of a large batch doesn't disturb the rest of it
+	{
+		std::vector<coinbase_output_input> mixed = inputs;
+		const size_t mixed_index = mixed.size() / 3;
+		mixed[mixed_index].spend_public_key = invalid_public_key;
+
+		ASSERT_FALSE(batch_coinbase_outputs(height, mixed, out));
+		ASSERT_EQ(out.size(), mixed.size());
+
+		for (size_t i = 0; i < mixed.size(); ++i) {
+			if (i == mixed_index) {
+				EXPECT_FALSE(out[i].valid);
+				EXPECT_EQ(out[i].onetime_address, hash());
+			}
+			else {
+				EXPECT_TRUE(equal_outputs(out[i], reference[i])) << "element " << i;
+			}
+		}
+	}
+}
+
+static bool equal_anchor(const janus_anchor& a, const janus_anchor& b)
+{
+	return memcmp(a.data, b.data, CARROT_JANUS_ANCHOR_BYTES) == 0;
+}
+
+// 33 wallets is enough to cross every parallel_run thread-count boundary
+static std::vector<Wallet> make_test_wallets(size_t n)
+{
+	std::vector<Wallet> wallets;
+	wallets.reserve(n);
+
+	for (uint64_t i = 0; i < n; ++i) {
+		const uint64_t si = i * 2, vi = i * 2 + 1;
+
+		hash spend_pub, spend_sec, view_pub, view_sec;
+		generate_keys_deterministic(spend_pub, spend_sec, reinterpret_cast<const uint8_t*>(&si), sizeof(si));
+		generate_keys_deterministic(view_pub, view_sec, reinterpret_cast<const uint8_t*>(&vi), sizeof(vi));
+
+		Wallet w(nullptr);
+		EXPECT_TRUE(w.assign(spend_pub, view_pub, NetworkType::Mainnet, false));
+
+		wallets.emplace_back(w);
+	}
+
+	return wallets;
+}
+
+TEST(carrot, batch_eph_privkeys)
+{
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() { thread_pool_destroy(); });
+
+	constexpr uint64_t height = 3812345;
+	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
+
+	const hash& txkey_sec = gen_janus_anchor_txkey_sec;
+
+	std::vector<janus_anchor> anchors(1);
+	std::vector<hash> eph_priv_keys(1);
+
+	ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 0, height, {}, anchors, eph_priv_keys));
+	ASSERT_TRUE(anchors.empty());
+	ASSERT_TRUE(eph_priv_keys.empty());
+
+	const std::vector<Wallet> wallets = make_test_wallets(BOUNDARY_INPUTS);
+
+	std::vector<const Wallet*> pointers;
+	pointers.reserve(BOUNDARY_INPUTS);
+
+	for (const Wallet& w : wallets) {
+		pointers.emplace_back(&w);
+	}
+
+	// The batch and the scalar path have to agree element for element
+	std::vector<janus_anchor> reference_anchors(BOUNDARY_INPUTS);
+	std::vector<hash> reference_keys(BOUNDARY_INPUTS);
+
+	for (size_t i = 0; i < BOUNDARY_INPUTS; ++i) {
+		reference_anchors[i] = gen_janus_anchor(txkey_sec, 0, wallets[i]);
+		ASSERT_TRUE(gen_eph_privkey(reference_anchors[i], height, wallets[i], reference_keys[i])) << "index " << i;
+	}
+
+	// Disjoint ranges with sizes around all possible parallel_run thread-count boundaries.
+	// Every size is checked against the scalar path, which doesn't depend on the thread count.
+	size_t range_begin = 0;
+
+	for (size_t n = 1; n <= 33; ++n) {
+		const size_t range_end = range_begin + n;
+
+		const std::vector<const Wallet*> range(pointers.begin() + range_begin, pointers.begin() + range_end);
+
+		anchors.resize(1);
+		eph_priv_keys.resize(1);
+
+		ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 0, height, range, anchors, eph_priv_keys)) << "batch size " << n;
+		ASSERT_EQ(anchors.size(), n);
+		ASSERT_EQ(eph_priv_keys.size(), n);
+
+		for (size_t i = 0; i < n; ++i) {
+			EXPECT_TRUE(equal_anchor(anchors[i], reference_anchors[range_begin + i])) << "batch size " << n << ", element " << i;
+			EXPECT_EQ(eph_priv_keys[i], reference_keys[range_begin + i]) << "batch size " << n << ", element " << i;
+		}
+
+		range_begin = range_end;
+	}
+	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
+
+	// Sizes on both sides of the point where the function stops running inline and dispatches
+	// parallel_run. The two paths must agree exactly - the split is an optimization, not a behavior.
+	for (const size_t n : { 40U, 44U, 46U, 47U, 48U, 49U, 50U, 52U, 56U, 64U, 72U, 96U }) {
+		const std::vector<const Wallet*> range(pointers.begin(), pointers.begin() + n);
+
+		anchors.resize(1);
+		eph_priv_keys.resize(1);
+
+		ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 0, height, range, anchors, eph_priv_keys)) << "batch size " << n;
+		ASSERT_EQ(anchors.size(), n);
+
+		for (size_t i = 0; i < n; ++i) {
+			EXPECT_TRUE(equal_anchor(anchors[i], reference_anchors[i])) << "batch size " << n << ", element " << i;
+			EXPECT_EQ(eph_priv_keys[i], reference_keys[i]) << "batch size " << n << ", element " << i;
+		}
+	}
+
+	ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 0, height, pointers, anchors, eph_priv_keys));
+	ASSERT_EQ(anchors.size(), BOUNDARY_INPUTS);
+
+	for (size_t i = 0; i < BOUNDARY_INPUTS; ++i) {
+		EXPECT_TRUE(equal_anchor(anchors[i], reference_anchors[i])) << "element " << i;
+		EXPECT_EQ(eph_priv_keys[i], reference_keys[i]) << "element " << i;
+	}
+
+	// All anchors and all keys are distinct, which is what the Carrot duplicate checks rely on
+	{
+		std::vector<hash> sorted = eph_priv_keys;
+		std::sort(sorted.begin(), sorted.end());
+		EXPECT_EQ(std::adjacent_find(sorted.begin(), sorted.end()), sorted.end());
+	}
+
+	// retry_counter and txkey_sec both change the anchor, and the key with it
+	{
+		std::vector<janus_anchor> other_anchors;
+		std::vector<hash> other_keys;
+
+		ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 1, height, pointers, other_anchors, other_keys));
+		EXPECT_FALSE(equal_anchor(other_anchors[0], anchors[0]));
+		EXPECT_NE(other_keys[0], eph_priv_keys[0]);
+
+		ASSERT_TRUE(batch_eph_privkeys(hash(), 0, height, pointers, other_anchors, other_keys));
+		EXPECT_FALSE(equal_anchor(other_anchors[0], anchors[0]));
+		EXPECT_NE(other_keys[0], eph_priv_keys[0]);
+	}
+
+	// The height only reaches d_e: the anchor doesn't depend on it
+	{
+		std::vector<janus_anchor> other_anchors;
+		std::vector<hash> other_keys;
+
+		ASSERT_TRUE(batch_eph_privkeys(txkey_sec, 0, height + 1, pointers, other_anchors, other_keys));
+		EXPECT_TRUE(equal_anchor(other_anchors[0], anchors[0]));
+		EXPECT_NE(other_keys[0], eph_priv_keys[0]);
+	}
+
+	// A null wallet only zeroes its own element
+	for (size_t null_index = 0; null_index < 3; ++null_index) {
+		std::vector<const Wallet*> mixed(pointers.begin(), pointers.begin() + 3);
+		mixed[null_index] = nullptr;
+
+		EXPECT_FALSE(batch_eph_privkeys(txkey_sec, 0, height, mixed, anchors, eph_priv_keys)) << "index " << null_index;
+		ASSERT_EQ(anchors.size(), 3U);
+
+		for (size_t i = 0; i < 3; ++i) {
+			const bool null_element = (i == null_index);
+
+			EXPECT_TRUE(equal_anchor(anchors[i], null_element ? janus_anchor{} : reference_anchors[i])) << "index " << null_index << ", element " << i;
+			EXPECT_EQ(eph_priv_keys[i], null_element ? hash() : reference_keys[i]) << "index " << null_index << ", element " << i;
+		}
+	}
+}
+
+TEST(carrot, batch_contextualized_sender_receiver_secrets)
+{
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() { thread_pool_destroy(); });
+
+	constexpr uint64_t height = 3812345;
+	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
+
+	std::vector<std::pair<hash, bool>> out(1);
+
+	ASSERT_TRUE(batch_contextualized_sender_receiver_secrets({}, {}, height, out));
+	ASSERT_TRUE(out.empty());
+
+	// Size mismatch is rejected outright
+	out.resize(1);
+	ASSERT_FALSE(batch_contextualized_sender_receiver_secrets({ { one, true } }, {}, height, out));
+	ASSERT_TRUE(out.empty());
+
+	std::vector<std::pair<hash, bool>> sender_receiver_secrets, eph_pub_keys;
+	std::vector<hash> reference(BOUNDARY_INPUTS);
+
+	sender_receiver_secrets.reserve(BOUNDARY_INPUTS);
+	eph_pub_keys.reserve(BOUNDARY_INPUTS);
+
+	for (uint64_t i = 0; i < BOUNDARY_INPUTS; ++i) {
+		const uint64_t si = i * 2, ei = i * 2 + 1;
+
+		hash s, e, unused;
+		generate_keys_deterministic(s, unused, reinterpret_cast<const uint8_t*>(&si), sizeof(si));
+		generate_keys_deterministic(e, unused, reinterpret_cast<const uint8_t*>(&ei), sizeof(ei));
+
+		sender_receiver_secrets.emplace_back(s, true);
+		eph_pub_keys.emplace_back(e, true);
+
+		reference[i] = gen_contextualized_sender_receiver_secret(s, e, height);
+	}
+
+	// Disjoint ranges around every parallel_run thread-count boundary, all against the scalar path
+	size_t range_begin = 0;
+
+	for (size_t n = 1; n <= 33; ++n) {
+		const size_t range_end = range_begin + n;
+
+		const std::vector<std::pair<hash, bool>> s_range(sender_receiver_secrets.begin() + range_begin, sender_receiver_secrets.begin() + range_end);
+		const std::vector<std::pair<hash, bool>> e_range(eph_pub_keys.begin() + range_begin, eph_pub_keys.begin() + range_end);
+		const std::vector<hash> range_reference(reference.begin() + range_begin, reference.begin() + range_end);
+
+		out.resize(1);
+
+		ASSERT_TRUE(batch_contextualized_sender_receiver_secrets(s_range, e_range, height, out)) << "batch size " << n;
+		ASSERT_EQ(out.size(), n);
+		EXPECT_TRUE(equal_values(out, range_reference)) << "batch size " << n;
+
+		range_begin = range_end;
+	}
+	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
+
+	// Sizes on both sides of the inline/parallel_run switch, same reasoning as in batch_eph_privkeys
+	for (const size_t n : { 48U, 52U, 54U, 55U, 56U, 57U, 58U, 60U, 64U, 72U, 96U }) {
+		const std::vector<std::pair<hash, bool>> s_range(sender_receiver_secrets.begin(), sender_receiver_secrets.begin() + n);
+		const std::vector<std::pair<hash, bool>> e_range(eph_pub_keys.begin(), eph_pub_keys.begin() + n);
+		const std::vector<hash> range_reference(reference.begin(), reference.begin() + n);
+
+		out.resize(1);
+
+		ASSERT_TRUE(batch_contextualized_sender_receiver_secrets(s_range, e_range, height, out)) << "batch size " << n;
+		ASSERT_EQ(out.size(), n);
+		EXPECT_TRUE(equal_values(out, range_reference)) << "batch size " << n;
+	}
+
+	ASSERT_TRUE(batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height, out));
+	EXPECT_TRUE(equal_values(out, reference));
+
+	// The height is part of the input context, so it changes every secret
+	{
+		std::vector<std::pair<hash, bool>> out2;
+		ASSERT_TRUE(batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height + 1, out2));
+
+		for (size_t i = 0; i < BOUNDARY_INPUTS; ++i) {
+			EXPECT_NE(out2[i].first, out[i].first) << "element " << i;
+		}
+	}
+
+	// An invalid input on either side invalidates only its own element, and leaves it unhashed
+	for (int side = 0; side < 2; ++side) {
+		for (size_t invalid_index = 0; invalid_index < 3; ++invalid_index) {
+			std::vector<std::pair<hash, bool>> s_in(sender_receiver_secrets.begin(), sender_receiver_secrets.begin() + 3);
+			std::vector<std::pair<hash, bool>> e_in(eph_pub_keys.begin(), eph_pub_keys.begin() + 3);
+
+			((side == 0) ? s_in : e_in)[invalid_index].second = false;
+
+			out.resize(1);
+
+			EXPECT_FALSE(batch_contextualized_sender_receiver_secrets(s_in, e_in, height, out)) << "side " << side << ", index " << invalid_index;
+			ASSERT_EQ(out.size(), 3U);
+
+			for (size_t i = 0; i < 3; ++i) {
+				const bool expected_ok = (i != invalid_index);
+
+				EXPECT_EQ(out[i].second, expected_ok) << "side " << side << ", index " << invalid_index << ", element " << i;
+				EXPECT_EQ(out[i].first, expected_ok ? reference[i] : hash()) << "side " << side << ", index " << invalid_index << ", element " << i;
+			}
+		}
+	}
+}
+
 TEST(carrot, sender_receiver_secret_cache_states)
 {
 	init_crypto_cache();
@@ -923,8 +1731,7 @@ TEST(carrot, sender_receiver_secret_cache_states)
 	constexpr uint32_t PRESENT = 1U;
 	constexpr uint32_t VALID = 2U;
 	constexpr uint32_t HAS_PRECOMP = 4U;
-	constexpr uint32_t SUBGROUP_CHECKED = 8U;
-	constexpr uint32_t MAIN_SUBGROUP = 16U;
+	constexpr uint32_t TORSION_CHECKED = 8U;
 
 	std::vector<std::pair<hash, bool>> out;
 	hash derivation;
@@ -935,39 +1742,36 @@ TEST(carrot, sender_receiver_secret_cache_states)
 	ASSERT_FALSE(batch_sender_receiver_secrets({ one }, { invalid_public_key }, out));
 	ASSERT_EQ(get_from_bytes_cache_state(invalid_public_key), PRESENT);
 
-	// Valid, no precomputation, subgroup unchecked -> valid main subgroup with precomputation.
+	// Valid, no precomputation -> the precomputation is added
 	clear_crypto_cache();
 
 	ASSERT_TRUE(derive_public_key(one, 0, convergence_view_public_key, derivation));
 	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID);
 	ASSERT_TRUE(batch_sender_receiver_secrets({ one }, { convergence_view_public_key }, out));
-	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID | HAS_PRECOMP | SUBGROUP_CHECKED | MAIN_SUBGROUP);
+	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID | HAS_PRECOMP);
 
-	// Valid, precomputed, subgroup unchecked -> valid main subgroup with the existing precomputation.
+	// Valid and already precomputed by the legacy path -> the existing precomputation is reused
 	clear_crypto_cache();
 
 	ASSERT_TRUE(generate_key_derivation(convergence_view_public_key, one, 0, derivation, view_tag));
 	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID | HAS_PRECOMP);
 	ASSERT_TRUE(batch_sender_receiver_secrets({ one }, { convergence_view_public_key }, out));
-	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID | HAS_PRECOMP | SUBGROUP_CHECKED | MAIN_SUBGROUP);
+	ASSERT_EQ(get_from_bytes_cache_state(convergence_view_public_key), PRESENT | VALID | HAS_PRECOMP);
 
-	// Valid, non-main-subgroup, without and then with a legacy precomputation.
+	// A point outside the prime order subgroup is cached like any other valid point: these paths
+	// don't do a subgroup or torsion check, they rely on Wallet having done it at parse time.
+	// TORSION_CHECKED must stay clear here, or a key that was never checked would look checked.
 	clear_crypto_cache();
 
-	ASSERT_FALSE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
-	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | SUBGROUP_CHECKED);
-	ASSERT_TRUE(generate_key_derivation(torsion_public_key, one, 0, derivation, view_tag));
-	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP | SUBGROUP_CHECKED);
-	ASSERT_FALSE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
-	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP | SUBGROUP_CHECKED);
-
-	// Valid, precomputed, subgroup unchecked -> checked and rejected as non-main-subgroup.
-	clear_crypto_cache();
-
+	ASSERT_TRUE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
+	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP);
 	ASSERT_TRUE(generate_key_derivation(torsion_public_key, one, 0, derivation, view_tag));
 	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP);
-	ASSERT_FALSE(batch_sender_receiver_secrets({ one }, { torsion_public_key }, out));
-	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP | SUBGROUP_CHECKED);
+
+	// check_public_key() adds the torsion flags to the existing entry, and the answer for this
+	// key is "not torsion free", so TORSION_FREE stays clear
+	ASSERT_FALSE(check_public_key(torsion_public_key));
+	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP | TORSION_CHECKED);
 }
 
 } // namespace carrot
