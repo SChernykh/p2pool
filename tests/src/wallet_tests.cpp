@@ -22,6 +22,18 @@
 
 namespace p2pool {
 
+// Real wallet public keys: k*G, so always in the prime order subgroup
+static constexpr hash valid_spend_pub("d2e232e441546a695b27187692d035ef7be5c54692700c9f470dcd706753a833");
+static constexpr hash valid_view_pub("06f68970da46f709e2b4d0ffabd0d1f78ea6717786b5766c25c259111f212490");
+
+// The same two keys plus a point of order 8: still valid curve points, but with torsion
+static constexpr hash torsioned_spend_pub("bd5886e258615b51bdff73f8ae3b9947cf021162325ee8a7f0c787f6f6889836");
+static constexpr hash torsioned_view_pub("33504b48a8074c5af955e83cf125f8462b1abfe3b5084efa67cc07ec2bcd5b50");
+
+static constexpr hash identity_pub("0100000000000000000000000000000000000000000000000000000000000000");
+static constexpr hash order2_pub("ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f");
+static constexpr hash order8_pub("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05");
+
 TEST(wallet, input_output)
 {
 	// No data
@@ -65,15 +77,86 @@ TEST(wallet, input_output)
 		Wallet w(nullptr);
 
 		constexpr hash invalid_spend_pub = keccak("invalid spend pub key 1");
-		constexpr hash valid_spend_pub = keccak("valid spend pub key 2");
-
 		constexpr hash invalid_view_pub = keccak("invalid view pub key 3");
-		constexpr hash valid_view_pub = keccak("valid view pub key 1");
 
 		ASSERT_TRUE(w.assign(valid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
 		ASSERT_FALSE(w.assign(invalid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
 		ASSERT_FALSE(w.assign(valid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
 		ASSERT_FALSE(w.assign(invalid_spend_pub, invalid_view_pub, NetworkType::Mainnet, false));
+	}
+
+	// Public keys which are valid points, but are not in the prime order subgroup.
+	//
+	// FCMP++ rejects coinbase outputs with torsion, and K_o = K_s + k^o_g G + k^o_t T has torsion
+	// if and only if K_s does, so these must never make it into a share.
+	{
+		Wallet w(nullptr);
+
+		ASSERT_FALSE(w.assign(torsioned_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(valid_spend_pub, torsioned_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(torsioned_spend_pub, torsioned_view_pub, NetworkType::Mainnet, false));
+
+		// Points of small order are rejected too (they don't even satisfy the pre-condition of the torsion check)
+		for (const hash& k : { identity_pub, order2_pub, order8_pub }) {
+			ASSERT_FALSE(w.assign(k, valid_view_pub, NetworkType::Mainnet, false));
+			ASSERT_FALSE(w.assign(valid_spend_pub, k, NetworkType::Mainnet, false));
+		}
+
+		// A rejected key pair must leave the wallet untouched
+		ASSERT_TRUE(w.assign(valid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(w.assign(torsioned_spend_pub, torsioned_view_pub, NetworkType::Mainnet, false));
+		ASSERT_TRUE(w.valid());
+		ASSERT_EQ(w.spend_public_key(), valid_spend_pub);
+		ASSERT_EQ(w.view_public_key(), valid_view_pub);
+		ASSERT_TRUE(w.torsion_check());
+	}
+
+	// The same thing through decode(). The control address is built by exactly the same generator as the
+	// three bad ones, so if it decodes then their base58 and checksums are good and torsion is what fails.
+	{
+		Wallet control("491sZoncdcwTUw6rax1Tqv7yx7TYdXTovDYHJwPu8zQTg51VCT72NZyTownPHbLpBseNitWzgxdJt32eD45VwddEHDTwBjm");
+		ASSERT_TRUE(control.valid());
+		ASSERT_TRUE(control.torsion_check());
+		ASSERT_EQ(control.spend_public_key(), hash("c3134df7b4f43c9e52b942080a9b8d29bdf723ada386194af7bf36a6a9766ce9"));
+		ASSERT_EQ(control.view_public_key(), hash("9435e4a23dc4f4a048698c41b11f2adf7299e46fcbb5850c205d65cd85e1b58f"));
+
+		// Same address, with the spend key, the view key, or both replaced by a torsioned point
+		Wallet w1("48oH9tLdYrvEg169xBenuvD1dkVCYog9VV6EZ1cAxC15A38dQNCmyjc2euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HHp2hoP");
+		Wallet w2("49ccoSmrBTPJd5yf8VYCULh4J5rHQaXP1TeC8Cnqhd5H9Zi6Cdm4u9uGDZZgZcMZ7DCjipxX8BJ53itFJaLR4ME2A5KG1db");
+		Wallet w3("48oH9tLdYrvEg169xBenuvD1dkVCYog9VV6EZ1cAxC15A4p7F4DYixTGDZZgZcMZ7DCjipxX8BJ53itFJaLR4ME2A3GMGUm");
+
+		ASSERT_FALSE(w1.valid());
+		ASSERT_FALSE(w2.valid());
+		ASSERT_FALSE(w3.valid());
+
+		// All three are well formed addresses whose keys are unusable, which is what lets
+		// Params::valid() tell the user that instead of "Invalid wallet address"
+		ASSERT_TRUE(w1.is_torsioned());
+		ASSERT_TRUE(w2.is_torsioned());
+		ASSERT_TRUE(w3.is_torsioned());
+
+		ASSERT_FALSE(control.is_torsioned());
+
+		// A damaged address must not be reported as torsioned: its keys are whatever the broken
+		// base58 happened to decode to, so torsion says nothing about what the user typed
+		{
+			char buf[Wallet::ADDRESS_LENGTH + 1] = {};
+			memcpy(buf, "48oH9tLdYrvEg169xBenuvD1dkVCYog9VV6EZ1cAxC15A38dQNCmyjc2euLmMghKtCiQcgZEiGYW1K6Ae4biZ7w1HHp2hoP", Wallet::ADDRESS_LENGTH);
+			buf[Wallet::ADDRESS_LENGTH - 1] = (buf[Wallet::ADDRESS_LENGTH - 1] == 'P') ? 'Q' : 'P';
+
+			Wallet broken(buf);
+			ASSERT_FALSE(broken.valid());
+			ASSERT_FALSE(broken.is_torsioned());
+		}
+
+		// The flag survives a copy, and assign() clears it
+		Wallet copy(w1);
+		ASSERT_TRUE(copy.is_torsioned());
+		ASSERT_FALSE(copy.valid());
+
+		ASSERT_TRUE(copy.assign(valid_spend_pub, valid_view_pub, NetworkType::Mainnet, false));
+		ASSERT_FALSE(copy.is_torsioned());
+		ASSERT_TRUE(copy.valid());
 	}
 
 	// Invalid prefix

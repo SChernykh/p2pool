@@ -243,6 +243,16 @@ struct PoolBlock
 		mm_n_aux_chains = 1U + ((k >> 3U) & ((1U << n) - 1U));
 		mm_nonce = static_cast<uint32_t>(m_merkleTreeData >> (3U + n));
 	}
+
+	[[nodiscard]] static constexpr size_t output_blob_size_estimate(uint8_t major_version)
+	{
+		constexpr size_t OUTPUT_BLOB_SIZE = 5 + 1 + HASH_SIZE + 1;
+		constexpr size_t CARROT_OUTPUT_BLOB_SIZE = 5 + 1 + HASH_SIZE + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES;
+
+		return (major_version >= HARDFORK_VERSION_CARROT) ? CARROT_OUTPUT_BLOB_SIZE : OUTPUT_BLOB_SIZE;
+	}
+
+	[[nodiscard]] constexpr size_t output_blob_size_estimate() const { return output_blob_size_estimate(m_majorVersion); }
 };
 
 } // namespace p2pool

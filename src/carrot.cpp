@@ -19,6 +19,7 @@
 #include "carrot.h"
 #include "crypto.h"
 #include "wallet.h"
+#include "uv_util.h"
 #include "blake2/blake2.h"
 
 namespace p2pool {
@@ -116,10 +117,11 @@ bool gen_eph_pubkey(const hash& eph_priv_key, hash& eph_pub_key)
 	return true;
 }
 
+// Pre-condition: view_public_key must be in the prime order subgroup. batch_sender_receiver_secrets relies on the same pre-condition.
 bool gen_sender_receiver_secret(const hash& eph_priv_key, const hash& view_public_key, hash& secret)
 {
 	ge_p3 view_point;
-	if ((ge_frombytes_vartime(&view_point, view_public_key.h) != 0) || !is_in_main_subgroup(view_point)) {
+	if (ge_frombytes_vartime(&view_point, view_public_key.h) != 0) {
 		return false;
 	}
 
@@ -175,6 +177,32 @@ hash gen_sender_extension_t(const hash& contextualized_sender_receiver_secret, u
 	return result;
 }
 
+bool gen_onetime_address(const hash& spend_public_key, const hash& sender_extension_g, const hash& sender_extension_t, hash& onetime_address)
+{
+	// K_s
+	ge_p3 spend_point;
+	if (ge_frombytes_vartime(&spend_point, spend_public_key.h) != 0) {
+		return false;
+	}
+
+	// K^o_ext = k^o_g G + k^o_t T
+	ge_p3 extension_point;
+	ge_double_scalarmult_base_T_vartime(&extension_point, sender_extension_g.h, sender_extension_t.h);
+
+	// K_o = K_s + K^o_ext
+	ge_cached extension_cached;
+	ge_p3_to_cached(&extension_cached, &extension_point);
+
+	ge_p1p1 sum;
+	ge_add(&sum, &spend_point, &extension_cached);
+
+	ge_p2 result;
+	ge_p1p1_to_p2(&result, &sum);
+	ge_tobytes(onetime_address.h, &result);
+
+	return true;
+}
+
 view_tag gen_view_tag(const hash& sender_receiver_secret, uint64_t height, const hash& onetime_address)
 {
 	auto t = transcript(
@@ -203,6 +231,99 @@ janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiv
 
 	for (size_t i = 0; i < CARROT_JANUS_ANCHOR_BYTES; ++i) {
 		result.data[i] = anchor.data[i] ^ mask.data[i];
+	}
+
+	return result;
+}
+
+// anchor_norm and d_e for every output. A failed element (a zero d_e, so probability 2^-252) leaves both outputs zeroed.
+bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys)
+{
+	anchors.clear();
+	eph_priv_keys.clear();
+
+	const size_t N = wallets.size();
+
+	if (N == 0) {
+		return true;
+	}
+
+	anchors.assign(N, janus_anchor{});
+	eph_priv_keys.assign(N, hash());
+
+	std::atomic<bool> result = true;
+
+	auto work = [N, &txkey_sec, retry_counter, height, &wallets, &anchors, &eph_priv_keys, &result](uint32_t thread_index, uint32_t total_thread_count) {
+		const size_t a = (N * thread_index) / total_thread_count;
+		const size_t b = (N * (thread_index + 1)) / total_thread_count;
+
+		for (size_t i = a; i < b; ++i) {
+			const Wallet* w = wallets[i];
+
+			if (!w) {
+				result = false;
+				continue;
+			}
+
+			anchors[i] = gen_janus_anchor(txkey_sec, retry_counter, *w);
+
+			if (!gen_eph_privkey(anchors[i], height, *w, eph_priv_keys[i])) {
+				result = false;
+				eph_priv_keys[i] = hash();
+			}
+		}
+	};
+
+	if (N <= 80) {
+		work(0, 1);
+	}
+	else {
+		parallel_run(std::move(work), true);
+	}
+
+	return result;
+}
+
+// s^ctx_sr for every output, from the s_sr and D_e that batch_sender_receiver_secrets and batch_eph_pubkeys produced.
+// An element is valid only if both of its inputs were; invalid ones are left zeroed and unhashed.
+bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<hash, bool>>& sender_receiver_secrets, const std::vector<std::pair<hash, bool>>& eph_pub_keys, uint64_t height, std::vector<std::pair<hash, bool>>& secrets)
+{
+	secrets.clear();
+
+	const size_t N = sender_receiver_secrets.size();
+
+	if (eph_pub_keys.size() != N) {
+		return false;
+	}
+
+	if (N == 0) {
+		return true;
+	}
+
+	secrets.assign(N, { hash(), true });
+
+	std::atomic<bool> result = true;
+
+	auto work = [N, &sender_receiver_secrets, &eph_pub_keys, height, &secrets, &result](uint32_t thread_index, uint32_t total_thread_count) {
+		const size_t a = (N * thread_index) / total_thread_count;
+		const size_t b = (N * (thread_index + 1)) / total_thread_count;
+
+		for (size_t i = a; i < b; ++i) {
+			if (!sender_receiver_secrets[i].second || !eph_pub_keys[i].second) {
+				result = false;
+				secrets[i].second = false;
+				continue;
+			}
+
+			secrets[i].first = gen_contextualized_sender_receiver_secret(sender_receiver_secrets[i].first, eph_pub_keys[i].first, height);
+		}
+	};
+
+	if (N <= 80) {
+		work(0, 1);
+	}
+	else {
+		parallel_run(std::move(work), true);
 	}
 
 	return result;

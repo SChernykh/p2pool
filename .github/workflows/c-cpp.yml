@@ -123,6 +123,7 @@ jobs:
           - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
           - {os: ubuntu-24.04, c: gcc-13, cpp: g++-13, flags: ""}
           - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: ""}
+          - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: "-DFE_FORCE_RADIX_25_5", suffix: "-radix-2-25-5"}
 
     steps:
     - name: Install dependencies
@@ -167,7 +168,7 @@ jobs:
     - name: Archive binary
       uses: actions/upload-artifact@v7
       with:
-        name: p2pool-${{ matrix.config.os }}-${{ matrix.config.c }}
+        name: p2pool-${{ matrix.config.os }}-${{ matrix.config.c }}${{ matrix.config.suffix }}
         path: build/p2pool
 
   build-ubuntu-static-libs:

@@ -37,6 +37,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #include "crypto-ops.h"
 
 /* Predeclarations */
@@ -67,11 +71,315 @@ uint64_t load_4(const unsigned char *in)
   return result;
 }
 
+
+#if FE_RADIX_51
+
+static uint64_t load_8(const unsigned char *in)
+{
+  return load_4(in) | (load_4(in + 4) << 32);
+}
+
+/*
+Radix 2^51 field arithmetic.
+
+A field element is 5 unsigned 64-bit limbs, h = h[0] + h[1]*2^51 + ... + h[4]*2^204.
+
+Bounds contract, which every function below both relies on and maintains:
+
+  - "reduced": every limb <= 2^51. This is what fe_mul, fe_sq, fe_sq2, fe_sub, fe_neg,
+    fe_frombytes_vartime, fe_0 and fe_1 produce, and what fe51_carry restores.
+  - "loose": a sum of at most 8 reduced values, so every limb <= 2^54. fe_add produces
+    this, and chaining fe_add adds up the term counts of its inputs.
+  - fe_mul and fe_sq accept loose inputs. The largest partial product is 2^54 * 19*2^54 <
+    2^112.3, and five of those still leave 13 bits of headroom in 128.
+  - fe_sub and fe_neg add 8p before subtracting, so the subtrahend must be at most 8p, and
+    8p limbs are 2^54 - 152 and 2^54 - 8, just BELOW the loose bound. That makes the limit
+    a sum of at most SEVEN reduced values, not eight: eight of them reach 2^54 and underflow
+    the first two limbs by up to 160. Nothing in this file comes near that - the widest
+    subtrahend the group code produces is a sum of two, in ge_p2_dbl - and ref10 is tighter
+    still, since its own fe_sub precondition is about one reduced value, so any ref10-correct
+    caller is safe here. Getting this right matters by construction rather than by testing:
+    random inputs never land in the failing corner.
+  - fe_tobytes accepts loose inputs, and fe_reduce turns a loose value back into a
+    reduced one.
+
+Callers may therefore chain several fe_add before a multiply, square or subtract, which
+is what ge_madd (t0 = Z + Z, then r->Z = t0 + r->T) and ge_p2_dbl do.
+*/
+
+#define FE51_MASK 0x7ffffffffffffULL
+
+/* 8p, used to keep subtraction results positive */
+#define FE51_8P_0 0x3fffffffffff68ULL
+#define FE51_8P_N 0x3ffffffffffff8ULL
+
+#if defined(_MSC_VER) || defined(FE51_FORCE_WIDE_PAIR)
+#define FE51_WIDE_PAIR 1
+#else
+#define FE51_WIDE_PAIR 0
+#endif
+
+#if defined(_MSC_VER)
+#define FE51_INLINE __forceinline
+#elif defined(__GNUC__)
+#define FE51_INLINE __attribute__((always_inline)) inline
+#else
+#define FE51_INLINE inline
+#endif
+
+#if FE51_WIDE_PAIR
+
+static FE51_INLINE uint64_t fe51_mul64(uint64_t a, uint64_t b, uint64_t *hi) {
+#if defined(_MSC_VER) && defined(_M_X64)
+  return _umul128(a, b, hi);
+#elif defined(_MSC_VER)
+  *hi = __umulh(a, b);
+  return a * b;
+#else
+  const unsigned __int128 p = (unsigned __int128) a * b;
+  *hi = (uint64_t) (p >> 64);
+  return (uint64_t) p;
+#endif
+}
+
+static FE51_INLINE unsigned char fe51_addc(unsigned char carry_in, uint64_t a, uint64_t b, uint64_t *out) {
+#if defined(_MSC_VER) && defined(_M_X64)
+  return _addcarry_u64(carry_in, a, b, out);
+#else
+  const uint64_t t = a + carry_in;
+  const uint64_t r = t + b;
+  *out = r;
+  return (unsigned char) ((t < a) | (r < t));
+#endif
+}
+
+#define FE51_ACC       uint64_t acc_lo, acc_hi
+#define FE51_SET(a, b) (acc_lo = fe51_mul64((a), (b), &acc_hi))
+#define FE51_MAC(a, b) \
+  do { \
+    uint64_t fe51_hi_; \
+    const uint64_t fe51_lo_ = fe51_mul64((a), (b), &fe51_hi_); \
+    const unsigned char fe51_c_ = fe51_addc(0, acc_lo, fe51_lo_, &acc_lo); \
+    (void) fe51_addc(fe51_c_, acc_hi, fe51_hi_, &acc_hi); \
+  } while (0)
+#define FE51_ADD64(v) \
+  do { \
+    const unsigned char fe51_c_ = fe51_addc(0, acc_lo, (v), &acc_lo); \
+    (void) fe51_addc(fe51_c_, acc_hi, 0, &acc_hi); \
+  } while (0)
+#define FE51_LOW51 (acc_lo & FE51_MASK)
+#define FE51_SHR51 ((acc_lo >> 51) | (acc_hi << 13))
+
+#else
+
+#define FE51_ACC       __uint128_t acc
+#define FE51_SET(a, b) (acc = (__uint128_t) (a) * (b))
+#define FE51_MAC(a, b) (acc += (__uint128_t) (a) * (b))
+#define FE51_ADD64(v)  (acc += (v))
+#define FE51_LOW51     ((uint64_t) acc & FE51_MASK)
+#define FE51_SHR51     ((uint64_t) (acc >> 51))
+
+#endif
+
+/* Propagate carries so that every limb is <= 2^51 + 1 */
+static void fe51_carry(fe h) {
+  uint64_t c;
+  c = h[0] >> 51; h[0] &= FE51_MASK; h[1] += c;
+  c = h[1] >> 51; h[1] &= FE51_MASK; h[2] += c;
+  c = h[2] >> 51; h[2] &= FE51_MASK; h[3] += c;
+  c = h[3] >> 51; h[3] &= FE51_MASK; h[4] += c;
+  c = h[4] >> 51; h[4] &= FE51_MASK; h[0] += c * 19;
+  c = h[0] >> 51; h[0] &= FE51_MASK; h[1] += c;
+}
+
+void fe_0(fe h) {
+  h[0] = 0; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
+}
+
+void fe_1(fe h) {
+  h[0] = 1; h[1] = 0; h[2] = 0; h[3] = 0; h[4] = 0;
+}
+
+void fe_copy(fe h, const fe f) {
+  h[0] = f[0]; h[1] = f[1]; h[2] = f[2]; h[3] = f[3]; h[4] = f[4];
+}
+
+void fe_add(fe h, const fe f, const fe g) {
+  h[0] = f[0] + g[0]; h[1] = f[1] + g[1]; h[2] = f[2] + g[2];
+  h[3] = f[3] + g[3]; h[4] = f[4] + g[4];
+}
+
+void fe_sub(fe h, const fe f, const fe g) {
+  h[0] = f[0] + FE51_8P_0 - g[0];
+  h[1] = f[1] + FE51_8P_N - g[1];
+  h[2] = f[2] + FE51_8P_N - g[2];
+  h[3] = f[3] + FE51_8P_N - g[3];
+  h[4] = f[4] + FE51_8P_N - g[4];
+  fe51_carry(h);
+}
+
+void fe_neg(fe h, const fe f) {
+  h[0] = FE51_8P_0 - f[0];
+  h[1] = FE51_8P_N - f[1];
+  h[2] = FE51_8P_N - f[2];
+  h[3] = FE51_8P_N - f[3];
+  h[4] = FE51_8P_N - f[4];
+  fe51_carry(h);
+}
+
+/* Replace f with g if b, in constant time. b must be 0 or 1 */
+static void fe_cmov(fe f, const fe g, unsigned int b) {
+  const uint64_t mask = (uint64_t) (-(int64_t) b);
+  int i;
+  for (i = 0; i < 5; ++i) {
+    f[i] ^= mask & (f[i] ^ g[i]);
+  }
+}
+
+void fe_mul(fe h, const fe f, const fe g) {
+  const uint64_t f0 = f[0], f1 = f[1], f2 = f[2], f3 = f[3], f4 = f[4];
+  const uint64_t g0 = g[0], g1 = g[1], g2 = g[2], g3 = g[3], g4 = g[4];
+  const uint64_t g1_19 = 19 * g1, g2_19 = 19 * g2, g3_19 = 19 * g3, g4_19 = 19 * g4;
+  uint64_t h0, h1, h2, h3, h4, c;
+  FE51_ACC;
+
+  FE51_SET(f0, g0); FE51_MAC(f1, g4_19); FE51_MAC(f2, g3_19); FE51_MAC(f3, g2_19); FE51_MAC(f4, g1_19);
+  h0 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0, g1); FE51_MAC(f1, g0);    FE51_MAC(f2, g4_19); FE51_MAC(f3, g3_19); FE51_MAC(f4, g2_19); FE51_ADD64(c);
+  h1 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0, g2); FE51_MAC(f1, g1);    FE51_MAC(f2, g0);    FE51_MAC(f3, g4_19); FE51_MAC(f4, g3_19); FE51_ADD64(c);
+  h2 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0, g3); FE51_MAC(f1, g2);    FE51_MAC(f2, g1);    FE51_MAC(f3, g0);    FE51_MAC(f4, g4_19); FE51_ADD64(c);
+  h3 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0, g4); FE51_MAC(f1, g3);    FE51_MAC(f2, g2);    FE51_MAC(f3, g1);    FE51_MAC(f4, g0);    FE51_ADD64(c);
+  h4 = FE51_LOW51; c = FE51_SHR51;
+
+  h0 += c * 19;   h1 += h0 >> 51; h0 &= FE51_MASK;
+  h2 += h1 >> 51; h1 &= FE51_MASK;
+
+  h[0] = h0; h[1] = h1; h[2] = h2; h[3] = h3; h[4] = h4;
+}
+
+void fe_sq(fe h, const fe f) {
+  const uint64_t f0 = f[0], f1 = f[1], f2 = f[2], f3 = f[3], f4 = f[4];
+  const uint64_t f0_2 = 2 * f0, f1_2 = 2 * f1;
+  const uint64_t f1_38 = 38 * f1, f2_38 = 38 * f2, f3_38 = 38 * f3;
+  const uint64_t f3_19 = 19 * f3, f4_19 = 19 * f4;
+  uint64_t h0, h1, h2, h3, h4, c;
+  FE51_ACC;
+
+  FE51_SET(f0, f0);   FE51_MAC(f1_38, f4); FE51_MAC(f2_38, f3);
+  h0 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0_2, f1); FE51_MAC(f2_38, f4); FE51_MAC(f3_19, f3); FE51_ADD64(c);
+  h1 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0_2, f2); FE51_MAC(f1, f1);    FE51_MAC(f3_38, f4); FE51_ADD64(c);
+  h2 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0_2, f3); FE51_MAC(f1_2, f2);  FE51_MAC(f4_19, f4); FE51_ADD64(c);
+  h3 = FE51_LOW51; c = FE51_SHR51;
+
+  FE51_SET(f0_2, f4); FE51_MAC(f1_2, f3);  FE51_MAC(f2, f2);    FE51_ADD64(c);
+  h4 = FE51_LOW51; c = FE51_SHR51;
+
+  h0 += c * 19;   h1 += h0 >> 51; h0 &= FE51_MASK;
+  h2 += h1 >> 51; h1 &= FE51_MASK;
+
+  h[0] = h0; h[1] = h1; h[2] = h2; h[3] = h3; h[4] = h4;
+}
+
+/* h = 2 * f * f */
+static void fe_sq2(fe h, const fe f) {
+  fe_sq(h, f);
+  h[0] += h[0]; h[1] += h[1]; h[2] += h[2]; h[3] += h[3]; h[4] += h[4];
+  fe51_carry(h);
+}
+
+void fe_tobytes(unsigned char *s, const fe h) {
+  uint64_t t0 = h[0], t1 = h[1], t2 = h[2], t3 = h[3], t4 = h[4];
+  uint64_t c, q, o0, o1, o2, o3;
+
+  c = t0 >> 51; t0 &= FE51_MASK; t1 += c;
+  c = t1 >> 51; t1 &= FE51_MASK; t2 += c;
+  c = t2 >> 51; t2 &= FE51_MASK; t3 += c;
+  c = t3 >> 51; t3 &= FE51_MASK; t4 += c;
+  c = t4 >> 51; t4 &= FE51_MASK; t0 += c * 19;
+  c = t0 >> 51; t0 &= FE51_MASK; t1 += c;
+
+  /* Now 0 <= h < 2p. Subtract p if h >= p, by adding 19 and checking for a carry out */
+  q = (t0 + 19) >> 51;
+  q = (t1 + q) >> 51;
+  q = (t2 + q) >> 51;
+  q = (t3 + q) >> 51;
+  q = (t4 + q) >> 51;
+
+  t0 += 19 * q;
+
+  c = t0 >> 51; t0 &= FE51_MASK; t1 += c;
+  c = t1 >> 51; t1 &= FE51_MASK; t2 += c;
+  c = t2 >> 51; t2 &= FE51_MASK; t3 += c;
+  c = t3 >> 51; t3 &= FE51_MASK; t4 += c;
+  t4 &= FE51_MASK;
+
+  o0 = t0        | (t1 << 51);
+  o1 = (t1 >> 13) | (t2 << 38);
+  o2 = (t2 >> 26) | (t3 << 25);
+  o3 = (t3 >> 39) | (t4 << 12);
+
+  s[0] = (unsigned char) (o0 >>  0); s[1]  = (unsigned char) (o0 >>  8);
+  s[2] = (unsigned char) (o0 >> 16); s[3]  = (unsigned char) (o0 >> 24);
+  s[4] = (unsigned char) (o0 >> 32); s[5]  = (unsigned char) (o0 >> 40);
+  s[6] = (unsigned char) (o0 >> 48); s[7]  = (unsigned char) (o0 >> 56);
+  s[8] = (unsigned char) (o1 >>  0); s[9]  = (unsigned char) (o1 >>  8);
+  s[10] = (unsigned char) (o1 >> 16); s[11] = (unsigned char) (o1 >> 24);
+  s[12] = (unsigned char) (o1 >> 32); s[13] = (unsigned char) (o1 >> 40);
+  s[14] = (unsigned char) (o1 >> 48); s[15] = (unsigned char) (o1 >> 56);
+  s[16] = (unsigned char) (o2 >>  0); s[17] = (unsigned char) (o2 >>  8);
+  s[18] = (unsigned char) (o2 >> 16); s[19] = (unsigned char) (o2 >> 24);
+  s[20] = (unsigned char) (o2 >> 32); s[21] = (unsigned char) (o2 >> 40);
+  s[22] = (unsigned char) (o2 >> 48); s[23] = (unsigned char) (o2 >> 56);
+  s[24] = (unsigned char) (o3 >>  0); s[25] = (unsigned char) (o3 >>  8);
+  s[26] = (unsigned char) (o3 >> 16); s[27] = (unsigned char) (o3 >> 24);
+  s[28] = (unsigned char) (o3 >> 32); s[29] = (unsigned char) (o3 >> 40);
+  s[30] = (unsigned char) (o3 >> 48); s[31] = (unsigned char) (o3 >> 56);
+}
+
+/* Decode 32 bytes, ignoring bit 255. Does not check for canonical input */
+static void fe_frombytes_relaxed(fe h, const unsigned char *s) {
+  uint64_t l0 = load_8(s), l1 = load_8(s + 8), l2 = load_8(s + 16), l3 = load_8(s + 24);
+
+  h[0] = l0 & FE51_MASK;
+  h[1] = ((l0 >> 51) | (l1 << 13)) & FE51_MASK;
+  h[2] = ((l1 >> 38) | (l2 << 26)) & FE51_MASK;
+  h[3] = ((l2 >> 25) | (l3 << 39)) & FE51_MASK;
+  h[4] = (l3 >> 12) & FE51_MASK;
+}
+
+int fe_frombytes_vartime(fe h, const unsigned char *s) {
+  fe_frombytes_relaxed(h, s);
+
+  /* Validate the number to be canonical: reject anything in [p, 2^255 - 1] */
+  if ((h[4] == FE51_MASK) && (h[3] == FE51_MASK) && (h[2] == FE51_MASK) && (h[1] == FE51_MASK) && (h[0] >= 0x7ffffffffffedULL)) {
+    return -1;
+  }
+
+  return 0;
+}
+
+#endif /* FE_RADIX_51 */
+
 /* From fe_0.c */
 
 /*
 h = 0
 */
+
+#if !FE_RADIX_51
 
 void fe_0(fe h) {
   h[0] = 0;
@@ -86,11 +394,16 @@ void fe_0(fe h) {
   h[9] = 0;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_1.c */
 
 /*
 h = 1
 */
+
+#if !FE_RADIX_51
 
 void fe_1(fe h) {
   h[0] = 1;
@@ -105,6 +418,9 @@ void fe_1(fe h) {
   h[9] = 0;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_add.c */
 
 /*
@@ -118,6 +434,8 @@ Preconditions:
 Postconditions:
    |h| bounded by 1.1*2^26,1.1*2^25,1.1*2^26,1.1*2^25,etc.
 */
+
+#if !FE_RADIX_51
 
 void fe_add(fe h, const fe f, const fe g) {
   int32_t f0 = f[0];
@@ -162,6 +480,9 @@ void fe_add(fe h, const fe f, const fe g) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_cmov.c */
 
 /*
@@ -170,6 +491,8 @@ replace (f,g) with (f,g) if b == 0.
 
 Preconditions: b in {0,1}.
 */
+
+#if !FE_RADIX_51
 
 static void fe_cmov(fe f, const fe g, unsigned int b) {
   int32_t f0 = f[0];
@@ -226,11 +549,16 @@ static void fe_cmov(fe f, const fe g, unsigned int b) {
   f[9] = f9 ^ x9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_copy.c */
 
 /*
 h = f
 */
+
+#if !FE_RADIX_51
 
 void fe_copy(fe h, const fe f) {
   int32_t f0 = f[0];
@@ -254,6 +582,9 @@ void fe_copy(fe h, const fe f) {
   h[8] = f8;
   h[9] = f9;
 }
+
+#endif /* !FE_RADIX_51 */
+
 
 /* From fe_invert.c */
 
@@ -408,6 +739,8 @@ Can get away with 11 carries, but then data flow is much deeper.
 
 With tighter constraints on inputs can squeeze carries into int32.
 */
+
+#if !FE_RADIX_51
 
 void fe_mul(fe h, const fe f, const fe g) {
   int32_t f0 = f[0];
@@ -627,6 +960,9 @@ void fe_mul(fe h, const fe f, const fe g) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_neg.c */
 
 /*
@@ -638,6 +974,8 @@ Preconditions:
 Postconditions:
    |h| bounded by 1.1*2^25,1.1*2^24,1.1*2^25,1.1*2^24,etc.
 */
+
+#if !FE_RADIX_51
 
 void fe_neg(fe h, const fe f) {
   int32_t f0 = f[0];
@@ -672,6 +1010,9 @@ void fe_neg(fe h, const fe f) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_sq.c */
 
 /*
@@ -688,6 +1029,8 @@ Postconditions:
 /*
 See fe_mul.c for discussion of implementation strategy.
 */
+
+#if !FE_RADIX_51
 
 void fe_sq(fe h, const fe f) {
   int32_t f0 = f[0];
@@ -820,6 +1163,9 @@ void fe_sq(fe h, const fe f) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_sq2.c */
 
 /*
@@ -836,6 +1182,8 @@ Postconditions:
 /*
 See fe_mul.c for discussion of implementation strategy.
 */
+
+#if !FE_RADIX_51
 
 static void fe_sq2(fe h, const fe f) {
   int32_t f0 = f[0];
@@ -979,6 +1327,9 @@ static void fe_sq2(fe h, const fe f) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_sub.c */
 
 /*
@@ -992,6 +1343,8 @@ Preconditions:
 Postconditions:
    |h| bounded by 1.1*2^26,1.1*2^25,1.1*2^26,1.1*2^25,etc.
 */
+
+#if !FE_RADIX_51
 
 void fe_sub(fe h, const fe f, const fe g) {
   int32_t f0 = f[0];
@@ -1036,6 +1389,9 @@ void fe_sub(fe h, const fe f, const fe g) {
   h[9] = h9;
 }
 
+#endif /* !FE_RADIX_51 */
+
+
 /* From fe_tobytes.c */
 
 /*
@@ -1062,6 +1418,8 @@ Proof:
   Have q+2^(-255)x = 2^(-255)(h + 19 2^(-25) h9 + 2^(-1))
   so floor(2^(-255)(h + 19 2^(-25) h9 + 2^(-1))) = q.
 */
+
+#if !FE_RADIX_51
 
 void fe_tobytes(unsigned char *s, const fe h) {
   int32_t h0 = h[0];
@@ -1154,6 +1512,9 @@ void fe_tobytes(unsigned char *s, const fe h) {
   s[30] = h9 >> 10;
   s[31] = h9 >> 18;
 }
+
+#endif /* !FE_RADIX_51 */
+
 
 /* From ge_add.c */
 
@@ -1369,6 +1730,8 @@ void ge_double_scalarmult_base_vartime_p3(ge_p3 *r3, const unsigned char *a, con
 
 /* From fe_frombytes.c */
 
+#if !FE_RADIX_51
+
 int fe_frombytes_vartime(fe y, const unsigned char *s) {
   int64_t h0 = load_4(s);
   int64_t h1 = load_3(s + 4) << 6;
@@ -1423,6 +1786,9 @@ int fe_frombytes_vartime(fe y, const unsigned char *s) {
 
   return 0;
 }
+
+#endif /* !FE_RADIX_51 */
+
 
 /* From ge_frombytes.c, modified */
 
@@ -1787,6 +2153,155 @@ void ge_scalarmult_base_vartime(ge_p3 *h, const unsigned char *a) {
   for (i = 0; i < 64; i += 2) {
     select_vartime(&t, i / 2, e[i]);
     ge_madd(&r, h, &t); ge_p1p1_to_p3(h, &r);
+  }
+}
+
+/*
+Split a scalar into 64 signed 4-bit digits: a = sum(e[i] * 16^i), -8 <= e[i] <= 8.
+
+Preconditions:
+  a[31] <= 127
+*/
+
+static void ge_signed_nibbles(signed char e[64], const unsigned char *a) {
+  signed char carry;
+  int i;
+
+  for (i = 0; i < 32; ++i) {
+    e[2 * i + 0] = (a[i] >> 0) & 15;
+    e[2 * i + 1] = (a[i] >> 4) & 15;
+  }
+  /* each e[i] is between 0 and 15 */
+  /* e[63] is between 0 and 7 */
+
+  carry = 0;
+  for (i = 0; i < 63; ++i) {
+    e[i] += carry;
+    carry = e[i] + 8;
+    carry >>= 4;
+    e[i] -= carry << 4;
+  }
+  e[63] += carry;
+  /* each e[i] is between -8 and 8 */
+}
+
+/*
+h = q, or h = -q when "negative" is set.
+
+A ge_precomp entry stores (y+x, y-x, 2*d*x*y), so with u = (y+x) - (y-x) = 2x   and   v = (y+x) + (y-x) = 2y
+the point can be written projectively as (2u : 2v : 4 : u*v) = (4x : 4y : 4 : 4xy), which
+satisfies the extended coordinates invariant T = X*Y/Z and needs no inversion. Negating
+means using -2x in place of 2x, which flips the sign of both X and T.
+
+This is ~7 field multiplications cheaper than starting from the point at infinity and
+doing a full ge_madd/ge_msub, so it's worth doing for the first digit.
+*/
+
+static void ge_precomp_to_p3(ge_p3 *h, const ge_precomp *q, int negative) {
+  fe u, v;
+
+  if (negative) {
+    fe_sub(u, q->yminusx, q->yplusx);
+  }
+  else {
+    fe_sub(u, q->yplusx, q->yminusx);
+  }
+  fe_add(v, q->yplusx, q->yminusx);
+
+  fe_mul(h->T, u, v);
+  fe_dbl(h->X, u);
+  fe_dbl(h->Y, v);
+  fe_0(h->Z);
+  h->Z[0] = 4;
+}
+
+/*
+h += e * row[0], where row is one row of a comb table and -8 <= e <= 8.
+
+Zero digits (1 in 16 on average for a uniformly random scalar) are skipped entirely
+instead of adding the point at infinity, and the sign is folded into the choice of
+ge_madd/ge_msub so the table entry can be used in place - no copy and no fe_neg.
+
+*initialized is 0 while h is still the point at infinity, in which case the first
+addition initializes h directly from the table entry.
+*/
+
+static void ge_comb_add(ge_p3 *h, int *initialized, const ge_precomp *row, signed char e) {
+  ge_p1p1 r;
+
+  if (e > 0) {
+    if (*initialized) {
+      ge_madd(&r, h, &row[e - 1]);
+      ge_p1p1_to_p3(h, &r);
+    }
+    else {
+      ge_precomp_to_p3(h, &row[e - 1], 0);
+      *initialized = 1;
+    }
+  }
+  else if (e < 0) {
+    if (*initialized) {
+      ge_msub(&r, h, &row[-e - 1]);
+      ge_p1p1_to_p3(h, &r);
+    }
+    else {
+      ge_precomp_to_p3(h, &row[-e - 1], 1);
+      *initialized = 1;
+    }
+  }
+}
+
+/*
+h = a * B + b * T
+where a = a[0]+256*a[1]+...+256^31 a[31]
+      b = b[0]+256*b[1]+...+256^31 b[31]
+B is the Ed25519 base point (x,4/5) with x positive, T is the FCMP++ generator unbiased_hash_to_ec(keccak("Monero Generator T")).
+
+Both scalars are consumed by the same comb, so the 16x doubling that separates the odd
+and even digit passes is shared instead of being done once per scalar, and the two
+half-results never have to be added together at the end.
+
+Preconditions:
+  a[31] <= 127
+  b[31] <= 127
+*/
+
+void ge_double_scalarmult_base_T_vartime(ge_p3 *h, const unsigned char *a, const unsigned char *b) {
+  signed char ea[64];
+  signed char eb[64];
+  ge_p1p1 r;
+  ge_p2 s;
+  int initialized = 0;
+  int i;
+
+  ge_signed_nibbles(ea, a);
+  ge_signed_nibbles(eb, b);
+
+  /* Digit i has weight 16^i, and row i/2 of both tables holds multiples of 256^(i/2) */
+
+  /* Odd digits: weight 16 * 256^(i/2) */
+  for (i = 1; i < 64; i += 2) {
+    ge_comb_add(h, &initialized, ge_base[i / 2], ea[i]);
+    ge_comb_add(h, &initialized, ge_T_base[i / 2], eb[i]);
+  }
+
+  /* h = 16 * h, skipped while h is still the point at infinity */
+  if (initialized) {
+    ge_p3_dbl(&r, h);  ge_p1p1_to_p2(&s, &r);
+    ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
+    ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
+    ge_p2_dbl(&r, &s); ge_p1p1_to_p3(h, &r);
+  }
+
+  /* Even digits: weight 256^(i/2) */
+  for (i = 0; i < 64; i += 2) {
+    ge_comb_add(h, &initialized, ge_base[i / 2], ea[i]);
+    ge_comb_add(h, &initialized, ge_T_base[i / 2], eb[i]);
+  }
+
+  /* Both scalars were zero */
+  if (!initialized) {
+    ge_p3_0(h);
   }
 }
 
@@ -2465,12 +2980,10 @@ void ge_mul8(ge_p1p1 *r, const ge_p2 *t) {
   ge_p2_dbl(r, &u);
 }
 
-void ge_fromfe_frombytes_vartime(ge_p2 *r, const unsigned char *s) {
-  fe u, v, w, x, y, z;
-  unsigned char sign;
+#if !FE_RADIX_51
 
-  /* From fe_frombytes.c */
-
+/* Decode 32 bytes, ignoring bit 255. Does not check for canonical input */
+static void fe_frombytes_relaxed(fe h, const unsigned char *s) {
   int64_t h0 = load_4(s);
   int64_t h1 = load_3(s + 4) << 6;
   int64_t h2 = load_3(s + 7) << 5;
@@ -2491,31 +3004,35 @@ void ge_fromfe_frombytes_vartime(ge_p2 *r, const unsigned char *s) {
   int64_t carry7;
   int64_t carry8;
   int64_t carry9;
-
   carry9 = (h9 + (int64_t) (1<<24)) >> 25; h0 += carry9 * 19; h9 -= carry9 << 25;
   carry1 = (h1 + (int64_t) (1<<24)) >> 25; h2 += carry1; h1 -= carry1 << 25;
   carry3 = (h3 + (int64_t) (1<<24)) >> 25; h4 += carry3; h3 -= carry3 << 25;
   carry5 = (h5 + (int64_t) (1<<24)) >> 25; h6 += carry5; h5 -= carry5 << 25;
   carry7 = (h7 + (int64_t) (1<<24)) >> 25; h8 += carry7; h7 -= carry7 << 25;
-
   carry0 = (h0 + (int64_t) (1<<25)) >> 26; h1 += carry0; h0 -= carry0 << 26;
   carry2 = (h2 + (int64_t) (1<<25)) >> 26; h3 += carry2; h2 -= carry2 << 26;
   carry4 = (h4 + (int64_t) (1<<25)) >> 26; h5 += carry4; h4 -= carry4 << 26;
   carry6 = (h6 + (int64_t) (1<<25)) >> 26; h7 += carry6; h6 -= carry6 << 26;
   carry8 = (h8 + (int64_t) (1<<25)) >> 26; h9 += carry8; h8 -= carry8 << 26;
+  h[0] = h0;
+  h[1] = h1;
+  h[2] = h2;
+  h[3] = h3;
+  h[4] = h4;
+  h[5] = h5;
+  h[6] = h6;
+  h[7] = h7;
+  h[8] = h8;
+  h[9] = h9;
+}
 
-  u[0] = h0;
-  u[1] = h1;
-  u[2] = h2;
-  u[3] = h3;
-  u[4] = h4;
-  u[5] = h5;
-  u[6] = h6;
-  u[7] = h7;
-  u[8] = h8;
-  u[9] = h9;
+#endif /* !FE_RADIX_51 */
 
-  /* End fe_frombytes.c */
+void ge_fromfe_frombytes_vartime(ge_p2 *r, const unsigned char *s) {
+  fe u, v, w, x, y, z;
+  unsigned char sign;
+
+  fe_frombytes_relaxed(u, s);
 
   fe_sq2(v, u); /* 2 * u^2 */
   fe_1(w);
@@ -4018,61 +4535,10 @@ void ge_p3_to_x25519(unsigned char *xbytes, const ge_p3 *h)
 
 int edwards_bytes_to_x25519_vartime(unsigned char *xbytes, const unsigned char *s)
 {
-  /* From fe_frombytes.c */
-
-  int64_t h0 = load_4(s);
-  int64_t h1 = load_3(s + 4) << 6;
-  int64_t h2 = load_3(s + 7) << 5;
-  int64_t h3 = load_3(s + 10) << 3;
-  int64_t h4 = load_3(s + 13) << 2;
-  int64_t h5 = load_4(s + 16);
-  int64_t h6 = load_3(s + 20) << 7;
-  int64_t h7 = load_3(s + 23) << 5;
-  int64_t h8 = load_3(s + 26) << 4;
-  int64_t h9 = (load_3(s + 29) & 8388607) << 2;
-  int64_t carry0;
-  int64_t carry1;
-  int64_t carry2;
-  int64_t carry3;
-  int64_t carry4;
-  int64_t carry5;
-  int64_t carry6;
-  int64_t carry7;
-  int64_t carry8;
-  int64_t carry9;
-
-  /* Validate the number to be canonical */
-  if (h9 == 33554428 && h8 == 268435440 && h7 == 536870880 && h6 == 2147483520 &&
-    h5 == 4294967295 && h4 == 67108860 && h3 == 134217720 && h2 == 536870880 &&
-    h1 == 1073741760 && h0 >= 4294967277) {
+  fe Y;
+  if (fe_frombytes_vartime(Y, s) != 0) {
     return -1;
   }
-
-  carry9 = (h9 + (int64_t) (1<<24)) >> 25; h0 += carry9 * 19; h9 -= carry9 << 25;
-  carry1 = (h1 + (int64_t) (1<<24)) >> 25; h2 += carry1; h1 -= carry1 << 25;
-  carry3 = (h3 + (int64_t) (1<<24)) >> 25; h4 += carry3; h3 -= carry3 << 25;
-  carry5 = (h5 + (int64_t) (1<<24)) >> 25; h6 += carry5; h5 -= carry5 << 25;
-  carry7 = (h7 + (int64_t) (1<<24)) >> 25; h8 += carry7; h7 -= carry7 << 25;
-
-  carry0 = (h0 + (int64_t) (1<<25)) >> 26; h1 += carry0; h0 -= carry0 << 26;
-  carry2 = (h2 + (int64_t) (1<<25)) >> 26; h3 += carry2; h2 -= carry2 << 26;
-  carry4 = (h4 + (int64_t) (1<<25)) >> 26; h5 += carry4; h4 -= carry4 << 26;
-  carry6 = (h6 + (int64_t) (1<<25)) >> 26; h7 += carry6; h6 -= carry6 << 26;
-  carry8 = (h8 + (int64_t) (1<<25)) >> 26; h9 += carry8; h8 -= carry8 << 26;
-
-  fe Y;
-  Y[0] = h0;
-  Y[1] = h1;
-  Y[2] = h2;
-  Y[3] = h3;
-  Y[4] = h4;
-  Y[5] = h5;
-  Y[6] = h6;
-  Y[7] = h7;
-  Y[8] = h8;
-  Y[9] = h9;
-
-  /* End fe_frombytes.c */
 
   fe Z;
   fe_1(Z);

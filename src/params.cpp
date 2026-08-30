@@ -514,6 +514,11 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 
 bool Params::valid() const
 {
+	if (m_mainWallet.is_torsioned()) {
+		fprintf(stderr, "This wallet address didn't pass the torsion check, so it is incompatible with FCMP++.\nUse a different address, or move the funds to a freshly created wallet.\n");
+		return false;
+	}
+
 	if (!m_mainWallet.valid() || !m_miningWallet.valid()) {
 		fprintf(stderr, "Invalid wallet address. Try \"p2pool --help\".\n");
 		return false;
@@ -526,11 +531,6 @@ bool Params::valid() const
 
 	if (m_subaddress.valid()) {
 		fprintf(stderr, "--subaddress is no longer supported: Carrot doesn't allow subaddresses in coinbase transactions.\n");
-		return false;
-	}
-
-	if (!m_mainWallet.torsion_check()) {
-		fprintf(stderr, "%s didn't pass the torsion check. It will be incompatible with FCMP++.\n", m_mainWallet.encode().c_str());
 		return false;
 	}
 

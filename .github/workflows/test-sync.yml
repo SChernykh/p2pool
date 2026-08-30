@@ -1,5 +1,9 @@
 name: Sync test
 
+# TODO: re-enable this workflow once the branch is ready for testing on the stressnet:
+# - Change "branches" below from master to v5, and uncomment the "schedule" trigger
+# - In all 8 p2pool command lines, replace the mainnet nodes with stressnet ones, and the mainnet --wallet address with a stressnet address
+
 on:
   push:
     branches: ["master"]

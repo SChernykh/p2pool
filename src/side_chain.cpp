@@ -86,6 +86,20 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 
 	LOGINFO(1, log::LightCyan() << "network type  = " << type);
 
+	// TODO: remove this check once the code is ready for production
+	//
+	// This branch is a work in progress for the v17 hard fork and can't produce or verify a valid chain yet:
+	// Carrot coinbase generation and verification are unfinished, and hardforks.cpp has no mainnet height for
+	// v17, so network_major_version() reports 16 for every mainnet height and PoolBlock::deserialize would
+	// reject every v17 block. Unit tests build mainnet sidechains on purpose, so they skip this.
+#ifndef P2POOL_UNIT_TESTS
+	if (type == NetworkType::Mainnet) {
+		LOGERR(0, "this build implements the upcoming v17 hard fork (FCMP++, Carrot, RandomX v2) and is not ready for production. "
+			"It must not be used on mainnet - run it with a testnet or stagenet wallet address instead.");
+		PANIC_STOP();
+	}
+#endif
+
 	if (m_poolName == "nano") {
 		m_targetBlockTime = 30;
 		m_unclePenalty = 10;
@@ -870,7 +884,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			const PoolBlock* b = it->second;
 			const size_t n = b->m_outputAmounts.size();
 
-			blob.reserve(n * 39 + 64);
+			blob.reserve(n * b->output_blob_size_estimate() + 64);
 			writeVarint(n, blob);
 
 			uint64_t total_reward_check = 0;
@@ -959,7 +973,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	// TODO: fill in m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
 
-	blob.reserve(n * 39 + 64);
+	blob.reserve(n * block->output_blob_size_estimate() + 64);
 
 	writeVarint(n, blob);
 
@@ -1194,6 +1208,9 @@ double SideChain::get_reward_share(const Wallet& w) const
 
 uint64_t SideChain::network_major_version(uint64_t height)
 {
+	// TODO: update hardforks.cpp from Monero once the mainnet and stagenet heights for v17 (FCMP++, Carrot,
+	// RandomX v2) and v18 are announced. Only testnet has them so far, so this returns 16 for every mainnet
+	// and stagenet height and PoolBlock::deserialize rejects v17+ blocks there.
 	const hardfork_t* hard_forks;
 	size_t num_hard_forks;
 

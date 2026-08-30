@@ -60,6 +60,8 @@ public:
 	[[nodiscard]] FORCEINLINE uint32_t checksum() const { return m_checksum; }
 	[[nodiscard]] FORCEINLINE NetworkType get_type() const { return m_type; }
 	[[nodiscard]] FORCEINLINE bool is_subaddress() const { return m_subaddress; }
+	[[nodiscard]] FORCEINLINE bool is_torsioned() const { return m_torsioned; }
+
 	[[nodiscard]] bool torsion_check() const;
 
 private:
@@ -73,6 +75,7 @@ private:
 	uint32_t m_checksum;
 	NetworkType m_type;
 	bool m_subaddress;
+	bool m_torsioned;
 };
 
 } // namespace p2pool

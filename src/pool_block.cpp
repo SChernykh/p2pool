@@ -149,7 +149,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
-	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * 39 + (m_transactions.size() + 1) * HASH_SIZE, 131072));
+	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * output_blob_size_estimate() + (m_transactions.size() + 1) * HASH_SIZE, 131072));
 
 	// Header
 	data.push_back(m_majorVersion);
@@ -214,6 +214,9 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 			writeVarint(m_carrotTxPubKeys.size(), tx_extra);
 		}
 		else {
+			// TODO: this writes the tag with no key at all when m_carrotTxPubKeys is empty. A parsed block can't
+			// get here (deserialize checks the size against m_outputAmounts), so block generation has to fill
+			// m_carrotTxPubKeys before calling this.
 			tx_extra.push_back(TX_EXTRA_TAG_PUBKEY);
 		}
 
