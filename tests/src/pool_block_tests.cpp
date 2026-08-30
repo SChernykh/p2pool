@@ -153,12 +153,12 @@ TEST(pool_block, verify)
 		bool m_shuffle;
 		hash m_templateBlobsHash;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("059e6440230d9206d8e05a13e0834872f21ee7f5d539101364a4ae735f21cb60") },
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("059e6440230d9206d8e05a13e0834872f21ee7f5d539101364a4ae735f21cb60") },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("d9260bf29a8a957e74f787cfd3811772208e44af5b71835a77452a045a4eaed7") },
-		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("d9260bf29a8a957e74f787cfd3811772208e44af5b71835a77452a045a4eaed7") },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("8a88ce3cf87386a33cf0b6973517d86933c96fffaede37c137b6f06157eca496") },
-		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("8a88ce3cf87386a33cf0b6973517d86933c96fffaede37c137b6f06157eca496") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("fd6bd6b38ed20a770c7eca6de3715e36453765908ef52a1d4df822d5eb66de5d") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("fd6bd6b38ed20a770c7eca6de3715e36453765908ef52a1d4df822d5eb66de5d") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("a0746d4a39a1a72aa48ddacc0c38d44504c77022bff92d937dbf45478cb8e4cb") },
+		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("a0746d4a39a1a72aa48ddacc0c38d44504c77022bff92d937dbf45478cb8e4cb") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("2b5a6abd276e99a1a8165c42e4ef3b4a7bcb4e79e483fc891e77288f8498a417") },
+		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, true, H("2b5a6abd276e99a1a8165c42e4ef3b4a7bcb4e79e483fc891e77288f8498a417") },
 	};
 
 	for (const STest& t : tests)
@@ -251,7 +251,6 @@ TEST(pool_block, verify)
 			Params params;
 
 			params.m_miningWallet = Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg");
-			params.m_subaddress = Wallet("86eQxzSW4AZfvsWRSop755WZUsog6L3x32NRZukeeShnS4mBGVpcqQhS6pCNxj44usPKNwesZ45ooHyjDku6nVZdT3Q9qrz");
 
 			tpl.update(data, mempool, params);
 

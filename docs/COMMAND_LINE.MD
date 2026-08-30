@@ -1,8 +1,8 @@
 ### P2Pool command line options
 
 ```
---wallet                  Main wallet address (the one that starts with 4...). To mine to a subaddress of this wallet, use it together with --subaddress
---subaddress              DEPRECATED. Subaddresses for miner payouts are not supported after Monero FCMP++ hardfork.
+--wallet                  Main wallet address (the one that starts with 4...).
+--subaddress              REMOVED: subaddresses for miner payouts are not supported after Monero FCMP++ hardfork.
 --host                    IP address of your Monero node, default is 127.0.0.1
 --rpc-port                monerod RPC API port number, default is 18081
 --zmq-port                monerod ZMQ pub port number, default is 18083 (same port as in monerod's "--zmq-pub" command line parameter)
@@ -76,12 +76,6 @@ wallet = YOUR_WALLET_ADDRESS
 data-api = "/path/to/api/folder" # use quotes if you have spaces in the path
 loglevel = 4
 mini = 1
-```
-
-### Example command line (mining to a subaddress)
-
-```
-p2pool.exe --host 127.0.0.1 --wallet WALLET_MAIN_ADDRESS --subaddress SUBADDRESS_FROM_THE_SAME_WALLET
 ```
 
 ### Multiple backup hosts

@@ -264,6 +264,8 @@ static p2pool::Params get_params(int argc, const char* const argv[]) noexcept
 	}
 
 	printf("Invalid or missing command line. Try \"p2pool --help\".\n");
+	fflush(stdout);
+	fflush(stderr);
 	abort();
 }
 
@@ -280,6 +282,8 @@ static p2pool::Params get_params(const std::string& params_file) noexcept
 	}
 
 	printf("Invalid or missing command line. Try \"p2pool --help\".\n");
+	fflush(stdout);
+	fflush(stderr);
 	abort();
 }
 

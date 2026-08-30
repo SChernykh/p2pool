@@ -368,7 +368,8 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash view_pub_key;
 		READ_BUF(spend_pub_key.h, HASH_SIZE);
 		READ_BUF(view_pub_key.h, HASH_SIZE);
-		if (!m_minerWallet.assign(spend_pub_key, view_pub_key, sidechain.network_type(), false)) {
+
+		if (!m_minerWallet.assign(spend_pub_key, view_pub_key, sidechain.network_type())) {
 			return __LINE__;
 		}
 

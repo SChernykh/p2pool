@@ -71,7 +71,7 @@ TEST(block_template, update)
 	hash seed_hash;
 	size_t nonce_offset;
 	uint32_t template_id;
-	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	ASSERT_EQ(tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id), 76);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);
@@ -124,7 +124,7 @@ TEST(block_template, update)
 		ASSERT_GE(static_cast<hash>(b->m_transactions[i]).u64()[0], 256);
 	}
 
-	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	ASSERT_EQ(tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id), 77);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);
@@ -161,7 +161,7 @@ TEST(block_template, update)
 	ASSERT_EQ(b->m_sidechainId, H("318543c2020c1154ec4b8127c1849777ef7d9cfe255ebbf8806f2e0231c82adb"));
 	ASSERT_EQ(b->m_transactions.size(), 10);
 
-	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	ASSERT_EQ(tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id), 76);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);
@@ -198,7 +198,7 @@ TEST(block_template, update)
 	ASSERT_EQ(b->m_sidechainId, H("76e680114a10a0499a78f9160f12f27bdc86453f8a5f2b25726b7dc91bd4809b"));
 	ASSERT_EQ(b->m_transactions.size(), 173);
 
-	tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id);
+	ASSERT_EQ(tpl.get_hashing_blobs(0, 1000, blobs, height, diff, aux_diff, sidechain_diff, seed_hash, nonce_offset, template_id), 77);
 
 	ASSERT_EQ(height, 2762973);
 	ASSERT_EQ(diff, 300346053753ULL);

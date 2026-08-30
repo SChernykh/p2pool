@@ -638,13 +638,6 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
 	}
 
-	if ((data.major_version < HARDFORK_VERSION_FCMP_PP) && params.m_subaddress.valid()) {
-		uint8_t buf[HASH_SIZE + 2] = {};
-		memcpy(buf, params.m_subaddress.view_public_key().h, HASH_SIZE);
-
-		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_subaddress_viewpub, std::vector(buf, buf + sizeof(buf)));
-	}
-
 	if (!params.m_onionPubkey.empty()) {
 		uint8_t buf[HASH_SIZE + 2] = {};
 		memcpy(buf, params.m_onionPubkey.h, HASH_SIZE);
