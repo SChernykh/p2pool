@@ -51,6 +51,7 @@ struct MinerShare;
 */
 
 // 128 KB minus BLOCK_RESPONSE P2P protocol header (5 bytes)
+// TODO: Increase it to 512 * 1024 - 5 before FCMP++, activate 512 KB size at FCMP++ fork
 static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
 
 // 0.6 XMR

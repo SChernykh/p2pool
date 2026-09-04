@@ -404,6 +404,11 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	const difficulty_type max_pplns_weight = mainchain_diff * 2;
 	difficulty_type pplns_weight;
 
+	// Don't allow more than 2700 (2160 + 2160 / 4) outputs in the coinbase transaction starting from v5
+	// FCMP++ has a limit of 10000, but 512 KiB message size will limit it to ~5800
+	// 2700 outputs will take ~46% of post-FCMP++ message size
+	const uint64_t max_shares = m_chainWindowSize + (m_chainWindowSize / 4);
+
 	unordered_set<MinerShare> shares_set;
 	shares_set.reserve(m_chainWindowSize * 2);
 
@@ -435,12 +440,22 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 				continue;
 			}
 
-			cur_weight += uncle_penalty;
-
 			auto result = shares_set.emplace(uncle_weight, &uncle->m_minerWallet);
-			if (!result.second) {
+
+			if (result.second) {
+				// Don't add more uncles if we hit the limit on outputs
+				// Also give way to the "cur" share below, if its wallet hasn't been added yet
+				if ((tip->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) &&
+					(shares_set.size() + (1 - shares_set.count({ {}, &cur->m_minerWallet })) > max_shares)) {
+					shares_set.erase(result.first);
+					break;
+				}
+			}
+			else {
 				result.first->m_weight += uncle_weight;
 			}
+
+			cur_weight += uncle_penalty;
 			pplns_weight = new_pplns_weight;
 		}
 
@@ -453,6 +468,11 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 		// One non-uncle share can go above the limit, but it will also guarantee that "shares" is never empty
 		if (pplns_weight > max_pplns_weight) {
+			break;
+		}
+
+		// Stop if we hit the limit on outputs
+		if ((tip->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (shares_set.size() >= max_shares)) {
 			break;
 		}
 
