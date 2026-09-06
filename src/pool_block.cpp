@@ -93,10 +93,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_ephPublicKeys = b.m_ephPublicKeys;
 	m_outputAmounts = b.m_outputAmounts;
 	m_viewTags = b.m_viewTags;
-	m_carrotViewTags = b.m_carrotViewTags;
-	m_carrotJanusAnchors = b.m_carrotJanusAnchors;
+	m_carrotOutputs = b.m_carrotOutputs;
 	m_txkeyPub = b.m_txkeyPub;
-	m_carrotTxPubKeys = b.m_carrotTxPubKeys;
 	m_extraNonceSize = b.m_extraNonceSize;
 	m_extraNonce = b.m_extraNonce;
 	m_merkleTreeDataSize = b.m_merkleTreeDataSize;
@@ -149,7 +147,12 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, size_t* miner_tx_size, int* outputs_offset, int* outputs_blob_size, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	std::vector<uint8_t> data;
-	data.reserve(std::min<size_t>(128 + m_outputAmounts.size() * output_blob_size_estimate() + (m_transactions.size() + 1) * HASH_SIZE, 131072));
+
+	data.reserve(std::min<size_t>(
+		128 +
+		std::max(m_outputAmounts.size(), m_carrotOutputs.size()) * output_blob_size_estimate() +
+		(m_transactions.size() + 1) * HASH_SIZE, 131072)
+	);
 
 	// Header
 	data.push_back(m_majorVersion);
@@ -179,19 +182,20 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 		*outputs_offset = outputs_offset0;
 	}
 
-	writeVarint(m_outputAmounts.size(), data);
-
 	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
-		for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
-			writeVarint(m_outputAmounts[i], data);
+		writeVarint(m_carrotOutputs.size(), data);
+
+		for (const carrot::coinbase_tx_output& o : m_carrotOutputs) {
+			writeVarint(o.amount, data);
 			data.push_back(TXOUT_TO_CARROT_V1);
-			const hash h = m_ephPublicKeys[i];
-			data.insert(data.end(), h.h, h.h + HASH_SIZE);
-			data.insert(data.end(), m_carrotViewTags[i].data, m_carrotViewTags[i].data + CARROT_VIEW_TAG_BYTES);
-			data.insert(data.end(), m_carrotJanusAnchors[i].data, m_carrotJanusAnchors[i].data + CARROT_JANUS_ANCHOR_BYTES);
+			data.insert(data.end(), o.onetime_address.h, o.onetime_address.h + HASH_SIZE);
+			data.insert(data.end(), o.vt.data, o.vt.data + CARROT_VIEW_TAG_BYTES);
+			data.insert(data.end(), o.anchor_enc.data, o.anchor_enc.data + CARROT_JANUS_ANCHOR_BYTES);
 		}
 	}
 	else {
+		writeVarint(m_outputAmounts.size(), data);
+
 		for (size_t i = 0, n = m_outputAmounts.size(); i < n; ++i) {
 			writeVarint(m_outputAmounts[i], data);
 			data.push_back(TXOUT_TO_TAGGED_KEY);
@@ -206,22 +210,19 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(size_t* header_size, si
 	}
 
 	std::vector<uint8_t> tx_extra;
-	tx_extra.reserve(128 + m_carrotTxPubKeys.size() * HASH_SIZE);
+	tx_extra.reserve(128 + m_carrotOutputs.size() * HASH_SIZE);
 
 	if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		if (m_carrotTxPubKeys.size() > 1) {
+		if (m_carrotOutputs.size() > 1) {
 			tx_extra.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
-			writeVarint(m_carrotTxPubKeys.size(), tx_extra);
+			writeVarint(m_carrotOutputs.size(), tx_extra);
 		}
 		else {
-			// TODO: this writes the tag with no key at all when m_carrotTxPubKeys is empty. A parsed block can't
-			// get here (deserialize checks the size against m_outputAmounts), so block generation has to fill
-			// m_carrotTxPubKeys before calling this.
 			tx_extra.push_back(TX_EXTRA_TAG_PUBKEY);
 		}
 
-		for (const hash& pub_key : m_carrotTxPubKeys) {
-			tx_extra.insert(tx_extra.end(), pub_key.h, pub_key.h + HASH_SIZE);
+		for (const carrot::coinbase_tx_output& o : m_carrotOutputs) {
+			tx_extra.insert(tx_extra.end(), o.eph_pub_key.h, o.eph_pub_key.h + HASH_SIZE);
 		}
 	}
 	else {

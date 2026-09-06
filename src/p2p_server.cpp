@@ -1089,11 +1089,14 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	// 0 outputs in the pruned blob
 	data->pruned_blob.push_back(0);
 
-	const uint64_t total_reward = std::accumulate(block.m_outputAmounts.begin(), block.m_outputAmounts.end(), 0ULL,
-		[](uint64_t a, uint64_t b)
-		{
-			return a + b;
-		});
+	uint64_t total_reward;
+
+	if (block.m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		total_reward = std::accumulate(block.m_carrotOutputs.begin(), block.m_carrotOutputs.end(), 0ULL, [](uint64_t a, const auto& b) { return a + b.amount; });
+	}
+	else {
+		total_reward = std::accumulate(block.m_outputAmounts.begin(), block.m_outputAmounts.end(), 0ULL, [](uint64_t a, uint64_t b) { return a + b; });
+	}
 
 	writeVarint(total_reward, data->pruned_blob);
 	writeVarint(outputs_blob_size, data->pruned_blob);
