@@ -324,6 +324,40 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_merkleTreeDataSize = 0;
 	writeVarint(m_poolBlockTemplate->m_merkleTreeData, [this](uint8_t) { ++m_poolBlockTemplate->m_merkleTreeDataSize; });
 
+	m_poolBlockTemplate->m_mergeMiningExtra.clear();
+
+	for (const AuxChainData& c : data.aux_chains) {
+		std::vector<uint8_t> v;
+		v.reserve(HASH_SIZE + 16);
+
+		v.assign(c.data.h, c.data.h + HASH_SIZE);
+
+		writeVarint(c.difficulty.lo, v);
+		writeVarint(c.difficulty.hi, v);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
+	}
+
+	if (!params.m_onionPubkey.empty()) {
+		uint8_t buf[HASH_SIZE + 2] = {};
+		memcpy(buf, params.m_onionPubkey.h, HASH_SIZE);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_onion_address_v3, std::vector(buf, buf + sizeof(buf)));
+	}
+
+	if (!params.m_i2pDestinationHash.empty()) {
+		uint8_t buf[HASH_SIZE + 2] = {};
+		memcpy(buf, params.m_i2pDestinationHash.h, HASH_SIZE);
+
+		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_i2p_b32_address, std::vector(buf, buf + sizeof(buf)));
+	}
+
+	m_poolBlockTemplate->m_sidechainId = {};
+	m_poolBlockTemplate->m_auxChains = data.aux_chains;
+	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
+
+	init_merge_mining_merkle_proof();
+
 	select_mempool_transactions(mempool);
 
 	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
@@ -624,41 +658,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	m_poolBlockTemplate->m_nonce = 0;
 	m_poolBlockTemplate->m_extraNonce = 0;
-	m_poolBlockTemplate->m_sidechainId = {};
 	m_poolBlockTemplate->m_merkleRoot = {};
-
-	m_poolBlockTemplate->m_auxChains = data.aux_chains;
-	m_poolBlockTemplate->m_auxNonce = data.aux_nonce;
-
-	m_poolBlockTemplate->m_mergeMiningExtra.clear();
-
-	for (const AuxChainData& c : data.aux_chains) {
-		std::vector<uint8_t> v;
-		v.reserve(HASH_SIZE + 16);
-
-		v.assign(c.data.h, c.data.h + HASH_SIZE);
-
-		writeVarint(c.difficulty.lo, v);
-		writeVarint(c.difficulty.hi, v);
-
-		m_poolBlockTemplate->m_mergeMiningExtra.emplace(c.unique_id, std::move(v));
-	}
-
-	if (!params.m_onionPubkey.empty()) {
-		uint8_t buf[HASH_SIZE + 2] = {};
-		memcpy(buf, params.m_onionPubkey.h, HASH_SIZE);
-
-		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_onion_address_v3, std::vector(buf, buf + sizeof(buf)));
-	}
-
-	if (!params.m_i2pDestinationHash.empty()) {
-		uint8_t buf[HASH_SIZE + 2] = {};
-		memcpy(buf, params.m_i2pDestinationHash.h, HASH_SIZE);
-
-		m_poolBlockTemplate->m_mergeMiningExtra.emplace(keccak_i2p_b32_address, std::vector(buf, buf + sizeof(buf)));
-	}
-
-	init_merge_mining_merkle_proof();
 
 	const std::vector<uint8_t> sidechain_data = m_poolBlockTemplate->serialize_sidechain_data();
 	const std::vector<uint8_t>& consensus_id = m_sidechain->consensus_id();
@@ -886,16 +886,6 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
 	k += m_shares.size() * b->output_blob_size_estimate();
 
-	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		// eph pubkey count varint
-		if (m_shares.size() > 1) {
-			writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
-		}
-
-		// eph pubkeys
-		k += m_shares.size() * HASH_SIZE;
-	}
-
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	{
 		uint64_t r = BASE_BLOCK_REWARD;
@@ -903,6 +893,20 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 			r += tx.fee;
 		}
 		k += r / 34359738368ULL;
+	}
+
+	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		// tx_extra size varint adjustment (conservative estimate)
+		--k;
+		writeVarint(m_shares.size() * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
+
+		// eph pubkey count varint
+		if (m_shares.size() > 1) {
+			writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+		}
+
+		// eph pubkeys
+		k += m_shares.size() * HASH_SIZE;
 	}
 
 	const uint32_t max_transactions = static_cast<uint32_t>((MAX_BLOCK_SIZE > k) ? ((MAX_BLOCK_SIZE - k) / HASH_SIZE) : 0);
