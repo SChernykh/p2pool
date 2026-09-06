@@ -378,8 +378,8 @@ bool build_coinbase_outputs(
 	unordered_set<hash> eph_pub_keys_set;
 	eph_pub_keys_set.reserve(N + 1);
 
-	for (size_t i = 0; i <= std::numeric_limits<uint8_t>::max(); ++i) {
-		const uint8_t retry_counter = static_cast<uint8_t>(i);
+	for (size_t rc = 0; rc <= std::numeric_limits<uint8_t>::max(); ++rc) {
+		const uint8_t retry_counter = static_cast<uint8_t>(rc);
 
 		// anchor_norm and d_e
 		if (!batch_eph_privkeys(txkey_sec, retry_counter, height, wallets, anchors, eph_priv_keys)) {
@@ -453,6 +453,20 @@ bool build_coinbase_outputs(
 			continue;
 		}
 
+		bool onetime_address_ok = true;
+
+		// Check for identity K_o
+		for (size_t i = 0; i < N; ++i) {
+			if (out[i].onetime_address == identity_hash) {
+				onetime_address_ok = false;
+				break;
+			}
+		}
+
+		if (!onetime_address_ok) {
+			continue;
+		}
+
 		outputs.clear();
 		outputs.reserve(N);
 
@@ -469,16 +483,9 @@ bool build_coinbase_outputs(
 
 		std::sort(outputs.begin(), outputs.end());
 
-		bool onetime_address_ok = true;
-
-		// Check for duplicate K_o and identity K_o
-		for (size_t i = 0; i < N; ++i) {
-			if (outputs[i].onetime_address == identity_hash) {
-				onetime_address_ok = false;
-				break;
-			}
-
-			if (i && (outputs[i - 1].onetime_address == outputs[i].onetime_address)) {
+		// Check for duplicate K_o
+		for (size_t i = 1; i < N; ++i) {
+			if (outputs[i - 1].onetime_address == outputs[i].onetime_address) {
 				onetime_address_ok = false;
 				break;
 			}
