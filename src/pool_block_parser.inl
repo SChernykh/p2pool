@@ -106,25 +106,25 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
 			if (static_cast<uint64_t>(data_end - data) < num_outputs * MIN_OUTPUT_SIZE) return __LINE__;
 
-			m_ephPublicKeys.resize(num_outputs);
-			m_outputAmounts.resize(num_outputs);
-
 			if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+				m_outputAmounts.clear();
+				m_ephPublicKeys.clear();
 				m_viewTags.clear();
-				m_carrotViewTags.resize(num_outputs);
-				m_carrotJanusAnchors.resize(num_outputs);
+
+				m_carrotOutputs.resize(num_outputs);
 			}
 			else {
+				m_outputAmounts.resize(num_outputs);
+				m_ephPublicKeys.resize(num_outputs);
 				m_viewTags.resize(num_outputs);
-				m_carrotViewTags.clear();
-				m_carrotJanusAnchors.clear();
+
+				m_carrotOutputs.clear();
 			}
 
 			m_ephPublicKeys.shrink_to_fit();
 			m_outputAmounts.shrink_to_fit();
 			m_viewTags.shrink_to_fit();
-			m_carrotViewTags.shrink_to_fit();
-			m_carrotJanusAnchors.shrink_to_fit();
+			m_carrotOutputs.shrink_to_fit();
 
 			for (uint64_t i = 0; i < num_outputs; ++i) {
 				uint64_t reward;
@@ -135,22 +135,21 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 					return __LINE__;
 				}
 
-				m_outputAmounts[i] = reward;
-
 				if (total_reward + reward < total_reward) return __LINE__;
 				total_reward += reward;
 
 				if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+					m_carrotOutputs[i].amount = reward;
+
 					EXPECT_BYTE(TXOUT_TO_CARROT_V1);
 
-					hash ephPublicKey;
-					READ_BUF(ephPublicKey.h, HASH_SIZE);
-					m_ephPublicKeys[i] = ephPublicKey;
-
-					READ_BUF(m_carrotViewTags[i].data, CARROT_VIEW_TAG_BYTES);
-					READ_BUF(m_carrotJanusAnchors[i].data, CARROT_JANUS_ANCHOR_BYTES);
+					READ_BUF(m_carrotOutputs[i].onetime_address.h, HASH_SIZE);
+					READ_BUF(m_carrotOutputs[i].vt.data, CARROT_VIEW_TAG_BYTES);
+					READ_BUF(m_carrotOutputs[i].anchor_enc.data, CARROT_JANUS_ANCHOR_BYTES);
 				}
 				else {
+					m_outputAmounts[i] = reward;
+
 					EXPECT_BYTE(TXOUT_TO_TAGGED_KEY);
 
 					hash ephPublicKey;
@@ -214,35 +213,31 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		const uint8_t* tx_extra_begin = data;
 
 		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-			uint8_t tag;
-			READ_BYTE(tag);
+			// TODO: Carrot pruned blocks will skip eph pub keys as well,
+			// so m_carrotOutputs will stay empty until get_outputs_blob fills it
+			// This section is for unpruned blocks only
+			if (num_outputs > 0) {
+				uint8_t tag;
+				READ_BYTE(tag);
 
-			if (tag == TX_EXTRA_TAG_PUBKEY) {
-				m_carrotTxPubKeys.resize(1);
-				READ_BUF(m_carrotTxPubKeys[0].h, HASH_SIZE);
-			}
-			else if (tag == TX_EXTRA_TAG_ADDITIONAL_PUBKEYS) {
-				uint64_t num_pub_keys;
-				READ_VARINT(num_pub_keys);
+				if (tag == TX_EXTRA_TAG_PUBKEY) {
+					if (m_carrotOutputs.size() != 1) return __LINE__;
+					READ_BUF(m_carrotOutputs[0].eph_pub_key.h, HASH_SIZE);
+				}
+				else if (tag == TX_EXTRA_TAG_ADDITIONAL_PUBKEYS) {
+					uint64_t num_pub_keys;
+					READ_VARINT(num_pub_keys);
 
-				if (num_pub_keys <= 1) return __LINE__;
-				if (num_pub_keys > std::numeric_limits<uint64_t>::max() / HASH_SIZE) return __LINE__;
-				if (static_cast<uint64_t>(data_end - data) < num_pub_keys * HASH_SIZE) return __LINE__;
+					if ((num_pub_keys <= 1) || (m_carrotOutputs.size() != num_pub_keys)) return __LINE__;
 
-				m_carrotTxPubKeys.clear();
-				m_carrotTxPubKeys.reserve(num_pub_keys);
-
-				for (uint64_t i = 0; i < num_pub_keys; ++i) {
-					hash pub_key;
-					READ_BUF(pub_key.h, HASH_SIZE);
-					m_carrotTxPubKeys.emplace_back(pub_key);
+					for (uint64_t i = 0; i < num_pub_keys; ++i) {
+						READ_BUF(m_carrotOutputs[i].eph_pub_key.h, HASH_SIZE);
+					}
+				}
+				else {
+					return __LINE__;
 				}
 			}
-			else {
-				return __LINE__;
-			}
-
-			m_carrotTxPubKeys.shrink_to_fit();
 		}
 		else {
 			EXPECT_BYTE(TX_EXTRA_TAG_PUBKEY);
@@ -550,9 +545,6 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		}
 
 		// TODO: make sure get_outputs_blob reconstructs all new Carrot fields for pruned blocks
-		if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (m_carrotTxPubKeys.size() != m_outputAmounts.size())) {
-			return __LINE__;
-		}
 
 		const uint8_t* transactions_blob = reinterpret_cast<uint8_t*>(transactions.data());
 

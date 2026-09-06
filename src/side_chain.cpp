@@ -887,26 +887,35 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		auto it = block->m_sidechainId.empty() ? m_blocksById.end() : m_blocksById.find(block->m_sidechainId);
 		if (it != m_blocksById.end()) {
 			const PoolBlock* b = it->second;
-			const size_t n = b->m_outputAmounts.size();
-
-			blob.reserve(n * b->output_blob_size_estimate() + 64);
-			writeVarint(n, blob);
 
 			uint64_t total_reward_check = 0;
 
 			if (b->m_majorVersion >= HARDFORK_VERSION_CARROT) {
-				for (size_t i = 0; i < n; ++i) {
-					total_reward_check += b->m_outputAmounts[i];
+				const size_t n = b->m_carrotOutputs.size();
 
-					writeVarint(b->m_outputAmounts[i], blob);
+				blob.reserve(n * (b->output_blob_size_estimate() + 32) + 64);
+				writeVarint(n, blob);
+
+				for (size_t i = 0; i < n; ++i) {
+					const carrot::coinbase_tx_output& o = b->m_carrotOutputs[i];
+
+					total_reward_check += o.amount;
+
+					writeVarint(o.amount, blob);
+
 					blob.emplace_back(TXOUT_TO_CARROT_V1);
-					const hash h = b->m_ephPublicKeys[i];
-					blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
-					blob.insert(blob.end(), b->m_carrotViewTags[i].data, b->m_carrotViewTags[i].data + CARROT_VIEW_TAG_BYTES);
-					blob.insert(blob.end(), b->m_carrotJanusAnchors[i].data, b->m_carrotJanusAnchors[i].data + CARROT_JANUS_ANCHOR_BYTES);
+
+					blob.insert(blob.end(), o.onetime_address.h, o.onetime_address.h + HASH_SIZE);
+					blob.insert(blob.end(), o.vt.data, o.vt.data + CARROT_VIEW_TAG_BYTES);
+					blob.insert(blob.end(), o.anchor_enc.data, o.anchor_enc.data + CARROT_JANUS_ANCHOR_BYTES);
 				}
 			}
 			else {
+				const size_t n = b->m_outputAmounts.size();
+
+				blob.reserve(n * b->output_blob_size_estimate() + 64);
+				writeVarint(n, blob);
+
 				for (size_t i = 0; i < n; ++i) {
 					total_reward_check += b->m_outputAmounts[i];
 
@@ -921,8 +930,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			block->m_ephPublicKeys = b->m_ephPublicKeys;
 			block->m_outputAmounts = b->m_outputAmounts;
 			block->m_viewTags = b->m_viewTags;
-			block->m_carrotViewTags = b->m_carrotViewTags;
-			block->m_carrotJanusAnchors = b->m_carrotJanusAnchors;
+			block->m_carrotOutputs = b->m_carrotOutputs;
 
 			return total_reward_check == total_reward;
 		}
@@ -976,8 +984,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	LOGINFO(6, "get_outputs_blob batch end");
 
-	// TODO: fill in m_carrotViewTags, m_carrotJanusAnchors instead of m_viewTags for Carrot transactions
-
+	// TODO: fill in m_carrotOutputs instead of m_ephPublicKeys, m_outputAmounts, m_viewTags for Carrot transactions
 	blob.reserve(n * block->output_blob_size_estimate() + 64);
 
 	writeVarint(n, blob);
@@ -985,8 +992,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_ephPublicKeys.clear();
 	block->m_outputAmounts.clear();
 	block->m_viewTags.clear();
-	block->m_carrotViewTags.clear();
-	block->m_carrotJanusAnchors.clear();
+	block->m_carrotOutputs.clear();
 
 	block->m_ephPublicKeys.reserve(n);
 	block->m_outputAmounts.reserve(n);
@@ -1011,8 +1017,8 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_ephPublicKeys.shrink_to_fit();
 	block->m_outputAmounts.shrink_to_fit();
 	block->m_viewTags.shrink_to_fit();
-	block->m_carrotViewTags.shrink_to_fit();
-	block->m_carrotJanusAnchors.shrink_to_fit();
+	block->m_carrotOutputs.shrink_to_fit();
+
 	return true;
 }
 

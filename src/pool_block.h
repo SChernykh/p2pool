@@ -118,11 +118,9 @@ struct PoolBlock
 	std::vector<uint64_t> m_outputAmounts;
 	std::vector<uint8_t> m_viewTags;
 
-	std::vector<carrot::view_tag> m_carrotViewTags;
-	std::vector<carrot::janus_anchor> m_carrotJanusAnchors;
+	std::vector<carrot::coinbase_tx_output> m_carrotOutputs;
 
 	hash m_txkeyPub;
-	std::vector<hash> m_carrotTxPubKeys;
 
 	uint64_t m_extraNonceSize;
 	uint32_t m_extraNonce;

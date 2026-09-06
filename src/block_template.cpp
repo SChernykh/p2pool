@@ -22,6 +22,7 @@
 #include "block_template.h"
 #include "wallet.h"
 #include "crypto.h"
+#include "carrot.h"
 #include "keccak.h"
 #include "mempool.h"
 #include "p2pool.h"
@@ -68,8 +69,8 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	uv_rwlock_init_checked(&m_lock);
 
 	m_blockHeader.reserve(64);
-	m_minerTx.reserve(49152);
-	m_minerTxExtra.reserve(64);
+	m_minerTx.reserve(262144);
+	m_minerTxExtra.reserve(98304);
 	m_transactionHashes.reserve(8192);
 	m_rewards.reserve(100);
 	m_blockTemplateBlob.reserve(65536);
@@ -287,29 +288,34 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	if (!m_shares.empty()) {
 		LOGINFO(6, "BlockTemplate::update batch start");
 
-		std::vector<std::pair<hash, size_t>> in;
-		std::vector<std::pair<hash, int32_t>> out;
-
-		const size_t n = m_shares.size();
-
-		in.reserve(n);
-		for (size_t i = 0; i < n; ++i) {
-			in.emplace_back(m_shares[i].m_wallet->view_public_key(), i);
+		if (data.major_version >= HARDFORK_VERSION_CARROT) {	
+			// TODO: cache the amount-independent part here
 		}
+		else {
+			std::vector<std::pair<hash, size_t>> in;
+			std::vector<std::pair<hash, int32_t>> out;
 
-		batch_derivations(in, m_poolBlockTemplate->m_txkeySec, out);
+			const size_t n = m_shares.size();
 
-		LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
+			in.reserve(n);
+			for (size_t i = 0; i < n; ++i) {
+				in.emplace_back(m_shares[i].m_wallet->view_public_key(), i);
+			}
 
-		std::vector<batch_public_key_input> in2;
-		std::vector<std::pair<hash, bool>> out2;
+			batch_derivations(in, m_poolBlockTemplate->m_txkeySec, out);
 
-		in2.reserve(n);
-		for (size_t i = 0; i < n; ++i) {
-			in2.emplace_back(out[i].first, i, m_shares[i].m_wallet->spend_public_key());
+			LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
+
+			std::vector<batch_public_key_input> in2;
+			std::vector<std::pair<hash, bool>> out2;
+
+			in2.reserve(n);
+			for (size_t i = 0; i < n; ++i) {
+				in2.emplace_back(out[i].first, i, m_shares[i].m_wallet->spend_public_key());
+			}
+
+			batch_public_keys(in2, out2);
 		}
-
-		batch_public_keys(in2, out2);
 
 		LOGINFO(6, "BlockTemplate::update batch end");
 	}
@@ -740,7 +746,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	LOGINFO(3, "final reward = " << log::Gray() << log::XMRAmount(final_reward) << log::NoColor() <<
 		", weight = " << log::Gray() << final_weight << log::NoColor() <<
-		", outputs = " << log::Gray() << m_poolBlockTemplate->m_outputAmounts.size() << log::NoColor() <<
+		", outputs = " << log::Gray() << std::max(m_poolBlockTemplate->m_outputAmounts.size(), m_poolBlockTemplate->m_carrotOutputs.size()) << log::NoColor() <<
 		", " << log::Gray() << m_numTransactionHashes << log::NoColor() <<
 		" of " << log::Gray() << m_mempoolTxs.size() << log::NoColor() << " transactions included");
 
@@ -868,11 +874,7 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	b->m_ephPublicKeys.clear();
 	b->m_outputAmounts.clear();
 	b->m_viewTags.clear();
-	b->m_carrotTxPubKeys.clear();
-
-	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		b->m_carrotTxPubKeys.resize(m_shares.size());
-	}
+	b->m_carrotOutputs.clear();
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
 	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
@@ -883,6 +885,16 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
 	k += m_shares.size() * b->output_blob_size_estimate();
+
+	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		// eph pubkey count varint
+		if (m_shares.size() > 1) {
+			writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+		}
+
+		// eph pubkeys
+		k += m_shares.size() * HASH_SIZE;
+	}
 
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	{
@@ -913,7 +925,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_minerTx.clear();
 
 	const size_t num_outputs = shares.size();
-	m_minerTx.reserve(num_outputs * PoolBlock::output_blob_size_estimate(data.major_version) + 55);
+	m_minerTx.reserve(num_outputs * PoolBlock::output_blob_size_estimate(data.major_version) + num_outputs * HASH_SIZE + 55);
 
 	// tx version
 	m_minerTx.push_back(TX_VERSION);
@@ -934,52 +946,93 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	// Number of outputs (1 output per miner)
 	writeVarint(num_outputs, m_minerTx);
 
-	// TODO: for Carrot transactions, fill in m_carrotTxPubKeys, m_carrotViewTags and m_carrotJanusAnchors instead
-	// of m_viewTags, and change the output loop below to write TXOUT_TO_CARROT_V1 followed by the 3-byte view tag
-	// and the 16-byte encrypted Janus anchor, instead of TXOUT_TO_TAGGED_KEY followed by a 1-byte view tag.
-	// serialize_mainchain_data() already writes that format, and the two must produce identical bytes.
-	if (m_poolBlockTemplate->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		const size_t N = shares.size();
-
-		m_poolBlockTemplate->m_carrotTxPubKeys.resize(N);
-		m_poolBlockTemplate->m_carrotViewTags.resize(N);
-		m_poolBlockTemplate->m_carrotJanusAnchors.resize(N);
-	}
-
 	m_poolBlockTemplate->m_ephPublicKeys.clear();
 	m_poolBlockTemplate->m_outputAmounts.clear();
 	m_poolBlockTemplate->m_viewTags.clear();
-
-	m_poolBlockTemplate->m_ephPublicKeys.reserve(num_outputs);
-	m_poolBlockTemplate->m_outputAmounts.reserve(num_outputs);
-	m_poolBlockTemplate->m_viewTags.reserve(num_outputs);
+	m_poolBlockTemplate->m_carrotOutputs.clear();
 
 	uint64_t reward_amounts_weight = 0;
-	for (size_t i = 0; i < num_outputs; ++i) {
-		writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
-			{
+
+	if (data.major_version >= HARDFORK_VERSION_CARROT) {
+		if (dry_run) {
+			m_poolBlockTemplate->m_carrotOutputs.resize(num_outputs);
+		}
+		else {
+			std::vector<const Wallet*> wallets;
+			wallets.reserve(num_outputs);
+
+			for (const MinerShare& s : shares) {
+				wallets.emplace_back(s.m_wallet);
+			}
+
+			const bool result = carrot::build_coinbase_outputs(
+				m_poolBlockTemplate->m_txkeySec,
+				data.height,
+				wallets,
+				m_rewards,
+				m_poolBlockTemplate->m_carrotOutputs
+			);
+
+			if (!result) {
+				LOGERR(1, "create_miner_tx: failed to generate Carrot coinbase outputs");
+				return -4;
+			}
+		}
+
+		for (size_t i = 0; i < num_outputs; ++i) {
+			const carrot::coinbase_tx_output& o = m_poolBlockTemplate->m_carrotOutputs[i];
+
+			// Wrong order for the dry run, but we only need to know how many bytes they take
+			const uint64_t amount = dry_run ? m_rewards[i] : o.amount;
+
+			writeVarint(amount, [this, &reward_amounts_weight](uint8_t b) {
 				m_minerTx.push_back(b);
 				++reward_amounts_weight;
 			});
-		m_minerTx.push_back(TXOUT_TO_TAGGED_KEY);
 
-		uint8_t view_tag = 0;
+			m_minerTx.push_back(TXOUT_TO_CARROT_V1);
 
-		if (dry_run) {
-			m_minerTx.insert(m_minerTx.end(), HASH_SIZE, 0);
-		}
-		else {
-			hash eph_public_key;
-			if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
-				LOGERR(1, "get_eph_public_key failed at index " << i);
+			if (dry_run) {
+				m_minerTx.insert(m_minerTx.end(), HASH_SIZE + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES, 0);
+				continue;
 			}
-			m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
-			m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
-			m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i]);
-			m_poolBlockTemplate->m_viewTags.emplace_back(view_tag);
-		}
 
-		m_minerTx.emplace_back(view_tag);
+			m_minerTx.insert(m_minerTx.end(), o.onetime_address.h, o.onetime_address.h + HASH_SIZE);
+			m_minerTx.insert(m_minerTx.end(), o.vt.data, o.vt.data + CARROT_VIEW_TAG_BYTES);
+			m_minerTx.insert(m_minerTx.end(), o.anchor_enc.data, o.anchor_enc.data + CARROT_JANUS_ANCHOR_BYTES);
+		}
+	}
+	else {
+		m_poolBlockTemplate->m_ephPublicKeys.reserve(num_outputs);
+		m_poolBlockTemplate->m_outputAmounts.reserve(num_outputs);
+		m_poolBlockTemplate->m_viewTags.reserve(num_outputs);
+
+		for (size_t i = 0; i < num_outputs; ++i) {
+			writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
+				{
+					m_minerTx.push_back(b);
+					++reward_amounts_weight;
+				});
+			m_minerTx.push_back(TXOUT_TO_TAGGED_KEY);
+
+			uint8_t view_tag = 0;
+
+			if (dry_run) {
+				m_minerTx.insert(m_minerTx.end(), HASH_SIZE, 0);
+			}
+			else {
+				hash eph_public_key;
+				if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
+					LOGERR(1, "get_eph_public_key failed at index " << i);
+				}
+				m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
+				m_poolBlockTemplate->m_ephPublicKeys.emplace_back(eph_public_key);
+				m_poolBlockTemplate->m_outputAmounts.emplace_back(m_rewards[i]);
+				m_poolBlockTemplate->m_viewTags.emplace_back(view_tag);
+			}
+
+			m_minerTx.emplace_back(view_tag);
+		}
 	}
 
 	if (dry_run) {
@@ -997,7 +1050,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 	m_minerTxExtra.clear();
 
 	if (m_poolBlockTemplate->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		const size_t N = m_poolBlockTemplate->m_carrotTxPubKeys.size();
+		const size_t N = m_poolBlockTemplate->m_carrotOutputs.size();
 
 		if (N > 1) {
 			m_minerTxExtra.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
@@ -1007,8 +1060,8 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 			m_minerTxExtra.push_back(TX_EXTRA_TAG_PUBKEY);
 		}
 
-		for (const hash& pub_key : m_poolBlockTemplate->m_carrotTxPubKeys) {
-			m_minerTxExtra.insert(m_minerTxExtra.end(), pub_key.h, pub_key.h + HASH_SIZE);
+		for (const auto& o : m_poolBlockTemplate->m_carrotOutputs) {
+			m_minerTxExtra.insert(m_minerTxExtra.end(), o.eph_pub_key.h, o.eph_pub_key.h + HASH_SIZE);
 		}
 	}
 	else {
