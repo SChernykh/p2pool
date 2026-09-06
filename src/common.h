@@ -283,6 +283,18 @@ namespace carrot {
 struct alignas(CARROT_JANUS_ANCHOR_BYTES) janus_anchor
 {
 	uint8_t data[CARROT_JANUS_ANCHOR_BYTES];
+
+	FORCEINLINE constexpr janus_anchor() noexcept : data{} {}
+
+	constexpr janus_anchor(std::initializer_list<uint8_t> l) noexcept : data{} {
+		auto it = l.begin();
+
+		for (size_t i = 0; (i < CARROT_JANUS_ANCHOR_BYTES) && (it != l.end()); ++i, ++it) {
+			data[i] = *it;
+		}
+	}
+
+	FORCEINLINE bool operator==(const janus_anchor& b) const { return memcmp(data, b.data, CARROT_JANUS_ANCHOR_BYTES) == 0; }
 };
 
 static_assert(sizeof(janus_anchor) == CARROT_JANUS_ANCHOR_BYTES, "struct janus_anchor has invalid size, check your compiler options");
@@ -295,6 +307,22 @@ struct view_tag
 
 static_assert(sizeof(view_tag) == CARROT_VIEW_TAG_BYTES, "struct view_tag has invalid size, check your compiler options");
 static_assert(alignof(view_tag) == 1, "struct view_tag has invalid alignment, check your compiler options");
+
+struct coinbase_tx_output
+{
+	janus_anchor anchor_enc; // Carrot Janus anchor, encrypted
+
+	hash onetime_address;    // K_o
+	hash eph_pub_key;        // D_e, goes into tx_extra at the same index
+
+	uint64_t amount = 0;
+	view_tag vt = {};        // Carrot view tag
+
+	bool valid = false;
+
+	// Carrot consensus output order
+	FORCEINLINE bool operator<(const coinbase_tx_output& b) const { return memcmp(onetime_address.h, b.onetime_address.h, HASH_SIZE) < 0; }
+};
 
 } // namespace carrot
 

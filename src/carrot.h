@@ -141,9 +141,6 @@ namespace carrot {
 	bool hash_to_bytes(const void* input, size_t in_len, void* output, size_t out_len, const void* key = nullptr);
 	bool hash_to_scalar(const void *data, const std::size_t data_length, void *hash_out, const void *key = nullptr);
 
-	// TODO: when adding it to block generation/verification, make sure retry_counter is the smallest possible value
-	// that makes generated anchors pass all Carrot checks (no zero/duplicate anchors, no zero/duplicate D_e, no duplicate K_o)
-	// retry_counter is transaction-wide and must have a single canonical value, just like txkey_sec
 	carrot::janus_anchor gen_janus_anchor(const hash& txkey_sec, uint8_t retry_counter, const Wallet& w);
 	bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wallet& w, hash& eph_priv_key);
 
@@ -177,19 +174,24 @@ namespace carrot {
 		hash spend_public_key;                       // K_s
 		hash sender_receiver_secret;                 // s_sr, keys the view tag
 		hash contextualized_sender_receiver_secret;  // s^ctx_sr, keys k^o_g, k^o_t and the anchor mask
-		janus_anchor anchor = {};                    // anchor_norm
+		janus_anchor anchor;                         // anchor_norm
 		uint64_t amount = 0;
 	};
 
-	struct coinbase_output {
-		hash onetime_address;      // K_o
-		view_tag vt = {};
-		janus_anchor anchor_enc = {};
-		bool valid = false;
-	};
-
 	// out[i].valid == false means out[i] is invalid (gen_onetime_address would've returned false for in[i]), and the rest of out[i] is left zeroed.
-	bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_output>& out);
+	bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_tx_output>& out);
+
+	// Builds Carrot coinbase tx outputs. Uses internal retry_counter (uint8_t) to guarantee that all
+	// Carrot consensus check pass (no zero/duplicate anchors, no zero/duplicate D_e, no duplicate K_o)
+	// retry_counter is transaction-wide and must have a single canonical value - a smallest value that passes.
+	//
+	// Returns false if retry_counter was exhausted (extremely unlikely)
+	[[nodiscard]] bool build_coinbase_outputs(
+		const hash& txkey_sec,
+		uint64_t height,
+		const std::vector<const Wallet*>& wallets,
+		const std::vector<uint64_t>& amounts,
+		std::vector<coinbase_tx_output>& outputs);
 } // namespace carrot
 
 } // namespace p2pool

@@ -560,4 +560,13 @@ struct hash<std::pair<uint64_t, uint64_t>>
 	}
 };
 
+template<>
+struct hash<p2pool::carrot::janus_anchor>
+{
+	FORCEINLINE size_t operator()(const p2pool::carrot::janus_anchor& value) const noexcept
+	{
+		return hash_bytes(&value, sizeof(value));
+	}
+};
+
 } // namespace robin_hood

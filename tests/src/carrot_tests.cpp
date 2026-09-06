@@ -56,7 +56,7 @@ static constexpr hash all_ones("ffffffffffffffffffffffffffffffffffffffffffffffff
 static constexpr const hash& invalid_public_key = all_ones;
 
 static constexpr janus_anchor all_ones_anchor = {
-	{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 };
 
 static constexpr hash hash_to_bytes_key = keccak("hash_to_bytes key");
@@ -70,7 +70,7 @@ static constexpr hash eph_priv_key_negated("a73157371ff66759483db7c064fa95e40233
 static constexpr hash eph_pub_key("924e14b4c6664450530266de4aafa87a019484a22e193728d6cad09824690224");
 
 static constexpr janus_anchor convergence_anchor = {
-	{ 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 }
+	0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55
 };
 
 static constexpr hash convergence_eph_priv_key("6aea0ed0c34ad3483415377658841a75e0da8b462e637d8bf783b9bcd320b303");
@@ -775,7 +775,7 @@ TEST(carrot, coinbase_enote_vectors)
 		init_crypto_cache();
 		thread_pool_init();
 
-		std::vector<coinbase_output> out;
+		std::vector<coinbase_tx_output> out;
 		const bool ok = batch_coinbase_outputs(v.height, { in }, out);
 
 		thread_pool_destroy();
@@ -1205,9 +1205,9 @@ TEST(carrot, batch_sender_receiver_secrets)
 	}
 }
 
-static coinbase_output reference_coinbase_output(uint64_t height, const coinbase_output_input& in)
+static coinbase_tx_output reference_coinbase_output(uint64_t height, const coinbase_output_input& in)
 {
-	coinbase_output result{};
+	coinbase_tx_output result{};
 
 	const hash sender_extension_g = gen_sender_extension_g(in.contextualized_sender_receiver_secret, in.amount, in.spend_public_key);
 	const hash sender_extension_t = gen_sender_extension_t(in.contextualized_sender_receiver_secret, in.amount, in.spend_public_key);
@@ -1225,7 +1225,7 @@ static coinbase_output reference_coinbase_output(uint64_t height, const coinbase
 	return result;
 }
 
-static bool equal_outputs(const coinbase_output& a, const coinbase_output& b)
+static bool equal_outputs(const coinbase_tx_output& a, const coinbase_tx_output& b)
 {
 	return (a.valid == b.valid) &&
 		(a.onetime_address == b.onetime_address) &&
@@ -1246,7 +1246,7 @@ TEST(carrot, batch_coinbase_outputs)
 	constexpr uint64_t height = 3812345;
 	constexpr uint64_t amount = 600000000000ULL;
 
-	std::vector<coinbase_output> out(1);
+	std::vector<coinbase_tx_output> out(1);
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, {}, out));
 	ASSERT_TRUE(out.empty());
@@ -1347,7 +1347,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	// The height only reaches the view tag: K_o and the encrypted anchor don't depend on it
 	{
-		std::vector<coinbase_output> out2;
+		std::vector<coinbase_tx_output> out2;
 
 		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
 		ASSERT_TRUE(batch_coinbase_outputs(height + 1, { known }, out2));
@@ -1382,7 +1382,7 @@ TEST(carrot, batch_coinbase_outputs)
 		inputs.emplace_back(t);
 	}
 
-	std::vector<coinbase_output> reference(inputs.size());
+	std::vector<coinbase_tx_output> reference(inputs.size());
 
 	for (size_t i = 0; i < reference.size(); ++i) {
 		reference[i] = reference_coinbase_output(height, inputs[i]);
@@ -1421,7 +1421,7 @@ TEST(carrot, batch_coinbase_outputs)
 		std::vector<hash> onetime_addresses;
 		onetime_addresses.reserve(out.size());
 
-		for (const coinbase_output& t : out) {
+		for (const coinbase_tx_output& t : out) {
 			onetime_addresses.emplace_back(t.onetime_address);
 		}
 

@@ -329,6 +329,173 @@ bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<ha
 	return result;
 }
 
+bool build_coinbase_outputs(
+	const hash& txkey_sec,
+	uint64_t height,
+	const std::vector<const Wallet*>& wallets,
+	const std::vector<uint64_t>& amounts,
+	std::vector<coinbase_tx_output>& outputs)
+{
+	outputs.clear();
+
+	const size_t N = wallets.size();
+
+	if (amounts.size() != N) {
+		return false;
+	}
+
+	if (N == 0) {
+		return true;
+	}
+
+	std::vector<hash> view_public_keys;
+	view_public_keys.reserve(N);
+
+	// Assumes that all wallet keys are torsion-free (Wallet class enforces it)
+	for (const Wallet* w : wallets) {
+		if (!w || !w->valid()) {
+			return false;
+		}
+
+		view_public_keys.emplace_back(w->view_public_key());
+	}
+
+	std::vector<janus_anchor> anchors;
+	std::vector<hash> eph_priv_keys;
+	std::vector<std::pair<hash, bool>> eph_pub_keys;
+	std::vector<std::pair<hash, bool>> sender_receiver_secrets;
+	std::vector<std::pair<hash, bool>> ctx_secrets;
+	std::vector<coinbase_output_input> in;
+	std::vector<coinbase_tx_output> out;
+
+	constexpr janus_anchor zero_anchor = {};
+	constexpr hash zero_hash = {};
+	constexpr hash identity_hash = { 1 };
+
+	unordered_set<janus_anchor> anchors_set;
+	anchors_set.reserve(N + 1);
+
+	unordered_set<hash> eph_pub_keys_set;
+	eph_pub_keys_set.reserve(N + 1);
+
+	for (size_t i = 0; i <= std::numeric_limits<uint8_t>::max(); ++i) {
+		const uint8_t retry_counter = static_cast<uint8_t>(i);
+
+		// anchor_norm and d_e
+		if (!batch_eph_privkeys(txkey_sec, retry_counter, height, wallets, anchors, eph_priv_keys)) {
+			continue;
+		}
+
+		anchors_set.clear();
+		anchors_set.insert(zero_anchor);
+
+		bool anchors_ok = true;
+
+		for (const janus_anchor& a : anchors) {
+			// Either a duplicate, or a zero anchor
+			if (!anchors_set.insert(a).second) {
+				anchors_ok = false;
+				break;
+			}
+		}
+
+		if (!anchors_ok) {
+			continue;
+		}
+
+		// D_e
+		if (!batch_eph_pubkeys(eph_priv_keys, eph_pub_keys)) {
+			continue;
+		}
+
+		eph_pub_keys_set.clear();
+		eph_pub_keys_set.insert(zero_hash);
+
+		bool eph_pub_keys_ok = true;
+
+		for (const auto& k : eph_pub_keys) {
+			// Either a duplicate, or a zero key, or an invalid key
+			if (!k.second || !eph_pub_keys_set.insert(k.first).second) {
+				eph_pub_keys_ok = false;
+				break;
+			}
+		}
+
+		if (!eph_pub_keys_ok) {
+			continue;
+		}
+
+		// s_sr
+		if (!batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, sender_receiver_secrets)) {
+			continue;
+		}
+
+		// s^ctx_sr
+		if (!batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height, ctx_secrets)) {
+			continue;
+		}
+
+		// K_o, vt and anchor_enc
+		in.clear();
+		in.reserve(N);
+
+		for (size_t i = 0; i < N; ++i) {
+			in.emplace_back(coinbase_output_input{
+				wallets[i]->spend_public_key(),
+				sender_receiver_secrets[i].first,
+				ctx_secrets[i].first,
+				anchors[i],
+				amounts[i]
+			});
+		}
+
+		if (!batch_coinbase_outputs(height, in, out)) {
+			continue;
+		}
+
+		outputs.clear();
+		outputs.reserve(N);
+
+		for (size_t i = 0; i < N; ++i) {
+			outputs.emplace_back(coinbase_tx_output{
+				out[i].anchor_enc,
+				out[i].onetime_address,
+				eph_pub_keys[i].first,
+				amounts[i],
+				out[i].vt,
+				true
+			});
+		}
+
+		std::sort(outputs.begin(), outputs.end());
+
+		bool onetime_address_ok = true;
+
+		// Check for duplicate K_o and identity K_o
+		for (size_t i = 0; i < N; ++i) {
+			if (outputs[i].onetime_address == identity_hash) {
+				onetime_address_ok = false;
+				break;
+			}
+
+			if (i && (outputs[i - 1].onetime_address == outputs[i].onetime_address)) {
+				onetime_address_ok = false;
+				break;
+			}
+		}
+
+		if (!onetime_address_ok) {
+			continue;
+		}
+
+		return true;
+	}
+
+	// retry_counter exhausted
+	outputs.clear();
+	return false;
+}
+
 } // namespace carrot
 
 } // namespace p2pool
