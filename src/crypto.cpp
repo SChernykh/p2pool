@@ -815,7 +815,7 @@ public:
 	//
 	// Deliberately not cached: every new share re-splits the reward, and so does every transaction added to the
 	// block template, so two peers on the same sidechain tip will rarely be hashing the same amounts.
-	bool batch_coinbase_outputs(uint64_t height, const std::vector<carrot::coinbase_output_input>& in, std::vector<carrot::coinbase_output>& out)
+	bool batch_coinbase_outputs(uint64_t height, const std::vector<carrot::coinbase_output_input>& in, std::vector<carrot::coinbase_tx_output>& out)
 	{
 		out.clear();
 
@@ -825,7 +825,7 @@ public:
 			return true;
 		}
 
-		out.assign(N, carrot::coinbase_output{});
+		out.assign(N, carrot::coinbase_tx_output{});
 
 		std::atomic<bool> result = true;
 
@@ -2062,7 +2062,7 @@ bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const
 	return cache->batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, secrets);
 }
 
-bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_output>& out)
+bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_tx_output>& out)
 {
 	return cache->batch_coinbase_outputs(height, in, out);
 }
