@@ -25,6 +25,8 @@
 
 #include "gtest/gtest.h"
 #include <random>
+#include <fstream>
+#include <sstream>
 
 namespace p2pool {
 
@@ -1772,6 +1774,192 @@ TEST(carrot, sender_receiver_secret_cache_states)
 	// key is "not torsion free", so TORSION_FREE stays clear
 	ASSERT_FALSE(check_public_key(torsion_public_key));
 	ASSERT_EQ(get_from_bytes_cache_state(torsion_public_key), PRESENT | VALID | HAS_PRECOMP | TORSION_CHECKED);
+}
+
+TEST(carrot, build_coinbase_outputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	std::ifstream file("carrot_coinbase_vectors.txt");
+	ASSERT_TRUE(file.is_open());
+
+	std::string line;
+
+	size_t line_number = 0;
+	size_t test_count = 0;
+
+	while (std::getline(file, line)) {
+		++line_number;
+
+		if (line.empty()) {
+			continue;
+		}
+
+		SCOPED_TRACE(testing::Message() << "line " << line_number);
+
+		std::istringstream input(line);
+
+		hash txkey_sec;
+		uint64_t height;
+		size_t output_count;
+
+		ASSERT_TRUE(input >> txkey_sec >> height >> output_count);
+		ASSERT_GT(output_count, 0U);
+
+		std::vector<Wallet> wallets;
+		wallets.reserve(output_count);
+
+		std::vector<coinbase_tx_output> expected_outputs(output_count);
+
+		for (auto& expected : expected_outputs) {
+			hash spend_public_key, view_public_key;
+			std::string view_tag_hex, anchor_enc_hex;
+
+			ASSERT_TRUE(input >> spend_public_key >> view_public_key >> expected.amount >> expected.onetime_address >> expected.eph_pub_key >> view_tag_hex >> anchor_enc_hex);
+
+			std::vector<uint8_t> bytes;
+
+			ASSERT_EQ(view_tag_hex.size(), CARROT_VIEW_TAG_BYTES * 2);
+			ASSERT_TRUE(from_hex(view_tag_hex.data(), view_tag_hex.size(), bytes));
+
+			memcpy(expected.vt.data, bytes.data(), CARROT_VIEW_TAG_BYTES);
+
+			ASSERT_EQ(anchor_enc_hex.size(), CARROT_JANUS_ANCHOR_BYTES * 2);
+			ASSERT_TRUE(from_hex(anchor_enc_hex.data(), anchor_enc_hex.size(), bytes));
+
+			memcpy(expected.anchor_enc.data, bytes.data(), CARROT_JANUS_ANCHOR_BYTES);
+
+			expected.valid = true;
+			wallets.emplace_back(nullptr);
+
+			ASSERT_TRUE(wallets.back().assign(spend_public_key, view_public_key, NetworkType::Mainnet));
+		}
+
+		ASSERT_TRUE((input >> std::ws).eof());
+
+		std::vector<const Wallet*> pointers;
+		std::vector<uint64_t> amounts;
+
+		for (size_t i = 0; i < wallets.size(); ++i) {
+			pointers.emplace_back(&wallets[i]);
+			amounts.emplace_back(expected_outputs[i].amount);
+		}
+
+		// Keep caches across fixtures to test changes in amounts, height and
+		// txkey_sec. Also repeat each set in reverse and rotated input order.
+		for (size_t pass = 0; pass < 3; ++pass) {
+			SCOPED_TRACE(testing::Message() << "pass " << pass);
+
+			if (pass == 1) {
+				std::reverse(pointers.begin(), pointers.end());
+				std::reverse(amounts.begin(), amounts.end());
+			}
+			else if (pass == 2) {
+				std::rotate(pointers.begin(), pointers.begin() + 1, pointers.end());
+				std::rotate(amounts.begin(), amounts.begin() + 1, amounts.end());
+			}
+
+			std::vector<coinbase_tx_output> outputs(output_count + 1);
+
+			ASSERT_TRUE(build_coinbase_outputs(txkey_sec, height, pointers, amounts, outputs));
+			ASSERT_EQ(outputs.size(), output_count);
+
+			for (size_t i = 0; i < outputs.size(); ++i) {
+				SCOPED_TRACE(testing::Message() << "output " << i);
+
+				const auto& actual = outputs[i];
+				const auto& expected = expected_outputs[i];
+
+				EXPECT_TRUE(actual.valid);
+				EXPECT_EQ(actual.onetime_address, expected.onetime_address);
+				EXPECT_EQ(actual.eph_pub_key, expected.eph_pub_key);
+				EXPECT_EQ(actual.amount, expected.amount);
+				EXPECT_EQ(actual.anchor_enc, expected.anchor_enc);
+				EXPECT_EQ(memcmp(actual.vt.data, expected.vt.data, CARROT_VIEW_TAG_BYTES), 0);
+
+				if (i) {
+					// Monero orders serialized bytes, unlike p2pool::hash::operator<.
+					EXPECT_LT(memcmp(outputs[i - 1].onetime_address.h, actual.onetime_address.h, HASH_SIZE), 0);
+				}
+			}
+		}
+
+		++test_count;
+	}
+
+	ASSERT_TRUE(file.eof());
+	EXPECT_EQ(test_count, 10U);
+}
+
+TEST(carrot, build_coinbase_outputs_invalid_inputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	constexpr uint64_t height = 3812345;
+	constexpr uint64_t amount = 600000000000ULL;
+
+	const hash& txkey_sec = gen_janus_anchor_txkey_sec;
+
+	Wallet w(test_wallet_address);
+
+	ASSERT_TRUE(w.valid());
+
+	Wallet copy(w);
+	Wallet invalid(nullptr);
+
+	ASSERT_FALSE(invalid.valid());
+
+	std::vector<coinbase_tx_output> baseline;
+
+	ASSERT_TRUE(build_coinbase_outputs(txkey_sec, height, { &w }, { amount }, baseline));
+	ASSERT_EQ(baseline.size(), 1U);
+
+	auto check_empty = [&](const std::vector<const Wallet*>& wallets, const std::vector<uint64_t>& amounts, bool expected)
+	{
+		std::vector<coinbase_tx_output> outputs = baseline;
+
+		EXPECT_EQ(build_coinbase_outputs(txkey_sec, height, wallets, amounts, outputs), expected);
+		EXPECT_TRUE(outputs.empty());
+	};
+
+	check_empty({}, {}, true);
+	check_empty({}, { 1 }, false);
+	check_empty({ &w }, {}, false);
+	check_empty({ &w }, { 1, 2 }, false);
+
+	for (size_t i = 0; i < 3; ++i) {
+		std::vector<const Wallet*> wallets(3, &w);
+
+		wallets[i] = nullptr;
+		check_empty(wallets, { 1, 2, 3 }, false);
+
+		wallets[i] = &invalid;
+		check_empty(wallets, { 1, 2, 3 }, false);
+	}
+
+	check_empty({ &w, &w }, { 1, 1 }, false);
+	check_empty({ &w, &copy }, { 1, 2 }, false);
+
+	std::vector<coinbase_tx_output> outputs;
+
+	ASSERT_TRUE(build_coinbase_outputs(txkey_sec, height, { &w }, { amount }, outputs));
+	ASSERT_EQ(outputs.size(), 1U);
+
+	EXPECT_TRUE(equal_outputs(outputs[0], baseline[0]));
+	EXPECT_EQ(outputs[0].eph_pub_key, baseline[0].eph_pub_key);
+	EXPECT_EQ(outputs[0].amount, baseline[0].amount);
 }
 
 } // namespace carrot
