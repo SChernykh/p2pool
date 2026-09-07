@@ -373,6 +373,7 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	writeVarint(arr.Size(), blob);
 
+	// TODO: add support for Carrot outputs
 	for (auto* i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
@@ -449,6 +450,8 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
 		out_transaction_hashes.emplace_back(h);
 	}
+
+	// TODO: add FCMP++ tree layer count and tree root to the blob here (33 bytes in total)
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(&data);
 	blob.insert(blob.begin(), p, p + sizeof(data));

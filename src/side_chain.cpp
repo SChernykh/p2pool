@@ -2800,6 +2800,7 @@ void SideChain::launch_precalc(const PoolBlock* block)
 	}
 }
 
+// TODO: add support for Carrot outputs precalculation
 void SideChain::precalc_worker()
 {
 	set_thread_name("Precalc");
