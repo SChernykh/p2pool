@@ -292,6 +292,20 @@ template<> struct Stream::Entry<carrot::janus_anchor>
 	}
 };
 
+template<> struct Stream::Entry<carrot::view_tag>
+{
+	static NOINLINE void put(const carrot::view_tag& data, Stream* wrapper)
+	{
+		char buf[sizeof(data) * 2];
+		for (size_t i = 0; i < sizeof(data.data); ++i) {
+			buf[i * 2 + 0] = "0123456789abcdef"[data.data[i] >> 4];
+			buf[i * 2 + 1] = "0123456789abcdef"[data.data[i] & 15];
+		}
+		// cppcheck-suppress uninitvar
+		wrapper->writeBuf(buf, sizeof(buf));
+	}
+};
+
 #ifdef WITH_INDEXED_HASHES
 template<> struct Stream::Entry<indexed_hash>
 {

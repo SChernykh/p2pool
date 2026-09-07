@@ -212,7 +212,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		const uint8_t* tx_extra_begin = data;
 
-		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
 			// TODO: Carrot pruned blocks will skip eph pub keys as well,
 			// so m_carrotOutputs will stay empty until get_outputs_blob fills it
 			// This section is for unpruned blocks only
@@ -450,10 +450,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash pub;
 		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
 
-		// TODO: check m_carrotTxPubKeys here
-		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
-		}
-		else {
+		if (m_majorVersion < HARDFORK_VERSION_FCMP_PP) {
 			if (pub != m_txkeyPub) {
 				return __LINE__;
 			}

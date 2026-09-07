@@ -460,6 +460,9 @@ void ConsoleCommands::process_input(std::string& command, const char* data, uint
 	do {
 		size_t k = command.find_first_of("\r\n");
 		if (k == std::string::npos) {
+			if (command.size() >= 4096) {
+				command.clear();
+			}
 			break;
 		}
 		command[k] = '\0';

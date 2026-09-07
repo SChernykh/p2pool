@@ -104,7 +104,22 @@ public:
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
 #endif
 
-	[[nodiscard]] static bool split_reward(uint8_t major_version, uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards);
+	// Splits reward using weighted shares and output resulting reward split into (wallets, rewards)
+	//
+	// If it returns true, then:
+	//
+	// wallets.size() == rewards.size() <= shares.size() and (wallets, rewards) has the calculated reward split
+	//
+	// If it returns false, then:
+	//
+	// wallets.size() == rewards.size() == 0
+	[[nodiscard]] static bool split_reward(
+		uint8_t major_version,
+		uint64_t reward,
+		const std::vector<MinerShare>& shares,
+		std::vector<const Wallet*>& wallets,
+		std::vector<uint64_t>& rewards
+	);
 
 	[[nodiscard]] FORCEINLINE uint64_t monero_headers_required() const { return m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME; }
 

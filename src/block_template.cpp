@@ -72,7 +72,8 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	m_minerTx.reserve(262144);
 	m_minerTxExtra.reserve(98304);
 	m_transactionHashes.reserve(8192);
-	m_rewards.reserve(100);
+	m_wallets.reserve(1000);
+	m_rewards.reserve(1000);
 	m_blockTemplateBlob.reserve(65536);
 	m_fullDataBlob.reserve(65536);
 	m_sidechainHashBlob.reserve(65536);
@@ -152,6 +153,7 @@ BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
 	m_minerTxExtra.clear();
 	m_transactionHashes.clear();
 	m_transactionHashesSet.clear();
+	m_wallets.clear();
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
@@ -173,27 +175,88 @@ static FORCEINLINE uint64_t get_base_reward(uint64_t already_generated_coins)
 	return (result < BASE_BLOCK_REWARD) ? BASE_BLOCK_REWARD : result;
 }
 
+// Compile time calculation of maximal W such that W^2 * BASE_BLOCK_REWARD < 2^128
+static FORCEINLINE constexpr uint64_t get_max_median_weight()
+{
+	uint64_t a[2] = {};
+
+	for (int i = 63; i >= 0; --i) {
+		const uint64_t bit = 1ULL << (i & 31);
+
+		a[i / 32] += bit;
+
+		uint64_t b[5] = {};
+
+		b[0] = a[0] * a[0];
+		b[1] = a[0] * a[1] * 2;
+		b[2] = a[1] * a[1];
+
+		for (int j = 0; j < 4; ++j) {
+			b[j + 1] += b[j] >> 32;
+			b[j] &= 0xFFFFFFFFULL;
+		}
+
+		uint64_t c[2] = { BASE_BLOCK_REWARD & 0xFFFFFFFFULL, BASE_BLOCK_REWARD >> 32 };
+
+		uint64_t d[7] = {};
+
+		for (int j = 0; j < 4; ++j) {
+			for (int k = 0; k < 2; ++k) {
+				d[j + k] += b[j] * c[k];
+			}
+		}
+
+		for (int j = 0; j < 6; ++j) {
+			d[j + 1] += d[j] >> 32;
+			d[j] &= 0xFFFFFFFFULL;
+		}
+
+		if (d[4] || d[5] || d[6]) {
+			a[i / 32] -= bit;
+		}
+	}
+
+	return (a[1] << 32) + a[0];
+}
+
+// Returns 0 on any error - both an internal error, or invalid inputs (i.e. weight is too big to pass Monero consensus rules)
 static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t median_weight, uint64_t fees, uint64_t weight)
 {
 	if (weight <= median_weight) {
-		return base_reward + fees;
+		const uint64_t result = base_reward + fees;
+		return (result < base_reward) ? 0 : result;
 	}
 
 	if (weight > median_weight * 2) {
 		return 0;
 	}
 
-	// This will overflow if median_weight >= 2^32
-	// Maybe fix it later like in Monero code, but it'll be fiiiine for now...
-	// Performance of this code is more important
+	// The code below works for median_weight <= this calculated value (approximately 2.38*10^13)
+	// Declare it as enum to guarantee it's compile time even in Debug builds
+	enum : uint64_t { max_median_weight = get_max_median_weight() };
 
-	uint64_t product[2];
-	product[0] = umul128(base_reward, (median_weight * 2 - weight) * weight, &product[1]);
+	if (median_weight > max_median_weight) {
+		return 0;
+	}
 
-	uint64_t rem;
-	uint64_t reward = udiv128(product[1], product[0], median_weight * median_weight, &rem);
+	const difficulty_type a = difficulty_type(median_weight * 2 - weight) * weight;
+	const difficulty_type b = difficulty_type(median_weight) * median_weight;
 
-	return reward + fees;
+	if ((base_reward != BASE_BLOCK_REWARD) && (a != 0)) {
+		constexpr difficulty_type diff_max = difficulty_type(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
+
+		if (difficulty_type(base_reward) > diff_max / a) {
+			return 0;
+		}
+	}
+
+	const difficulty_type result = ((a * base_reward) / b) + fees;
+
+	if (result.hi) {
+		return 0;
+	}
+
+	return result.lo;
 }
 
 void BlockTemplate::shuffle_tx_order()
@@ -376,7 +439,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
-	if (!SideChain::split_reward(data.major_version, max_reward, m_shares, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, max_reward, m_shares, m_wallets, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -529,6 +592,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 		if (final_reward < base_reward) {
 			LOGERR(1, "final_reward < base_reward, this should never happen. Fix the code!");
+			use_old_template();
+			return;
 		}
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
@@ -558,7 +623,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 #endif
 	}
 
-	if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_wallets, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -576,7 +641,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			// Block reward will be <= r due to how block size penalty works
 			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
 
-			if (!SideChain::split_reward(data.major_version, r, m_shares, m_rewards)) {
+			if (!r || !SideChain::split_reward(data.major_version, r, m_shares, m_wallets, m_rewards)) {
 				use_old_template();
 				return;
 			}
@@ -594,7 +659,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
 
-			if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_rewards)) {
+			if (!final_reward || !SideChain::split_reward(data.major_version, final_reward, m_shares, m_wallets, m_rewards)) {
 				use_old_template();
 				return;
 			}
@@ -755,6 +820,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_minerTxExtra.clear();
 	m_transactionHashes.clear();
 	m_transactionHashesSet.clear();
+	m_wallets.clear();
 	m_rewards.clear();
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
@@ -923,6 +989,7 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
 }
 
+// TODO: when the new reward split algorithm is implemented, get vectors of wallets and rewards here, instead of shares
 int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run)
 {
 	// Miner transaction (coinbase)
@@ -962,17 +1029,10 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 			m_poolBlockTemplate->m_carrotOutputs.resize(num_outputs);
 		}
 		else {
-			std::vector<const Wallet*> wallets;
-			wallets.reserve(num_outputs);
-
-			for (const MinerShare& s : shares) {
-				wallets.emplace_back(s.m_wallet);
-			}
-
 			const bool result = carrot::build_coinbase_outputs(
 				m_poolBlockTemplate->m_txkeySec,
 				data.height,
-				wallets,
+				m_wallets,
 				m_rewards,
 				m_poolBlockTemplate->m_carrotOutputs
 			);
@@ -1026,7 +1086,7 @@ int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<Mine
 			}
 			else {
 				hash eph_public_key;
-				if (!shares[i].m_wallet->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
+				if (!m_wallets[i]->get_eph_public_key(m_poolBlockTemplate->m_txkeySec, i, eph_public_key, view_tag)) {
 					LOGERR(1, "get_eph_public_key failed at index " << i);
 				}
 				m_minerTx.insert(m_minerTx.end(), eph_public_key.h, eph_public_key.h + HASH_SIZE);
