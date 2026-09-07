@@ -33,6 +33,7 @@
 #include "params.h"
 #include "json_parsers.h"
 #include "crypto.h"
+#include "carrot.h"
 #include "hardforks/hardforks.h"
 #include "pow_hash.h"
 
@@ -879,6 +880,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	hash txkeySec;
 
+	std::vector<const Wallet*> tmpWallets;
 	std::vector<uint64_t> tmpRewards;
 	std::vector<MinerShare> tmpShares;
 	{
@@ -937,12 +939,13 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 		txkeySec = block->m_txkeySec;
 
-		if (!get_shares(block, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpRewards) || (tmpRewards.size() != tmpShares.size())) {
+		if (!get_shares(block, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpWallets, tmpRewards)) {
 			return false;
 		}
 	}
 
-	const size_t n = tmpShares.size();
+	// TODO: fill in m_carrotOutputs instead of m_ephPublicKeys, m_outputAmounts, m_viewTags for Carrot transactions
+	const size_t n = tmpWallets.size();
 
 	LOGINFO(6, "get_outputs_blob batch start");
 
@@ -951,7 +954,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in.emplace_back(tmpShares[i].m_wallet->view_public_key(), i);
+		in.emplace_back(tmpWallets[i]->view_public_key(), i);
 	}
 
 	if (!batch_derivations(in, txkeySec, out)) {
@@ -970,7 +973,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	in2.reserve(n);
 	for (size_t i = 0; i < n; ++i) {
-		in2.emplace_back(out[i].first, i, tmpShares[i].m_wallet->spend_public_key());
+		in2.emplace_back(out[i].first, i, tmpWallets[i]->spend_public_key());
 	}
 
 	if (!batch_public_keys(in2, out2)) {
@@ -984,7 +987,6 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	LOGINFO(6, "get_outputs_blob batch end");
 
-	// TODO: fill in m_carrotOutputs instead of m_ephPublicKeys, m_outputAmounts, m_viewTags for Carrot transactions
 	blob.reserve(n * block->output_blob_size_estimate() + 64);
 
 	writeVarint(n, blob);
@@ -1324,8 +1326,16 @@ uint64_t SideChain::get_bottom_height(const PoolBlock* tip) const
 	return bottom_height;
 }
 
-bool SideChain::split_reward(uint8_t major_version, uint64_t reward, const std::vector<MinerShare>& shares, std::vector<uint64_t>& rewards)
+bool SideChain::split_reward(
+	uint8_t major_version,
+	uint64_t reward,
+	const std::vector<MinerShare>& shares,
+	std::vector<const Wallet*>& wallets,
+	std::vector<uint64_t>& rewards)
 {
+	wallets.clear();
+	rewards.clear();
+
 	const size_t num_shares = shares.size();
 
 	const difficulty_type total_weight = std::accumulate(shares.begin(), shares.end(), difficulty_type(), [](const difficulty_type& a, const MinerShare& b) { return a + b.m_weight; });
@@ -1335,7 +1345,7 @@ bool SideChain::split_reward(uint8_t major_version, uint64_t reward, const std::
 		return false;
 	}
 
-	rewards.clear();
+	wallets.reserve(num_shares);
 	rewards.reserve(num_shares);
 
 	// Each miner gets a proportional fraction of the block reward
@@ -1350,15 +1360,22 @@ bool SideChain::split_reward(uint8_t major_version, uint64_t reward, const std::
 
 		if ((major_version < HARDFORK_VERSION_CARROT) && (r > MAX_OUTPUT_VALUE)) {
 			LOGERR(1, "Reward of " << log::XMRAmount(reward) << " is too big for the current split.");
+
+			wallets.clear();
+			rewards.clear();
 			return false;
 		}
 
+		wallets.emplace_back(shares[i].m_wallet);
 		rewards.emplace_back(r);
 	}
 
 	// Double check that we gave out the exact amount
 	if (std::accumulate(rewards.begin(), rewards.end(), 0ULL) != reward) {
 		LOGERR(1, "miners got incorrect reward. This should never happen because math says so. Check the code!");
+
+		wallets.clear();
+		rewards.clear();
 		return false;
 	}
 
@@ -1948,23 +1965,27 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (shares.size() != block->m_outputAmounts.size()) {
+	const bool is_carrot = (block->m_majorVersion >= HARDFORK_VERSION_CARROT);
+	const size_t num_outputs = is_carrot ? block->m_carrotOutputs.size() : block->m_outputAmounts.size();
+
+	// Post-Carrot split_reward will only guarantee num_outputs <= shares.size()
+	if ((is_carrot && (shares.size() < num_outputs)) || (!is_carrot && (shares.size() != num_outputs))) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
-			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << shares.size());
+			", mainchain height = " << block->m_txinGenHeight <<
+			" has invalid number of outputs: got " << num_outputs << ", expected " << shares.size());
 		block->m_invalid = true;
 		return;
 	}
 
-	uint64_t total_reward = std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL,
-		[](uint64_t a, uint64_t b)
-		{
-			return a + b;
-		});
+	const uint64_t total_reward = is_carrot
+		? std::accumulate(block->m_carrotOutputs.begin(), block->m_carrotOutputs.end(), 0ULL, [](uint64_t a, auto& b) { return a + b.amount; })
+		: std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL, [](uint64_t a, uint64_t b) { return a + b; });
 
+	std::vector<const Wallet*> wallets;
 	std::vector<uint64_t> rewards;
-	if (!split_reward(block->m_majorVersion, total_reward, shares, rewards)) {
+
+	if (!split_reward(block->m_majorVersion, total_reward, shares, wallets, rewards)) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight << ": split_reward failed");
@@ -1972,22 +1993,63 @@ void SideChain::verify(PoolBlock* block)
 		return;
 	}
 
-	if (rewards.size() != block->m_outputAmounts.size()) {
+	if (rewards.size() != num_outputs) {
 		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 			", id = " << block->m_sidechainId <<
 			", mainchain height = " << block->m_txinGenHeight
-			<< " has invalid number of outputs: got " << block->m_outputAmounts.size() << ", expected " << rewards.size());
+			<< " has invalid number of outputs: got " << num_outputs << ", expected " << rewards.size());
 		block->m_invalid = true;
 		return;
 	}
 
-	// TODO: add code to check Carrot transactions
-	if (block->m_majorVersion >= HARDFORK_VERSION_CARROT) {
-		LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
-			", id = " << block->m_sidechainId <<
-			", mainchain height = " << block->m_txinGenHeight <<
-			" can't be verified: Carrot verification code is not ready yet");
-		block->m_invalid = true;
+	if (is_carrot) {
+		std::vector<carrot::coinbase_tx_output> outputs;
+
+		if (!carrot::build_coinbase_outputs(block->m_txkeySec, block->m_txinGenHeight, wallets, rewards, outputs)) {
+			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+				", id = " << block->m_sidechainId <<
+				", mainchain height = " << block->m_txinGenHeight << ": can't generate Carrot coinbase outputs");
+			block->m_invalid = true;
+			return;
+		}
+
+		if (outputs.size() != num_outputs) {
+			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
+				", id = " << block->m_sidechainId <<
+				", mainchain height = " << block->m_txinGenHeight <<
+				" has invalid number of outputs: got " << num_outputs << ", expected " << outputs.size());
+			block->m_invalid = true;
+			return;
+		}
+
+		for (size_t i = 0; i < num_outputs; ++i) {
+#define CHECK_CARROT_OUTPUT_FIELD(X) \
+			if (!(block->m_carrotOutputs[i].X == outputs[i].X)) { \
+				LOGWARN(3, "block at height = " << block->m_sidechainHeight << \
+					", id = " << block->m_sidechainId << \
+					", mainchain height = " << block->m_txinGenHeight << \
+					" has an invalid output at index " << i << \
+					": got " #X << " = " << block->m_carrotOutputs[i].X << \
+					", expected " << outputs[i].X); \
+				block->m_invalid = true; \
+				/* let it print all mismatched fields before returning, so no "return;" here */ \
+			}
+
+			CHECK_CARROT_OUTPUT_FIELD(anchor_enc);
+			CHECK_CARROT_OUTPUT_FIELD(onetime_address);
+			CHECK_CARROT_OUTPUT_FIELD(eph_pub_key);
+			CHECK_CARROT_OUTPUT_FIELD(amount);
+			CHECK_CARROT_OUTPUT_FIELD(vt);
+
+#undef CHECK_CARROT_OUTPUT_FIELD
+
+			if (block->m_invalid) {
+				return;
+			}
+		}
+
+		// All checks passed
+		block->m_invalid = false;
 		return;
 	}
 

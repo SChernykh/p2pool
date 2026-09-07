@@ -183,13 +183,15 @@ bool merkle_hash_with_proof(const std::vector<hash>& hashes, size_t index_to_pro
 		for (size_t i = k, j = k; j < cnt; i += 2, ++j) {
 			keccak(h + i * HASH_SIZE, HASH_SIZE * 2, tmp_ints[j].h);
 
-			if (hashes[i] == h2) {
+			if (i == index_to_prove) {
 				proof.emplace_back(hashes[i + 1]);
 				h2 = tmp_ints[j];
+				index_to_prove = j;
 			}
-			else if (hashes[i + 1] == h2) {
+			else if (i + 1 == index_to_prove) {
 				proof.emplace_back(hashes[i]);
 				h2 = tmp_ints[j];
+				index_to_prove = j;
 				path = 1;
 			}
 		}
@@ -200,14 +202,16 @@ bool merkle_hash_with_proof(const std::vector<hash>& hashes, size_t index_to_pro
 				hash tmp;
 				keccak(tmp_ints[i].h, HASH_SIZE * 2, tmp.h);
 
-				if (tmp_ints[i] == h2) {
+				if (i == index_to_prove) {
 					proof.emplace_back(tmp_ints[i + 1]);
 					h2 = tmp;
+					index_to_prove = j;
 					path <<= 1;
 				}
-				else if (tmp_ints[i + 1] == h2) {
+				else if (i + 1 == index_to_prove) {
 					proof.emplace_back(tmp_ints[i]);
 					h2 = tmp;
+					index_to_prove = j;
 					path = (path << 1) | 1;
 				}
 
@@ -395,7 +399,7 @@ bool verify_merkle_proof(hash h, const std::vector<hash>& proof, uint32_t path, 
 		keccak(tmp[0].h, HASH_SIZE * 2, h.h);
 	}
 
-	return h == root;
+	return !root.empty() && (h == root);
 }
 
 uint32_t get_aux_slot(const hash &id, uint32_t nonce, uint32_t n_aux_chains)

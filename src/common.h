@@ -303,6 +303,8 @@ static_assert(alignof(janus_anchor) == CARROT_JANUS_ANCHOR_BYTES, "struct janus_
 struct view_tag
 {
 	uint8_t data[CARROT_VIEW_TAG_BYTES];
+
+	FORCEINLINE bool operator==(const view_tag& b) const { return memcmp(data, b.data, CARROT_VIEW_TAG_BYTES) == 0; }
 };
 
 static_assert(sizeof(view_tag) == CARROT_VIEW_TAG_BYTES, "struct view_tag has invalid size, check your compiler options");
