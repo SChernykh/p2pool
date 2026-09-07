@@ -882,7 +882,6 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 
 	std::vector<const Wallet*> tmpWallets;
 	std::vector<uint64_t> tmpRewards;
-	std::vector<MinerShare> tmpShares;
 	{
 		ReadLock lock(m_sidechainLock);
 
@@ -938,6 +937,8 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 
 		txkeySec = block->m_txkeySec;
+
+		std::vector<MinerShare> tmpShares;
 
 		if (!get_shares(block, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpWallets, tmpRewards)) {
 			return false;
@@ -1979,7 +1980,7 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	const uint64_t total_reward = is_carrot
-		? std::accumulate(block->m_carrotOutputs.begin(), block->m_carrotOutputs.end(), 0ULL, [](uint64_t a, auto& b) { return a + b.amount; })
+		? std::accumulate(block->m_carrotOutputs.begin(), block->m_carrotOutputs.end(), 0ULL, [](uint64_t a, const auto& b) { return a + b.amount; })
 		: std::accumulate(block->m_outputAmounts.begin(), block->m_outputAmounts.end(), 0ULL, [](uint64_t a, uint64_t b) { return a + b; });
 
 	std::vector<const Wallet*> wallets;

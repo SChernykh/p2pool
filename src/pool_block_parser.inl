@@ -450,7 +450,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		hash pub;
 		get_tx_keys(pub, m_txkeySec, m_txkeySecSeed, m_prevId);
 
-		if (m_majorVersion < HARDFORK_VERSION_FCMP_PP) {
+		if (m_majorVersion < HARDFORK_VERSION_CARROT) {
 			if (pub != m_txkeyPub) {
 				return __LINE__;
 			}
@@ -494,7 +494,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				hash chain_id;
 				READ_BUF(chain_id.h, HASH_SIZE);
 
-				if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (chain_id == keccak_subaddress_viewpub)) {
+				if ((m_majorVersion >= HARDFORK_VERSION_CARROT) && (chain_id == keccak_subaddress_viewpub)) {
 					return __LINE__;
 				}
 
@@ -507,7 +507,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 				// Sanity checks
 				if (static_cast<uint64_t>(data_end - data) < n) return __LINE__;
-				if ((m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (static_cast<uint64_t>(data - mm_extra_begin) + n > MM_EXTRA_MAX_SIZE)) {
+				if ((m_majorVersion >= HARDFORK_VERSION_CARROT) && (static_cast<uint64_t>(data - mm_extra_begin) + n > MM_EXTRA_MAX_SIZE)) {
 					return __LINE__;
 				}
 

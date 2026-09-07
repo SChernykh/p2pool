@@ -196,7 +196,7 @@ static FORCEINLINE constexpr uint64_t get_max_median_weight()
 			b[j] &= 0xFFFFFFFFULL;
 		}
 
-		uint64_t c[2] = { BASE_BLOCK_REWARD & 0xFFFFFFFFULL, BASE_BLOCK_REWARD >> 32 };
+		const uint64_t c[2] = { BASE_BLOCK_REWARD & 0xFFFFFFFFULL, BASE_BLOCK_REWARD >> 32 };
 
 		uint64_t d[7] = {};
 
@@ -242,12 +242,8 @@ static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t medi
 	const difficulty_type a = difficulty_type(median_weight * 2 - weight) * weight;
 	const difficulty_type b = difficulty_type(median_weight) * median_weight;
 
-	if ((base_reward != BASE_BLOCK_REWARD) && (a != 0)) {
-		constexpr difficulty_type diff_max = difficulty_type(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
-
-		if (difficulty_type(base_reward) > diff_max / a) {
-			return 0;
-		}
+	if ((base_reward != BASE_BLOCK_REWARD) && (a != 0) && (difficulty_type(base_reward) > diff_max / a)) {
+		return 0;
 	}
 
 	const difficulty_type result = ((a * base_reward) / b) + fees;
@@ -454,7 +450,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	};
 	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
 
-	if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
+	if (create_miner_tx(data, max_reward_amounts_weight, true) < 0) {
 		use_old_template();
 		return;
 	}
@@ -628,7 +624,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
-	const int create_miner_tx_result = create_miner_tx(data, m_shares, max_reward_amounts_weight, false);
+	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);
 	if (create_miner_tx_result < 0) {
 		if (create_miner_tx_result == -3) {
 			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
@@ -648,7 +644,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 			max_reward_amounts_weight = get_reward_amounts_weight();
 
-			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, true) < 0) {
+			if (create_miner_tx(data, max_reward_amounts_weight, true) < 0) {
 				use_old_template();
 				return;
 			}
@@ -664,7 +660,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				return;
 			}
 
-			if (create_miner_tx(data, m_shares, max_reward_amounts_weight, false) < 0) {
+			if (create_miner_tx(data, max_reward_amounts_weight, false) < 0) {
 				use_old_template();
 				return;
 			}
@@ -989,13 +985,12 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
 }
 
-// TODO: when the new reward split algorithm is implemented, get vectors of wallets and rewards here, instead of shares
-int BlockTemplate::create_miner_tx(const MinerData& data, const std::vector<MinerShare>& shares, uint64_t max_reward_amounts_weight, bool dry_run)
+int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_amounts_weight, bool dry_run)
 {
 	// Miner transaction (coinbase)
 	m_minerTx.clear();
 
-	const size_t num_outputs = shares.size();
+	const size_t num_outputs = m_wallets.size();
 	m_minerTx.reserve(num_outputs * PoolBlock::output_blob_size_estimate(data.major_version) + num_outputs * HASH_SIZE + 55);
 
 	// tx version
