@@ -3696,6 +3696,7 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	return true;
 }
 
+// TODO: add support for FCMP++/Carrot blocks (33 extra bytes after transaction hashes: FCMP++ number of layers and FCMP++ tree root)
 bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
@@ -3857,6 +3858,7 @@ void P2PServer::monero_block_broadcast_work_cb(uv_work_t* req)
 	// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
 	keccak(buf + data.header_size, static_cast<int>(data.miner_tx_size) - 1, hashes[0].h);
 
+	// TODO: add FCMP++ data here for post-FCMP++ blocks (tree layer count, tree root)
 	std::vector<hash> transactions(work->num_transactions + 1);
 	keccak(reinterpret_cast<uint8_t*>(hashes), sizeof(hashes), transactions[0].h);
 
