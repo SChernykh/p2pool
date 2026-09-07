@@ -10,6 +10,28 @@ P2Pool has several command-line options that should be used for TOR setup:
 	- **Attention: this also links the onion address with the Monero wallet you use for mining. Create a new onion address when mining through TOR, don't use your existing onion addresses to avoid meta-data leaks.**
 - `--no-clearnet-p2p` to never connect to clearnet P2Pool nodes. This also makes sure that your P2Pool traffic doesn't exit the TOR network (and is not seen/modified by the exit nodes)
 
+## Using Arti as the TOR SOCKS proxy
+
+[Arti](https://arti.torproject.org/) is the Tor Project's Rust implementation of Tor. It can be used in place of the classic Tor daemon for P2Pool's outbound SOCKS connections.
+
+Arti listens on `127.0.0.1:9150` by default. After installing or building Arti, start the proxy with:
+
+```
+arti proxy
+```
+
+Then point P2Pool at Arti's SOCKS listener:
+
+```
+./p2pool --host MONERO_NODE_IP --wallet YOUR_WALLET --socks5 127.0.0.1:9150 --socks5-proxy-type tor --no-dns --no-upnp
+```
+
+Add `--no-clearnet-p2p` if you want P2Pool peer traffic to stay on the Tor network instead of also connecting to clearnet peers.
+
+If Arti is configured to listen on a different SOCKS port, pass that address to `--socks5` instead. See the Arti documentation for [starting the proxy](https://arti.torproject.org/guides/starting-arti/) and [configuring applications](https://arti.torproject.org/guides/configuring-arti/).
+
+The command above covers outbound connections through Arti. If you also want to advertise an inbound onion address with `--onion-address`, configure an Arti onion service to forward onion-service port `28722` to your local P2Pool listening port (`37889` for main, `37888` for mini, or `37890` for nano). Arti onion-service hosting is feature-gated and its configuration differs from the classic `torrc` format, so follow the current Arti onion-service documentation for that part of the setup.
+
 ## Setting up a hidden service for P2Pool (Linux)
 
 - Add these lines to your TOR config in `/etc/tor/torrc`:
