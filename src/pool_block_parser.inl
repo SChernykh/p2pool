@@ -97,14 +97,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		uint64_t total_reward = 0;
 		int outputs_blob_size;
 
-		if (num_outputs > 0) {
-			// Outputs are in the buffer, just read them
-			// Each output is at least 35 bytes, exit early if there's not enough data left
-			// 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key, 1 byte for view_tag
-			constexpr uint64_t MIN_OUTPUT_SIZE = 35;
+		// Pre-Carrot: 1 byte for reward, 1 byte for tx_type, 32 bytes for eph_pub_key, 1 byte for view_tag
+		// Carrot: 1 byte for reward, 1 byte for tx_type, 32 bytes for one time address, 3 bytes for view tag, 16 bytes for Janus anchor
+		const uint64_t MIN_OUTPUT_SIZE = (m_majorVersion >= HARDFORK_VERSION_CARROT) ? 53 : 35;
 
-			if (num_outputs > std::numeric_limits<uint64_t>::max() / MIN_OUTPUT_SIZE) return __LINE__;
-			if (static_cast<uint64_t>(data_end - data) < num_outputs * MIN_OUTPUT_SIZE) return __LINE__;
+		if (num_outputs > 0) {
+			// Outputs are in the buffer, just read them. Exit early if there's not enough data left
+			if (difficulty_type(num_outputs) * MIN_OUTPUT_SIZE > difficulty_type(static_cast<uint64_t>(data_end - data))) return __LINE__;
 
 			if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
 				m_outputAmounts.clear();
@@ -180,7 +179,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			READ_VARINT(tmp);
 
 			// Sanity check
-			if ((tmp == 0) || (tmp > MAX_BLOCK_SIZE)) {
+			if ((tmp < 1 + MIN_OUTPUT_SIZE) || (tmp > MAX_BLOCK_SIZE)) {
 				return __LINE__;
 			}
 
@@ -212,10 +211,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		const uint8_t* tx_extra_begin = data;
 
+		std::vector<uint8_t> pubkeys_blob;
+		const int pubkeys_offset = static_cast<int>(data - data_begin);
+
+		int pubkeys_blob_size;
+
 		if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
-			// TODO: Carrot pruned blocks will skip eph pub keys as well,
-			// so m_carrotOutputs will stay empty until get_outputs_blob fills it
-			// This section is for unpruned blocks only
 			if (num_outputs > 0) {
 				uint8_t tag;
 				READ_BYTE(tag);
@@ -237,12 +238,36 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				else {
 					return __LINE__;
 				}
+
+				pubkeys_blob_size = static_cast<int>(data - data_begin) - pubkeys_offset;
+				pubkeys_blob.assign(data_begin + pubkeys_offset, data);
+			}
+			else {
+				uint64_t tmp;
+				READ_VARINT(tmp);
+
+				// Sanity check
+				if ((tmp < 1 + HASH_SIZE) || (tmp > MAX_BLOCK_SIZE)) {
+					return __LINE__;
+				}
+
+				pubkeys_blob_size = static_cast<int>(tmp);
 			}
 		}
 		else {
 			EXPECT_BYTE(TX_EXTRA_TAG_PUBKEY);
 			READ_BUF(m_txkeyPub.h, HASH_SIZE);
+
+			pubkeys_blob_size = 1 + HASH_SIZE;
+			pubkeys_blob.assign(data_begin + pubkeys_offset, data);
 		}
+
+		const int pubkeys_actual_blob_size = static_cast<int>(data - data_begin) - pubkeys_offset;
+		if (pubkeys_blob_size < pubkeys_actual_blob_size) {
+			return __LINE__;
+		}
+
+		const int pubkeys_blob_size_diff = pubkeys_blob_size - pubkeys_actual_blob_size;
 
 		EXPECT_BYTE(TX_EXTRA_NONCE);
 		READ_VARINT(m_extraNonceSize);
@@ -250,7 +275,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		// Sanity check
 		if ((m_extraNonceSize < EXTRA_NONCE_SIZE) || (m_extraNonceSize > EXTRA_NONCE_MAX_SIZE)) return __LINE__;
 
-		const int extra_nonce_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+		const int extra_nonce_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff + pubkeys_blob_size_diff);
 		READ_BUF(&m_extraNonce, EXTRA_NONCE_SIZE);
 		for (uint64_t i = EXTRA_NONCE_SIZE; i < m_extraNonceSize; ++i) {
 			EXPECT_BYTE(0);
@@ -272,14 +297,14 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		decode_merkle_tree_data(mm_n_aux_chains, mm_nonce);
 
-		mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff);
+		mm_root_hash_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff + pubkeys_blob_size_diff);
 		READ_BUF(m_merkleRoot.h, HASH_SIZE);
 
 		if (static_cast<uint64_t>(data - mm_field_begin) != mm_field_size) {
 			return __LINE__;
 		}
 
-		if (static_cast<uint64_t>(data - tx_extra_begin) != tx_extra_size) return __LINE__;
+		if (static_cast<uint64_t>(data - tx_extra_begin) + pubkeys_blob_size_diff != tx_extra_size) return __LINE__;
 
 		EXPECT_BYTE(0);
 
@@ -342,17 +367,19 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			}
 		}
 
-		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
+		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + pubkeys_blob_size_diff + transactions_blob_size_diff);
 
 		if (data_size > static_cast<int>(MAX_BLOCK_SIZE)) {
 			return __LINE__;
 		}
 
 #if POOL_BLOCK_DEBUG
-		m_mainChainDataDebug.reserve((data - data_begin) + outputs_blob_size_diff + transactions_blob_size_diff);
+		m_mainChainDataDebug.reserve(data_size);
 		m_mainChainDataDebug.assign(data_begin, data_begin + outputs_offset);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), outputs_blob_size, 0);
-		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data_begin + transactions_offset);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + outputs_offset + outputs_actual_blob_size, data_begin + pubkeys_offset);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), pubkeys_blob_size, 0);
+		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + pubkeys_offset + pubkeys_actual_blob_size, data_begin + transactions_offset);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), transactions_blob_size, 0);
 		m_mainChainDataDebug.insert(m_mainChainDataDebug.end(), data_begin + transactions_offset + transactions_actual_blob_size, data);
 
@@ -533,7 +560,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		if ((num_outputs == 0) && !sidechain.get_outputs_blob(this, total_reward, outputs_blob)) {
+		if ((num_outputs == 0) && !sidechain.get_outputs_blob(this, total_reward, outputs_blob, pubkeys_blob)) {
 			return __LINE__;
 		}
 
@@ -541,21 +568,30 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		// TODO: make sure get_outputs_blob reconstructs all new Carrot fields for pruned blocks
+		if (static_cast<int>(pubkeys_blob.size()) != pubkeys_blob_size) {
+			return __LINE__;
+		}
 
 		const uint8_t* transactions_blob = reinterpret_cast<uint8_t*>(transactions.data());
 
 #if POOL_BLOCK_DEBUG
 		memcpy(m_mainChainDataDebug.data() + outputs_offset, outputs_blob.data(), outputs_blob_size);
-		memcpy(m_mainChainDataDebug.data() + transactions_offset + outputs_blob_size_diff, transactions_blob, transactions_blob_size);
+		memcpy(m_mainChainDataDebug.data() + pubkeys_offset + outputs_blob_size_diff, pubkeys_blob.data(), pubkeys_blob_size);
+		memcpy(m_mainChainDataDebug.data() + transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff, transactions_blob, transactions_blob_size);
 #endif
 
 		hash check;
 		const std::vector<uint8_t>& consensus_id = sidechain.consensus_id();
 
-		keccak_custom(
-			[nonce_offset, extra_nonce_offset, mm_root_hash_offset, data_begin, data_size, &consensus_id, &outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size, transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size](int offset) -> uint8_t
-			{
+		keccak_custom([
+				nonce_offset, extra_nonce_offset, mm_root_hash_offset,
+				data_begin, data_size,
+				&consensus_id,
+				&outputs_blob, outputs_blob_size_diff, outputs_offset, outputs_blob_size,
+				&pubkeys_blob, pubkeys_blob_size_diff, pubkeys_offset, pubkeys_blob_size,
+				transactions_blob, transactions_blob_size_diff, transactions_offset, transactions_blob_size
+			]
+			(int offset) -> uint8_t {
 				uint32_t k = static_cast<uint32_t>(offset - nonce_offset);
 				if (k < NONCE_SIZE) {
 					return 0;
@@ -578,18 +614,24 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 					else if (offset < outputs_offset + outputs_blob_size) {
 						return outputs_blob[offset - outputs_offset];
 					}
-					else if (offset < transactions_offset + outputs_blob_size_diff) {
+					else if (offset < pubkeys_offset + outputs_blob_size_diff) {
 						return data_begin[offset - outputs_blob_size_diff];
 					}
-					else if (offset < transactions_offset + outputs_blob_size_diff + transactions_blob_size) {
-						return transactions_blob[offset - (transactions_offset + outputs_blob_size_diff)];
+					else if (offset < pubkeys_offset + outputs_blob_size_diff + pubkeys_blob_size) {
+						return pubkeys_blob[offset - (pubkeys_offset + outputs_blob_size_diff)];
 					}
-					return data_begin[offset - outputs_blob_size_diff - transactions_blob_size_diff];
+					else if (offset < transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff) {
+						return data_begin[offset - (outputs_blob_size_diff + pubkeys_blob_size_diff)];
+					}
+					else if (offset < transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff + transactions_blob_size) {
+						return transactions_blob[offset - (transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff)];
+					}
+					return data_begin[offset - (outputs_blob_size_diff + pubkeys_blob_size_diff + transactions_blob_size_diff)];
 				}
 
 				return consensus_id[offset - data_size];
 			},
-			static_cast<int>(size + outputs_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
+			static_cast<int>(size + outputs_blob_size_diff + pubkeys_blob_size_diff + transactions_blob_size_diff + consensus_id.size()), check.h, HASH_SIZE);
 
 		if (m_sidechainId.empty()) {
 			m_sidechainId = check;
