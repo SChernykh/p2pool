@@ -172,14 +172,14 @@ TEST(pool_block, deserialize_carrot)
 	thread_pool_init();
 	init_crypto_cache();
 
-	ON_SCOPE_LEAVE([]() {
+	auto on_scope_leave = ScopeGuard{[]() {
 		thread_pool_destroy();
 		destroy_crypto_cache();
 
 #ifdef WITH_INDEXED_HASHES
 		indexed_hash::cleanup_storage();
 #endif
-	});
+	}};
 
 	SideChain sidechain(nullptr, NetworkType::Testnet, "default");
 

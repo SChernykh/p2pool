@@ -2859,7 +2859,6 @@ void SideChain::launch_precalc(const PoolBlock* block)
 	}
 }
 
-// TODO: add support for Carrot outputs precalculation
 void SideChain::precalc_worker()
 {
 	set_thread_name("Precalc");
@@ -2873,8 +2872,15 @@ void SideChain::precalc_worker()
 	std::vector<batch_public_key_input> in2;
 	std::vector<std::pair<hash, bool>> out2;
 
+	std::vector<const Wallet*> carrot_wallets;
+	std::vector<carrot::janus_anchor> anchors;
+
+	std::vector<hash> eph_priv_keys;
+	std::vector<hash> view_public_keys;
+
 	do {
 		const PoolBlock* job;
+		bool is_carrot;
 
 		{
 			MutexLock lock(m_precalcJobsMutex);
@@ -2894,8 +2900,12 @@ void SideChain::precalc_worker()
 			job = m_precalcJobs.back();
 			m_precalcJobs.pop_back();
 
-			// Filter out duplicate inputs for get_eph_public_key()
-			uint8_t t[HASH_SIZE * 2 + sizeof(size_t)];
+			is_carrot = (job->m_majorVersion >= HARDFORK_VERSION_CARROT);
+
+			// Filter out duplicate inputs for the output key caches.
+			uint8_t t[HASH_SIZE * 3 + sizeof(uint64_t)];
+
+			const size_t input_size = is_carrot ? sizeof(t) : (HASH_SIZE * 2 + sizeof(size_t));
 			memcpy(t, job->m_txkeySec.h, HASH_SIZE);
 
 			wallets.clear();
@@ -2905,15 +2915,53 @@ void SideChain::precalc_worker()
 			const size_t n = job->m_precalculatedShares.size();
 
 			for (size_t i = 0; i < n; ++i) {
-				memcpy(t + HASH_SIZE, job->m_precalculatedShares[i].m_wallet->view_public_key().h, HASH_SIZE);
-				memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
-				if (m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, array_size(t))).second) {
-					wallets.emplace_back(i, job->m_precalculatedShares[i].m_wallet);
+				const Wallet* w = job->m_precalculatedShares[i].m_wallet;
+
+				if (is_carrot) {
+					memcpy(t + HASH_SIZE, w->keys(), HASH_SIZE * 2);
+					memcpy(t + HASH_SIZE * 3, &job->m_txinGenHeight, sizeof(job->m_txinGenHeight));
+				}
+				else {
+					memcpy(t + HASH_SIZE, w->view_public_key().h, HASH_SIZE);
+					memcpy(t + HASH_SIZE * 2, &i, sizeof(i));
+				}
+
+				if (m_uniquePrecalcInputs->insert(robin_hood::hash_bytes(t, input_size)).second) {
+					wallets.emplace_back(i, w);
 				}
 			}
 		}
 
 		const size_t n = wallets.size();
+
+		if (is_carrot) {
+			carrot_wallets.clear();
+			view_public_keys.clear();
+
+			carrot_wallets.reserve(n);
+			view_public_keys.reserve(n);
+
+			for (const auto& w : wallets) {
+				carrot_wallets.emplace_back(w.second);
+				view_public_keys.emplace_back(w.second->view_public_key());
+			}
+
+			if (!carrot::batch_eph_privkeys(job->m_txkeySec, 0, job->m_txinGenHeight, carrot_wallets, anchors, eph_priv_keys)) {
+				LOGWARN(6, "batch_eph_privkeys failed in precalc_worker");
+				continue;
+			}
+
+			if (!carrot::batch_eph_pubkeys(eph_priv_keys, out2)) {
+				LOGWARN(6, "batch_eph_pubkeys failed in precalc_worker");
+				continue;
+			}
+
+			if (!carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, out2)) {
+				LOGWARN(6, "batch_sender_receiver_secrets failed in precalc_worker");
+			}
+
+			continue;
+		}
 
 		in.clear();
 		in.reserve(n);
