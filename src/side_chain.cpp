@@ -874,9 +874,10 @@ const PoolBlock* SideChain::get_block_blob(const hash& id, std::vector<uint8_t>&
 	return block;
 }
 
-bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob) const
+bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, std::vector<uint8_t>& pubkeys_blob) const
 {
 	blob.clear();
+	pubkeys_blob.clear();
 
 	hash txkeySec;
 
@@ -894,8 +895,18 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			if (b->m_majorVersion >= HARDFORK_VERSION_CARROT) {
 				const size_t n = b->m_carrotOutputs.size();
 
-				blob.reserve(n * (b->output_blob_size_estimate() + 32) + 64);
+				blob.reserve(n * (b->output_blob_size_estimate() + HASH_SIZE) + 64);
+				pubkeys_blob.reserve(n * HASH_SIZE + 3);
+
 				writeVarint(n, blob);
+
+				if (n > 1) {
+					pubkeys_blob.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
+					writeVarint(n, pubkeys_blob);
+				}
+				else {
+					pubkeys_blob.push_back(TX_EXTRA_TAG_PUBKEY);
+				}
 
 				for (size_t i = 0; i < n; ++i) {
 					const carrot::coinbase_tx_output& o = b->m_carrotOutputs[i];
@@ -909,12 +920,16 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 					blob.insert(blob.end(), o.onetime_address.h, o.onetime_address.h + HASH_SIZE);
 					blob.insert(blob.end(), o.vt.data, o.vt.data + CARROT_VIEW_TAG_BYTES);
 					blob.insert(blob.end(), o.anchor_enc.data, o.anchor_enc.data + CARROT_JANUS_ANCHOR_BYTES);
+
+					pubkeys_blob.insert(pubkeys_blob.end(), o.eph_pub_key.h, o.eph_pub_key.h + HASH_SIZE);
 				}
 			}
 			else {
 				const size_t n = b->m_outputAmounts.size();
 
 				blob.reserve(n * b->output_blob_size_estimate() + 64);
+				pubkeys_blob.reserve(1 + HASH_SIZE);
+
 				writeVarint(n, blob);
 
 				for (size_t i = 0; i < n; ++i) {
@@ -926,6 +941,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 					blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
 					blob.emplace_back(b->m_viewTags[i]);
 				}
+
+				pubkeys_blob.push_back(TX_EXTRA_TAG_PUBKEY);
+				pubkeys_blob.insert(pubkeys_blob.end(), b->m_txkeyPub.h, b->m_txkeyPub.h + HASH_SIZE);
 			}
 
 			block->m_ephPublicKeys = b->m_ephPublicKeys;
@@ -945,10 +963,52 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		}
 	}
 
-	// TODO: fill in m_carrotOutputs instead of m_ephPublicKeys, m_outputAmounts, m_viewTags for Carrot transactions
 	const size_t n = tmpWallets.size();
 
 	LOGINFO(6, "get_outputs_blob batch start");
+
+	block->m_ephPublicKeys.clear();
+	block->m_outputAmounts.clear();
+	block->m_viewTags.clear();
+	block->m_carrotOutputs.clear();
+
+	if (block->m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		if (!carrot::build_coinbase_outputs(block->m_txkeySec, block->m_txinGenHeight, tmpWallets, tmpRewards, block->m_carrotOutputs)) {
+			LOGWARN(6, "get_outputs_blob: can't generate Carrot coinbase outputs");
+			return false;
+		}
+
+		LOGINFO(6, "get_outputs_blob batch end");
+
+		blob.reserve(n * (block->output_blob_size_estimate() + HASH_SIZE) + 64);
+		pubkeys_blob.reserve(n * HASH_SIZE + 3);
+
+		writeVarint(n, blob);
+
+		if (n > 1) {
+			pubkeys_blob.push_back(TX_EXTRA_TAG_ADDITIONAL_PUBKEYS);
+			writeVarint(n, pubkeys_blob);
+		}
+		else {
+			pubkeys_blob.push_back(TX_EXTRA_TAG_PUBKEY);
+		}
+
+		for (size_t i = 0; i < n; ++i) {
+			const carrot::coinbase_tx_output& o = block->m_carrotOutputs[i];
+
+			writeVarint(o.amount, blob);
+
+			blob.emplace_back(TXOUT_TO_CARROT_V1);
+
+			blob.insert(blob.end(), o.onetime_address.h, o.onetime_address.h + HASH_SIZE);
+			blob.insert(blob.end(), o.vt.data, o.vt.data + CARROT_VIEW_TAG_BYTES);
+			blob.insert(blob.end(), o.anchor_enc.data, o.anchor_enc.data + CARROT_JANUS_ANCHOR_BYTES);
+
+			pubkeys_blob.insert(pubkeys_blob.end(), o.eph_pub_key.h, o.eph_pub_key.h + HASH_SIZE);
+		}
+
+		return true;
+	}
 
 	std::vector<std::pair<hash, size_t>> in;
 	std::vector<std::pair<hash, int32_t>> out;
@@ -989,13 +1049,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	LOGINFO(6, "get_outputs_blob batch end");
 
 	blob.reserve(n * block->output_blob_size_estimate() + 64);
+	pubkeys_blob.reserve(1 + HASH_SIZE);
 
 	writeVarint(n, blob);
-
-	block->m_ephPublicKeys.clear();
-	block->m_outputAmounts.clear();
-	block->m_viewTags.clear();
-	block->m_carrotOutputs.clear();
 
 	block->m_ephPublicKeys.reserve(n);
 	block->m_outputAmounts.reserve(n);
@@ -1016,6 +1072,9 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 		block->m_outputAmounts.emplace_back(tmpRewards[i]);
 		block->m_viewTags.emplace_back(view_tag);
 	}
+
+	pubkeys_blob.push_back(TX_EXTRA_TAG_PUBKEY);
+	pubkeys_blob.insert(pubkeys_blob.end(), block->m_txkeyPub.h, block->m_txkeyPub.h + HASH_SIZE);
 
 	block->m_ephPublicKeys.shrink_to_fit();
 	block->m_outputAmounts.shrink_to_fit();
