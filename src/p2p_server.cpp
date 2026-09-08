@@ -1073,18 +1073,25 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	: id(block.m_sidechainId)
 	, received_timestamp(block.m_receivedTimestamp)
 {
+	const bool is_carrot = (block.m_majorVersion >= HARDFORK_VERSION_CARROT);
+
 	Broadcast* data = this;
 
-	int outputs_offset, outputs_blob_size;
-	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(nullptr, nullptr, &outputs_offset, &outputs_blob_size);
+	PoolBlock::MainchainLayout layout;
+
+	const std::vector<uint8_t> mainchain_data = block.serialize_mainchain_data(&layout);
 	const std::vector<uint8_t> sidechain_data = block.serialize_sidechain_data();
 
 	data->blob.reserve(mainchain_data.size() + sidechain_data.size());
 	data->blob = mainchain_data;
 	data->blob.insert(data->blob.end(), sidechain_data.begin(), sidechain_data.end());
 
-	data->pruned_blob.reserve(mainchain_data.size() + sidechain_data.size() + 16 - outputs_blob_size);
-	data->pruned_blob.assign(mainchain_data.begin(), mainchain_data.begin() + outputs_offset);
+	data->pruned_blob.reserve(
+		mainchain_data.size() + sidechain_data.size() + 64 -
+		(layout.outputs_blob_size + (is_carrot ? layout.pubkeys_blob_size : 0))
+	);
+
+	data->pruned_blob.assign(mainchain_data.begin(), mainchain_data.begin() + layout.outputs_offset);
 
 	// 0 outputs in the pruned blob
 	data->pruned_blob.push_back(0);
@@ -1099,12 +1106,35 @@ P2PServer::Broadcast::Broadcast(const PoolBlock& block, const PoolBlock* parent)
 	}
 
 	writeVarint(total_reward, data->pruned_blob);
-	writeVarint(outputs_blob_size, data->pruned_blob);
+	writeVarint(layout.outputs_blob_size, data->pruned_blob);
 
 	data->pruned_blob.insert(data->pruned_blob.end(), block.m_sidechainId.h, block.m_sidechainId.h + HASH_SIZE);
-	data->pruned_blob.insert(data->pruned_blob.end(), mainchain_data.begin() + outputs_offset + outputs_blob_size, mainchain_data.end());
+
+	if (is_carrot) {
+		data->pruned_blob.insert(
+			data->pruned_blob.end(),
+			mainchain_data.begin() + layout.outputs_offset + layout.outputs_blob_size,
+			mainchain_data.begin() + layout.pubkeys_offset
+		);
+
+		writeVarint(layout.pubkeys_blob_size, data->pruned_blob);
+
+		data->pruned_blob.insert(
+			data->pruned_blob.end(),
+			mainchain_data.begin() + layout.pubkeys_offset + layout.pubkeys_blob_size,
+			mainchain_data.end()
+		);
+	}
+	else {
+		data->pruned_blob.insert(
+			data->pruned_blob.end(),
+			mainchain_data.begin() + layout.outputs_offset + layout.outputs_blob_size,
+			mainchain_data.end()
+		);
+	}
 
 	const size_t N = block.m_transactions.size();
+
 	if ((N > 0) && parent && (parent->m_transactions.size() > 0)) {
 		const uint32_t tx_list_size = static_cast<uint32_t>(N * HASH_SIZE);
 		const uint32_t fcmp_pp_size = (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) ? (1 + HASH_SIZE) : 0;

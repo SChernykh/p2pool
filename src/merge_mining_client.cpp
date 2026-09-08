@@ -250,15 +250,16 @@ void MergeMiningClientShared::on_external_block(const PoolBlock& block)
 
 	// nonce_offset and blob
 
-	size_t header_size = 0;
-	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&header_size);
+	PoolBlock::MainchainLayout layout;
 
-	if (header_size <= NONCE_SIZE) {
+	const std::vector<uint8_t> blob = block.serialize_mainchain_data(&layout);
+
+	if (layout.header_size <= NONCE_SIZE) {
 		LOGWARN(3, "on_external_block: invalid header_size");
 		return;
 	}
 
-	const uint32_t nonce_offset = static_cast<uint32_t>(header_size - NONCE_SIZE);
+	const uint32_t nonce_offset = static_cast<uint32_t>(layout.header_size - NONCE_SIZE);
 
 	// aux_merkle_proof, aux_merkle_proof_path
 
