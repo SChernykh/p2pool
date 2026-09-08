@@ -27,6 +27,7 @@
 #include "params.h"
 #include "gtest/gtest.h"
 #include <fstream>
+#include <numeric>
 
 namespace p2pool {
 
