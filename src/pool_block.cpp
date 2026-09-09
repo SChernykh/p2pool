@@ -152,7 +152,7 @@ std::vector<uint8_t> PoolBlock::serialize_mainchain_data(MainchainLayout* layout
 	data.reserve(std::min<size_t>(
 		128 +
 		std::max(m_outputAmounts.size(), m_carrotOutputs.size()) * output_blob_size_estimate() +
-		(m_transactions.size() + 1) * HASH_SIZE, 131072)
+		(m_transactions.size() + 1) * HASH_SIZE, MAX_BLOCK_SIZE_NEW)
 	);
 
 	// Header

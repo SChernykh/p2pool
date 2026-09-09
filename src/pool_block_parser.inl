@@ -27,7 +27,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 {
 	try {
 		// Sanity check
-		if (!data || (size > MAX_BLOCK_SIZE)) {
+		if (!data || (size > MAX_BLOCK_SIZE_NEW)) {
 			return __LINE__;
 		}
 
@@ -63,6 +63,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BYTE(m_majorVersion);
 		if (m_majorVersion > HARDFORK_SUPPORTED_VERSION) return __LINE__;
+		if (size > max_block_size()) return __LINE__;
 
 		READ_BYTE(m_minorVersion);
 		if (m_minorVersion < m_majorVersion) return __LINE__;
@@ -179,7 +180,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			READ_VARINT(tmp);
 
 			// Sanity check
-			if ((tmp < 1 + MIN_OUTPUT_SIZE) || (tmp > MAX_BLOCK_SIZE)) {
+			if ((tmp < 1 + MIN_OUTPUT_SIZE) || (tmp > max_block_size())) {
 				return __LINE__;
 			}
 
@@ -247,7 +248,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 				READ_VARINT(tmp);
 
 				// Sanity check
-				if ((tmp < 1 + HASH_SIZE) || (tmp > MAX_BLOCK_SIZE)) {
+				if ((tmp < 1 + HASH_SIZE) || (tmp > max_block_size())) {
 					return __LINE__;
 				}
 
@@ -310,7 +311,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		uint64_t num_transactions;
 		READ_VARINT(num_transactions);
-		if (num_transactions > MAX_BLOCK_SIZE / HASH_SIZE) return __LINE__;
+		if (num_transactions > max_block_size() / HASH_SIZE) return __LINE__;
 
 		const int transactions_offset = static_cast<int>(data - data_begin);
 
@@ -369,7 +370,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		const int data_size = static_cast<int>((data_end - data_begin) + outputs_blob_size_diff + pubkeys_blob_size_diff + transactions_blob_size_diff);
 
-		if (data_size > static_cast<int>(MAX_BLOCK_SIZE)) {
+		if (data_size > static_cast<int>(max_block_size())) {
 			return __LINE__;
 		}
 

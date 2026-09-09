@@ -144,6 +144,8 @@ public:
 	FORCEINLINE std::string get_current_host_fingerprint() const { ReadLock lock(m_currentHostFingerprintLock); return m_currentHostFingerprint; }
 #endif
 
+	FORCEINLINE uint8_t network_major_version() const { return m_networkMajorVersion.load(std::memory_order_acquire); }
+
 private:
 	p2pool(const p2pool&) = delete;
 	p2pool(p2pool&&) = delete;
@@ -308,6 +310,8 @@ private:
 	std::atomic<uint64_t> m_lastMinerDataReceived;
 
 	uv_timer_t m_timer;
+
+	std::atomic<uint8_t> m_networkMajorVersion = 0;
 };
 
 } // namespace p2pool

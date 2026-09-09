@@ -51,8 +51,9 @@ struct MinerShare;
 */
 
 // 128 KB minus BLOCK_RESPONSE P2P protocol header (5 bytes)
-// TODO: Increase it to 512 * 1024 - 5 before FCMP++, activate 512 KB size at FCMP++ fork
-static constexpr uint64_t MAX_BLOCK_SIZE = 128 * 1024 - 5;
+// 512 KB starting with Carrot hardfork
+static constexpr uint64_t MAX_BLOCK_SIZE_OLD = 128 * 1024 - 5;
+static constexpr uint64_t MAX_BLOCK_SIZE_NEW = 512 * 1024 - 5;
 
 // 0.6 XMR
 static constexpr uint64_t BASE_BLOCK_REWARD = 600000000000ULL;
@@ -256,7 +257,7 @@ struct PoolBlock
 		mm_nonce = static_cast<uint32_t>(m_merkleTreeData >> (3U + n));
 	}
 
-	[[nodiscard]] static constexpr size_t output_blob_size_estimate(uint8_t major_version)
+	[[nodiscard]] static FORCEINLINE constexpr size_t output_blob_size_estimate(uint8_t major_version)
 	{
 		constexpr size_t OUTPUT_BLOB_SIZE = 5 + 1 + HASH_SIZE + 1;
 		constexpr size_t CARROT_OUTPUT_BLOB_SIZE = 5 + 1 + HASH_SIZE + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES;
@@ -264,7 +265,14 @@ struct PoolBlock
 		return (major_version >= HARDFORK_VERSION_CARROT) ? CARROT_OUTPUT_BLOB_SIZE : OUTPUT_BLOB_SIZE;
 	}
 
-	[[nodiscard]] constexpr size_t output_blob_size_estimate() const { return output_blob_size_estimate(m_majorVersion); }
+	[[nodiscard]] FORCEINLINE constexpr size_t output_blob_size_estimate() const { return output_blob_size_estimate(m_majorVersion); }
+
+	[[nodiscard]] static FORCEINLINE constexpr uint64_t max_block_size(uint8_t major_version)
+	{
+		return (major_version >= HARDFORK_VERSION_CARROT) ? MAX_BLOCK_SIZE_NEW : MAX_BLOCK_SIZE_OLD;
+	}
+
+	[[nodiscard]] FORCEINLINE constexpr uint64_t max_block_size() const { return max_block_size(m_majorVersion); }
 };
 
 } // namespace p2pool

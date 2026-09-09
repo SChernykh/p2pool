@@ -28,8 +28,8 @@ struct PoolBlock;
 class BlockCache;
 
 // Max block size plus BLOCK_RESPONSE header (5 bytes)
-static constexpr uint64_t P2P_BUF_SIZE = MAX_BLOCK_SIZE + (1 + sizeof(uint32_t));
-static_assert((P2P_BUF_SIZE & (P2P_BUF_SIZE - 1)) == 0, "P2P_BUF_SIZE is not a power of 2, fix MAX_BLOCK_SIZE");
+static constexpr uint64_t P2P_BUF_SIZE = PoolBlock::max_block_size(HARDFORK_SUPPORTED_VERSION) + (1 + sizeof(uint32_t));
+static_assert((P2P_BUF_SIZE & (P2P_BUF_SIZE - 1)) == 0, "P2P_BUF_SIZE is not a power of 2, fix MAX_BLOCK_SIZE_NEW");
 
 static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
 static constexpr int DEFAULT_P2P_PORT = 37889;
@@ -133,8 +133,6 @@ public:
 
 		[[nodiscard]] bool is_good() const { return m_handshakeComplete && !m_handshakeInvalid && (m_listenPort >= 0); }
 
-		alignas(8) char m_p2pReadBuf[P2P_BUF_SIZE];
-
 		uint64_t m_peerId;
 		uint64_t m_connectedTime;
 		bool m_connectedDomain;
@@ -179,6 +177,10 @@ public:
 			SoftwareID m_id;
 			uint32_t m_version;
 		};
+
+		// Put it last in the struct so that clients access continuous 4 KiB pages,
+		// and working set grows on demand - unused pages stay in virtual memory, but not in the physical memory
+		alignas(8) char m_p2pReadBuf[P2P_BUF_SIZE];
 	};
 
 	struct Broadcast
@@ -465,6 +467,8 @@ private:
 
 	void clean_broadcast_throttle_data();
 	bool throttle_broadcast(const P2PClient* client, uint64_t timestamp_mcs);
+
+	uint64_t max_block_size() const;
 };
 
 } // namespace p2pool

@@ -22,14 +22,21 @@
 #include "side_chain.h"
 #include "params.h"
 
+#ifdef _WIN32
+#include <winioctl.h>
+#endif
+
 LOG_CATEGORY(BlockCache)
 
-static constexpr uint32_t BLOCK_SIZE = 96 * 1024;
-static constexpr uint32_t NUM_BLOCKS = 4608;
-static constexpr uint32_t CACHE_SIZE = BLOCK_SIZE * NUM_BLOCKS;
+namespace p2pool {
+
+static constexpr uint64_t BLOCK_SIZE = 512 * 1024;
+static constexpr uint64_t NUM_BLOCKS = 4608;
+static constexpr uint64_t CACHE_SIZE = BLOCK_SIZE * NUM_BLOCKS;
 static constexpr char cache_name[] = "p2pool.cache";
 
-namespace p2pool {
+static_assert(BLOCK_SIZE >= sizeof(uint32_t) + MAX_BLOCK_SIZE_NEW, "BLOCK_SIZE is too small for a max-size block");
+static_assert(BLOCK_SIZE % 4096 == 0, "BLOCK_SIZE must be page-aligned");
 
 struct BlockCache::Impl : public nocopy_nomove
 {
@@ -99,8 +106,26 @@ struct BlockCache::Impl : public nocopy_nomove
 			return;
 		}
 
-		if (SetFilePointer(m_file, CACHE_SIZE, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
-			LOGERR(1, "SetFilePointer failed, error " << static_cast<uint32_t>(GetLastError()));
+		DWORD bytes_returned;
+
+		if (!DeviceIoControl(m_file, FSCTL_SET_SPARSE, NULL, 0, NULL, 0, &bytes_returned, NULL)) {
+			LOGWARN(4, "FSCTL_SET_SPARSE failed, error " << static_cast<uint32_t>(GetLastError()) << " - the cache file will not be sparse");
+		}
+
+		LARGE_INTEGER size, zero;
+		zero.QuadPart = 0;
+
+		// Truncate the old cache of a different size
+		if (GetFileSizeEx(m_file, &size) && (size.QuadPart != CACHE_SIZE)) {
+			if (!SetFilePointerEx(m_file, zero, NULL, FILE_BEGIN) || !SetEndOfFile(m_file)) {
+				LOGWARN(4, "couldn't truncate the old cache file, error " << static_cast<uint32_t>(GetLastError()));
+			}
+		}
+
+		size.QuadPart = CACHE_SIZE;
+
+		if (!SetFilePointerEx(m_file, size, NULL, FILE_BEGIN)) {
+			LOGERR(1, "SetFilePointerEx failed, error " << static_cast<uint32_t>(GetLastError()));
 			CloseHandle(m_file);
 			m_file = INVALID_HANDLE_VALUE;
 			return;
@@ -113,7 +138,7 @@ struct BlockCache::Impl : public nocopy_nomove
 			return;
 		}
 
-		m_map = CreateFileMapping(m_file, NULL, PAGE_READWRITE, 0, CACHE_SIZE, NULL);
+		m_map = CreateFileMapping(m_file, NULL, PAGE_READWRITE, static_cast<DWORD>(CACHE_SIZE >> 32), static_cast<DWORD>(CACHE_SIZE & 0xFFFFFFFFUL), NULL);
 		if (!m_map) {
 			LOGERR(1, "CreateFileMapping failed, error " << static_cast<uint32_t>(GetLastError()));
 			CloseHandle(m_file);
