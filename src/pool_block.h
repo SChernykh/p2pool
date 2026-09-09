@@ -236,6 +236,7 @@ struct PoolBlock
 		return key;
 	}
 
+	hash calculate_genesis_tx_key_seed(const hash& consensus_hash) const;
 	hash calculate_tx_key_seed() const;
 
 	static FORCEINLINE uint64_t encode_merkle_tree_data(uint32_t n_aux_chains, uint32_t nonce)

@@ -296,6 +296,116 @@ TEST(block_template, submit_sidechain_block)
 #endif
 }
 
+TEST(block_template, genesis_tx_key_seed)
+{
+	thread_pool_init();
+	init_crypto_cache();
+
+	auto cleanup = ScopeGuard{[]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+
+#ifdef WITH_INDEXED_HASHES
+		indexed_hash::cleanup_storage();
+#endif
+	}};
+
+	for (uint8_t version : { uint8_t(HARDFORK_VERSION_CARROT - 1), HARDFORK_VERSION_CARROT }) {
+		for (bool change_prev_id : {false, true}) {
+			SCOPED_TRACE(testing::Message() << "version=" << unsigned(version) << " change_prev_id=" << change_prev_id);
+
+			SideChain sidechain(nullptr, NetworkType::Testnet, "default");
+			sidechain.m_testMainChainDiff = difficulty_type(1000000000000ULL);
+
+			BlockTemplate tpl(&sidechain, nullptr);
+			tpl.rng().seed(123);
+
+			MinerData data{};
+
+			data.major_version = version;
+			data.height = (version < HARDFORK_VERSION_CARROT) ? 2762973 : 3012000;
+			data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+			data.difficulty = sidechain.m_testMainChainDiff;
+			data.median_weight = 300000;
+			data.already_generated_coins = 18204981557254756780ULL;
+			data.median_timestamp = (1ULL << 35) - 1000;
+			data.fcmp_pp_n_tree_layers = 7;
+			data.fcmp_pp_tree_root = H("61b736ce93b62a3d3778ab204da85d3b4cdc07250f5da7e3df2629928134d526");
+
+			Mempool mempool;
+			Params params;
+
+			ASSERT_TRUE(params.m_miningWallet.assign(H("48313a5b1865002b25225520212c24806ccb92347089a3fba869a8c7e6586e15"), H("c24e9aa0f7aef7b37f4ad0a906210f78fc5794b4fa9f73f3ca2bf5a09423b12c"), NetworkType::Testnet));
+
+			const PoolBlock* genesis = nullptr;
+
+			for (uint64_t height = 0; height < 2; ++height) {
+				tpl.update(data, mempool, params);
+				const PoolBlock* b = tpl.pool_block_template();
+
+				ASSERT_EQ(b->m_sidechainHeight, height);
+				ASSERT_FALSE(b->m_verified);
+
+				const hash expected_seed = genesis
+					? (change_prev_id ? genesis->calculate_tx_key_seed() : genesis->m_txkeySecSeed)
+					: ((version < HARDFORK_VERSION_CARROT) ? sidechain.consensus_hash() : H("0206fa01e57831c64ec64607664e9b53753035c508a7d76358951440ef8d5c5d"));
+
+				ASSERT_EQ(b->m_txkeySecSeed, expected_seed);
+
+				PoolBlock wrong_seed(*b);
+				wrong_seed.m_sidechainId = height ? keccak("wrong child seed") : keccak("wrong genesis seed");
+
+				if (genesis && change_prev_id) {
+					wrong_seed.m_txkeySecSeed = genesis->m_txkeySecSeed;
+				}
+				else if (!genesis && (version >= HARDFORK_VERSION_CARROT)) {
+					wrong_seed.m_txkeySecSeed = sidechain.consensus_hash();
+				}
+				else {
+					wrong_seed.m_txkeySecSeed.h[0] ^= 1;
+				}
+
+				ASSERT_NE(wrong_seed.m_txkeySecSeed, expected_seed);
+				ASSERT_TRUE(sidechain.add_block(wrong_seed));
+
+				const PoolBlock* rejected = sidechain.find_block(wrong_seed.m_sidechainId);
+
+				ASSERT_NE(rejected, nullptr);
+				ASSERT_TRUE(rejected->m_verified);
+				ASSERT_TRUE(rejected->m_invalid);
+
+				auto blob = b->serialize_mainchain_data();
+				const auto side = b->serialize_sidechain_data();
+				blob.insert(blob.end(), side.begin(), side.end());
+
+				PoolBlock decoded;
+
+				ASSERT_EQ(decoded.deserialize(blob.data(), blob.size(), sidechain, false, false), 0);
+				ASSERT_TRUE(sidechain.add_block(decoded));
+
+				const PoolBlock* stored = sidechain.find_block(decoded.m_sidechainId);
+
+				ASSERT_NE(stored, nullptr);
+				ASSERT_TRUE(stored->m_verified);
+				ASSERT_FALSE(stored->m_invalid);
+				ASSERT_EQ(sidechain.chainTip(), stored);
+
+				if (!genesis) {
+					genesis = stored;
+					ASSERT_NE(genesis->calculate_tx_key_seed(), genesis->m_txkeySecSeed);
+				}
+
+				if (change_prev_id) {
+					++data.height;
+					data.prev_id.h[0] ^= 1;
+				}
+
+				data.median_timestamp += sidechain.block_time();
+			}
+		}
+	}
+}
+
 TEST(block_template, genesis_block_max_timestamp)
 {
 	thread_pool_init();

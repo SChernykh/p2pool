@@ -526,6 +526,28 @@ uint64_t PoolBlock::get_payout(const Wallet& w) const
 	return 0;
 }
 
+hash PoolBlock::calculate_genesis_tx_key_seed(const hash& consensus_hash) const
+{
+	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		using namespace carrot;
+
+		// tx key seed changes when the previous Monero block id changes, so make genesis tx key seed follow this rule too.
+		auto t = transcript(
+			"P2Pool tx key seed",
+			consensus_hash,
+			m_txinGenHeight,
+			m_prevId
+		);
+
+		hash result{};
+		hash_to_bytes(t.data(), t.size(), result.h, HASH_SIZE);
+
+		return result;
+	}
+
+	return consensus_hash;
+}
+
 hash PoolBlock::calculate_tx_key_seed() const
 {
 	const char domain[] = "tx_key_seed";
