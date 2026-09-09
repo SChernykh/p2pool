@@ -260,10 +260,16 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 		p = readVarint(p, e, k); if (!p) return; // txinGenHeight
 		p = readVarint(p, e, k); if (!p) return; // num_outputs
 
+		// Pre-Carrot: tx_type, public key, view tag
+		// Carrot: tx_type, one time address, view tag, encrypted Janus anchor
+		const size_t output_size = (blob[0] >= HARDFORK_VERSION_CARROT)
+			? (1 + HASH_SIZE + CARROT_VIEW_TAG_BYTES + CARROT_JANUS_ANCHOR_BYTES)
+			: (1 + HASH_SIZE + 1);
+
 		for (uint64_t i = 0; i < k; ++i) {
 			uint64_t reward;
 			p = readVarint(p, e, reward); if (!p) return;
-			p += 1 + HASH_SIZE + 1; // tx_type, public key, view tag
+			p += output_size;
 		}
 
 		std::array<uint64_t, 25> keccak_state = {};
@@ -274,6 +280,9 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 		p = readVarint(p, e, tx_extra_size); if (!p) return;
 
 		const uint8_t* tx_extra_begin = p;
+
+		if (static_cast<uint64_t>(e - tx_extra_begin) < tx_extra_size) return;
+
 		p = coinbase_tx;
 
 		while (offset >= KeccakParams::HASH_DATA_AREA) {
