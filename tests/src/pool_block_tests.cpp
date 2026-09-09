@@ -38,6 +38,76 @@ static hash H(const char* s)
 	return result;
 };
 
+TEST(pool_block, genesis_tx_key_seed)
+{
+	const hash consensus_hash = H("6126482df93599e022eb6e71f3e32f97ff00cc4e146cbf791afbf78d1ba7c94b");
+
+	constexpr size_t N_PREV_IDS = 3;
+
+	const hash prev_ids[N_PREV_IDS] = {
+		H("0000000000000000000000000000000000000000000000000000000000000000"),
+		H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c"),
+		H("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+	};
+
+	// One seed per (Monero height, previous Monero block id) pair: the seed must depend on both
+	const struct {
+		uint64_t height;
+		hash seed[N_PREV_IDS];
+	} tests[] = {
+		{ 0, {
+			H("15e3f76b370b48678b5444533d1b3f964caffdcd414c5179074971427c99e337"),
+			H("a13a005c4c32227b99f917e5ab7f5a78f9e6c1c352aff2369d1fcdcf769d6e14"),
+			H("df3f96ef116ce7abec29e57713f704c10bf0b9c5f78aa41bb06885bf66524ccb") } },
+		{ 1, {
+			H("b3354891c5722dabfe6200c2ee17efb008b38414471500826b0b46e5545c32bf"),
+			H("9f3e9cffab3dc768649f2de52ffda2235f6ec4f479a777dfea7a82ff2a798215"),
+			H("a1f0b44e5d144ef1c02779acf7a823ded868f7bd732fe634e5aba26a86b026b8") } },
+		{ 3012000, {
+			H("67e87aa830837d231f01ac4b30d1709c0c21040a4f2cae8c22de6256eb3a5c06"),
+			H("0206fa01e57831c64ec64607664e9b53753035c508a7d76358951440ef8d5c5d"),
+			H("981c99fed06592c81e941829a3fd8afed6429300c8c23f2844ad05def874ac0d") } },
+		{ 0x100000000ULL, {
+			H("43d259d2173c487207e7a743ead45bea3c88649067ea03c97abb04bd57dd0536"),
+			H("a846eea0b5581a1b90c13c1ae69eb709e6e18114e307055ddac12c159b52e18f"),
+			H("3af367dd74529ea0e6afffe4453b57112e2a365636694fd7536cc85479499f90") } },
+		{ UINT64_MAX, {
+			H("b6bffc226bf657ef892cf291876e4e5eb8329aa352785caf948035ec89888338"),
+			H("ada3f722d44d5bce44bee4ba57429d644efdcd05be01f14843546ee184a99845"),
+			H("215fd3e2bce6dca5345175bd585c7a97ee1790e03ff2bcb393ce6837027b1a6a") } },
+	};
+
+	PoolBlock b;
+
+	for (const auto& t : tests) {
+		for (size_t i = 0; i < N_PREV_IDS; ++i) {
+			SCOPED_TRACE(testing::Message() << "height=" << t.height << " prev_id=" << prev_ids[i]);
+
+			b.m_txinGenHeight = t.height;
+			b.m_prevId = prev_ids[i];
+
+			const hash& seed = t.seed[i];
+
+			b.m_majorVersion = HARDFORK_VERSION_CARROT - 1;
+			EXPECT_EQ(b.calculate_genesis_tx_key_seed(consensus_hash), consensus_hash);
+
+			b.m_majorVersion = HARDFORK_VERSION_CARROT;
+			EXPECT_EQ(b.calculate_genesis_tx_key_seed(consensus_hash), seed);
+
+			hash other_consensus_hash = consensus_hash;
+			other_consensus_hash.h[0] ^= 1;
+			EXPECT_NE(b.calculate_genesis_tx_key_seed(other_consensus_hash), seed);
+
+			b.m_prevId.h[0] ^= 1;
+			EXPECT_NE(b.calculate_genesis_tx_key_seed(consensus_hash), seed);
+			b.m_prevId = prev_ids[i];
+
+			b.m_majorVersion = HARDFORK_VERSION_CARROT + 1;
+			EXPECT_EQ(b.calculate_genesis_tx_key_seed(consensus_hash), seed);
+		}
+	}
+}
+
 TEST(pool_block, deserialize)
 {
 	init_crypto_cache();
@@ -221,9 +291,9 @@ TEST(pool_block, deserialize_carrot)
 
 	constexpr uint64_t payouts[4][4] = {
 		{ 600123456789ULL, 0, 0, 0 },
-		{ 300061728394ULL, 300061728395ULL, 0, 0 },
+		{ 300061728395ULL, 300061728394ULL, 0, 0 },
 		{ 200041152263ULL, 200041152263ULL, 200041152263ULL, 0 },
-		{ 150030864197ULL, 150030864197ULL, 150030864198ULL, 150030864197ULL },
+		{ 150030864197ULL, 150030864197ULL, 150030864197ULL, 150030864198ULL },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -238,10 +308,10 @@ TEST(pool_block, deserialize_carrot)
 		hash coinbase_hash;
 		const char* hashing_blob;
 	} expected[] = {
-		{ 4396, 5085, 0, 0, H("0400ca792371f8df36594f56f095c6f8c97163352616e5690010aff754827333"), H("335daf62519ed2b14059d222dcbcfd6a0488a6da96d77ac6378f8067be20e615"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897856341253d894523d547b80f6b51c3400a1693622607113177ea7c24bd73dd3d1072ffe8301" },
-		{ 4487, 5085, 1058, 1200, H("d5b66ed1013ec7e3ce0df8f416de2ad6bd5f5f17a0df0ec9323f56f7dbc4fcb2"), H("7b0f958291e1f85ee9edd84ae3b5db9c46e164b85cf120a26cc1686534cf8363"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8979563412dfe6e88cee500ba9bb114f0edce0643830b3899b4327f6f896cd614cd34170598301" },
-		{ 4578, 5087, 1060, 1291, H("f92a0343f280eb0ddd0484d7f17c1523094eccf864c5ff2692f087d9966d05c4"), H("e49c34a7754ca556014ad26b3134b53a7e65578d12c6c279927f242b6e5f9468"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a56341277b07c277417c72b117836c106d6752c2959552c3ef7188895921f9cab069a7c8301" },
-		{ 4668, 5088, 1093, 1413, H("bb134a644b0f5315c919d17ec40d20acdc2599d5eb15fe40eb388169e1697aba"), H("b112f093f23951de6d2385345d20c4daed75f5c586ff95c30f1e625ddcf22e5b"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b56341262c026f0a85c93c31f46f4632beb2ef6adc68e525d7ba14ac8a4d99bd33625168301" },
+		{ 4396, 5085, 0, 0, H("93efc370237e5fb59c843de5f392fa81179751564175e5bd13e42a677edef309"), H("1010e11212434d2dd5dfb6c583fde95eccdba044abdde54b836a9afd0ef04fd1"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8978563412763dab04b71117f54717cc5ae4770044882c2808900f080fccff667ec2c124398301" },
+		{ 4487, 5085, 1058, 1200, H("2d9b71db20b3297fca9803ead51eac5e031e165aad2d20c9a0a9837b7682db8a"), H("8f23c4b33f95cf33f3da3c170a393796fef58dbb439a273fcf6f3bd90b3f26d8"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897956341215e04eaf1f045068f522043ed8400be12a4d715a1e2284c4042aa54812a73c838301" },
+		{ 4578, 5087, 1060, 1291, H("738f19272b38ac1078b0c25fe4212f07120bca0753d774561bc06cd7a0a93b8b"), H("39270be8a61214edfd43e7094a943e476b5837754ac826c2057d594387d6c4b8"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634125b409c19d35fb78808359772fd374e1da4196c4eecf979bce582839f47e7f5e98301" },
+		{ 4668, 5088, 1093, 1413, H("8f4c8d70f72fee2a1cd899bd1f3ad581469145f4b6aa44043aaf042ac060ee29"), H("f20337a4fa2f7d0af0599729a8f3d5ac1e9775886f56d31bb148e1641edfd8fd"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412715bb88d46759869bfe1664ee4b5d966a6e95580093840db1a292f56df634baf8301" },
 	};
 
 	PoolBlock decoded;
@@ -302,6 +372,7 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(b.m_majorVersion, HARDFORK_VERSION_CARROT);
 		ASSERT_EQ(b.m_minorVersion, 18U);
 		ASSERT_EQ(b.m_txinGenHeight, 3012000U);
+		ASSERT_EQ(b.m_txkeySecSeed, H("44898813cdaa6a4c41ed362a36e7bd128e763af57770a72b007f1c097462fe14"));
 		ASSERT_EQ(b.m_sidechainHeight, i);
 		ASSERT_EQ(b.m_timestamp, 1780000000U + i * 10);
 		ASSERT_EQ(b.m_nonce, 0x12345678U + i);
