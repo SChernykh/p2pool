@@ -264,6 +264,36 @@ bool ZMQReader::connect(const std::string& address, bool keep_monitor)
 	return true;
 }
 
+static bool writeHex(const rapidjson::Value& value, const char* name, size_t size, std::vector<uint8_t>& blob)
+{
+	const auto member = value.FindMember(name);
+
+	if ((member == value.MemberEnd()) || !member->value.IsString()) {
+		LOGWARN(3, "construct_monero_block_blob: " << name << " not found or is not a string");
+		return false;
+	}
+
+	if (member->value.GetStringLength() != size * 2) {
+		LOGWARN(3, "construct_monero_block_blob: " << name << " has wrong length");
+		return false;
+	}
+
+	const char* s = member->value.GetString();
+
+	for (size_t i = 0; i < size; ++i) {
+		uint8_t d[2];
+
+		if (!from_hex(s[i * 2], d[0]) || !from_hex(s[i * 2 + 1], d[1])) {
+			LOGWARN(3, "construct_monero_block_blob: invalid " << name);
+			return false;
+		}
+
+		blob.push_back(static_cast<uint8_t>((d[0] << 4) | d[1]));
+	}
+
+	return true;
+}
+
 static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value, std::vector<hash>& out_transaction_hashes)
 {
 	out_transaction_hashes.clear();
@@ -373,7 +403,8 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 	writeVarint(arr.Size(), blob);
 
-	// TODO: add support for Carrot outputs
+	const bool is_carrot = (major_version >= HARDFORK_VERSION_CARROT);
+
 	for (auto* i = arr.begin(); i != arr.end(); ++i) {
 		auto amount = i->FindMember("amount");
 		if ((amount == i->MemberEnd()) || !amount->value.IsUint64()) {
@@ -381,41 +412,28 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 			return empty_blob;
 		}
 
-		auto to_tagged_key = i->FindMember("to_tagged_key");
-		if ((to_tagged_key == i->MemberEnd()) || !to_tagged_key->value.IsObject()) {
-			LOGWARN(3, "construct_monero_block_blob: to_tagged_key not found or is not an object");
-			return empty_blob;
-		}
-
-		auto key = to_tagged_key->value.FindMember("key");
-		if ((key == to_tagged_key->value.MemberEnd()) || !key->value.IsString()) {
-			LOGWARN(3, "construct_monero_block_blob: key not found or is not a string");
-			return empty_blob;
-		}
-
-		auto view_tag = to_tagged_key->value.FindMember("view_tag");
-		if ((view_tag == to_tagged_key->value.MemberEnd()) || !view_tag->value.IsString()) {
-			LOGWARN(3, "construct_monero_block_blob: view_tag not found or is not a string");
+		auto target = i->FindMember(is_carrot ? "to_carrot_v1" : "to_tagged_key");
+		if ((target == i->MemberEnd()) || !target->value.IsObject()) {
+			LOGWARN(3, "construct_monero_block_blob: tx tag not found or is not an object");
 			return empty_blob;
 		}
 
 		writeVarint(amount->value.GetUint64(), blob);
-		blob.push_back(TXOUT_TO_TAGGED_KEY);
+		blob.push_back(is_carrot ? TXOUT_TO_CARROT_V1 : TXOUT_TO_TAGGED_KEY);
 
-		if (!from_hex(key->value.GetString(), key->value.GetStringLength(), h)) {
-			LOGWARN(3, "construct_monero_block_blob: invalid key " << key->value.GetString());
+		if (!writeHex(target->value, "key", HASH_SIZE, blob)) {
 			return empty_blob;
 		}
 
-		blob.insert(blob.end(), h.h, h.h + HASH_SIZE);
-
-		std::vector<uint8_t> t;
-		if (!from_hex(view_tag->value.GetString(), view_tag->value.GetStringLength(), t) || (t.size() != 1)) {
-			LOGWARN(3, "construct_monero_block_blob: invalid view_tag " << view_tag->value.GetString());
+		if (is_carrot) {
+			if (!writeHex(target->value, "view_tag", CARROT_VIEW_TAG_BYTES, blob) ||
+				!writeHex(target->value, "encrypted_janus_anchor", CARROT_JANUS_ANCHOR_BYTES, blob)) {
+				return empty_blob;
+			}
+		}
+		else if (!writeHex(target->value, "view_tag", 1, blob)) {
 			return empty_blob;
 		}
-
-		blob.push_back(t[0]);
 	}
 
 	std::vector<uint8_t> t;
@@ -451,7 +469,22 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 		out_transaction_hashes.emplace_back(h);
 	}
 
-	// TODO: add FCMP++ tree layer count and tree root to the blob here (33 bytes in total)
+	if (major_version >= HARDFORK_VERSION_FCMP_PP) {
+		uint32_t n_tree_layers;
+
+		if (!parseValue(*value, "fcmp_pp_n_tree_layers", n_tree_layers) || (n_tree_layers > FCMP_PLUS_PLUS_MAX_LAYERS)) {
+			LOGWARN(3, "construct_monero_block_blob: fcmp_pp_n_tree_layers not found or invalid");
+			out_transaction_hashes.clear();
+			return empty_blob;
+		}
+
+		blob.push_back(static_cast<uint8_t>(n_tree_layers));
+
+		if (!writeHex(*value, "fcmp_pp_tree_root", HASH_SIZE, blob)) {
+			out_transaction_hashes.clear();
+			return empty_blob;
+		}
+	}
 
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(&data);
 	blob.insert(blob.begin(), p, p + sizeof(data));

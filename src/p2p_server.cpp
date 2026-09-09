@@ -3726,7 +3726,6 @@ bool P2PServer::P2PClient::on_aux_job_donation(const uint8_t* buf, uint32_t size
 	return true;
 }
 
-// TODO: add support for FCMP++/Carrot blocks (33 extra bytes after transaction hashes: FCMP++ number of layers and FCMP++ tree root)
 bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_t size)
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
@@ -3752,6 +3751,9 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		return false;
 	}
 
+	const bool is_fcmp_pp = (buf[0] >= HARDFORK_VERSION_FCMP_PP);
+	const uint32_t fcmp_pp_size = is_fcmp_pp ? (1 + HASH_SIZE) : 0;
+
 	uint32_t num_transactions;
 	const uint8_t* tx_hashes = readVarint(buf + header_and_miner_tx_size, buf + size, num_transactions);
 	if (!tx_hashes) {
@@ -3759,9 +3761,20 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		return false;
 	}
 
-	if ((num_transactions >= MAX_BLOCK_SIZE / HASH_SIZE) || (num_transactions * HASH_SIZE != size - static_cast<uint32_t>(tx_hashes - buf))) {
+	const uint32_t tx_hashes_offset = static_cast<uint32_t>(tx_hashes - buf);
+
+	if ((num_transactions >= MAX_BLOCK_SIZE / HASH_SIZE) || (num_transactions * HASH_SIZE + fcmp_pp_size != size - tx_hashes_offset)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: invalid number of transactions " << num_transactions);
 		return false;
+	}
+
+	if (is_fcmp_pp) {
+		const uint8_t n_tree_layers = tx_hashes[num_transactions * HASH_SIZE];
+
+		if (n_tree_layers > FCMP_PLUS_PLUS_MAX_LAYERS) {
+			LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: invalid number of FCMP++ tree layers " << n_tree_layers);
+			return false;
+		}
 	}
 
 	if (buf[data.header_size] != TX_VERSION) {
@@ -3836,7 +3849,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 		diff,
 		{ buf0, buf0 + size0 },
 		num_transactions,
-		static_cast<uint32_t>(tx_hashes - buf),
+		tx_hashes_offset,
 		false,
 		false
 	};
@@ -3888,12 +3901,20 @@ void P2PServer::monero_block_broadcast_work_cb(uv_work_t* req)
 	// "miner_tx_size - 1" because the last byte is 0x00 (base rct data), it goes into the second hash
 	keccak(buf + data.header_size, static_cast<int>(data.miner_tx_size) - 1, hashes[0].h);
 
-	// TODO: add FCMP++ data here for post-FCMP++ blocks (tree layer count, tree root)
-	std::vector<hash> transactions(work->num_transactions + 1);
+	const uint32_t prefix_hashes = (buf[0] >= HARDFORK_VERSION_FCMP_PP) ? 3 : 1;
+
+	std::vector<hash> transactions(work->num_transactions + prefix_hashes);
 	keccak(reinterpret_cast<uint8_t*>(hashes), sizeof(hashes), transactions[0].h);
 
+	if (prefix_hashes > 1) {
+		const uint8_t* fcmp_pp_data = buf + work->tx_hashes_offset + work->num_transactions * HASH_SIZE;
+
+		transactions[1].h[0] = fcmp_pp_data[0];
+		memcpy(transactions[2].h, fcmp_pp_data + 1, HASH_SIZE);
+	}
+
 	if (work->num_transactions > 0) {
-		memcpy(transactions.data() + 1, buf + work->tx_hashes_offset, work->num_transactions * HASH_SIZE);
+		memcpy(transactions.data() + prefix_hashes, buf + work->tx_hashes_offset, work->num_transactions * HASH_SIZE);
 	}
 
 	root_hash root;
