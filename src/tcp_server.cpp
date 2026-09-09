@@ -1144,7 +1144,6 @@ TCPServer::Client::Client(char* read_buf, size_t size)
 #endif
 {
 	m_readBuf[0] = '\0';
-	m_readBuf[m_readBufSize - 1] = '\0';
 }
 
 void TCPServer::Client::reset()
@@ -1166,7 +1165,6 @@ void TCPServer::Client::reset()
 	m_socks5ProxyState = Socks5ProxyState::Default;
 	m_proxyProtocolState = ProxyProtocolState::None;
 	m_readBuf[0] = '\0';
-	m_readBuf[m_readBufSize - 1] = '\0';
 
 #ifdef WITH_TLS
 	m_tls.reset();

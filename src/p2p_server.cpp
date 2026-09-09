@@ -95,7 +95,7 @@ P2PServer::P2PServer(p2pool* pool)
 	, m_auxJobLastMessageTimestamp(0)
 {
 	m_callbackBuf.resize(P2P_BUF_SIZE);
-	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE);
+	m_blockDeserializeBuf.reserve(MAX_BLOCK_SIZE_NEW);
 
 	m_auxJobMessages.reserve(1024);
 	m_MoneroBlockBroadcasts.reserve(1024);
@@ -2099,7 +2099,7 @@ void P2PServer::broadcast_monero_block(const uint8_t* data, uint32_t data_size, 
 		return;
 	}
 
-	if (data_size > MAX_BLOCK_SIZE) {
+	if (data_size > max_block_size()) {
 		LOGWARN(3, "broadcast_monero_block: data_size is too big: " << data_size);
 		return;
 	}
@@ -2449,7 +2449,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 
-				if (block_size > MAX_BLOCK_SIZE) {
+				if (block_size > server->max_block_size()) {
 					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big BLOCK_RESPONSE");
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
@@ -2483,7 +2483,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 				if (bytes_left >= 1 + sizeof(uint32_t)) {
 					const uint32_t block_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 
-					if (block_size > MAX_BLOCK_SIZE) {
+					if (block_size > server->max_block_size()) {
 						LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big " << (compact ? "BLOCK_BROADCAST_COMPACT" : "BLOCK_BROADCAST"));
 						ban(DEFAULT_BAN_TIME);
 						server->remove_peer_from_list(this);
@@ -2569,7 +2569,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 
-				if (msg_size > MAX_BLOCK_SIZE) {
+				if (msg_size > server->max_block_size()) {
 					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big AUX_JOB_DONATION");
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
@@ -2594,7 +2594,7 @@ bool P2PServer::P2PClient::on_read(const char* data, uint32_t size)
 			if (bytes_left >= 1 + sizeof(uint32_t)) {
 				const uint32_t msg_size = read_unaligned(reinterpret_cast<uint32_t*>(buf + 1));
 
-				if (msg_size > MAX_BLOCK_SIZE) {
+				if (msg_size > server->max_block_size()) {
 					LOGWARN(4, "peer " << static_cast<char*>(m_addrString) << " sent too big MONERO_BLOCK_BROADCAST");
 					ban(DEFAULT_BAN_TIME);
 					server->remove_peer_from_list(this);
@@ -3253,6 +3253,11 @@ bool P2PServer::throttle_broadcast(const P2PClient* client, uint64_t timestamp_m
 	return false;
 }
 
+uint64_t P2PServer::max_block_size() const
+{
+	return PoolBlock::max_block_size(m_pool->network_major_version());
+}
+
 bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size, bool compact)
 {
 	if (!size) {
@@ -3763,7 +3768,7 @@ bool P2PServer::P2PClient::on_monero_block_broadcast(const uint8_t* buf, uint32_
 
 	const uint32_t tx_hashes_offset = static_cast<uint32_t>(tx_hashes - buf);
 
-	if ((num_transactions >= MAX_BLOCK_SIZE / HASH_SIZE) || (num_transactions * HASH_SIZE + fcmp_pp_size != size - tx_hashes_offset)) {
+	if ((num_transactions >= server->max_block_size() / HASH_SIZE) || (num_transactions * HASH_SIZE + fcmp_pp_size != size - tx_hashes_offset)) {
 		LOGWARN(3, "Invalid MONERO_BLOCK_BROADCAST: invalid number of transactions " << num_transactions);
 		return false;
 	}

@@ -971,7 +971,8 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 		k += m_shares.size() * HASH_SIZE;
 	}
 
-	const uint32_t max_transactions = static_cast<uint32_t>((MAX_BLOCK_SIZE > k) ? ((MAX_BLOCK_SIZE - k) / HASH_SIZE) : 0);
+	const uint64_t N = b->max_block_size();
+	const uint32_t max_transactions = static_cast<uint32_t>((N > k) ? ((N - k) / HASH_SIZE) : 0);
 	LOGINFO(6, max_transactions << " transactions can be taken with current block size limit");
 
 	if (max_transactions == 0) {

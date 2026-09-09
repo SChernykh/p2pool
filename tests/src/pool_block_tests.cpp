@@ -327,7 +327,7 @@ TEST(pool_block, deserialize_carrot)
 			ASSERT_TRUE(ancestors.good());
 
 			ASSERT_GT(size, 0U);
-			ASSERT_LE(size, MAX_BLOCK_SIZE);
+			ASSERT_LE(size, MAX_BLOCK_SIZE_NEW);
 
 			buf.resize(size);
 			ancestors.read(reinterpret_cast<char*>(buf.data()), buf.size());
@@ -337,7 +337,7 @@ TEST(pool_block, deserialize_carrot)
 			std::ifstream f("block_carrot.dat", std::ios::binary | std::ios::ate);
 			ASSERT_TRUE(f.is_open());
 			ASSERT_GT(f.tellg(), 0);
-			ASSERT_LE(static_cast<uint64_t>(f.tellg()), MAX_BLOCK_SIZE);
+			ASSERT_LE(static_cast<uint64_t>(f.tellg()), MAX_BLOCK_SIZE_NEW);
 
 			buf.resize(static_cast<size_t>(f.tellg()));
 			f.seekg(0);
@@ -543,8 +543,8 @@ TEST(pool_block, deserialize_carrot)
 
 			bad_varint(reward_offset, reward + 1);
 
-			for (uint64_t n : std::initializer_list<uint64_t>{0ULL, 53ULL, uint64_t(layout.outputs_blob_size - 1), uint64_t(layout.outputs_blob_size + 1), MAX_BLOCK_SIZE + 1, UINT64_MAX}) bad_varint(output_size_ptr - begin, n);
-			for (uint64_t n : std::initializer_list<uint64_t>{0ULL, 32ULL, pubkeys_size - 1, pubkeys_size + 1, MAX_BLOCK_SIZE + 1, UINT64_MAX}) bad_varint(pubkeys_size_ptr - begin, n);
+			for (uint64_t n : std::initializer_list<uint64_t>{0ULL, 53ULL, uint64_t(layout.outputs_blob_size - 1), uint64_t(layout.outputs_blob_size + 1), MAX_BLOCK_SIZE_NEW + 1, UINT64_MAX}) bad_varint(output_size_ptr - begin, n);
+			for (uint64_t n : std::initializer_list<uint64_t>{0ULL, 32ULL, pubkeys_size - 1, pubkeys_size + 1, MAX_BLOCK_SIZE_NEW + 1, UINT64_MAX}) bad_varint(pubkeys_size_ptr - begin, n);
 
 			bad_varint(extra_size_ptr - begin, extra_size - 1);
 			bad_varint(extra_size_ptr - begin, extra_size + 1);

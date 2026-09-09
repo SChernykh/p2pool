@@ -401,6 +401,8 @@ void p2pool::handle_tx(TxMempoolData& tx)
 
 void p2pool::handle_miner_data(MinerData& data)
 {
+	m_networkMajorVersion.store(data.major_version, std::memory_order_release);
+
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	if (m_mempool->size() < data.tx_backlog.size()) {
 		m_mempool->swap_transactions(data.tx_backlog);
