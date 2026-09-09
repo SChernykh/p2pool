@@ -27,6 +27,7 @@
 #include "params.h"
 #include "gtest/gtest.h"
 #include <fstream>
+#include <numeric>
 
 namespace p2pool {
 
@@ -73,10 +74,32 @@ TEST(pool_block, deserialize)
 		ASSERT_EQ(memcmp(id.data() + HASH_SIZE + NONCE_SIZE, &b.m_extraNonce, EXTRA_NONCE_SIZE), 0);
 	}
 
-	ASSERT_EQ(b.get_payout(Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH")), 17411468548U);
-	ASSERT_EQ(b.get_payout(Wallet("43VbH7CQCJqhH1d327TBenCs9hFN3zvcgX5YZdGyJfEE5rabasAtKhyPsKmbYSU9AmMReACZrz9j5U2Ba6WXWoQpVi38AJn")), 1404738424U);
-	ASSERT_EQ(b.get_payout(Wallet("46r3PD45TYH9jVf8sEejW9JdK1EgNe6BeYLdGyJTU1MRctoevAHXpzSjBMJhdkLirGXwiWdZejSRZ8MZP72artSD17LprKY")), 1419699645U);
-	ASSERT_EQ(b.get_payout(Wallet("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg")), 0U);
+	const struct {
+		const char* address;
+		uint64_t reward;
+	} payouts[] = {
+		{ "4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH", 17411468548U },
+		{ "43VbH7CQCJqhH1d327TBenCs9hFN3zvcgX5YZdGyJfEE5rabasAtKhyPsKmbYSU9AmMReACZrz9j5U2Ba6WXWoQpVi38AJn", 1404738424U },
+		{ "46r3PD45TYH9jVf8sEejW9JdK1EgNe6BeYLdGyJTU1MRctoevAHXpzSjBMJhdkLirGXwiWdZejSRZ8MZP72artSD17LprKY", 1419699645U },
+		{ "44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg", 0U },
+	};
+
+	ASSERT_DOUBLE_EQ(sidechain.get_reward_share(Wallet(payouts[0].address)), 0.0);
+
+	sidechain.set_chain_tip(&b);
+
+	const uint64_t total_reward = std::accumulate(b.m_outputAmounts.begin(), b.m_outputAmounts.end(), 0ULL);
+	ASSERT_GT(total_reward, 0U);
+
+	for (const auto& payout : payouts) {
+		SCOPED_TRACE(payout.address);
+
+		const Wallet w(payout.address);
+		ASSERT_TRUE(w.valid());
+
+		ASSERT_EQ(b.get_payout(w), payout.reward);
+		EXPECT_DOUBLE_EQ(sidechain.get_reward_share(w), static_cast<double>(payout.reward) / static_cast<double>(total_reward));
+	}
 
 	PoolBlock::MainchainLayout layout;
 
@@ -132,6 +155,10 @@ TEST(pool_block, deserialize)
 
 	ASSERT_EQ(b.serialize_mainchain_data(), mainchain_data);
 	ASSERT_EQ(b.serialize_sidechain_data(), sidechain_data);
+
+	b.m_outputAmounts.clear();
+	EXPECT_EQ(b.get_payout(Wallet(payouts[0].address)), 0U);
+	EXPECT_DOUBLE_EQ(sidechain.get_reward_share(Wallet(payouts[0].address)), 0.0);
 	}
 	destroy_crypto_cache();
 
@@ -184,6 +211,20 @@ TEST(pool_block, deserialize_carrot)
 	SideChain sidechain(nullptr, NetworkType::Testnet, "default");
 
 	sidechain.m_testMainChainDiff = difficulty_type(1000000000000ULL);
+
+	Wallet no_payout(nullptr);
+
+	ASSERT_TRUE(no_payout.assign(H("5866666666666666666666666666666666666666666666666666666666666666"), H("61b736ce93b62a3d3778ab204da85d3b4cdc07250f5da7e3df2629928134d526"), NetworkType::Testnet));
+	ASSERT_DOUBLE_EQ(sidechain.get_reward_share(no_payout), 0.0);
+
+	std::vector<Wallet> mining_wallets;
+
+	constexpr uint64_t payouts[4][4] = {
+		{ 600123456789ULL, 0, 0, 0 },
+		{ 300061728394ULL, 300061728395ULL, 0, 0 },
+		{ 200041152263ULL, 200041152263ULL, 200041152263ULL, 0 },
+		{ 150030864197ULL, 150030864197ULL, 150030864198ULL, 150030864197ULL },
+	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
 	ASSERT_TRUE(ancestors.is_open());
@@ -238,6 +279,7 @@ TEST(pool_block, deserialize_carrot)
 		PoolBlock b;
 
 		ASSERT_EQ(b.deserialize(buf.data(), buf.size(), sidechain, false, false), 0);
+		mining_wallets.push_back(b.m_minerWallet);
 
 		PoolBlock::MainchainLayout layout;
 		const auto main = b.serialize_mainchain_data(&layout);
@@ -343,6 +385,12 @@ TEST(pool_block, deserialize_carrot)
 				ASSERT_NE(stored, nullptr);
 				ASSERT_TRUE(stored->m_verified);
 				ASSERT_FALSE(stored->m_invalid);
+				ASSERT_EQ(sidechain.chainTip(), stored);
+
+				for (size_t j = 0; j < mining_wallets.size(); ++j) {
+					EXPECT_DOUBLE_EQ(sidechain.get_reward_share(mining_wallets[j]), static_cast<double>(payouts[i][j]) / static_cast<double>(reward)) << "miner " << j;
+				}
+				EXPECT_DOUBLE_EQ(sidechain.get_reward_share(no_payout), 0.0);
 			}
 
 			for (bool compact : {false, true}) {
@@ -380,6 +428,11 @@ TEST(pool_block, deserialize_carrot)
 						ASSERT_TRUE(decoded.m_outputAmounts.empty());
 						ASSERT_TRUE(decoded.m_viewTags.empty());
 						ASSERT_FALSE(decoded.m_verified);
+
+						for (size_t j = 0; j < mining_wallets.size(); ++j) {
+							EXPECT_EQ(decoded.get_payout(mining_wallets[j]), payouts[i][j]) << "miner " << j;
+						}
+						EXPECT_EQ(decoded.get_payout(no_payout), 0U);
 
 						if (pruned) {
 							ASSERT_NE(decoded.deserialize(wire.data(), wire.size(), sidechain, compact, false), 0);
@@ -466,6 +519,50 @@ TEST(pool_block, deserialize_carrot)
 	const PoolBlock* parent = sidechain.chainTip();
 	ASSERT_NE(parent, nullptr);
 	ASSERT_FALSE(parent->m_transactions.empty());
+
+	{
+		PoolBlock scan_block(*parent);
+
+		PoolBlock* original_tip = sidechain.blocksById().at(parent->m_sidechainId);
+		sidechain.set_chain_tip(&scan_block);
+
+		auto restore_tip = ScopeGuard{[&]() { sidechain.set_chain_tip(original_tip); }};
+
+		auto check_no_reward = [&]() {
+			for (size_t i = 0; i < mining_wallets.size(); ++i) {
+				EXPECT_EQ(scan_block.get_payout(mining_wallets[i]), 0U) << "miner " << i;
+				EXPECT_DOUBLE_EQ(sidechain.get_reward_share(mining_wallets[i]), 0.0) << "miner " << i;
+			}
+		};
+
+		for (size_t i = 0; i < CARROT_VIEW_TAG_BYTES; ++i) {
+			SCOPED_TRACE(testing::Message() << "view-tag byte " << i);
+
+			for (auto& o : scan_block.m_carrotOutputs) o.vt.data[i] ^= 1;
+
+			check_no_reward();
+			scan_block.m_carrotOutputs = parent->m_carrotOutputs;
+		}
+
+		for (auto& o : scan_block.m_carrotOutputs) ++o.amount;
+		check_no_reward();
+		scan_block.m_carrotOutputs = parent->m_carrotOutputs;
+
+		for (auto& o : scan_block.m_carrotOutputs) o.eph_pub_key.h[0] ^= 1;
+		check_no_reward();
+		scan_block.m_carrotOutputs = parent->m_carrotOutputs;
+
+		++scan_block.m_txinGenHeight;
+		check_no_reward();
+		scan_block.m_txinGenHeight = parent->m_txinGenHeight;
+
+		scan_block.m_txkeySec.h[0] ^= 1;
+		check_no_reward();
+		scan_block.m_txkeySec = parent->m_txkeySec;
+
+		scan_block.m_carrotOutputs.clear();
+		check_no_reward();
+	}
 
 	MinerData data{};
 

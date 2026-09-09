@@ -21,6 +21,7 @@
 #include "side_chain.h"
 #include "pow_hash.h"
 #include "crypto.h"
+#include "carrot.h"
 #include "merkle.h"
 
 LOG_CATEGORY(PoolBlock)
@@ -475,8 +476,40 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const
 {
-	// TODO: add code to check Carrot transactions
 	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		using namespace carrot;
+
+		const uint64_t h = m_txinGenHeight;
+
+		const hash& K_s = w.spend_public_key();
+		const hash& K_v = w.view_public_key();
+
+		// Non-zero retry counter is so improbable we can just always use 0 where it's not critical for consensus
+		const janus_anchor anchor = gen_janus_anchor(m_txkeySec, 0, w);
+
+		hash d_e;
+		if (!gen_eph_privkey(anchor, h, w, d_e)) {
+			return 0;
+		}
+
+		hash s_sr;
+		if (!gen_sender_receiver_secret(d_e, K_v, s_sr)) {
+			return 0;
+		}
+
+		for (const coinbase_tx_output& o : m_carrotOutputs) {
+			if (gen_view_tag(s_sr, h, o.onetime_address) == o.vt) {
+				const hash s_sr_ctx = gen_contextualized_sender_receiver_secret(s_sr, o.eph_pub_key, h);
+				const hash k_g = gen_sender_extension_g(s_sr_ctx, o.amount, K_s);
+				const hash k_t = gen_sender_extension_t(s_sr_ctx, o.amount, K_s);
+
+				hash K_o;
+				if (gen_onetime_address(K_s, k_g, k_t, K_o) && (K_o == o.onetime_address)) {
+					return o.amount;
+				}
+			}
+		}
+
 		return 0;
 	}
 

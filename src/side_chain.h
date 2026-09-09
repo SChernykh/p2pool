@@ -102,6 +102,7 @@ public:
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
+	void set_chain_tip(PoolBlock* block) { WriteLock lock(m_sidechainLock); m_chainTip = block; }
 #endif
 
 	// Splits reward using weighted shares and output resulting reward split into (wallets, rewards)
