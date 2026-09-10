@@ -53,6 +53,8 @@ public:
 	void clear()
 	{
 		WriteLock lock(m_lock);
+
+		m_totalWeight = 0;
 		m_transactions.clear();
 	}
 

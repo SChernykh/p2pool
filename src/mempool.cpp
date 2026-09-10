@@ -50,8 +50,6 @@ void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
 
 	WriteLock lock(m_lock);
 
-	m_totalWeight = 0;
-
 	// Initialize time_received for all transactions
 	for (TxMempoolData& data : transactions) {
 		auto it = m_transactions.find(data.id);
@@ -63,6 +61,7 @@ void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
 		}
 	}
 
+	m_totalWeight = 0;
 	m_transactions.clear();
 	m_transactions.reserve(transactions.size());
 
@@ -86,7 +85,7 @@ void Mempool::remove(const std::vector<hash>& tx_hashes)
 
 		if (it != m_transactions.end()) {
 			m_totalWeight -= it->second.weight;
-			m_transactions.erase(h);
+			m_transactions.erase(it);
 		}
 	}
 }

@@ -441,8 +441,12 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	std::shared_ptr<Precalc> precalc;
 
 	// Run precalc only when transaction picker will run, otherwise it's a too short window before create_miner_tx
-	if (!m_shares.empty() &&
-		(mempool.total_weight() + (PoolBlock::output_blob_size_estimate(data.major_version) + HASH_SIZE) * m_shares.size() + 55 > data.median_weight)) {
+	// Also run it unconditionally pre-Carrot because the regular path doesn't use batching there
+	const bool run_precalc =
+		(data.major_version < HARDFORK_VERSION_CARROT) ||
+		(mempool.total_weight() + (PoolBlock::output_blob_size_estimate(data.major_version) + HASH_SIZE) * m_shares.size() + 55 > data.median_weight);
+
+	if (!m_shares.empty() && run_precalc) {
 		precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
 		queue_work([precalc]() { precalc->run(); });
 	}
