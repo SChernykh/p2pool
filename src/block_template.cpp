@@ -440,15 +440,23 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	std::shared_ptr<Precalc> precalc;
 
-	// Run precalc only when transaction picker will run, otherwise it's a too short window before create_miner_tx
-	// Also run it unconditionally pre-Carrot because the regular path doesn't use batching there
-	const bool run_precalc =
-		(data.major_version < HARDFORK_VERSION_CARROT) ||
-		(mempool.total_weight() + (PoolBlock::output_blob_size_estimate(data.major_version) + HASH_SIZE) * m_shares.size() + 55 > data.median_weight);
+	// Run precalc in background when blocks are full (transaction picker runs), otherwise it's a too short window before create_miner_tx
+	// Also run it unconditionally for pre-Carrot outputs because the regular path doesn't use batching there
+	if (!m_shares.empty()) {
+		const bool pre_carrot = (data.major_version < HARDFORK_VERSION_CARROT);
+		const bool run_precalc_in_background = (mempool.total_weight() + (pre_carrot ? 39 : 89) * m_shares.size() + 55 > data.median_weight);
 
-	if (!m_shares.empty() && run_precalc) {
-		precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
-		queue_work([precalc]() { precalc->run(); });
+		if (run_precalc_in_background || pre_carrot) {
+			precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
+
+			if (run_precalc_in_background) {
+				queue_work([precalc]() { precalc->run(); });
+			}
+			else {
+				precalc->run();
+				precalc.reset();
+			}
+		}
 	}
 
 	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
