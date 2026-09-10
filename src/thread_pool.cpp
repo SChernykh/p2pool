@@ -84,6 +84,8 @@ struct ThreadPool
 		{
 			uv_mutex_lock(&m_mutex);
 
+			s_current_thread = this;
+
 			char buf[16] = {};
 
 			log::Stream s(buf);
@@ -102,6 +104,7 @@ struct ThreadPool
 		}
 
 		static std::atomic<uint32_t> thread_index;
+		static thread_local Thread* s_current_thread;
 
 		std::atomic<bool> m_stop;
 
@@ -124,6 +127,12 @@ struct ThreadPool
 			ReadLock lock(m_threadsLock);
 
 			for (auto& t : m_threads) {
+				// Never give work to the thread that's asking for it: it's busy running the code that called us.
+				// A nested parallel_run(wait = true) would then wait for itself forever.
+				if (t.get() == Thread::s_current_thread) {
+					continue;
+				}
+
 				if (uv_mutex_trylock(&t->m_mutex) == 0) {
 					// Another concurrent queue_work might have assigned work to this thread already
 					// Or it might be the initial work that the thread has right after its creation and before the first mutex lock
@@ -164,6 +173,7 @@ struct ThreadPool
 
 static ThreadPool* tp = nullptr;
 std::atomic<uint32_t> ThreadPool::Thread::thread_index = 0;
+thread_local ThreadPool::Thread* ThreadPool::Thread::s_current_thread = nullptr;
 
 void thread_pool_init()
 {

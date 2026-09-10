@@ -23,6 +23,7 @@
 #include <atomic>
 #include <vector>
 #include <chrono>
+#include <memory>
 
 namespace p2pool {
 
@@ -112,6 +113,86 @@ TEST(thread_pool, parallel_run)
 
 	EXPECT_FALSE(wrong_thread_count.load(memory_order_relaxed));
 	EXPECT_EQ(completed_runs.load(memory_order_relaxed), static_cast<uint64_t>(NUM_CALLER_THREADS) * ITERATIONS_PER_THREAD);
+
+	thread_pool_destroy();
+}
+
+TEST(thread_pool, parallel_run_nested)
+{
+	using namespace std;
+	using namespace chrono;
+
+	thread_pool_init();
+
+	constexpr uint32_t NUM_CONCURRENT_OUTER = 4;
+	constexpr uint32_t ITERATIONS = 500;
+
+	const uint32_t cap = min<uint32_t>(thread::hardware_concurrency(), 16u);
+	const uint32_t effective_total = (cap <= 1) ? 1u : cap;
+
+	atomic<uint64_t> completed_runs = 0;
+	atomic<bool> finished = false;
+	atomic<bool> wrong_thread_count = false;
+
+	thread watchdog([&completed_runs, &finished]() {
+		uint64_t last = 0;
+		auto last_changed = steady_clock::now();
+
+		while (!finished.load(memory_order_acquire)) {
+			this_thread::sleep_for(milliseconds(1));
+
+			const uint64_t now = completed_runs.load(memory_order_relaxed);
+
+			if (now != last) {
+				last = now;
+				last_changed = steady_clock::now();
+			}
+			else {
+				const double dt = static_cast<double>(duration_cast<nanoseconds>(steady_clock::now() - last_changed).count()) / 1e9;
+
+				if (dt >= 10.0) {
+					fprintf(stderr, "no progress for %.3fs after %llu runs - parallel_run() called from a thread pool thread waited for itself\n", dt, static_cast<unsigned long long>(now));
+					fflush(stderr);
+					abort();
+				}
+			}
+		}
+	});
+
+	for (uint32_t it = 0; it < ITERATIONS; ++it) {
+		auto outer_finished = make_shared<atomic<uint32_t>>(0);
+
+		for (uint32_t i = 0; i < NUM_CONCURRENT_OUTER; ++i) {
+			queue_work([outer_finished, effective_total, &completed_runs, &wrong_thread_count]() {
+				atomic<uint32_t> participated = 0;
+
+				// The nested fan-out: this runs on a thread pool thread, and asks the same pool for more threads
+				parallel_run([effective_total, &participated, &wrong_thread_count](uint32_t thread_index, uint32_t total_thread_count) {
+					if ((total_thread_count != effective_total) || (thread_index >= effective_total)) {
+						wrong_thread_count.store(true, memory_order_relaxed);
+					}
+					participated.fetch_add(1, memory_order_relaxed);
+				}, true);
+
+				if (participated.load(memory_order_relaxed) != effective_total) {
+					wrong_thread_count.store(true, memory_order_relaxed);
+				}
+
+				completed_runs.fetch_add(1, memory_order_relaxed);
+				outer_finished->fetch_add(1, memory_order_release);
+			});
+		}
+
+		while (outer_finished->load(memory_order_acquire) < NUM_CONCURRENT_OUTER) {
+			this_thread::yield();
+		}
+	}
+
+	finished.store(true, memory_order_release);
+	watchdog.join();
+
+	EXPECT_FALSE(wrong_thread_count.load(memory_order_relaxed));
+	EXPECT_EQ(completed_runs.load(memory_order_relaxed), static_cast<uint64_t>(NUM_CONCURRENT_OUTER) * ITERATIONS);
 
 	thread_pool_destroy();
 }
