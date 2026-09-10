@@ -90,13 +90,14 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	// TODO: remove this check once the code is ready for production
 	//
 	// This branch is a work in progress for the v17 hard fork and can't produce or verify a valid chain yet:
-	// Carrot coinbase generation and verification are unfinished, and hardforks.cpp has no mainnet height for
-	// v17, so network_major_version() reports 16 for every mainnet height and PoolBlock::deserialize would
-	// reject every v17 block. Unit tests build mainnet sidechains on purpose, so they skip this.
+	// - hardforks.cpp has no mainnet height for v17, so PoolBlock::deserialize would reject eventual v17 blocks.
+	// - RandomX v2 is not fully supported yet.
+	//
+	// Unit tests build mainnet sidechains on purpose, so they skip this.
 #ifndef P2POOL_UNIT_TESTS
-	if (type == NetworkType::Mainnet) {
+	if (type != NetworkType::Testnet) {
 		LOGERR(0, "this build implements the upcoming v17 hard fork (FCMP++, Carrot, RandomX v2) and is not ready for production. "
-			"It must not be used on mainnet - run it with a testnet or stagenet wallet address instead.");
+			"It must not be used on mainnet/stagenet - run it with a testnet wallet address instead.");
 		PANIC_STOP();
 	}
 #endif

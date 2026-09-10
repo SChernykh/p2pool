@@ -279,7 +279,7 @@ public:
 		return torsion_free;
 	}
 
-	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys)
+	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys, std::atomic<bool>* stop)
 	{
 		eph_pub_keys.clear();
 
@@ -319,6 +319,10 @@ public:
 
 		if (batch.empty()) {
 			return true;
+		}
+
+		if (stop && stop->load(std::memory_order_acquire)) {
+			return false;
 		}
 
 		const size_t batch_size = batch.size();
@@ -380,6 +384,11 @@ public:
 				else {
 					fe_mul(scratchpad[i].P, scratchpad[i - 1].P, scratchpad[i].D);
 				}
+
+				if (stop && stop->load(std::memory_order_acquire)) {
+					result = false;
+					break;
+				}
 			}
 
 			const bool last = sync_point(counter, next_counter);
@@ -387,7 +396,7 @@ public:
 
 			// Last thread at the sync point is likely the first one to continue execution,
 			// so make it calculate each segment end's inverse using Montgomery's trick
-			if (last) {
+			if (last && !(stop && stop->load(std::memory_order_acquire))) {
 				// Work over the whole miss batch, but inverse only each segment's end
 				// One fe_invert, thread_count*3 - 3 fe_mul calls
 
@@ -421,6 +430,11 @@ public:
 
 			sync_point(counter, next_counter);
 
+			if (stop && stop->load(std::memory_order_acquire)) {
+				result = false;
+				return;
+			}
+
 			// Each segment has scratchpad[b - 1].Q = (D_a*D_{a+1}*...*D_{b-1})^-1 now
 			fe t;
 			memcpy(t, scratchpad[b - 1].Q, sizeof(fe));
@@ -443,6 +457,11 @@ public:
 				fe_add(numerator, scratchpad[i].Z, scratchpad[i].Y);
 				fe_mul(numerator, numerator, scratchpad[i].Q);
 				fe_tobytes(eph_pub_keys[batch[i]].first.h, numerator);
+
+				if (stop && stop->load(std::memory_order_acquire)) {
+					result = false;
+					return;
+				}
 			}
 		}, true);
 
@@ -457,7 +476,7 @@ public:
 			WriteLock lock(carrot_public_keys_lock);
 
 			for (const size_t i : batch) {
-				if (eph_pub_keys[i].second) {
+				if (eph_pub_keys[i].second && !eph_pub_keys[i].first.empty()) {
 					carrot_public_keys->emplace(eph_priv_keys[i], CarrotPublicKeyEntry{ eph_pub_keys[i].first, t });
 				}
 			}
@@ -468,18 +487,20 @@ public:
 #endif
 
 #ifdef P2POOL_DEBUGGING
-		for (size_t i = 0; i < N; ++i) {
-			hash eph_pub_key;
-			const bool b = carrot::gen_eph_pubkey(eph_priv_keys[i], eph_pub_key);
+		if (!(stop && stop->load(std::memory_order_acquire))) {
+			for (size_t i = 0; i < N; ++i) {
+				hash eph_pub_key;
+				const bool b = carrot::gen_eph_pubkey(eph_priv_keys[i], eph_pub_key);
 
-			if (b != eph_pub_keys[i].second) {
-				LOGERR(1, "batch_eph_pubkeys error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << eph_pub_keys[i].second);
-				PANIC_STOP();
-			}
+				if (b != eph_pub_keys[i].second) {
+					LOGERR(1, "batch_eph_pubkeys error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << eph_pub_keys[i].second);
+					PANIC_STOP();
+				}
 
-			if (b && (eph_pub_key != eph_pub_keys[i].first)) {
-				LOGERR(1, "batch_eph_pubkeys error: wrong ephemeral public key at position " << i << '/' << N);
-				PANIC_STOP();
+				if (b && (eph_pub_key != eph_pub_keys[i].first)) {
+					LOGERR(1, "batch_eph_pubkeys error: wrong ephemeral public key at position " << i << '/' << N);
+					PANIC_STOP();
+				}
 			}
 		}
 #endif
@@ -487,7 +508,7 @@ public:
 		return result;
 	}
 
-	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets)
+	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets, std::atomic<bool>* stop)
 	{
 		secrets.clear();
 
@@ -583,6 +604,10 @@ public:
 			}
 		}
 
+		if (stop && stop->load(std::memory_order_acquire)) {
+			return false;
+		}
+
 		struct M {
 			fe Y;
 			fe Z;
@@ -667,6 +692,11 @@ public:
 				else {
 					fe_mul(scratchpad[i].P, scratchpad[i - 1].P, scratchpad[i].D);
 				}
+
+				if (stop && stop->load(std::memory_order_acquire)) {
+					result = false;
+					break;
+				}
 			}
 
 			const bool last = sync_point(counter, next_counter);
@@ -674,7 +704,7 @@ public:
 
 			// Last thread at the sync point is likely the first one to continue execution,
 			// so make it calculate each segment end's inverse using Montgomery's trick
-			if (last) {
+			if (last && !(stop && stop->load(std::memory_order_acquire))) {
 				// Work over the whole miss batch, but inverse only each segment's end
 				// One fe_invert, thread_count*3 - 3 fe_mul calls
 
@@ -708,6 +738,11 @@ public:
 
 			sync_point(counter, next_counter);
 
+			if (stop && stop->load(std::memory_order_acquire)) {
+				result = false;
+				return;
+			}
+
 			// Each segment has scratchpad[b - 1].Q = (D_a*D_{a+1}*...*D_{b-1})^-1 now
 			fe t;
 			memcpy(t, scratchpad[b - 1].Q, sizeof(fe));
@@ -731,6 +766,11 @@ public:
 				fe_add(numerator, scratchpad[i].Z, scratchpad[i].Y);
 				fe_mul(numerator, numerator, scratchpad[i].Q);
 				fe_tobytes(secrets[j].first.h, numerator);
+
+				if (stop && stop->load(std::memory_order_acquire)) {
+					result = false;
+					return;
+				}
 			}
 		}, true);
 
@@ -775,7 +815,7 @@ public:
 			for (size_t i = 0; i < batch_size; ++i) {
 				const size_t j = secret_batch[i];
 
-				if (!secrets[j].second) {
+				if (!secrets[j].second || secrets[j].first.empty()) {
 					continue;
 				}
 
@@ -791,18 +831,20 @@ public:
 #endif
 
 #ifdef P2POOL_DEBUGGING
-		for (size_t i = 0; i < N; ++i) {
-			hash secret;
-			const bool b = carrot::gen_sender_receiver_secret(eph_priv_keys[i], view_public_keys[i], secret);
+		if (!(stop && stop->load(std::memory_order_acquire))) {
+			for (size_t i = 0; i < N; ++i) {
+				hash secret;
+				const bool b = carrot::gen_sender_receiver_secret(eph_priv_keys[i], view_public_keys[i], secret);
 
-			if (b != secrets[i].second) {
-				LOGERR(1, "batch_sender_receiver_secrets error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << secrets[i].second);
-				PANIC_STOP();
-			}
+				if (b != secrets[i].second) {
+					LOGERR(1, "batch_sender_receiver_secrets error: result mismatch at position " << i << '/' << N << ": expected " << b << ", got " << secrets[i].second);
+					PANIC_STOP();
+				}
 
-			if (b && (secret != secrets[i].first)) {
-				LOGERR(1, "batch_sender_receiver_secrets error: wrong secret at position " << i << '/' << N);
-				PANIC_STOP();
+				if (b && (secret != secrets[i].first)) {
+					LOGERR(1, "batch_sender_receiver_secrets error: wrong secret at position " << i << '/' << N);
+					PANIC_STOP();
+				}
 			}
 		}
 #endif
@@ -2052,14 +2094,14 @@ static Cache* cache = nullptr;
 
 namespace carrot {
 
-bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys)
+bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys, std::atomic<bool>* stop)
 {
-	return cache->batch_eph_pubkeys(eph_priv_keys, eph_pub_keys);
+	return cache->batch_eph_pubkeys(eph_priv_keys, eph_pub_keys, stop);
 }
 
-bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets)
+bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets, std::atomic<bool>* stop)
 {
-	return cache->batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, secrets);
+	return cache->batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, secrets, stop);
 }
 
 bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_tx_output>& out)

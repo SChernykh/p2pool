@@ -158,10 +158,10 @@ namespace carrot {
 	janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiver_secret, const janus_anchor& anchor, const hash& onetime_address);
 
 	// anchor_norm and d_e for every output, in parallel. A failed element leaves a zero d_e, which batch_eph_pubkeys rejects on its own.
-	bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys);
+	bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys, std::atomic<bool>* stop = nullptr);
 
-	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys);
-	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets);
+	bool batch_eph_pubkeys(const std::vector<hash>& eph_priv_keys, std::vector<std::pair<hash, bool>>& eph_pub_keys, std::atomic<bool>* stop = nullptr);
+	bool batch_sender_receiver_secrets(const std::vector<hash>& eph_priv_keys, const std::vector<hash>& view_public_keys, std::vector<std::pair<hash, bool>>& secrets, std::atomic<bool>* stop = nullptr);
 
 	// s^ctx_sr for every output, in parallel. secrets[i] is valid only if both of its inputs were.
 	bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<hash, bool>>& sender_receiver_secrets, const std::vector<std::pair<hash, bool>>& eph_pub_keys, uint64_t height, std::vector<std::pair<hash, bool>>& secrets);

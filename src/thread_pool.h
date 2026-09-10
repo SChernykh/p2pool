@@ -27,7 +27,7 @@ void queue_work_base(std::shared_ptr<Callback<void>::Base>&& callback, uint32_t 
 // Calls the callback N times on N threads in parallel
 // Doesn't wait, returns immediately
 template<typename T>
-FORCEINLINE void queue_work(T&& callback, uint32_t N)
+FORCEINLINE void queue_work(T&& callback, uint32_t N = 1)
 {
 	static_assert(!std::is_lvalue_reference_v<T>, "queue_work() requires an rvalue callback; use std::move or pass a temporary lambda");
 	queue_work_base(std::make_shared<Callback<void>::Derived<std::decay_t<T>>>(std::forward<T>(callback)), N);
