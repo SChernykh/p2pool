@@ -39,7 +39,8 @@ public:
 	~BlockTemplate();
 
 	BlockTemplate(const BlockTemplate& b);
-	BlockTemplate& operator=(const BlockTemplate& b);
+
+	FORCEINLINE BlockTemplate& operator=(const BlockTemplate& b) { WriteLock lock(m_lock); return copy_nolock(b); }
 
 	void update(const MinerData& data, const Mempool& mempool, const Params& params);
 	[[nodiscard]] uint64_t last_updated() const { return m_lastUpdated.load(); }
@@ -75,6 +76,8 @@ private:
 	RandomX_Hasher_Base* m_hasher;
 
 private:
+	BlockTemplate& copy_nolock(const BlockTemplate& b);
+
 	void select_mempool_transactions(const Mempool& mempool);
 	[[nodiscard]] int create_miner_tx(const MinerData& data, uint64_t max_reward_amounts_weight, bool dry_run);
 	[[nodiscard]] hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;

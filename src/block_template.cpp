@@ -107,17 +107,14 @@ BlockTemplate::BlockTemplate(const BlockTemplate& b)
 	: m_poolBlockTemplate(new PoolBlock())
 {
 	uv_rwlock_init_checked(&m_lock);
-	*this = b;
+	copy_nolock(b);
 }
 
-// cppcheck-suppress operatorEqVarError
-BlockTemplate& BlockTemplate::operator=(const BlockTemplate& b)
+BlockTemplate& BlockTemplate::copy_nolock(const BlockTemplate& b)
 {
 	if (this == &b) {
 		return *this;
 	}
-
-	WriteLock lock(m_lock);
 
 	m_sidechain = b.m_sidechain;
 	m_hasher = b.m_hasher;
@@ -292,7 +289,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	auto use_old_template = [this]() {
 		const uint32_t id = m_templateId - 1;
 		LOGWARN(4, "using old block template with ID = " << id);
-		*this = *m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)];
+		copy_nolock(*m_oldTemplates[id % array_size(&BlockTemplate::m_oldTemplates)]);
 	};
 
 	m_height = data.height;
@@ -344,39 +341,103 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	}
 
 	// Pre-calculate outputs to speed up miner tx generation
+	struct Precalc {
+		Precalc(const std::vector<MinerShare>& shares, const hash& k, uint8_t v, uint64_t h) : txKeySec(k), major_version(v), height(h), stop(false)
+		{
+			const size_t n = shares.size();
+
+			wallets.reserve(n);
+			wallet_ptrs.reserve(n);
+
+			for (const MinerShare& s : shares) {
+				wallets.emplace_back(*s.m_wallet);
+				wallet_ptrs.emplace_back(&wallets.back());
+			}
+		}
+
+		void run()
+		{
+			LOGINFO(6, "BlockTemplate::update batch start");
+
+			if (major_version >= HARDFORK_VERSION_CARROT) {
+				std::vector<carrot::janus_anchor> anchors;
+				std::vector<hash> eph_priv_keys;
+
+				// Non-zero retry counter is so improbable we can just always use 0 where it's not critical for consensus
+				if (stop || !carrot::batch_eph_privkeys(txKeySec, 0, height, wallet_ptrs, anchors, eph_priv_keys, &stop)) {
+					return;
+				}
+
+				LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
+
+				std::vector<hash> view_public_keys;
+				view_public_keys.reserve(wallets.size());
+
+				for (const Wallet& w : wallets) {
+					view_public_keys.emplace_back(w.view_public_key());
+				}
+
+				std::vector<std::pair<hash, bool>> tmp;
+
+				if (stop || !carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, tmp, &stop)) {
+					return;
+				}
+
+				LOGINFO(6, "BlockTemplate::update batch, stage 3 start");
+
+				if (stop || !carrot::batch_eph_pubkeys(eph_priv_keys, tmp, &stop)) {
+					return;
+				}
+			}
+			else {
+				std::vector<std::pair<hash, size_t>> in;
+				std::vector<std::pair<hash, int32_t>> out;
+
+				const size_t n = wallets.size();
+
+				in.reserve(n);
+				for (size_t i = 0; i < n; ++i) {
+					in.emplace_back(wallets[i].view_public_key(), i);
+				}
+
+				if (stop || !batch_derivations(in, txKeySec, out)) {
+					return;
+				}
+
+				LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
+
+				std::vector<batch_public_key_input> in2;
+				std::vector<std::pair<hash, bool>> out2;
+
+				in2.reserve(n);
+				for (size_t i = 0; i < n; ++i) {
+					in2.emplace_back(out[i].first, i, wallets[i].spend_public_key());
+				}
+
+				if (stop || !batch_public_keys(in2, out2)) {
+					return;
+				}
+			}
+
+			LOGINFO(6, "BlockTemplate::update batch end");
+		}
+
+		std::vector<Wallet> wallets;
+		std::vector<const Wallet*> wallet_ptrs;
+
+		hash txKeySec;
+		uint8_t major_version;
+		uint64_t height;
+
+		std::atomic<bool> stop;
+	};
+
+	std::shared_ptr<Precalc> precalc;
+	ON_SCOPE_LEAVE([&precalc]() { if (precalc) precalc->stop.store(true, std::memory_order_release); });
+
 	if (!m_shares.empty()) {
-		LOGINFO(6, "BlockTemplate::update batch start");
-
-		if (data.major_version >= HARDFORK_VERSION_CARROT) {	
-			// TODO: cache the amount-independent part here
-		}
-		else {
-			std::vector<std::pair<hash, size_t>> in;
-			std::vector<std::pair<hash, int32_t>> out;
-
-			const size_t n = m_shares.size();
-
-			in.reserve(n);
-			for (size_t i = 0; i < n; ++i) {
-				in.emplace_back(m_shares[i].m_wallet->view_public_key(), i);
-			}
-
-			batch_derivations(in, m_poolBlockTemplate->m_txkeySec, out);
-
-			LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
-
-			std::vector<batch_public_key_input> in2;
-			std::vector<std::pair<hash, bool>> out2;
-
-			in2.reserve(n);
-			for (size_t i = 0; i < n; ++i) {
-				in2.emplace_back(out[i].first, i, m_shares[i].m_wallet->spend_public_key());
-			}
-
-			batch_public_keys(in2, out2);
-		}
-
-		LOGINFO(6, "BlockTemplate::update batch end");
+		precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
+		queue_work([precalc]() { precalc->run(); });
 	}
 
 	m_poolBlockTemplate->m_merkleTreeData = PoolBlock::encode_merkle_tree_data(static_cast<uint32_t>(data.aux_chains.size() + 1), data.aux_nonce);
@@ -622,6 +683,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_wallets, m_rewards)) {
 		use_old_template();
 		return;
+	}
+
+	if (precalc) {
+		precalc->stop.store(true, std::memory_order_release);
 	}
 
 	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);
