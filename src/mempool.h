@@ -58,9 +58,13 @@ public:
 
 	void remove(const std::vector<hash>& tx_hashes);
 
+	FORCEINLINE uint64_t total_weight() const { ReadLock lock(m_lock); return m_totalWeight; }
+
 private:
 	mutable uv_rwlock_t m_lock;
 	unordered_map<hash, TxMempoolData> m_transactions;
+
+	uint64_t m_totalWeight;
 };
 
 } // namespace p2pool
