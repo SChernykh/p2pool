@@ -22,7 +22,7 @@ LOG_CATEGORY(Mempool)
 
 namespace p2pool {
 
-Mempool::Mempool()
+Mempool::Mempool() : m_totalWeight(0)
 {
 	uv_rwlock_init_checked(&m_lock);
 }
@@ -36,7 +36,10 @@ void Mempool::add(const TxMempoolData& tx)
 {
 	WriteLock lock(m_lock);
 
-	if (!m_transactions.emplace(tx.id, tx).second) {
+	if (m_transactions.emplace(tx.id, tx).second) {
+		m_totalWeight += tx.weight;
+	}
+	else {
 		LOGWARN(1, "duplicate transaction with id = " << tx.id << ", skipped");
 	}
 }
@@ -46,6 +49,8 @@ void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
 	const uint64_t cur_time = seconds_since_epoch();
 
 	WriteLock lock(m_lock);
+
+	m_totalWeight = 0;
 
 	// Initialize time_received for all transactions
 	for (TxMempoolData& data : transactions) {
@@ -62,7 +67,9 @@ void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
 	m_transactions.reserve(transactions.size());
 
 	for (TxMempoolData& data : transactions) {
-		m_transactions.emplace(data.id, data);
+		if (m_transactions.emplace(data.id, data).second) {
+			m_totalWeight += data.weight;
+		}
 	}
 }
 
@@ -75,7 +82,12 @@ void Mempool::remove(const std::vector<hash>& tx_hashes)
 	WriteLock lock(m_lock);
 
 	for (const hash& h : tx_hashes) {
-		m_transactions.erase(h);
+		auto it = m_transactions.find(h);
+
+		if (it != m_transactions.end()) {
+			m_totalWeight -= it->second.weight;
+			m_transactions.erase(h);
+		}
 	}
 }
 

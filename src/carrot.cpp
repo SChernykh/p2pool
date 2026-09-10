@@ -237,7 +237,7 @@ janus_anchor gen_encrypted_janus_anchor(const hash& contextualized_sender_receiv
 }
 
 // anchor_norm and d_e for every output. A failed element (a zero d_e, so probability 2^-252) leaves both outputs zeroed.
-bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys, std::atomic<bool>* stop)
+bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<janus_anchor>& anchors, std::vector<hash>& eph_priv_keys)
 {
 	anchors.clear();
 	eph_priv_keys.clear();
@@ -253,7 +253,7 @@ bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t h
 
 	std::atomic<bool> result = true;
 
-	auto work = [N, &txkey_sec, retry_counter, height, &wallets, &anchors, &eph_priv_keys, &result, stop](uint32_t thread_index, uint32_t total_thread_count) {
+	auto work = [N, &txkey_sec, retry_counter, height, &wallets, &anchors, &eph_priv_keys, &result](uint32_t thread_index, uint32_t total_thread_count) {
 		const size_t a = (N * thread_index) / total_thread_count;
 		const size_t b = (N * (thread_index + 1)) / total_thread_count;
 
@@ -270,11 +270,6 @@ bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t h
 			if (!gen_eph_privkey(anchors[i], height, *w, eph_priv_keys[i])) {
 				result = false;
 				eph_priv_keys[i] = hash();
-			}
-
-			if (stop && stop->load(std::memory_order_acquire)) {
-				result = false;
-				return;
 			}
 		}
 	};

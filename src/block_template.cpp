@@ -103,6 +103,7 @@ BlockTemplate::~BlockTemplate()
 	delete m_poolBlockTemplate;
 }
 
+// cppcheck-suppress missingMemberCopy
 BlockTemplate::BlockTemplate(const BlockTemplate& b)
 	: m_poolBlockTemplate(new PoolBlock())
 {
@@ -342,7 +343,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	// Pre-calculate outputs to speed up miner tx generation
 	struct Precalc {
-		Precalc(const std::vector<MinerShare>& shares, const hash& k, uint8_t v, uint64_t h) : txKeySec(k), major_version(v), height(h), stop(false)
+		Precalc(const std::vector<MinerShare>& shares, const hash& k, uint8_t v, uint64_t h) : txKeySec(k), major_version(v), height(h)
 		{
 			const size_t n = shares.size();
 
@@ -364,7 +365,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				std::vector<hash> eph_priv_keys;
 
 				// Non-zero retry counter is so improbable we can just always use 0 where it's not critical for consensus
-				if (stop || !carrot::batch_eph_privkeys(txKeySec, 0, height, wallet_ptrs, anchors, eph_priv_keys, &stop)) {
+				if (!carrot::batch_eph_privkeys(txKeySec, 0, height, wallet_ptrs, anchors, eph_priv_keys)) {
 					return;
 				}
 
@@ -379,13 +380,13 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 				std::vector<std::pair<hash, bool>> tmp;
 
-				if (stop || !carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, tmp, &stop)) {
+				if (!carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, tmp)) {
 					return;
 				}
 
 				LOGINFO(6, "BlockTemplate::update batch, stage 3 start");
 
-				if (stop || !carrot::batch_eph_pubkeys(eph_priv_keys, tmp, &stop)) {
+				if (!carrot::batch_eph_pubkeys(eph_priv_keys, tmp)) {
 					return;
 				}
 			}
@@ -400,7 +401,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 					in.emplace_back(wallets[i].view_public_key(), i);
 				}
 
-				if (stop || !batch_derivations(in, txKeySec, out)) {
+				if (!batch_derivations(in, txKeySec, out)) {
 					return;
 				}
 
@@ -414,7 +415,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 					in2.emplace_back(out[i].first, i, wallets[i].spend_public_key());
 				}
 
-				if (stop || !batch_public_keys(in2, out2)) {
+				if (!batch_public_keys(in2, out2)) {
 					return;
 				}
 			}
@@ -429,13 +430,19 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		uint8_t major_version;
 		uint64_t height;
 
-		std::atomic<bool> stop;
+	private:
+		Precalc(const Precalc&) = delete;
+		Precalc(Precalc&&) = delete;
+
+		Precalc& operator=(const Precalc&) = delete;
+		Precalc& operator=(Precalc&&) = delete;
 	};
 
 	std::shared_ptr<Precalc> precalc;
-	ON_SCOPE_LEAVE([&precalc]() { if (precalc) precalc->stop.store(true, std::memory_order_release); });
 
-	if (!m_shares.empty()) {
+	// Run precalc only when transaction picker will run, otherwise it's a too short window before create_miner_tx
+	if (!m_shares.empty() &&
+		(mempool.total_weight() + (PoolBlock::output_blob_size_estimate(data.major_version) + HASH_SIZE) * m_shares.size() + 55 > data.median_weight)) {
 		precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
 		queue_work([precalc]() { precalc->run(); });
 	}
@@ -685,8 +692,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
-	if (precalc) {
-		precalc->stop.store(true, std::memory_order_release);
+	while (precalc && (precalc.use_count() > 1)) {
+		std::this_thread::yield();
 	}
 
 	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);

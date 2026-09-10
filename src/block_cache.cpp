@@ -30,7 +30,7 @@ LOG_CATEGORY(BlockCache)
 
 namespace p2pool {
 
-static constexpr uint64_t BLOCK_SIZE = 512 * 1024;
+static constexpr uint64_t BLOCK_SIZE = 524288;
 static constexpr uint64_t NUM_BLOCKS = 4608;
 static constexpr uint64_t CACHE_SIZE = BLOCK_SIZE * NUM_BLOCKS;
 static constexpr char cache_name[] = "p2pool.cache";

@@ -40,6 +40,7 @@ public:
 
 	BlockTemplate(const BlockTemplate& b);
 
+	// cppcheck-suppress operatorEqVarError
 	FORCEINLINE BlockTemplate& operator=(const BlockTemplate& b) { WriteLock lock(m_lock); return copy_nolock(b); }
 
 	void update(const MinerData& data, const Mempool& mempool, const Params& params);
