@@ -24,6 +24,7 @@
 #include "p2pool_api.h"
 #include "p2p_server.h"
 #include "pow_hash.h"
+#include "blake2/blake2.h"
 
 #include "rapidjson_wrapper.h"
 
@@ -314,6 +315,8 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		job_id = ++client->m_perConnectionJobId;
 
 		StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
+
+		saved_job.major_version = hashing_blob[0];
 		saved_job.job_id = job_id;
 		saved_job.extra_nonce = extra_nonce;
 		saved_job.template_id = template_id;
@@ -356,7 +359,7 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 	return result;
 }
 
-bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str)
+bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str, const char* commitment_str)
 {
 	uint32_t job_id = 0;
 
@@ -396,14 +399,17 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		resultHash.h[i] = static_cast<uint8_t>((d[0] << 4) | d[1]);
 	}
 
+	uint8_t major_version = 0;
 	uint32_t template_id = 0;
 	uint32_t extra_nonce = 0;
 	uint64_t target = 0;
+	hash commitment = {};
 
 	bool found = false;
 	{
 		const StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
 		if (saved_job.job_id == job_id) {
+			major_version = saved_job.major_version;
 			template_id = saved_job.template_id;
 			extra_nonce = saved_job.extra_nonce;
 			target = saved_job.target;
@@ -427,7 +433,26 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 				});
 		}
 
-		// TODO: check the RandomX V2 commitment here using randomx_calculate_commitment or a standalone Blake2b when WITH_RANDOMX=OFF
+		if (major_version >= HARDFORK_VERSION_RANDOMX_V2) {
+			if (!commitment_str) {
+				LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('commitment' field not found)");
+				return false;
+			}
+
+			for (size_t i = 0; i < HASH_SIZE * 2; ++i) {
+				uint32_t d;
+				if (!from_hex(commitment_str[i], d)) {
+					LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('commitment' is not a hex value)");
+					return false;
+				}
+				commitment.h[i / 2] = (commitment.h[i / 2] << 4) + d;
+			}
+
+			if (commitment.empty()) {
+				LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('commitment' is empty)");
+				return false;
+			}
+		}
 
 		if (mainchain_diff.check_pow(resultHash)) {
 			const char* s = client->m_customUser;
@@ -477,6 +502,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 		share.m_nonce = nonce;
 		share.m_extraNonce = extra_nonce;
 		share.m_target = target;
+		share.m_commitment = commitment;
 		share.m_resultHash = resultHash;
 		share.m_sidechainDifficulty = sidechain_diff;
 		share.m_mainchainHeight = height;
@@ -920,6 +946,8 @@ void StratumServer::on_blobs_ready()
 			job_id = ++client->m_perConnectionJobId;
 
 			StratumClient::SavedJob& saved_job = client->m_jobs[job_id % StratumClient::JOBS_SIZE];
+
+			saved_job.major_version = hashing_blob[0];
 			saved_job.job_id = job_id;
 			saved_job.extra_nonce = extra_nonce_start + data->m_numSent;
 			saved_job.template_id = data->m_templateId;
@@ -1086,6 +1114,29 @@ void StratumServer::on_share_found(uv_work_t* req)
 			nonce >>= 8;
 		}
 
+		// Check the commitment
+		//
+		// XMRig names it backwards, so XMRig's "commitment" is an actual RandomX v2 hash, and
+		// XMRig's "result" is the commitment of that hash (the actual value which must hit the PoW target)
+		if (blob[0] >= HARDFORK_VERSION_RANDOMX_V2) {
+			blake2b_state state;
+
+			blake2b_init(&state, HASH_SIZE);
+			blake2b_update(&state, blob, blob_size);
+			blake2b_update(&state, share->m_commitment.h, HASH_SIZE);
+
+			hash h;
+			blake2b_final(&state, h.h, HASH_SIZE);
+
+			if (h != share->m_resultHash) {
+				LOGWARN(3, "client " << static_cast<char*>(share->m_clientAddrString) << " RandomX v2 commitment check failed");
+				share->m_result = SubmittedShare::Result::COMMITMENT_FAILED;
+				share->m_score = BAD_SHARE_POINTS;
+
+				return;
+			}
+		}
+
 		hash pow_hash;
 		if (!pool->calculate_hash(blob, blob_size, height, seed_hash, pow_hash, false, RandomX_Hasher_Base::VM_LANE_STRATUM)) {
 			LOGWARN(3, "client " << static_cast<char*>(share->m_clientAddrString) << " couldn't check share PoW");
@@ -1202,7 +1253,8 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 				"low difficulty",
 				"invalid PoW",
 				"worker banned",
-				"submit failed"
+				"submit failed",
+				"commitment check failed"
 			};
 			static_assert(array_size(reason_list) == static_cast<size_t>(SubmittedShare::Result::OK), "Update reason_list to match SubmittedShare::Result enum");
 
@@ -1212,7 +1264,10 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 		}
 	}
 
-	const bool bad_share = (share->m_result == SubmittedShare::Result::LOW_DIFF) || (share->m_result == SubmittedShare::Result::INVALID_POW);
+	const bool bad_share =
+		(share->m_result == SubmittedShare::Result::LOW_DIFF) ||
+		(share->m_result == SubmittedShare::Result::INVALID_POW) ||
+		(share->m_result == SubmittedShare::Result::COMMITMENT_FAILED);
 
 	StratumClient* client = share->m_client;
 
@@ -1242,6 +1297,9 @@ void StratumServer::on_after_share_found(uv_work_t* req, int /*status*/)
 					break;
 				case SubmittedShare::Result::SUBMIT_FAILED:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Submit failed\"}}\n";
+					break;
+				case SubmittedShare::Result::COMMITMENT_FAILED:
+					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Commitment check failed\"}}\n";
 					break;
 				case SubmittedShare::Result::OK:
 					s << "{\"id\":" << share->m_id << ",\"jsonrpc\":\"2.0\",\"error\":null,\"result\":{\"status\":\"OK\"}}\n";
@@ -1651,10 +1709,25 @@ bool StratumServer::StratumClient::process_submit(T& doc, uint32_t id)
 		return false;
 	}
 
-	// TODO: read the RandomX V2's "commitment" field (if it exists) and pass it to on_submit
-	// on_submit will check that it's present and correct when the algo is rx/2
+	const auto commitment_it = params.FindMember("commitment");
+	const char* commitment_str = nullptr;
 
-	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString());
+	if (commitment_it != params.MemberEnd()) {
+		const auto& commitment = commitment_it->value;
+		if (!commitment.IsString()) {
+			LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('commitment' field is not a string)");
+			return false;
+		}
+
+		if (commitment.GetStringLength() != HASH_SIZE * 2) {
+			LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid submit params ('commitment' field has invalid length)");
+			return false;
+		}
+
+		commitment_str = commitment.GetString();
+	}
+
+	return static_cast<StratumServer*>(m_owner)->on_submit(this, id, job_id.GetString(), nonce.GetString(), result.GetString(), commitment_str);
 }
 
 bool StratumServer::StratumClient::send_http_response(bool send_content)

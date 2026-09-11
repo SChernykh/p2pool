@@ -70,6 +70,7 @@ public:
 		};
 
 		struct SavedJob {
+			uint8_t major_version;
 			uint32_t job_id;
 			uint32_t extra_nonce;
 			uint32_t template_id;
@@ -97,7 +98,7 @@ public:
 	};
 
 	[[nodiscard]] bool on_login(StratumClient* client, uint32_t id, const char* login);
-	[[nodiscard]] bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
+	[[nodiscard]] bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str, const char* commitment_str);
 	[[nodiscard]] uint32_t get_random32();
 
 	void print_status() override;
@@ -186,6 +187,7 @@ private:
 		uint32_t m_nonce = 0;
 		uint32_t m_extraNonce = 0;
 		uint64_t m_target = 0;
+		hash m_commitment;
 		hash m_resultHash;
 		difficulty_type m_sidechainDifficulty;
 		uint64_t m_mainchainHeight = 0;
@@ -204,6 +206,7 @@ private:
 			INVALID_POW,
 			BANNED,
 			SUBMIT_FAILED,
+			COMMITMENT_FAILED,
 			OK
 		} m_result = Result::NONE;
 	};

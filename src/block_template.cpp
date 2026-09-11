@@ -345,7 +345,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	struct Precalc {
 		Precalc(const std::vector<MinerShare>& shares, const hash& k, uint8_t v, uint64_t h) : txKeySec(k), major_version(v), height(h)
 		{
-			uv_sem_init_checked(&s, 0);
+			uv_sem_init_checked(&sem, 0);
 
 			const size_t n = shares.size();
 
@@ -360,7 +360,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 		FORCEINLINE ~Precalc()
 		{
-			uv_sem_destroy(&s);
+			uv_sem_destroy(&sem);
 		}
 
 		void run()
@@ -437,7 +437,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		uint8_t major_version;
 		uint64_t height;
 
-		uv_sem_t s;
+		uv_sem_t sem;
 
 	private:
 		Precalc(const Precalc&) = delete;
@@ -461,7 +461,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
 
 			if (run_precalc_in_background) {
-				queue_work([precalc]() { precalc->run(); uv_sem_post(&precalc->s); });
+				queue_work([precalc]() { precalc->run(); uv_sem_post(&precalc->sem); });
 			}
 			else {
 				precalc->run();
@@ -716,7 +716,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	}
 
 	if (precalc) {
-		uv_sem_wait(&precalc->s);
+		uv_sem_wait(&precalc->sem);
 	}
 
 	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);
