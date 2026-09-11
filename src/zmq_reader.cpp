@@ -560,36 +560,34 @@ void ZMQReader::parse(char* data, size_t size)
 			}
 		}
 
-		if (!doc.HasMember("tx_backlog")) {
-			LOGWARN(1, "json-full-miner_data doesn't have 'tx_backlog', skipping it");
-			return;
-		}
-
-		const auto& tx_backlog = doc["tx_backlog"];
-
-		if (!tx_backlog.IsArray()) {
-			LOGWARN(1, "'tx_backlog' in json-full-miner_data is not an array, skipping it");
-			return;
-		}
-
 		m_minerData.tx_backlog.clear();
 
-		const SizeType n = tx_backlog.Size();
+		// Can be missing if there is no backlog
+		if (doc.HasMember("tx_backlog")) {
+			const auto& tx_backlog = doc["tx_backlog"];
 
-		if (n > 65536) {
-			LOGWARN(1, "'tx_backlog' is too big (" << n << "), skipping it");
-			return;
-		}
-
-		m_minerData.tx_backlog.reserve(n);
-
-		for (SizeType i = 0; i < n; ++i) {
-			const auto& v = tx_backlog[i];
-			if (PARSE(v, m_tx, id) && PARSE(v, m_tx, weight) && PARSE(v, m_tx, fee)) {
-				m_minerData.tx_backlog.push_back(m_tx);
+			if (!tx_backlog.IsArray()) {
+				LOGWARN(1, "'tx_backlog' in json-full-miner_data is not an array, skipping it");
+				return;
 			}
-			else {
-				LOGWARN(1, "transaction #" << (i + 1) << " in json-full-miner_data `tx_backlog` failed to parse, skipped it");
+
+			SizeType n = tx_backlog.Size();
+
+			if (n > 65536) {
+				LOGWARN(1, "'tx_backlog' is too big (" << n << "), cropping it to 65536");
+				n = 65536;
+			}
+
+			m_minerData.tx_backlog.reserve(n);
+
+			for (SizeType i = 0; i < n; ++i) {
+				const auto& v = tx_backlog[i];
+				if (PARSE(v, m_tx, id) && PARSE(v, m_tx, weight) && PARSE(v, m_tx, fee)) {
+					m_minerData.tx_backlog.push_back(m_tx);
+				}
+				else {
+					LOGWARN(1, "transaction #" << (i + 1) << " in json-full-miner_data `tx_backlog` failed to parse, skipped it");
+				}
 			}
 		}
 
