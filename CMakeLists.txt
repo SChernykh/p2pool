@@ -211,7 +211,7 @@ else()
 	set(SOURCES ${SOURCES} external/src/RandomX/src/blake2/blake2b.c)
 
 	if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-		set_source_files_properties(external/src/RandomX/src/blake2/blake2b.c PROPERTIES COMPILE_OPTIONS "/wd4820")
+		set_source_files_properties(external/src/RandomX/src/blake2/blake2b.c PROPERTIES COMPILE_OPTIONS "/wd4711;/wd4820")
 	endif()
 endif()
 

@@ -127,7 +127,7 @@ extern "C" void __nss_module_disable_loading();
 namespace p2pool {
 
 constexpr size_t HASH_SIZE = 32;
-constexpr uint8_t HARDFORK_VERSION_RANDOMX_V2 = 17;
+constexpr uint8_t HARDFORK_VERSION_RANDOMX_V2 = 255; // TODO: change it back to 17 when it's live on stressnet (it's not live yet).
 constexpr uint8_t HARDFORK_VERSION_FCMP_PP = 17;
 constexpr uint8_t HARDFORK_VERSION_CARROT = 17;
 constexpr uint8_t HARDFORK_SUPPORTED_VERSION = 18;

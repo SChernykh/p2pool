@@ -445,7 +445,7 @@ bool StratumServer::on_submit(StratumClient* client, uint32_t id, const char* jo
 					LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " invalid params ('commitment' is not a hex value)");
 					return false;
 				}
-				commitment.h[i / 2] = (commitment.h[i / 2] << 4) + d;
+				commitment.h[i / 2] = static_cast<uint8_t>((commitment.h[i / 2] << 4) + d);
 			}
 
 			if (commitment.empty()) {
