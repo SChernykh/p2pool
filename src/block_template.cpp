@@ -345,6 +345,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	struct Precalc {
 		Precalc(const std::vector<MinerShare>& shares, const hash& k, uint8_t v, uint64_t h) : txKeySec(k), major_version(v), height(h)
 		{
+			uv_sem_init_checked(&s, 0);
+
 			const size_t n = shares.size();
 
 			wallets.reserve(n);
@@ -354,6 +356,11 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 				wallets.emplace_back(*s.m_wallet);
 				wallet_ptrs.emplace_back(&wallets.back());
 			}
+		}
+
+		FORCEINLINE ~Precalc()
+		{
+			uv_sem_destroy(&s);
 		}
 
 		void run()
@@ -430,6 +437,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		uint8_t major_version;
 		uint64_t height;
 
+		uv_sem_t s;
+
 	private:
 		Precalc(const Precalc&) = delete;
 		Precalc(Precalc&&) = delete;
@@ -444,13 +453,15 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	// Also run it unconditionally for pre-Carrot outputs because the regular path doesn't use batching there
 	if (!m_shares.empty()) {
 		const bool pre_carrot = (data.major_version < HARDFORK_VERSION_CARROT);
-		const bool run_precalc_in_background = (mempool.total_weight() + (pre_carrot ? 39 : 89) * m_shares.size() + 55 > data.median_weight);
+		const bool run_precalc_in_background =
+			(std::thread::hardware_concurrency() > 1) &&
+			(mempool.total_weight() + (pre_carrot ? 39 : 89) * m_shares.size() + 55 > data.median_weight);
 
 		if (run_precalc_in_background || pre_carrot) {
 			precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
 
 			if (run_precalc_in_background) {
-				queue_work([precalc]() { precalc->run(); });
+				queue_work([precalc]() { precalc->run(); uv_sem_post(&precalc->s); });
 			}
 			else {
 				precalc->run();
@@ -704,8 +715,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		return;
 	}
 
-	while (precalc && (precalc.use_count() > 1)) {
-		std::this_thread::yield();
+	if (precalc) {
+		uv_sem_wait(&precalc->s);
 	}
 
 	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);

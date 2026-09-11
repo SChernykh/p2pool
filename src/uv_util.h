@@ -77,6 +77,7 @@ void uv_cond_init_checked(uv_cond_t* cond);
 void uv_mutex_init_checked(uv_mutex_t* mutex);
 void uv_rwlock_init_checked(uv_rwlock_t* lock);
 void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async_cb);
+void uv_sem_init_checked(uv_sem_t* sem, uint32_t value);
 uv_loop_t* uv_default_loop_checked();
 
 typedef Callback<void>::Base UV_LoopCallbackBase;

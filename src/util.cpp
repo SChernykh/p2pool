@@ -430,6 +430,15 @@ void uv_async_init_checked(uv_loop_t* loop, uv_async_t* async, uv_async_cb async
 	}
 }
 
+void uv_sem_init_checked(uv_sem_t* sem, uint32_t value)
+{
+	const int err = uv_sem_init(sem, value);
+	if (err) {
+		LOGERR(1, "uv_sem_init failed, error " << uv_err_name(err));
+		PANIC_STOP();
+	}
+}
+
 uv_loop_t* uv_default_loop_checked()
 {
 	if (!is_main_thread()) {
