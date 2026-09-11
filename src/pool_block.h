@@ -180,6 +180,7 @@ struct PoolBlock
 
 	bool m_verified;
 	bool m_invalid;
+	bool m_outputsComputed;
 
 	mutable bool m_broadcasted;
 	mutable bool m_wantBroadcast;

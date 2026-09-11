@@ -59,6 +59,7 @@ PoolBlock::PoolBlock()
 	, m_depth(0)
 	, m_verified(false)
 	, m_invalid(false)
+	, m_outputsComputed(false)
 	, m_broadcasted(false)
 	, m_wantBroadcast(false)
 	, m_precalculated(false)
@@ -119,6 +120,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_depth = b.m_depth;
 	m_verified = b.m_verified;
 	m_invalid = b.m_invalid;
+	m_outputsComputed = b.m_outputsComputed;
 	m_broadcasted = b.m_broadcasted;
 	m_wantBroadcast = b.m_wantBroadcast;
 	m_precalculated = b.m_precalculated;
@@ -365,6 +367,7 @@ void PoolBlock::reset_offchain_data()
 
 	m_verified = false;
 	m_invalid = false;
+	// m_outputsComputed - don't reset it, because it's a permanent property of a block once it finishes deserializing
 
 	m_broadcasted = false;
 	m_wantBroadcast = false;

@@ -26,6 +26,8 @@ namespace p2pool {
 int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, bool compact, bool allow_pruned)
 {
 	try {
+		m_outputsComputed = false;
+
 		// Sanity check
 		if (!data || (size > MAX_BLOCK_SIZE_NEW)) {
 			return __LINE__;

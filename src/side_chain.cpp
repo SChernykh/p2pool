@@ -1003,6 +1003,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			pubkeys_blob.insert(pubkeys_blob.end(), o.eph_pub_key.h, o.eph_pub_key.h + HASH_SIZE);
 		}
 
+		block->m_outputsComputed = true;
 		return true;
 	}
 
@@ -1077,6 +1078,7 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 	block->m_viewTags.shrink_to_fit();
 	block->m_carrotOutputs.shrink_to_fit();
 
+	block->m_outputsComputed = true;
 	return true;
 }
 
@@ -2039,6 +2041,13 @@ void SideChain::verify(PoolBlock* block)
 			", mainchain height = " << block->m_txinGenHeight <<
 			" has wrong difficulty: got " << block->m_difficulty << ", expected " << diff);
 		block->m_invalid = true;
+		return;
+	}
+
+	// It was a pruned block, so all outputs were recalculated in get_outputs_blob() and not read from the wire
+	// There's no point to calculate them again and compare the outputs of the two exactly matching calculations
+	if (block->m_outputsComputed) {
+		block->m_invalid = false;
 		return;
 	}
 
