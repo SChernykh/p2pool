@@ -387,7 +387,9 @@ void p2pool::handle_tx(TxMempoolData& tx)
 		", weight = " << log::Gray() << tx.weight << log::NoColor() <<
 		", fee = " << log::Gray() << static_cast<double>(tx.fee) / 1e6 << " um");
 
-	if (tx.fee >= HIGH_FEE_VALUE) {
+	const bool is_fcmp_pp = (m_networkMajorVersion.load(std::memory_order_acquire) >= HARDFORK_VERSION_FCMP_PP);
+
+	if (tx.fee >= (is_fcmp_pp ? HIGH_FEE_VALUE_FCMP_PP : HIGH_FEE_VALUE)) {
 		LOGINFO(4, "high fee tx received: " << log::LightBlue() << tx.id << log::NoColor() << ", " << log::XMRAmount(tx.fee) << " - updating block template");
 		update_block_template_async();
 	}
@@ -405,10 +407,10 @@ void p2pool::handle_miner_data(MinerData& data)
 
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 	if (m_mempool->size() < data.tx_backlog.size()) {
-		m_mempool->swap_transactions(data.tx_backlog);
+		m_mempool->swap_transactions(data.tx_backlog, data.time_received_mcs);
 	}
 #else
-	m_mempool->swap_transactions(data.tx_backlog);
+	m_mempool->swap_transactions(data.tx_backlog, data.time_received_mcs);
 #endif
 
 	{
@@ -428,7 +430,6 @@ void p2pool::handle_miner_data(MinerData& data)
 	}
 
 	data.tx_backlog.clear();
-	data.time_received = std::chrono::high_resolution_clock::now();
 	{
 		WriteLock lock(m_minerDataLock);
 		data.aux_chains = m_minerData.aux_chains;
@@ -1763,6 +1764,8 @@ void p2pool::get_miner_data(bool retry)
 
 void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 {
+	const uint64_t cur_time_mcs = microseconds_since_epoch();
+
 	if (m_stopped) {
 		return;
 	}
@@ -1784,6 +1787,7 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	}
 
 	MinerData minerData;
+	minerData.time_received_mcs = cur_time_mcs;
 
 	const auto& result = doc["result"];
 

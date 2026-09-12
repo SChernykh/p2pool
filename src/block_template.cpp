@@ -1008,16 +1008,19 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 
 void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 {
-	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006 XMR) transactions
+	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006/0.02 XMR) transactions
 	m_mempoolTxs.clear();
 
-	const uint64_t cur_time = seconds_since_epoch();
+	const uint64_t cur_time_mcs = microseconds_since_epoch();
 	size_t total_mempool_transactions = 0;
 
-	mempool.iterate([this, cur_time, &total_mempool_transactions](const hash&, const TxMempoolData& tx) {
+	PoolBlock* b = m_poolBlockTemplate;
+	const bool is_fcmp_pp = (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP);
+
+	mempool.iterate([this, cur_time_mcs, &total_mempool_transactions, is_fcmp_pp](const hash&, const TxMempoolData& tx) {
 		++total_mempool_transactions;
 
-		if ((cur_time > tx.time_received + 5) || (tx.fee >= HIGH_FEE_VALUE)) {
+		if ((cur_time_mcs >= tx.time_received_mcs + 5'000'000) || (tx.fee >= (is_fcmp_pp ? HIGH_FEE_VALUE_FCMP_PP : HIGH_FEE_VALUE))) {
 			m_mempoolTxs.emplace_back(tx);
 		}
 	});
@@ -1025,8 +1028,6 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	// Safeguard for busy mempool moments
 	// If the block template gets too big, nodes won't be able to send and receive it because of p2p packet size limit
 	// Calculate how many transactions we can take
-
-	PoolBlock* b = m_poolBlockTemplate;
 	b->m_transactions.clear();
 	b->m_ephPublicKeys.clear();
 	b->m_outputAmounts.clear();
@@ -1052,7 +1053,7 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 		k += r / 34359738368ULL;
 	}
 
-	if (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+	if (is_fcmp_pp) {
 		// tx_extra size varint adjustment (conservative estimate)
 		--k;
 		writeVarint(m_shares.size() * HASH_SIZE + 64, [&k](uint8_t) { ++k; });

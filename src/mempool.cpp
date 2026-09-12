@@ -44,20 +44,18 @@ void Mempool::add(const TxMempoolData& tx)
 	}
 }
 
-void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions)
+void Mempool::swap_transactions(std::vector<TxMempoolData>& transactions, uint64_t timestamp_mcs)
 {
-	const uint64_t cur_time = seconds_since_epoch();
-
 	WriteLock lock(m_lock);
 
-	// Initialize time_received for all transactions
+	// Initialize time_received_mcs for all transactions
 	for (TxMempoolData& data : transactions) {
 		auto it = m_transactions.find(data.id);
 		if (it != m_transactions.end()) {
-			data.time_received = it->second.time_received;
+			data.time_received_mcs = it->second.time_received_mcs;
 		}
 		else {
-			data.time_received = cur_time;
+			data.time_received_mcs = timestamp_mcs;
 		}
 	}
 

@@ -506,18 +506,21 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 
 	const uint64_t n = shares.size();
 
-	// Shuffle shares
-	if (n > 1) {
-		hash h;
-		keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);
+	// Don't shuffle shares after Carrot, because Carrot defines a strict output order anyway
+	if (tip->m_majorVersion < HARDFORK_VERSION_CARROT) {
+		// Shuffle shares
+		if (n > 1) {
+			hash h;
+			keccak(tip->m_txkeySecSeed.h, HASH_SIZE, h.h);
 
-		uint64_t seed = *h.u64();
-		if (seed == 0) seed = 1;
+			uint64_t seed = *h.u64();
+			if (seed == 0) seed = 1;
 
-		for (uint64_t i = 0, k; i < n - 1; ++i) {
-			seed = xorshift64star(seed);
-			umul128(seed, n - i, &k);
-			std::swap(shares[i], shares[i + k]);
+			for (uint64_t i = 0, k; i < n - 1; ++i) {
+				seed = xorshift64star(seed);
+				umul128(seed, n - i, &k);
+				std::swap(shares[i], shares[i + k]);
+			}
 		}
 	}
 
