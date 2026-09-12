@@ -70,7 +70,6 @@ private:
 	std::atomic<bool> m_stopped{ false };
 	std::atomic<bool> m_workerThreadRunning{ false };
 
-	TxMempoolData m_tx;
 	MinerData m_minerData;
 	ChainMain m_chainmainData;
 };

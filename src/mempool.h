@@ -21,7 +21,8 @@
 
 namespace p2pool {
 
-constexpr uint64_t HIGH_FEE_VALUE = 6000000000ULL;
+constexpr uint64_t HIGH_FEE_VALUE          =  6000000000ULL; // 0.006 XMR
+constexpr uint64_t HIGH_FEE_VALUE_FCMP_PP  = 20000000000ULL; // 0.02 XMR (FCMP++ transactions are ~3.2x heavier)
 
 class p2pool;
 
@@ -32,7 +33,7 @@ public:
 	~Mempool();
 
 	void add(const TxMempoolData& tx);
-	void swap_transactions(std::vector<TxMempoolData>& transactions);
+	void swap_transactions(std::vector<TxMempoolData>& transactions, uint64_t timestamp_mcs);
 
 	size_t size() const
 	{

@@ -565,7 +565,7 @@ typedef hash indexed_hash;
 
 struct TxMempoolData
 {
-	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0), time_received(0) {}
+	FORCEINLINE TxMempoolData() : id(), blob_size(0), weight(0), fee(0), time_received_mcs(0) {}
 
 	FORCEINLINE bool operator<(const TxMempoolData& tx) const
 	{
@@ -600,7 +600,7 @@ struct TxMempoolData
 	uint64_t blob_size;
 	uint64_t weight;
 	uint64_t fee;
-	uint64_t time_received;
+	uint64_t time_received_mcs;
 };
 
 struct AuxChainData
@@ -629,6 +629,7 @@ struct MinerData
 		, median_timestamp(0)
 		, aux_nonce(0)
 		, fcmp_pp_n_tree_layers(0)
+		, time_received_mcs(0)
 	{}
 
 	uint8_t major_version;
@@ -647,7 +648,7 @@ struct MinerData
 	uint8_t fcmp_pp_n_tree_layers;
 	hash fcmp_pp_tree_root;
 
-	std::chrono::high_resolution_clock::time_point time_received;
+	uint64_t time_received_mcs;
 };
 
 struct ChainMain

@@ -28,7 +28,6 @@ ZMQReader::ZMQReader(const std::string& address, uint32_t zmq_port, const std::s
 	: m_zmqPort(zmq_port)
 	, m_proxy(proxy)
 	, m_handler(handler)
-	, m_tx()
 	, m_minerData()
 	, m_chainmainData()
 {
@@ -494,6 +493,8 @@ static std::vector<uint8_t> construct_monero_block_blob(rapidjson::Value* value,
 
 void ZMQReader::parse(char* data, size_t size)
 {
+	const uint64_t cur_time_mcs = microseconds_since_epoch();
+
 	char* value = data;
 	const char* end = data + size;
 
@@ -523,12 +524,13 @@ void ZMQReader::parse(char* data, size_t size)
 			return;
 		}
 
-		m_tx.time_received = seconds_since_epoch();
+		TxMempoolData tx;
+		tx.time_received_mcs = cur_time_mcs;
 
 		for (SizeType i = 0, n = doc.Size(); i < n; ++i) {
 			const auto& v = doc[i];
-			if (PARSE(v, m_tx, id) && PARSE(v, m_tx, blob_size) && PARSE(v, m_tx, weight) && PARSE(v, m_tx, fee)) {
-				m_handler->handle_tx(m_tx);
+			if (PARSE(v, tx, id) && PARSE(v, tx, blob_size) && PARSE(v, tx, weight) && PARSE(v, tx, fee)) {
+				m_handler->handle_tx(tx);
 			}
 			else {
 				LOGWARN(1, "transaction #" << (i + 1) << " in json-minimal-txpool_add failed to parse, skipped it");
@@ -582,14 +584,20 @@ void ZMQReader::parse(char* data, size_t size)
 
 			for (SizeType i = 0; i < n; ++i) {
 				const auto& v = tx_backlog[i];
-				if (PARSE(v, m_tx, id) && PARSE(v, m_tx, weight) && PARSE(v, m_tx, fee)) {
-					m_minerData.tx_backlog.push_back(m_tx);
+
+				TxMempoolData tx;
+				tx.time_received_mcs = cur_time_mcs;
+
+				if (PARSE(v, tx, id) && PARSE(v, tx, weight) && PARSE(v, tx, fee)) {
+					m_minerData.tx_backlog.push_back(tx);
 				}
 				else {
 					LOGWARN(1, "transaction #" << (i + 1) << " in json-full-miner_data `tx_backlog` failed to parse, skipped it");
 				}
 			}
 		}
+
+		m_minerData.time_received_mcs = cur_time_mcs;
 
 		m_handler->handle_miner_data(m_minerData);
 	}
