@@ -289,11 +289,12 @@ TEST(pool_block, deserialize_carrot)
 
 	std::vector<Wallet> mining_wallets;
 
+	// Starting with Carrot, a block pays out the PPLNS window of its parent, so block N pays N miners (block 0 pays 1)
 	constexpr uint64_t payouts[4][4] = {
 		{ 600123456789ULL, 0, 0, 0 },
-		{ 300061728394ULL, 300061728395ULL, 0, 0 },
+		{ 600123456789ULL, 0, 0, 0 },
+		{ 300061728395ULL, 300061728394ULL, 0, 0 },
 		{ 200041152263ULL, 200041152263ULL, 200041152263ULL, 0 },
-		{ 150030864197ULL, 150030864197ULL, 150030864197ULL, 150030864198ULL },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -309,9 +310,9 @@ TEST(pool_block, deserialize_carrot)
 		const char* hashing_blob;
 	} expected[] = {
 		{ 4396, 5085, 0, 0, H("93efc370237e5fb59c843de5f392fa81179751564175e5bd13e42a677edef309"), H("1010e11212434d2dd5dfb6c583fde95eccdba044abdde54b836a9afd0ef04fd1"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8978563412763dab04b71117f54717cc5ae4770044882c2808900f080fccff667ec2c124398301" },
-		{ 4487, 5085, 1058, 1200, H("f684f17f495537f5c51267d470d9e439256c03ae4bf730f9e9bb4e0bd36d31fe"), H("281c62920c6cb7a86433b0a3bbaf976abcffdc01428da688df97f99bdae4b017"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89795634122525a023fc3bfc9e6fa1df29e807659516c603284915bd4f9f1eb7ea6d7db1a58301" },
-		{ 4578, 5087, 1060, 1291, H("24e0f76cc6f3fb5d8b0b65325840ff028f7b469ff359593fa5674c48866228d7"), H("92af2b5a6aa9a565ba2c690f2d1e24493ccf14ee77743b4711447efe6f2ee4bd"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a563412ea4383bc6240f6f768ca0624d45eeb74707eec0f6c627c131ee5aefc13cbf1b28301" },
-		{ 4668, 5088, 1093, 1413, H("02e59e68d6f93de80c7ad1ef87ea2176ec72e9d87e85e9ce1d6a13d45b46e4e0"), H("30a52c02ec8a5f28cb1befd3eb5f0e17fef76f547e99fe55d17c17807f0c195c"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b5634124546233526abde1bc0bf486f96f9d2af0abbc7cc7a6fb26225bee4668c09621b8301" },
+		{ 4396, 5085, 1058, 1109, H("1de7dca04f0434d8b5f1631a59bf787edce8ecc91cd54f87f7ae74776584706a"), H("75218b6e3a85727928640026449dc801dc04951660ab39cae529104dd35a17d0"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8979563412ba8f6882eab600ecafb89aab850d2960bb42ed1ab09c673b59056eea6e65a3f98301" },
+		{ 4487, 5085, 1058, 1200, H("30dd0e7f6cae3eeb9456c8db94adf3bf11d7fdead9a1e70ba0bcdaea78eb309b"), H("fe4b5eb9233726a58eb2856fce4ce031bd3380bb3ab59a85446c037c50da8c89"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a563412d47c8fba2ae478c3dc171a0273cba21075ff4ac6762ab809a419b5edfbf8c91d8301" },
+		{ 4578, 5087, 1092, 1323, H("8a31d6960eb807cf4327566574b4cf37cdfce05ca040252015b7169b684a5dd4"), H("e3b79e7c444be514db0b9dfe6342303bdabddee4549bf71139dc2d8168572dbe"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412b631c40badd6484a70d5fc9a65f8694fa3ab299e07754f8a966c7048c59390e48301" },
 	};
 
 	PoolBlock decoded;
@@ -378,7 +379,7 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(b.m_nonce, 0x12345678U + i);
 		ASSERT_EQ(b.m_extraNonce, 0x9abcdef0U + i);
 		ASSERT_EQ(b.m_extraNonceSize, 14U);
-		ASSERT_EQ(b.m_carrotOutputs.size(), i + 1);
+		ASSERT_EQ(b.m_carrotOutputs.size(), std::max<size_t>(i, 1));
 		ASSERT_TRUE(b.m_ephPublicKeys.empty());
 		ASSERT_TRUE(b.m_outputAmounts.empty());
 		ASSERT_TRUE(b.m_viewTags.empty());

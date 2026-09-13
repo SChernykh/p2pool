@@ -245,13 +245,13 @@ SideChain::~SideChain()
 	s_networkType = NetworkType::Invalid;
 }
 
-bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const
+bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares, uint64_t* bottom_height) const
 {
 	block.m_uncles.clear();
 
 	ReadLock lock(m_sidechainLock);
 
-	const PoolBlock* tip = m_chainTip;
+	const PoolBlock* const tip = m_chainTip;
 
 	if (!tip) {
 		block.m_parent = {};
@@ -261,7 +261,7 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_txkeySecSeed = block.calculate_genesis_tx_key_seed(m_consensusHash);
 		get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
-		return get_shares(&block, shares);
+		return get_shares(&block, shares, bottom_height);
 	}
 
 	block.m_txkeySecSeed = (block.m_prevId == tip->m_prevId) ? tip->m_txkeySecSeed : tip->calculate_tx_key_seed();
@@ -358,7 +358,11 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& s
 		block.m_cumulativeDifficulty += it->second->m_difficulty;
 	}
 
-	return get_shares(&block, shares);
+	if ((block.m_majorVersion >= HARDFORK_VERSION_CARROT) && (block.m_sidechainHeight != 0)) {
+		return get_shares(tip, shares, bottom_height);
+	}
+
+	return get_shares(&block, shares, bottom_height);
 }
 
 P2PServer* SideChain::p2pServer() const
@@ -410,8 +414,12 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 	// 2700 outputs will take ~46% of post-FCMP++ message size
 	const uint64_t max_shares = m_chainWindowSize + (m_chainWindowSize / 4);
 
-	unordered_set<MinerShare> shares_set;
-	shares_set.reserve(m_chainWindowSize * 2);
+	// Wallet -> index in "shares"
+	unordered_map<Wallet, size_t> shares_map;
+	shares.clear();
+
+	shares_map.reserve(max_shares);
+	shares.reserve(max_shares);
 
 	do {
 		difficulty_type cur_weight = cur->m_difficulty;
@@ -441,19 +449,20 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 				continue;
 			}
 
-			auto result = shares_set.emplace(uncle_weight, &uncle->m_minerWallet);
+			auto result = shares_map.emplace(uncle->m_minerWallet, shares.size());
 
 			if (result.second) {
 				// Don't add more uncles if we hit the limit on outputs
 				// Also give way to the "cur" share below, if its wallet hasn't been added yet
 				if ((tip->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) &&
-					(shares_set.size() + (1 - shares_set.count({ {}, &cur->m_minerWallet })) > max_shares)) {
-					shares_set.erase(result.first);
+					(shares_map.size() + (1 - shares_map.count(cur->m_minerWallet)) > max_shares)) {
+					shares_map.erase(result.first);
 					break;
 				}
+				shares.emplace_back(uncle_weight, &uncle->m_minerWallet);
 			}
 			else {
-				result.first->m_weight += uncle_weight;
+				shares[result.first->second].m_weight += uncle_weight;
 			}
 
 			cur_weight += uncle_penalty;
@@ -461,10 +470,15 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 		}
 
 		// Always add non-uncle shares even if PPLNS weight goes above the limit
-		auto result = shares_set.emplace(cur_weight, &cur->m_minerWallet);
-		if (!result.second) {
-			result.first->m_weight += cur_weight;
+		auto result = shares_map.emplace(cur->m_minerWallet, shares.size());
+
+		if (result.second) {
+			shares.emplace_back(cur_weight, &cur->m_minerWallet);
 		}
+		else {
+			shares[result.first->second].m_weight += cur_weight;
+		}
+
 		pplns_weight += cur_weight;
 
 		// One non-uncle share can go above the limit, but it will also guarantee that "shares" is never empty
@@ -473,7 +487,7 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 		}
 
 		// Stop if we hit the limit on outputs
-		if ((tip->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (shares_set.size() >= max_shares)) {
+		if ((tip->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) && (shares_map.size() >= max_shares)) {
 			break;
 		}
 
@@ -501,13 +515,12 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 		*bottom_height = cur->m_sidechainHeight;
 	}
 
-	shares.assign(shares_set.begin(), shares_set.end());
-	std::sort(shares.begin(), shares.end(), [](const auto& a, const auto& b) { return *a.m_wallet < *b.m_wallet; });
-
 	const uint64_t n = shares.size();
 
-	// Don't shuffle shares after Carrot, because Carrot defines a strict output order anyway
+	// Don't sort-and-shuffle shares after Carrot, because Carrot defines a strict output order anyway
 	if (tip->m_majorVersion < HARDFORK_VERSION_CARROT) {
+		std::sort(shares.begin(), shares.end(), [](const auto& a, const auto& b) { return *a.m_wallet < *b.m_wallet; });
+
 		// Shuffle shares
 		if (n > 1) {
 			hash h;
@@ -955,9 +968,19 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			return total_reward_check == total_reward;
 		}
 
+		const PoolBlock* b = block;
+
+		if ((block->m_majorVersion >= HARDFORK_VERSION_CARROT) && (block->m_sidechainHeight != 0)) {
+			b = get_parent(b);
+
+			if (!b) {
+				return false;
+			}
+		}
+
 		std::vector<MinerShare> tmpShares;
 
-		if (!get_shares(block, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpWallets, tmpRewards)) {
+		if (!get_shares(b, tmpShares) || !split_reward(block->m_majorVersion, total_reward, tmpShares, tmpWallets, tmpRewards)) {
 			return false;
 		}
 	}
@@ -1403,24 +1426,6 @@ bool SideChain::is_nano() const
 	return (memcmp(m_consensusId.data(), nano_consensus_id, HASH_SIZE) == 0);
 }
 
-uint64_t SideChain::get_bottom_height(const PoolBlock* tip) const
-{
-	if (!tip) {
-		return 0;
-	}
-
-	uint64_t bottom_height;
-	std::vector<MinerShare> shares;
-
-	ReadLock lock(m_sidechainLock);
-
-	if (!get_shares(tip, shares, &bottom_height, true)) {
-		return 0;
-	}
-
-	return bottom_height;
-}
-
 bool SideChain::split_reward(
 	uint8_t major_version,
 	uint64_t reward,
@@ -1807,7 +1812,7 @@ void SideChain::verify(PoolBlock* block)
 	// If a block is deeper than "2*W-1" it can't influence blocks in PPLNS window:
 	//
 	// get_difficulty requires uncle blocks to exist up to "2*W-1+U" depth, but only uses values of blocks at "<= 2*W-1" depth
-	// get_shares has the same constraints but starts 1 block higher, so it requires 1 less depth
+	// get_shares has the same constraints but (pre-Carrot) starts 1 block higher, so it requires 1 less depth or the same depth as get_difficulty
 	//
 	// (W-1)*2 + U = W*2-2+U >= 2*W-1 if U >= 1
 	// So if U >= 1, block's depth here will be > 2*W - 1
@@ -2061,9 +2066,17 @@ void SideChain::verify(PoolBlock* block)
 		shares = std::move(block->m_precalculatedShares);
 	}
 
-	if (shares.empty() && !get_shares(block, shares)) {
-		block->m_invalid = true;
-		return;
+	if (shares.empty()) {
+		const PoolBlock* b = block;
+
+		if ((b->m_majorVersion >= HARDFORK_VERSION_CARROT) && (b->m_sidechainHeight != 0)) {
+			b = parent;
+		}
+
+		if (!get_shares(b, shares)) {
+			block->m_invalid = true;
+			return;
+		}
 	}
 
 	const bool is_carrot = (block->m_majorVersion >= HARDFORK_VERSION_CARROT);
@@ -2883,8 +2896,20 @@ void SideChain::launch_precalc(const PoolBlock* block)
 			if (b->m_precalculated) {
 				continue;
 			}
+
 			std::vector<MinerShare> shares;
-			if (get_shares(b, shares, nullptr, true)) {
+
+			const PoolBlock* b2 = b;
+
+			if ((b->m_majorVersion >= HARDFORK_VERSION_CARROT) && (b->m_sidechainHeight != 0)) {
+				b2 = get_parent(b2);
+
+				if (!b2) {
+					continue;
+				}
+			}
+
+			if (get_shares(b2, shares, nullptr, true)) {
 				b->m_precalculated = true;
 				{
 					WriteLock lock(*PoolBlock::s_precalculatedSharesLock);

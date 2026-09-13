@@ -214,7 +214,7 @@ private:
 	uint32_t parse_block_headers_range(const char* data, size_t size);
 
 	void api_update_network_stats();
-	void api_update_pool_stats();
+	void api_update_pool_stats(uint64_t bottom_height);
 	void api_update_stats_mod();
 
 	void cleanup_mainchain_data(uint64_t height);

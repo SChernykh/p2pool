@@ -61,6 +61,7 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	, m_minerTxKeccakStateInputLength(0)
 	, m_sidechainHashKeccakState{}
 	, m_sidechainHashInputLength(0)
+	, m_bottomHeight(0)
 	, m_rng(RandomDeviceSeed::instance)
 {
 	// Diffuse the initial state in case it has low quality
@@ -157,6 +158,7 @@ BlockTemplate& BlockTemplate::copy_nolock(const BlockTemplate& b)
 	m_mempoolTxsOrder.clear();
 	m_mempoolTxsOrder2.clear();
 	m_shares.clear();
+	m_bottomHeight = 0;
 
 	m_rng = b.m_rng;
 
@@ -336,7 +338,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_fcmp_pp_n_tree_layers = data.fcmp_pp_n_tree_layers;
 	m_poolBlockTemplate->m_fcmp_pp_tree_root = data.fcmp_pp_tree_root;
 
-	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares)) {
+	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares, &m_bottomHeight)) {
 		use_old_template();
 		return;
 	}
