@@ -431,6 +431,7 @@ struct difficulty_type : public u128
 {
 	FORCEINLINE          constexpr difficulty_type() noexcept : u128() {}
 	FORCEINLINE explicit constexpr difficulty_type(uint64_t a) noexcept : u128(a) {}
+	// cppcheck-suppress noExplicitConstructor
 	FORCEINLINE          constexpr difficulty_type(const u128& a) noexcept : u128(a) {}
 	FORCEINLINE          constexpr difficulty_type(uint64_t a, uint64_t b) noexcept : u128(a, b) {}
 
