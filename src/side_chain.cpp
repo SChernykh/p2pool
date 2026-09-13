@@ -1455,9 +1455,9 @@ bool SideChain::split_reward(
 	for (uint64_t i = 0; i < num_shares; ++i) {
 		w += shares[i].m_weight;
 
-		const difficulty_type next_value = w * reward / total_weight;
-		const uint64_t r = next_value.lo - reward_given;
-		reward_given = next_value.lo;
+		const uint64_t next_value = (w * reward / total_weight).lo;
+		const uint64_t r = next_value - reward_given;
+		reward_given = next_value;
 
 		if ((major_version < HARDFORK_VERSION_CARROT) && (r > MAX_OUTPUT_VALUE)) {
 			LOGERR(1, "Reward of " << log::XMRAmount(reward) << " is too big for the current split.");

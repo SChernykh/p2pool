@@ -218,7 +218,7 @@ void make_thread_background()
 #endif
 }
 
-NOINLINE difficulty_type& difficulty_type::operator/=(difficulty_type b)
+NOINLINE u128& u128::operator/=(u128 b)
 {
 	if (*this < b) {
 		lo = 0;
@@ -249,7 +249,7 @@ NOINLINE difficulty_type& difficulty_type::operator/=(difficulty_type b)
 		t = shiftright128(udiv128(hi - divisor, lo, divisor, &r), 1, shift);
 	}
 
-	difficulty_type product;
+	u128 product;
 	product.lo = umul128(b.lo, t, &product.hi);
 
 	uint64_t t1, t2;
@@ -317,7 +317,7 @@ NOINLINE bool difficulty_type::check_pow(const hash& pow_hash) const
 	return true;
 }
 
-std::ostream& operator<<(std::ostream& s, const difficulty_type& d)
+std::ostream& operator<<(std::ostream& s, const u128& d)
 {
 	char buf[log::Stream::BUF_SIZE + 1];
 	// cppcheck-suppress uninitvar
@@ -327,7 +327,7 @@ std::ostream& operator<<(std::ostream& s, const difficulty_type& d)
 	return s;
 }
 
-std::istream& operator>>(std::istream& s, difficulty_type& diff)
+std::istream& operator>>(std::istream& s, u128& diff)
 {
 	diff.lo = 0;
 	diff.hi = 0;

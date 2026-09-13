@@ -106,7 +106,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		if (num_outputs > 0) {
 			// Outputs are in the buffer, just read them. Exit early if there's not enough data left
-			if (difficulty_type(num_outputs) * MIN_OUTPUT_SIZE > difficulty_type(static_cast<uint64_t>(data_end - data))) return __LINE__;
+			if (static_cast<u128>(num_outputs) * MIN_OUTPUT_SIZE > static_cast<u128>(data_end - data)) return __LINE__;
 
 			if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
 				m_outputAmounts.clear();

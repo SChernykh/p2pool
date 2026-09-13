@@ -239,14 +239,14 @@ static FORCEINLINE uint64_t get_block_reward(uint64_t base_reward, uint64_t medi
 		return 0;
 	}
 
-	const difficulty_type a = difficulty_type(median_weight * 2 - weight) * weight;
-	const difficulty_type b = difficulty_type(median_weight) * median_weight;
+	const u128 a = u128(median_weight * 2 - weight) * weight;
+	const u128 b = u128(median_weight) * median_weight;
 
-	if ((base_reward != BASE_BLOCK_REWARD) && (a != 0) && (difficulty_type(base_reward) > diff_max / a)) {
+	if ((base_reward != BASE_BLOCK_REWARD) && (a != 0) && (u128(base_reward) > u128_max / a)) {
 		return 0;
 	}
 
-	const difficulty_type result = ((a * base_reward) / b) + fees;
+	const u128 result = ((a * base_reward) / b) + fees;
 
 	if (result.hi) {
 		return 0;
@@ -1784,7 +1784,7 @@ void BlockTemplate::init_merge_mining_merkle_proof()
 	const uint32_t n_aux_chains = static_cast<uint32_t>(m_poolBlockTemplate->m_auxChains.size() + 1);
 
 	m_poolBlockTemplate->m_merkleProof.clear();
-	m_auxDifficulty = diff_max;
+	m_auxDifficulty = u128_max;
 
 	if (n_aux_chains == 1) {
 		return;

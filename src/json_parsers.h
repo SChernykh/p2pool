@@ -121,9 +121,9 @@ struct parse_wrapper<T, indexed_hash>
 #endif
 
 template<typename T>
-struct parse_wrapper<T, difficulty_type>
+struct parse_wrapper<T, u128>
 {
-	static NOINLINE bool parse(T& v, const char* name, difficulty_type &out_value)
+	static NOINLINE bool parse(T& v, const char* name, u128 &out_value)
 	{
 		const char* s = nullptr;
 		if (!parseValue(v, name, s) || !s) {
@@ -155,6 +155,12 @@ struct parse_wrapper<T, difficulty_type>
 
 		return true;
 	}
+};
+
+template<typename T>
+struct parse_wrapper<T, difficulty_type>
+{
+	static FORCEINLINE bool parse(T& v, const char* name, difficulty_type &out_value) { return parse_wrapper<T, u128>::parse(v, name, out_value); }
 };
 
 #define PARSE(doc, var, name) parseValue(doc, #name, var.name)

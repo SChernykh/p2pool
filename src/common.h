@@ -328,20 +328,16 @@ struct coinbase_tx_output
 
 } // namespace carrot
 
-struct
-#ifdef __GNUC__
-	alignas(unsigned __int128)
-#endif
-	difficulty_type
+struct alignas(16) u128
 {
-	FORCEINLINE          constexpr difficulty_type() noexcept : lo(0), hi(0) {}
-	FORCEINLINE explicit constexpr difficulty_type(uint64_t a) noexcept : lo(a), hi(0) {}
-	FORCEINLINE          constexpr difficulty_type(uint64_t a, uint64_t b) noexcept : lo(a), hi(b) {}
+	FORCEINLINE          constexpr u128() noexcept : lo(0), hi(0) {}
+	FORCEINLINE explicit constexpr u128(uint64_t a) noexcept : lo(a), hi(0) {}
+	FORCEINLINE          constexpr u128(uint64_t a, uint64_t b) noexcept : lo(a), hi(b) {}
 
 	uint64_t lo;
 	uint64_t hi;
 
-	FORCEINLINE difficulty_type& operator+=(const difficulty_type& b)
+	FORCEINLINE u128& operator+=(const u128& b)
 	{
 #ifdef _MSC_VER
 		_addcarry_u64(_addcarry_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
@@ -358,9 +354,9 @@ struct
 		return *this;
 	}
 
-	FORCEINLINE difficulty_type& operator+=(uint64_t b) { return operator+=(difficulty_type{ b, 0 }); }
+	FORCEINLINE u128& operator+=(uint64_t b) { return operator+=(u128{ b, 0 }); }
 
-	FORCEINLINE difficulty_type& operator-=(const difficulty_type& b)
+	FORCEINLINE u128& operator-=(const u128& b)
 	{
 #ifdef _MSC_VER
 		_subborrow_u64(_subborrow_u64(0, lo, b.lo, &lo), hi, b.hi, &hi);
@@ -377,9 +373,9 @@ struct
 		return *this;
 	}
 
-	FORCEINLINE difficulty_type& operator-=(uint64_t b) { return operator-=(difficulty_type{ b, 0 }); }
+	FORCEINLINE u128& operator-=(uint64_t b) { return operator-=(u128{ b, 0 }); }
 
-	FORCEINLINE difficulty_type& operator*=(const uint64_t b)
+	FORCEINLINE u128& operator*=(const uint64_t b)
 	{
 		uint64_t t;
 		lo = umul128(lo, b, &t);
@@ -388,7 +384,7 @@ struct
 		return *this;
 	}
 
-	FORCEINLINE difficulty_type& operator/=(const uint64_t b)
+	FORCEINLINE u128& operator/=(const uint64_t b)
 	{
 		const uint64_t t = hi;
 		hi = t / b;
@@ -399,30 +395,44 @@ struct
 		return *this;
 	}
 
-	difficulty_type& operator/=(difficulty_type b);
+	u128& operator/=(u128 b);
 
-	FORCEINLINE bool operator<(const difficulty_type& other) const
+	FORCEINLINE bool operator<(const u128& other) const
 	{
 		if (hi < other.hi) return true;
 		if (hi > other.hi) return false;
 		return (lo < other.lo);
 	}
 
-	FORCEINLINE bool operator>(const difficulty_type& other) const { return other.operator<(*this); }
+	FORCEINLINE bool operator>(const u128& other) const { return other.operator<(*this); }
 
-	FORCEINLINE bool operator>=(const difficulty_type& other) const { return !operator<(other); }
-	FORCEINLINE bool operator<=(const difficulty_type& other) const { return !operator>(other); }
+	FORCEINLINE bool operator>=(const u128& other) const { return !operator<(other); }
+	FORCEINLINE bool operator<=(const u128& other) const { return !operator>(other); }
 
-	FORCEINLINE bool operator==(const difficulty_type& other) const { return (lo == other.lo) && (hi == other.hi); }
-	FORCEINLINE bool operator!=(const difficulty_type& other) const { return (lo != other.lo) || (hi != other.hi); }
+	FORCEINLINE bool operator==(const u128& other) const { return (lo == other.lo) && (hi == other.hi); }
+	FORCEINLINE bool operator!=(const u128& other) const { return (lo != other.lo) || (hi != other.hi); }
 
 	FORCEINLINE bool operator==(uint64_t other) const { return (lo == other) && (hi == 0); }
 	FORCEINLINE bool operator!=(uint64_t other) const { return (lo != other) || (hi != 0); }
 
-	friend std::ostream& operator<<(std::ostream& s, const difficulty_type& d);
-	friend std::istream& operator>>(std::istream& s, difficulty_type& d);
+	friend std::ostream& operator<<(std::ostream& s, const u128& d);
+	friend std::istream& operator>>(std::istream& s, u128& d);
 
 	FORCEINLINE double to_double() const { return static_cast<double>(hi) * 18446744073709551616.0 + static_cast<double>(lo); }
+};
+
+static_assert(sizeof(u128) == sizeof(uint64_t) * 2, "struct u128 has invalid size, check your compiler options");
+static_assert(std::is_standard_layout<u128>::value, "struct u128 is not a POD, check your compiler options");
+static_assert(std::is_trivially_copyable<u128>::value, "struct u128 is not trivially copyable, fix it");
+
+static constexpr u128 u128_max = { std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max() };
+
+struct difficulty_type : public u128
+{
+	FORCEINLINE          constexpr difficulty_type() noexcept : u128() {}
+	FORCEINLINE explicit constexpr difficulty_type(uint64_t a) noexcept : u128(a) {}
+	FORCEINLINE          constexpr difficulty_type(const u128& a) noexcept : u128(a) {}
+	FORCEINLINE          constexpr difficulty_type(uint64_t a, uint64_t b) noexcept : u128(a, b) {}
 
 	FORCEINLINE bool empty() const { return (lo == 0) && (hi == 0); }
 
@@ -450,36 +460,35 @@ struct
 
 static_assert(sizeof(difficulty_type) == sizeof(uint64_t) * 2, "struct difficulty_type has invalid size, check your compiler options");
 static_assert(std::is_standard_layout<difficulty_type>::value, "struct difficulty_type is not a POD, check your compiler options");
-
-static constexpr difficulty_type diff_max = { std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max() };
+static_assert(std::is_trivially_copyable<difficulty_type>::value, "struct difficulty_type is not trivially copyable, fix it");
 
 template<typename T>
-FORCEINLINE difficulty_type operator+(const difficulty_type& a, const T& b)
+FORCEINLINE u128 operator+(const u128& a, const T& b)
 {
-	difficulty_type result = a;
+	u128 result = a;
 	result += b;
 	return result;
 }
 
 template<typename T>
-FORCEINLINE difficulty_type operator-(const difficulty_type& a, const T& b)
+FORCEINLINE u128 operator-(const u128& a, const T& b)
 {
-	difficulty_type result = a;
+	u128 result = a;
 	result -= b;
 	return result;
 }
 
-FORCEINLINE difficulty_type operator*(const difficulty_type& a, uint64_t b)
+FORCEINLINE u128 operator*(const u128& a, uint64_t b)
 {
-	difficulty_type result = a;
+	u128 result = a;
 	result *= b;
 	return result;
 }
 
 template<typename T>
-FORCEINLINE difficulty_type operator/(const difficulty_type& a, const T& b)
+FORCEINLINE u128 operator/(const u128& a, const T& b)
 {
-	difficulty_type result = a;
+	u128 result = a;
 	result /= b;
 	return result;
 }
