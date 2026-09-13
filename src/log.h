@@ -313,9 +313,9 @@ template<> struct Stream::Entry<indexed_hash>
 };
 #endif
 
-template<> struct Stream::Entry<difficulty_type>
+template<> struct Stream::Entry<u128>
 {
-	static NOINLINE void put(const difficulty_type& data, Stream* wrapper)
+	static NOINLINE void put(const u128& data, Stream* wrapper)
 	{
 		char buf[40];
 		size_t k = sizeof(buf);
@@ -339,6 +339,11 @@ template<> struct Stream::Entry<difficulty_type>
 
 		wrapper->writeBuf(buf + k, sizeof(buf) - k);
 	}
+};
+
+template<> struct Stream::Entry<difficulty_type>
+{
+	static FORCEINLINE void put(const difficulty_type& data, Stream* wrapper) { *wrapper << static_cast<const u128&>(data); }
 };
 
 struct const_buf
