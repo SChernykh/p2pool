@@ -66,6 +66,7 @@ PoolBlock::PoolBlock()
 	, m_localTimestamp(seconds_since_epoch())
 	, m_receivedTimestamp(0)
 	, m_auxNonce(0)
+	, m_parentPtrCache(nullptr)
 {
 }
 
@@ -139,6 +140,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_powHash = b.m_powHash;
 	m_seed = b.m_seed;
+
+	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	m_cachedNextDifficulty = b.m_cachedNextDifficulty;
 
@@ -392,6 +395,8 @@ void PoolBlock::reset_offchain_data()
 
 	m_powHash = {};
 	m_seed = {};
+
+	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	m_cachedNextDifficulty = {};
 

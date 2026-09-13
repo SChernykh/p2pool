@@ -248,6 +248,7 @@ SideChain::~SideChain()
 bool SideChain::fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares, uint64_t* bottom_height) const
 {
 	block.m_uncles.clear();
+	block.m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	ReadLock lock(m_sidechainLock);
 
@@ -501,14 +502,14 @@ bool SideChain::get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares
 			break;
 		}
 
-		auto it = m_blocksById.find(cur->m_parent);
-		if (it == m_blocksById.end()) {
+		const PoolBlock* parent = get_parent(cur);
+		if (!parent) {
 			LOGWARN(L, "get_shares: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
 			LOGWARN(L, "get_shares: can't calculate shares for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return false;
 		}
 
-		cur = it->second;
+		cur = parent;
 	} while (true);
 
 	if (bottom_height) {
@@ -697,7 +698,7 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 	{
 		ReadLock lock(m_sidechainLock);
 
-		if (!block.m_parent.empty() && (m_blocksById.find(block.m_parent) == m_blocksById.end())) {
+		if (!block.m_parent.empty() && !get_parent(&block)) {
 			missing_blocks.push_back(block.m_parent);
 		}
 
@@ -1524,14 +1525,14 @@ int SideChain::get_difficulty(const PoolBlock* const tip, std::vector<Difficulty
 			break;
 		}
 
-		auto it = m_blocksById.find(cur->m_parent);
-		if (it == m_blocksById.end()) {
+		const PoolBlock* parent = get_parent(cur);
+		if (!parent) {
 			LOGWARN(3, "get_difficulty: can't find parent block at height = " << cur->m_sidechainHeight - 1 << ", id = " << cur->m_parent);
 			LOGWARN(3, "get_difficulty: can't calculate diff for block at height = " << tip->m_sidechainHeight << ", id = " << tip->m_sidechainId << ", mainchain height = " << tip->m_txinGenHeight);
 			return 1;
 		}
 
-		cur = it->second;
+		cur = parent;
 	} while (true);
 
 	// Discard 10% oldest and 10% newest (by timestamp) blocks
@@ -1834,14 +1835,13 @@ void SideChain::verify(PoolBlock* block)
 	}
 
 	// Check parent
-	auto it = m_blocksById.find(block->m_parent);
-	if ((it == m_blocksById.end()) || !it->second->m_verified) {
+	const PoolBlock* parent = get_parent(block);
+	if (!(parent && parent->m_verified)) {
 		block->m_verified = false;
 		return;
 	}
 
 	// If it's invalid then this block is also invalid
-	const PoolBlock* parent = it->second;
 	if (parent->m_invalid) {
 		block->m_verified = true;
 		block->m_invalid = true;
@@ -1929,7 +1929,7 @@ void SideChain::verify(PoolBlock* block)
 			return;
 		}
 
-		it = m_blocksById.find(uncle_id);
+		auto it = m_blocksById.find(uncle_id);
 		if ((it == m_blocksById.end()) || !it->second->m_verified) {
 			block->m_verified = false;
 			return;
@@ -2286,8 +2286,21 @@ void SideChain::update_chain_tip(PoolBlock* block)
 
 PoolBlock* SideChain::get_parent(const PoolBlock* block) const
 {
-	auto it = m_blocksById.find(block->m_parent);
-	return (it != m_blocksById.end()) ? it->second : nullptr;
+	// A block's parent never changes once it's in the side-chain, so the lookup result can be cached.
+	// prune_old_blocks() resets m_parentPtrCache in all child blocks before freeing a pruned block.
+	PoolBlock* parent = block->m_parentPtrCache.load(std::memory_order_relaxed);
+
+	if (!parent) {
+		auto it = m_blocksById.find(block->m_parent);
+		if (it == m_blocksById.end()) {
+			return nullptr;
+		}
+
+		parent = it->second;
+		block->m_parentPtrCache.store(parent, std::memory_order_relaxed);
+	}
+
+	return parent;
 }
 
 bool SideChain::is_longer_chain(const PoolBlock* const block, const PoolBlock* const candidate, bool& is_alternative) const
@@ -2597,19 +2610,19 @@ void SideChain::update_depths(PoolBlock* block)
 			}
 		}
 
-		auto it = m_blocksById.find(block->m_parent);
-		if (it != m_blocksById.end()) {
-			if (it->second->m_sidechainHeight + 1 != block->m_sidechainHeight) {
+		PoolBlock* parent = get_parent(block);
+		if (parent) {
+			if (parent->m_sidechainHeight + 1 != block->m_sidechainHeight) {
 				LOGWARN(4, "Block " << block->m_sidechainId << ": m_sidechainHeight is inconsistent with parent's m_sidechainHeight.");
 			}
-			else if (it->second->m_depth < block->m_depth + 1) {
-				update_depth(it->second, block->m_depth + 1);
-				blocks_to_update.push_back(it->second);
+			else if (parent->m_depth < block->m_depth + 1) {
+				update_depth(parent, block->m_depth + 1);
+				blocks_to_update.push_back(parent);
 			}
 		}
 
 		for (const hash& uncle_id : block->m_uncles) {
-			it = m_blocksById.find(uncle_id);
+			auto it = m_blocksById.find(uncle_id);
 			if (it == m_blocksById.end()) {
 				continue;
 			}
@@ -2704,6 +2717,19 @@ void SideChain::prune_old_blocks()
 
 		// Pre-calc workers are not needed anymore
 		finish_precalc();
+
+		for (const PoolBlock* b : blocks_to_prune) {
+			auto it2 = m_blocksByHeight.find(b->m_sidechainHeight + 1);
+			if (it2 == m_blocksByHeight.end()) {
+				continue;
+			}
+
+			for (PoolBlock* child : it2->second) {
+				if (child->m_parentPtrCache.load(std::memory_order_relaxed) == b) {
+					child->m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
+				}
+			}
+		}
 
 		// These blocks have already been unlinked from m_blocksById/m_blocksByHeight/m_blocksByMerkleRoot
 		// above, so no new lookup can return them. Place them in a queue for deletion 1 minute later.
