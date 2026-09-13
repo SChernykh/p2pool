@@ -396,6 +396,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_txkeySecSeed.h, HASH_SIZE);
 		READ_BUF(m_parent.h, HASH_SIZE);
+		m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 		m_transactions.clear();
 		m_transactions.reserve(transactions.size());

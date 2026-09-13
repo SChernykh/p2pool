@@ -200,6 +200,8 @@ struct PoolBlock
 	hash m_powHash;
 	hash m_seed;
 
+	mutable std::atomic<PoolBlock*> m_parentPtrCache;
+
 	// Used to speed up SideChain::get_difficulty
 	mutable difficulty_type m_cachedNextDifficulty;
 
