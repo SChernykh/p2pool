@@ -1256,7 +1256,7 @@ void p2pool::update_block_template()
 	}
 	m_blockTemplate->update(data, *m_mempool, m_params);
 	stratum_on_block();
-	api_update_pool_stats();
+	api_update_pool_stats(m_blockTemplate->get_bottom_height());
 
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	if (m_isAlternativeBlock.exchange(false)) {
@@ -1965,15 +1965,15 @@ void p2pool::api_update_network_stats()
 	api_update_stats_mod();
 }
 
-void p2pool::api_update_pool_stats()
+void p2pool::api_update_pool_stats(uint64_t bottom_height)
 {
 	if (!m_api || m_stopped) {
 		return;
 	}
 
 	const PoolBlock* tip = m_sideChain->chainTip();
-	const uint64_t bottom_height = m_sideChain->get_bottom_height(tip);
-	const uint64_t pplns_window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + 1U) : m_sideChain->chain_window_size();
+	const bool is_carrot = tip && (tip->m_majorVersion >= HARDFORK_VERSION_CARROT);
+	const uint64_t pplns_window_size = (tip && bottom_height) ? (tip->m_sidechainHeight - bottom_height + (is_carrot ? 1U : 2U)) : m_sideChain->chain_window_size();
 
 	uint64_t t;
 	const difficulty_type diff = m_sideChain->difficulty();

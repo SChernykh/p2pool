@@ -46,7 +46,7 @@ public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	[[nodiscard]] bool fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares) const;
+	[[nodiscard]] bool fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr) const;
 
 	[[nodiscard]] bool incoming_block_seen(const PoolBlock& block);
 	void forget_incoming_block(const PoolBlock& block);
@@ -86,7 +86,6 @@ public:
 	[[nodiscard]] bool is_default() const;
 	[[nodiscard]] bool is_mini() const;
 	[[nodiscard]] bool is_nano() const;
-	[[nodiscard]] uint64_t get_bottom_height(const PoolBlock* tip) const;
 
 	[[nodiscard]] const PoolBlock* chainTip() const { return m_chainTip; }
 	[[nodiscard]] bool precalcFinished() const { return m_precalcFinished.load(); }

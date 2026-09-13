@@ -67,6 +67,8 @@ public:
 
 	[[nodiscard]] FORCEINLINE std::vector<uint8_t> get_coinbase_merkle_proof() const { ReadLock lock(m_lock); return m_merkleTreeMainBranch; }
 
+	[[nodiscard]] FORCEINLINE uint64_t get_bottom_height() const { ReadLock lock(m_lock); return m_bottomHeight; }
+
 #ifdef P2POOL_UNIT_TESTS
 	[[nodiscard]] FORCEINLINE const PoolBlock* pool_block_template() const { return m_poolBlockTemplate; }
 	[[nodiscard]] FORCEINLINE std::mt19937_64& rng() { return m_rng; }
@@ -141,6 +143,7 @@ private:
 	std::vector<int> m_mempoolTxsOrder;
 	std::vector<int> m_mempoolTxsOrder2;
 	std::vector<MinerShare> m_shares;
+	uint64_t m_bottomHeight;
 
 	std::mt19937_64 m_rng;
 

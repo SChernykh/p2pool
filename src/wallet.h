@@ -77,3 +77,16 @@ private:
 };
 
 } // namespace p2pool
+
+namespace robin_hood {
+
+template<>
+struct hash<p2pool::Wallet>
+{
+	FORCEINLINE size_t operator()(const p2pool::Wallet& value) const noexcept
+	{
+		return hash_bytes(value.keys(), p2pool::HASH_SIZE * 2);
+	}
+};
+
+} // namespace robin_hood
