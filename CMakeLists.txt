@@ -147,6 +147,7 @@ set(SOURCES
 	src/block_template.cpp
 	src/carrot.cpp
 	src/console_commands.cpp
+	src/fp64.cpp
 	src/crypto.cpp
 	src/json_rpc_request.cpp
 	src/keccak.cpp
