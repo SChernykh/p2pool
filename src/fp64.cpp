@@ -40,8 +40,6 @@ fp64& fp64::operator/=(const fp64& b)
 	return *this;
 }
 
-namespace {
-
 struct big
 {
 	uint64_t w[4];
@@ -159,8 +157,6 @@ static big pow10(const big& base, uint64_t n)
 
 	return result;
 }
-
-} // namespace
 
 size_t fp64::to_scientific(char (&buf)[SCIENTIFIC_BUF_SIZE]) const
 {

@@ -521,6 +521,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		total_tx_weight += tx.weight;
 	}
 
+	// TODO: rework how miner tx is constructed post-Carrot, because size variability will be much bigger. Use an iterative algorithm until it converges.
 	const uint64_t max_reward = base_reward + total_tx_fees;
 
 	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
