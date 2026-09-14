@@ -717,7 +717,10 @@ TEST(pool_block, verify)
 		std::vector<PoolBlock*> blocks;
 		for (const uint8_t *p = buf.data(), *e = buf.data() + buf.size(); p < e;) {
 			ASSERT_TRUE(p + sizeof(uint32_t) <= e);
-			const uint32_t n = *reinterpret_cast<const uint32_t*>(p);
+
+			uint32_t n;
+
+			memcpy(&n, p, sizeof(uint32_t));
 			p += sizeof(uint32_t);
 
 			ASSERT_TRUE(p + n <= e);

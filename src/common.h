@@ -328,6 +328,24 @@ struct coinbase_tx_output
 
 } // namespace carrot
 
+// Number of significant bits in x, 0 if x is zero.
+[[nodiscard]] FORCEINLINE uint32_t bit_length(uint64_t x)
+{
+#ifdef HAVE_BUILTIN_CLZLL
+	return x ? (64U - static_cast<uint32_t>(__builtin_clzll(x))) : 0U;
+#elif defined HAVE_BITSCANREVERSE64
+#pragma intrinsic(_BitScanReverse64)
+	unsigned long index;
+	return _BitScanReverse64(&index, x) ? (static_cast<uint32_t>(index) + 1U) : 0U;
+#else
+	uint32_t n = 0;
+	for (; x; x >>= 1) {
+		++n;
+	}
+	return n;
+#endif
+}
+
 struct alignas(16) u128
 {
 	FORCEINLINE          constexpr u128() noexcept : lo(0), hi(0) {}
@@ -355,6 +373,33 @@ struct alignas(16) u128
 	}
 
 	FORCEINLINE u128& operator+=(uint64_t b) { return operator+=(u128{ b, 0 }); }
+
+	// *this += b, returning whether the sum carried out of 128 bits
+	[[nodiscard]] FORCEINLINE bool add_carry(const u128& b)
+	{
+#ifdef _MSC_VER
+		const unsigned char c = _addcarry_u64(0, lo, b.lo, &lo);
+		return _addcarry_u64(c, hi, b.hi, &hi) != 0;
+#elif defined(__GNUC__) && !defined(DEV_CLANG_TIDY)
+		unsigned __int128 r;
+		const bool c = __builtin_add_overflow(
+			((static_cast<unsigned __int128>(hi) << 64) | lo),
+			((static_cast<unsigned __int128>(b.hi) << 64) | b.lo), &r);
+
+		lo = static_cast<uint64_t>(r);
+		hi = static_cast<uint64_t>(r >> 64);
+		return c;
+#else
+		const uint64_t old_lo = lo;
+		lo += b.lo;
+
+		const uint64_t carry = (lo < old_lo) ? 1 : 0;
+		const uint64_t old_hi = hi;
+		hi += b.hi + carry;
+
+		return (hi < old_hi) || ((hi == old_hi) && (b.hi + carry != 0));
+#endif
+	}
 
 	FORCEINLINE u128& operator-=(const u128& b)
 	{
@@ -396,6 +441,101 @@ struct alignas(16) u128
 	}
 
 	u128& operator/=(u128 b);
+
+#if defined(__GNUC__) && !defined(DEV_CLANG_TIDY)
+	FORCEINLINE u128& operator>>=(uint32_t k)
+	{
+		const unsigned __int128 v = ((static_cast<unsigned __int128>(hi) << 64) | lo) >> (k & 127);
+		const bool clear = (k >= 128);
+
+		lo = clear ? 0 : static_cast<uint64_t>(v);
+		hi = clear ? 0 : static_cast<uint64_t>(v >> 64);
+		return *this;
+	}
+
+	FORCEINLINE u128& operator<<=(uint32_t k)
+	{
+		const unsigned __int128 v = ((static_cast<unsigned __int128>(hi) << 64) | lo) << (k & 127);
+		const bool clear = (k >= 128);
+
+		lo = clear ? 0 : static_cast<uint64_t>(v);
+		hi = clear ? 0 : static_cast<uint64_t>(v >> 64);
+		return *this;
+	}
+#else
+	FORCEINLINE u128& operator>>=(uint32_t k)
+	{
+		if (k >= 128) {
+			lo = 0;
+			hi = 0;
+		}
+		else if (k >= 64) {
+			lo = hi >> (k - 64);
+			hi = 0;
+		}
+		else if (k) {
+			lo = (lo >> k) | (hi << (64 - k));
+			hi >>= k;
+		}
+		return *this;
+	}
+
+	FORCEINLINE u128& operator<<=(uint32_t k)
+	{
+		if (k >= 128) {
+			lo = 0;
+			hi = 0;
+		}
+		else if (k >= 64) {
+			hi = lo << (k - 64);
+			lo = 0;
+		}
+		else if (k) {
+			hi = (hi << k) | (lo >> (64 - k));
+			lo <<= k;
+		}
+		return *this;
+	}
+#endif
+
+	// Number of significant bits: 0 for zero, 128 for the maximum value
+	[[nodiscard]] FORCEINLINE uint32_t bit_length() const { return hi ? (64U + p2pool::bit_length(hi)) : p2pool::bit_length(lo); }
+
+	// floor(*this * m / 2^k), truncated to the low 64 bits. If the result doesn't fit into 64 bits, don't use this function.
+	[[nodiscard]] FORCEINLINE uint64_t mulshr(uint64_t m, uint32_t k) const
+	{
+		u128 l(lo);
+		l *= m;
+
+		u128 t(hi);
+		t *= m;
+		t += l.hi;
+
+		if (k >= 192) {
+			return 0;
+		}
+
+		const uint64_t p[4] = { l.lo, t.lo, t.hi, 0 };
+		const uint32_t limb = k >> 6, sh = k & 63;
+
+		uint64_t r = p[limb] >> sh;
+
+		if (sh) {
+			r |= p[limb + 1] << (64 - sh);
+		}
+
+		return r;
+	}
+
+	// The top 64 bits, left-normalised so that bit 63 is set.
+	[[nodiscard]] FORCEINLINE uint64_t top64() const
+	{
+		if (hi) {
+			const uint32_t k = 64U - p2pool::bit_length(hi);     // 0..63
+			return k ? ((hi << k) | (lo >> (64 - k))) : hi;
+		}
+		return lo ? (lo << (64U - p2pool::bit_length(lo))) : 0;
+	}
 
 	FORCEINLINE bool operator<(const u128& other) const
 	{
@@ -491,6 +631,20 @@ FORCEINLINE u128 operator/(const u128& a, const T& b)
 {
 	u128 result = a;
 	result /= b;
+	return result;
+}
+
+FORCEINLINE u128 operator>>(const u128& a, uint32_t k)
+{
+	u128 result = a;
+	result >>= k;
+	return result;
+}
+
+FORCEINLINE u128 operator<<(const u128& a, uint32_t k)
+{
+	u128 result = a;
+	result <<= k;
 	return result;
 }
 
@@ -721,4 +875,5 @@ extern const char* BLOCK_FOUND;
 #define FORCEINLINE NOINLINE
 #endif
 
+#include "fp64.h"
 #include "log.h"

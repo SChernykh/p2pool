@@ -346,6 +346,15 @@ template<> struct Stream::Entry<difficulty_type>
 	static FORCEINLINE void put(const difficulty_type& data, Stream* wrapper) { *wrapper << static_cast<const u128&>(data); }
 };
 
+template<> struct Stream::Entry<fp64>
+{
+	static FORCEINLINE void put(const fp64& data, Stream* wrapper)
+	{
+		char buf[fp64::SCIENTIFIC_BUF_SIZE];
+		wrapper->writeBuf(buf, data.to_scientific(buf));
+	}
+};
+
 struct const_buf
 {
 	FORCEINLINE const_buf(const char* data, size_t size) : m_data(data), m_size(size) {}

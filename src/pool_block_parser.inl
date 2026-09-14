@@ -577,7 +577,9 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 #if POOL_BLOCK_DEBUG
 		memcpy(m_mainChainDataDebug.data() + outputs_offset, outputs_blob.data(), outputs_blob_size);
 		memcpy(m_mainChainDataDebug.data() + pubkeys_offset + outputs_blob_size_diff, pubkeys_blob.data(), pubkeys_blob_size);
-		memcpy(m_mainChainDataDebug.data() + transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff, transactions_blob, transactions_blob_size);
+		if (transactions_blob && (transactions_blob_size > 0)) {
+			memcpy(m_mainChainDataDebug.data() + transactions_offset + outputs_blob_size_diff + pubkeys_blob_size_diff, transactions_blob, transactions_blob_size);
+		}
 #endif
 
 		hash check;
