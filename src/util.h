@@ -370,7 +370,6 @@ uint64_t bsr_reference(uint64_t x);
 #ifdef HAVE_BUILTIN_CLZLL
 #define bsr(x) (63 - __builtin_clzll(x))
 #elif defined HAVE_BITSCANREVERSE64
-#pragma intrinsic(_BitScanReverse64)
 FORCEINLINE uint64_t bsr(uint64_t x)
 {
 	unsigned long index;
