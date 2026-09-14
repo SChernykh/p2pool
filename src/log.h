@@ -350,7 +350,7 @@ template<> struct Stream::Entry<fp64>
 {
 	static FORCEINLINE void put(const fp64& data, Stream* wrapper)
 	{
-		char buf[fp64::SCIENTIFIC_BUF_SIZE];
+		char buf[fp64::SCIENTIFIC_BUF_SIZE] = {};
 		wrapper->writeBuf(buf, data.to_scientific(buf));
 	}
 };

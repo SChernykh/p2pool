@@ -56,7 +56,7 @@ static constexpr big BIG_TENTH = { { 0xccccccccccccccccULL, 0xccccccccccccccccUL
 static constexpr uint64_t LOG10_2_Q64 = 0x4d104d427de7fbccULL;
 
 // Schoolbook 256x256 -> 512. r[0] is the least significant word.
-FORCEINLINE void mul256(const uint64_t (&a)[4], const uint64_t (&b)[4], uint64_t (&r)[8])
+static FORCEINLINE void mul256(const uint64_t (&a)[4], const uint64_t (&b)[4], uint64_t (&r)[8])
 {
 	for (uint32_t i = 0; i < 8; ++i) {
 		r[i] = 0;
@@ -84,7 +84,7 @@ FORCEINLINE void mul256(const uint64_t (&a)[4], const uint64_t (&b)[4], uint64_t
 }
 
 // a * b, keeping the top 256 bits and renormalising
-FORCEINLINE big mul(const big& a, const big& b)
+static FORCEINLINE big mul(const big& a, const big& b)
 {
 	uint64_t p[8];
 	mul256(a.w, b.w, p);
@@ -103,7 +103,7 @@ FORCEINLINE big mul(const big& a, const big& b)
 }
 
 // w >>= n, for n < 64
-FORCEINLINE void shr(uint64_t (&w)[4], uint32_t n)
+static FORCEINLINE void shr(uint64_t (&w)[4], uint32_t n)
 {
 	if (n == 0) {
 		return;
@@ -117,7 +117,7 @@ FORCEINLINE void shr(uint64_t (&w)[4], uint32_t n)
 }
 
 // w *= 10. The caller keeps the value under 1.6 so the four integer bits never overflow.
-FORCEINLINE void mul10(uint64_t (&w)[4])
+static FORCEINLINE void mul10(uint64_t (&w)[4])
 {
 	uint64_t carry = 0;
 
@@ -131,7 +131,7 @@ FORCEINLINE void mul10(uint64_t (&w)[4])
 }
 
 // w /= 10
-FORCEINLINE void div10(uint64_t (&w)[4])
+static FORCEINLINE void div10(uint64_t (&w)[4])
 {
 	uint64_t rem = 0;
 
@@ -143,7 +143,7 @@ FORCEINLINE void div10(uint64_t (&w)[4])
 }
 
 // base^n by squaring: ~2*bit_length(n) multiplies, so any exponent is affordable
-big pow10(const big& base, uint64_t n)
+static big pow10(const big& base, uint64_t n)
 {
 	big result = { { 0, 0, 0, 1ULL << 63 }, -255 }; // exactly 1
 	big b = base;

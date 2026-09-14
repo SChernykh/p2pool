@@ -328,13 +328,16 @@ struct coinbase_tx_output
 
 } // namespace carrot
 
+#ifdef HAVE_BITSCANREVERSE64
+#pragma intrinsic(_BitScanReverse64)
+#endif
+
 // Number of significant bits in x, 0 if x is zero.
 [[nodiscard]] FORCEINLINE uint32_t bit_length(uint64_t x)
 {
 #ifdef HAVE_BUILTIN_CLZLL
 	return x ? (64U - static_cast<uint32_t>(__builtin_clzll(x))) : 0U;
 #elif defined HAVE_BITSCANREVERSE64
-#pragma intrinsic(_BitScanReverse64)
 	unsigned long index;
 	return _BitScanReverse64(&index, x) ? (static_cast<uint32_t>(index) + 1U) : 0U;
 #else

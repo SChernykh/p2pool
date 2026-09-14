@@ -68,6 +68,8 @@ public:
 	// The exact 128-bit product of two mantissas, unnormalized
 	struct wide
 	{
+		FORCEINLINE wide(const u128& _m, int64_t _e, bool _c) : m(_m), e(_e), c(_c) {}
+
 		u128 m;    // mantissa, unnormalized
 		int64_t e; // exponent
 		bool c;    // carry flag for values up to 2^129
