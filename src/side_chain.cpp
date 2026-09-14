@@ -2179,7 +2179,7 @@ void SideChain::verify(PoolBlock* block)
 
 		hash eph_public_key;
 		uint8_t view_tag;
-		if (!shares[i].m_wallet->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
+		if (!wallets[i]->get_eph_public_key(block->m_txkeySec, i, eph_public_key, view_tag)) {
 			LOGWARN(3, "block at height = " << block->m_sidechainHeight <<
 				", id = " << block->m_sidechainId <<
 				", mainchain height = " << block->m_txinGenHeight <<
