@@ -39,6 +39,10 @@ public:
 	[[nodiscard]] bool decode(const char* address);
 	[[nodiscard]] bool assign(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type);
 
+#ifdef P2POOL_UNIT_TESTS
+	void assign_unchecked(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type) { set_keys(spend_pub_key, view_pub_key, type); }
+#endif
+
 	void encode(char (&buf)[ADDRESS_LENGTH]) const;
 
 	[[nodiscard]] FORCEINLINE std::string encode() const
@@ -64,6 +68,8 @@ public:
 	[[nodiscard]] bool torsion_check() const;
 
 private:
+	void set_keys(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type);
+
 	uint64_t m_prefix;
 
 	hash m_keys[2];

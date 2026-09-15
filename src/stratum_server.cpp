@@ -1197,7 +1197,7 @@ void StratumServer::on_share_found(uv_work_t* req)
 				server->m_lastSidechainShareFoundTime = cur_time;
 			}
 
-			if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce)) {
+			if (!pool->submit_sidechain_block(share->m_templateId, share->m_nonce, share->m_extraNonce, share->m_resultHash)) {
 				submit_failed = true;
 
 				WriteLock lock(server->m_hashrateDataLock);

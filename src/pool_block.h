@@ -34,7 +34,27 @@ static FORCEINLINE constexpr int pool_block_debug() { return POOL_BLOCK_DEBUG; }
 
 class RandomX_Hasher_Base;
 class SideChain;
-struct MinerShare;
+
+struct MinerShare
+{
+	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
+
+	FORCEINLINE bool operator==(const MinerShare& s) const { return *m_wallet == *s.m_wallet; }
+
+	difficulty_type m_weight;
+	const Wallet* m_wallet;
+};
+
+struct PPLNSWindow
+{
+	std::vector<MinerShare> m_shares;
+	hash m_powHash;
+
+	FORCEINLINE void clear() { m_shares.clear(); m_powHash = {}; }
+
+	[[nodiscard]] FORCEINLINE bool empty() const { return m_shares.empty(); }
+	[[nodiscard]] FORCEINLINE size_t size() const { return m_shares.size(); }
+};
 
 /*
 * --------------------------------------------------
@@ -188,7 +208,7 @@ struct PoolBlock
 	bool m_precalculated;
 
 	static ReadWriteLock* s_precalculatedSharesLock;
-	std::vector<MinerShare> m_precalculatedShares;
+	PPLNSWindow m_precalculatedShares;
 
 	uint64_t m_localTimestamp;
 	uint64_t m_receivedTimestamp;
@@ -279,3 +299,17 @@ struct PoolBlock
 };
 
 } // namespace p2pool
+
+namespace robin_hood {
+
+	template<>
+	struct hash<p2pool::MinerShare>
+	{
+		FORCEINLINE size_t operator()(const p2pool::MinerShare& value) const noexcept
+		{
+			return hash_bytes(value.m_wallet->keys(), p2pool::HASH_SIZE * 2);
+		}
+	};
+
+} // namespace robin_hood
+

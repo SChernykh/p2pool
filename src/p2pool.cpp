@@ -1224,10 +1224,10 @@ void p2pool::submit_block() const
 		});
 }
 
-bool p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+bool p2pool::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce, const hash& pow_hash)
 {
 	LOGINFO(3, "submit_sidechain_block: template id = " << template_id << ", nonce = " << nonce << ", extra_nonce = " << extra_nonce);
-	return m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce);
+	return m_blockTemplate->submit_sidechain_block(template_id, nonce, extra_nonce, pow_hash);
 }
 
 void p2pool::update_block_template_async(bool is_alternative_block)
@@ -1982,7 +1982,7 @@ void p2pool::api_update_pool_stats(uint64_t bottom_height)
 	const uint64_t miners = std::max<uint64_t>(m_sideChain->miner_count(), m_p2pServer ? m_p2pServer->peer_list_size() : 0U);
 	const difficulty_type total_hashes = m_sideChain->total_hashes();
 
-	const auto& s = m_blockTemplate->get_shares();
+	const auto& s = m_blockTemplate->get_payout_window().m_shares;
 	const difficulty_type pplns_weight = std::accumulate(s.begin(), s.end(), difficulty_type(), [](const auto& a, const auto& b) { return a + b.m_weight; });
 
 	time_t last_block_found_time = 0;

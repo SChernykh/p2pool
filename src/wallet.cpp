@@ -195,6 +195,12 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 		return false;
 	}
 
+	set_keys(spend_pub_key, view_pub_key, type);
+	return true;
+}
+
+void Wallet::set_keys(const hash& spend_pub_key, const hash& view_pub_key, NetworkType type)
+{
 	switch (type)
 	{
 	case NetworkType::Mainnet:  m_prefix = valid_prefixes[0]; break;
@@ -218,8 +224,6 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 
 	m_type = type;
 	m_torsioned = false;
-
-	return true;
 }
 
 void Wallet::encode(char (&buf)[ADDRESS_LENGTH]) const

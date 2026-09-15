@@ -125,6 +125,7 @@ set(HEADERS
 	src/pool_block.h
 	src/pool_block_parser.inl
 	src/pow_hash.h
+	src/quantize_rewards.h
 	src/side_chain.h
 	src/stratum_server.h
 	src/tcp_server.h
@@ -164,6 +165,7 @@ set(SOURCES
 	src/params.cpp
 	src/pool_block.cpp
 	src/pow_hash.cpp
+	src/quantize_rewards.cpp
 	src/side_chain.cpp
 	src/stratum_server.cpp
 	src/tcp_server.cpp
@@ -198,6 +200,7 @@ if (AMD64)
 	set(SOURCES ${SOURCES} src/keccak_bmi.cpp)
 	if (CMAKE_C_COMPILER_ID MATCHES GNU OR CMAKE_C_COMPILER_ID MATCHES Clang)
 		set_source_files_properties(src/keccak_bmi.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -mbmi")
+		set_source_files_properties(src/quantize_rewards.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -maes")
 	endif()
 endif()
 
@@ -210,9 +213,12 @@ else()
 	set(SOURCES ${SOURCES} external/src/RandomX/src/cpu.cpp)
 	set(HEADERS ${HEADERS} external/src/RandomX/src/blake2/blake2.h)
 	set(SOURCES ${SOURCES} external/src/RandomX/src/blake2/blake2b.c)
+	set(HEADERS ${HEADERS} external/src/RandomX/src/soft_aes.h)
+	set(SOURCES ${SOURCES} external/src/RandomX/src/soft_aes.cpp)
 
 	if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 		set_source_files_properties(external/src/RandomX/src/blake2/blake2b.c PROPERTIES COMPILE_OPTIONS "/wd4711;/wd4820")
+		set_source_files_properties(external/src/RandomX/src/soft_aes.cpp PROPERTIES COMPILE_OPTIONS "/wd4365;/wd4514")
 	endif()
 endif()
 

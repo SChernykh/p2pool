@@ -94,7 +94,6 @@ jobs:
       shell: alpine.sh {0}
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: List directory
@@ -162,7 +161,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: Archive binary
@@ -241,7 +239,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: Archive binary
@@ -318,7 +315,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: Archive binary
@@ -405,7 +401,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests.exe
 
     - name: Archive binary
@@ -478,7 +473,6 @@ jobs:
       shell: cmd
       run: |
         cd tests/build/Debug
-        7z x *.xz
         call "${{ matrix.config.vspath }}\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64
         p2pool_tests.exe
 
@@ -546,7 +540,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: Archive binary
@@ -613,7 +606,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         ./p2pool_tests
 
     - name: Archive binary
@@ -683,7 +675,6 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release -DSTATIC_LIBS=ON
           make -j4 p2pool_tests
-          unxz *.xz
           ./p2pool_tests
 
     - name: Archive binary
@@ -734,7 +725,6 @@ jobs:
           mkdir build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
           make -j4 p2pool_tests
-          unxz *.xz
           ./p2pool_tests
 
     - name: Archive binary

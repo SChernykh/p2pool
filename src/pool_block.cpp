@@ -379,7 +379,7 @@ void PoolBlock::reset_offchain_data()
 	{
 		WriteLock lock(*s_precalculatedSharesLock);
 		m_precalculatedShares.clear();
-		m_precalculatedShares.shrink_to_fit();
+		m_precalculatedShares.m_shares.shrink_to_fit();
 	}
 
 	m_localTimestamp = seconds_since_epoch();
