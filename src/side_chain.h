@@ -30,23 +30,13 @@ static constexpr uint64_t MONERO_BLOCK_TIME = 120;
 class p2pool;
 class P2PServer;
 
-struct MinerShare
-{
-	FORCEINLINE MinerShare(const difficulty_type& w, const Wallet* x) : m_weight(w), m_wallet(x) {}
-
-	FORCEINLINE bool operator==(const MinerShare& s) const { return *m_wallet == *s.m_wallet; }
-
-	difficulty_type m_weight;
-	const Wallet* m_wallet;
-};
-
 class SideChain : public nocopy_nomove
 {
 public:
 	SideChain(p2pool* pool, NetworkType type, const char* pool_name = nullptr);
 	~SideChain();
 
-	[[nodiscard]] bool fill_sidechain_data(PoolBlock& block, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr) const;
+	[[nodiscard]] bool fill_sidechain_data(PoolBlock& block, PPLNSWindow& window, uint64_t* bottom_height = nullptr) const;
 
 	[[nodiscard]] bool incoming_block_seen(const PoolBlock& block);
 	void forget_incoming_block(const PoolBlock& block);
@@ -108,7 +98,7 @@ public:
 	//
 	// If it returns true, then:
 	//
-	// wallets.size() == rewards.size() <= shares.size() and (wallets, rewards) has the calculated reward split
+	// wallets.size() == rewards.size() <= window.size() and (wallets, rewards) has the calculated reward split
 	//
 	// If it returns false, then:
 	//
@@ -116,7 +106,7 @@ public:
 	[[nodiscard]] static bool split_reward(
 		uint8_t major_version,
 		uint64_t reward,
-		const std::vector<MinerShare>& shares,
+		const PPLNSWindow& window,
 		std::vector<const Wallet*>& wallets,
 		std::vector<uint64_t>& rewards
 	);
@@ -129,7 +119,8 @@ private:
 	static NetworkType s_networkType;
 
 private:
-	[[nodiscard]] bool get_shares(const PoolBlock* tip, std::vector<MinerShare>& shares, uint64_t* bottom_height = nullptr, bool quiet = false) const;
+	[[nodiscard]] bool get_payout_window(const PoolBlock& block, const PoolBlock* parent, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
+	[[nodiscard]] bool get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	[[nodiscard]] int get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
@@ -205,16 +196,3 @@ private:
 };
 
 } // namespace p2pool
-
-namespace robin_hood {
-
-	template<>
-	struct hash<p2pool::MinerShare>
-	{
-		FORCEINLINE size_t operator()(const p2pool::MinerShare& value) const noexcept
-		{
-			return hash_bytes(value.m_wallet->keys(), p2pool::HASH_SIZE * 2);
-		}
-	};
-
-} // namespace robin_hood

@@ -82,7 +82,7 @@ BlockTemplate::BlockTemplate(SideChain* sidechain, RandomX_Hasher_Base* hasher)
 	m_mempoolTxs.reserve(1024);
 	m_mempoolTxsOrder.reserve(1024);
 	m_mempoolTxsOrder2.reserve(1024);
-	m_shares.reserve(m_sidechain->chain_window_size() * 2);
+	m_payoutWindow.m_shares.reserve(m_sidechain->chain_window_size() * 2);
 
 	for (size_t i = 0; i < array_size(&BlockTemplate::m_oldTemplates); ++i) {
 		m_oldTemplates[i] = new BlockTemplate(*this);
@@ -157,7 +157,7 @@ BlockTemplate& BlockTemplate::copy_nolock(const BlockTemplate& b)
 	m_mempoolTxs.clear();
 	m_mempoolTxsOrder.clear();
 	m_mempoolTxsOrder2.clear();
-	m_shares.clear();
+	m_payoutWindow.clear();
 	m_bottomHeight = 0;
 
 	m_rng = b.m_rng;
@@ -328,7 +328,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_blockHeader.insert(m_blockHeader.end(), NONCE_SIZE, 0);
 	m_poolBlockTemplate->m_nonce = 0;
 
-	// Fill in m_txinGenHeight here so get_shares() can use it to calculate the correct PPLNS window
+	// Fill in m_txinGenHeight here so get_payout_window() can use it to calculate the correct PPLNS window
 	m_poolBlockTemplate->m_txinGenHeight = data.height;
 
 	m_blockHeaderSize = m_blockHeader.size();
@@ -338,7 +338,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_poolBlockTemplate->m_fcmp_pp_n_tree_layers = data.fcmp_pp_n_tree_layers;
 	m_poolBlockTemplate->m_fcmp_pp_tree_root = data.fcmp_pp_tree_root;
 
-	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_shares, &m_bottomHeight)) {
+	if (!m_sidechain->fill_sidechain_data(*m_poolBlockTemplate, m_payoutWindow, &m_bottomHeight)) {
 		use_old_template();
 		return;
 	}
@@ -453,14 +453,14 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	// Run precalc in background when blocks are full (transaction picker runs), otherwise it's a too short window before create_miner_tx
 	// Also run it unconditionally for pre-Carrot outputs because the regular path doesn't use batching there
-	if (!m_shares.empty()) {
+	if (!m_payoutWindow.empty()) {
 		const bool pre_carrot = (data.major_version < HARDFORK_VERSION_CARROT);
 		const bool run_precalc_in_background =
 			(std::thread::hardware_concurrency() > 1) &&
-			(mempool.total_weight() + (pre_carrot ? 39 : 89) * m_shares.size() + 55 > data.median_weight);
+			(mempool.total_weight() + (pre_carrot ? 39 : 89) * m_payoutWindow.size() + 55 > data.median_weight);
 
 		if (run_precalc_in_background || pre_carrot) {
-			precalc = std::make_shared<Precalc>(m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
+			precalc = std::make_shared<Precalc>(m_payoutWindow.m_shares, m_poolBlockTemplate->m_txkeySec, data.major_version, data.height);
 
 			if (run_precalc_in_background) {
 				queue_work([precalc]() { precalc->run(); uv_sem_post(&precalc->sem); });
@@ -529,7 +529,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
-	if (!SideChain::split_reward(data.major_version, max_reward, m_shares, m_wallets, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, max_reward, m_payoutWindow, m_wallets, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -713,7 +713,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 #endif
 	}
 
-	if (!SideChain::split_reward(data.major_version, final_reward, m_shares, m_wallets, m_rewards)) {
+	if (!SideChain::split_reward(data.major_version, final_reward, m_payoutWindow, m_wallets, m_rewards)) {
 		use_old_template();
 		return;
 	}
@@ -735,7 +735,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			// Block reward will be <= r due to how block size penalty works
 			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
 
-			if (!r || !SideChain::split_reward(data.major_version, r, m_shares, m_wallets, m_rewards)) {
+			if (!r || !SideChain::split_reward(data.major_version, r, m_payoutWindow, m_wallets, m_rewards)) {
 				use_old_template();
 				return;
 			}
@@ -753,7 +753,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
 
-			if (!final_reward || !SideChain::split_reward(data.major_version, final_reward, m_shares, m_wallets, m_rewards)) {
+			if (!final_reward || !SideChain::split_reward(data.major_version, final_reward, m_payoutWindow, m_wallets, m_rewards)) {
 				use_old_template();
 				return;
 			}
@@ -1041,11 +1041,11 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
 
 	// Add output and tx count real varints
-	writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+	writeVarint(m_payoutWindow.size(), [&k](uint8_t) { ++k; });
 	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
-	k += m_shares.size() * b->output_blob_size_estimate();
+	k += m_payoutWindow.size() * b->output_blob_size_estimate();
 
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	{
@@ -1059,15 +1059,15 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	if (is_fcmp_pp) {
 		// tx_extra size varint adjustment (conservative estimate)
 		--k;
-		writeVarint(m_shares.size() * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
+		writeVarint(m_payoutWindow.size() * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
 
 		// eph pubkey count varint
-		if (m_shares.size() > 1) {
-			writeVarint(m_shares.size(), [&k](uint8_t) { ++k; });
+		if (m_payoutWindow.size() > 1) {
+			writeVarint(m_payoutWindow.size(), [&k](uint8_t) { ++k; });
 		}
 
 		// eph pubkeys
-		k += m_shares.size() * HASH_SIZE;
+		k += m_payoutWindow.size() * HASH_SIZE;
 	}
 
 	const uint64_t N = b->max_block_size();
@@ -1710,7 +1710,7 @@ std::vector<uint8_t> BlockTemplate::get_block_template_blob(uint32_t template_id
 	return m_blockTemplateBlob;
 }
 
-bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce)
+bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce, const hash& pow_hash)
 {
 	const uint64_t received_timestamp = microseconds_since_epoch();
 
@@ -1745,17 +1745,19 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 			}
 
 			if (m_hasher) {
-				hash pow_hash;
-				if (!check.get_pow_hash(m_hasher, check.m_txinGenHeight, m_seedHash, pow_hash, false, RandomX_Hasher_Base::VM_LANE_STRATUM)) {
+				hash h;
+				if (!check.get_pow_hash(m_hasher, check.m_txinGenHeight, m_seedHash, h, false, RandomX_Hasher_Base::VM_LANE_STRATUM)) {
 					LOGERR(1, "PoW check failed for the sidechain block. Fix it! ");
 				}
-				else if (!check.m_difficulty.check_pow(pow_hash)) {
+				else if (!check.m_difficulty.check_pow(h)) {
 					LOGERR(1, "Sidechain block has wrong PoW. Fix it! ");
 				}
 			}
 		}
 
+		m_poolBlockTemplate->m_powHash = pow_hash;
 		m_poolBlockTemplate->m_verified = true;
+
 		if (!m_sidechain->incoming_block_seen(*m_poolBlockTemplate)) {
 			m_poolBlockTemplate->m_wantBroadcast = true;
 			const bool result = m_sidechain->add_block(*m_poolBlockTemplate);
@@ -1773,7 +1775,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 	BlockTemplate* old = m_oldTemplates[template_id % array_size(&BlockTemplate::m_oldTemplates)];
 
 	if (old && (template_id == old->m_templateId)) {
-		return old->submit_sidechain_block(template_id, nonce, extra_nonce);
+		return old->submit_sidechain_block(template_id, nonce, extra_nonce, pow_hash);
 	}
 
 	LOGWARN(3, "failed to submit a share: template id " << template_id << " is too old/out of range, current template id is " << m_templateId);

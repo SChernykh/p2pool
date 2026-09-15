@@ -300,7 +300,7 @@ void Miner::run(WorkerData* data)
 		if (j.m_sidechainDiff.check_pow(h)) {
 			LOGINFO(0, log::Green() << "SHARE FOUND: mainchain height " << j.m_height << ", sidechain height " << j.m_sidechainHeight << ", diff " << j.m_sidechainDiff << ", worker thread " << data->m_index << '/' << data->m_count);
 			++m_sharesFound;
-			if (!m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce)) {
+			if (!m_pool->submit_sidechain_block(j.m_templateId, j.m_nonce, j.m_extraNonce, h)) {
 				if (m_sharesFound > 0) {
 					--m_sharesFound;
 				}

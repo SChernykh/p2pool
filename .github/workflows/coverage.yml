@@ -44,7 +44,6 @@ jobs:
     - name: Run tests
       run: |
         cd tests/build
-        unxz *.xz
         LLVM_PROFILE_FILE="p2pool_tests.profraw" ./p2pool_tests
 
     - name: Merge profile data

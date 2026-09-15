@@ -262,14 +262,14 @@ TEST(block_template, submit_sidechain_block)
 			if ((rng() % 11) == 0) {
 				tpl3.update(data, mempool, params);
 				++i3;
-				ASSERT_TRUE(tpl3.submit_sidechain_block(i3, 0, 0));
+				ASSERT_TRUE(tpl3.submit_sidechain_block(i3, 0, 0, hash()));
 			}
 
 			++i2;
-			ASSERT_TRUE(tpl2.submit_sidechain_block(i2, 0, 0));
+			ASSERT_TRUE(tpl2.submit_sidechain_block(i2, 0, 0, hash()));
 		}
 
-		ASSERT_TRUE(tpl.submit_sidechain_block(i + 1, 0, 0));
+		ASSERT_TRUE(tpl.submit_sidechain_block(i + 1, 0, 0, hash()));
 		data.median_timestamp += sidechain.block_time();
 	}
 
@@ -434,7 +434,7 @@ TEST(block_template, genesis_block_max_timestamp)
 
 	tpl.update(data, mempool, params);
 
-	ASSERT_TRUE(tpl.submit_sidechain_block(1, 0, 0));
+	ASSERT_TRUE(tpl.submit_sidechain_block(1, 0, 0, hash()));
 	ASSERT_EQ(sidechain.difficulty(), 100000);
 
 	const PoolBlock* tip = sidechain.chainTip();

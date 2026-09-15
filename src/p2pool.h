@@ -108,7 +108,7 @@ public:
 
 	void submit_aux_block_async(const std::vector<SubmitAuxBlockData>& aux_blocks);
 
-	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce, const hash& pow_hash);
 
 	void update_block_template_async(bool is_alternative_block = false);
 	void update_block_template();

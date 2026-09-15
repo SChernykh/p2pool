@@ -29,7 +29,6 @@ class RandomX_Hasher_Base;
 class Mempool;
 class Wallet;
 struct PoolBlock;
-struct MinerShare;
 struct Params;
 
 class BlockTemplate
@@ -60,9 +59,9 @@ public:
 	[[nodiscard]] FORCEINLINE uint64_t get_height() const { return m_height; }
 	[[nodiscard]] FORCEINLINE difficulty_type get_difficulty() const { return m_difficulty; }
 
-	[[nodiscard]] bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce);
+	[[nodiscard]] bool submit_sidechain_block(uint32_t template_id, uint32_t nonce, uint32_t extra_nonce, const hash& pow_hash);
 
-	[[nodiscard]] FORCEINLINE const std::vector<MinerShare>& get_shares() const { return m_shares; }
+	[[nodiscard]] FORCEINLINE const PPLNSWindow& get_payout_window() const { return m_payoutWindow; }
 	[[nodiscard]] FORCEINLINE uint64_t get_reward() const { return m_finalReward; }
 
 	[[nodiscard]] FORCEINLINE std::vector<uint8_t> get_coinbase_merkle_proof() const { ReadLock lock(m_lock); return m_merkleTreeMainBranch; }
@@ -142,7 +141,7 @@ private:
 	std::vector<TxMempoolData> m_mempoolTxs;
 	std::vector<int> m_mempoolTxsOrder;
 	std::vector<int> m_mempoolTxsOrder2;
-	std::vector<MinerShare> m_shares;
+	PPLNSWindow m_payoutWindow;
 	uint64_t m_bottomHeight;
 
 	std::mt19937_64 m_rng;

@@ -25,9 +25,13 @@
 #include "p2p_server.h"
 #include "keccak.h"
 #include "params.h"
+#include "carrot.h"
+#include "merkle.h"
+#include "wallet.h"
 #include "gtest/gtest.h"
 #include <fstream>
 #include <numeric>
+#include <sstream>
 
 namespace p2pool {
 
@@ -259,7 +263,8 @@ struct CarrotBlockTestHasher : RandomX_Hasher_Base
 		const auto* p = static_cast<const uint8_t*>(data);
 		blob.assign(p, p + size);
 
-		result = {};
+		// Not RandomX, but it has to be non-zero and a function of the block
+		keccak(p, static_cast<int>(size), result.h);
 		return true;
 	}
 };
@@ -293,8 +298,8 @@ TEST(pool_block, deserialize_carrot)
 	constexpr uint64_t payouts[4][4] = {
 		{ 600123456789ULL, 0, 0, 0 },
 		{ 600123456789ULL, 0, 0, 0 },
-		{ 300061728395ULL, 300061728394ULL, 0, 0 },
-		{ 200041152263ULL, 200041152263ULL, 200041152263ULL, 0 },
+		{ 300000000000ULL, 300123456789ULL, 0, 0 },
+		{ 199923456789ULL, 200400000000ULL, 199800000000ULL, 0 },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -311,8 +316,8 @@ TEST(pool_block, deserialize_carrot)
 	} expected[] = {
 		{ 4396, 5085, 0, 0, H("93efc370237e5fb59c843de5f392fa81179751564175e5bd13e42a677edef309"), H("1010e11212434d2dd5dfb6c583fde95eccdba044abdde54b836a9afd0ef04fd1"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8978563412763dab04b71117f54717cc5ae4770044882c2808900f080fccff667ec2c124398301" },
 		{ 4396, 5085, 1058, 1109, H("1de7dca04f0434d8b5f1631a59bf787edce8ecc91cd54f87f7ae74776584706a"), H("75218b6e3a85727928640026449dc801dc04951660ab39cae529104dd35a17d0"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8979563412ba8f6882eab600ecafb89aab850d2960bb42ed1ab09c673b59056eea6e65a3f98301" },
-		{ 4487, 5085, 1058, 1200, H("30dd0e7f6cae3eeb9456c8db94adf3bf11d7fdead9a1e70ba0bcdaea78eb309b"), H("fe4b5eb9233726a58eb2856fce4ce031bd3380bb3ab59a85446c037c50da8c89"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a563412d47c8fba2ae478c3dc171a0273cba21075ff4ac6762ab809a419b5edfbf8c91d8301" },
-		{ 4578, 5087, 1092, 1323, H("8a31d6960eb807cf4327566574b4cf37cdfce05ca040252015b7169b684a5dd4"), H("e3b79e7c444be514db0b9dfe6342303bdabddee4549bf71139dc2d8168572dbe"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412b631c40badd6484a70d5fc9a65f8694fa3ab299e07754f8a966c7048c59390e48301" },
+		{ 4487, 5085, 1058, 1200, H("a984ac0c6325c96c9c8841ade8fd1716f713f48d8f44245f3cdf1b13f7c91e36"), H("031cfe67e48409184f6792e93da69ec28120dee7635c04f0d6cafa3cf78a820e"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634120a4d66e67b343da964c98daa0ca856680d9cb4a9454d81a352b60f6b604329ad8301" },
+		{ 4578, 5087, 1092, 1323, H("6c5cb1d56d7b1a88dbd609d99d5c191db8a9280867088833d92c4ab0ee8d340a"), H("c558947a861d7eefbd37ee362492ccaed312ac48b6d8c90b60d43692e33d59ee"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b56341220bea6662fd3cf08a662f990d276b8cce620e436559dd77b45542b97b43f66be8301" },
 	};
 
 	PoolBlock decoded;
@@ -364,6 +369,8 @@ TEST(pool_block, deserialize_carrot)
 
 		ASSERT_TRUE(b.get_pow_hash(&hasher, b.m_txinGenHeight, {}, pow_hash, false, RandomX_Hasher_Base::VM_LANE_P2P));
 		ASSERT_EQ(b.m_coinbase_tx_hash, expected[i].coinbase_hash);
+
+		b.m_powHash = pow_hash;
 
 		std::vector<uint8_t> expected_hashing_blob;
 
@@ -812,12 +819,12 @@ TEST(pool_block, verify)
 		PoolBlock block;
 		ASSERT_TRUE(block.m_minerWallet.decode("44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg"));
 
-		std::vector<MinerShare> shares;
+		PPLNSWindow window;
 
-		ASSERT_TRUE(sidechain.fill_sidechain_data(block, shares));
+		ASSERT_TRUE(sidechain.fill_sidechain_data(block, window));
 
 		ASSERT_EQ(block.m_sidechainHeight, t.m_sidechainHeight + 1);
-		ASSERT_EQ(shares.size(), t.m_expectedSharesNextBlock);
+		ASSERT_EQ(window.size(), t.m_expectedSharesNextBlock);
 
 		const PoolBlock* parent = sidechain.find_block(tip->m_parent);
 		ASSERT_TRUE(parent != nullptr);
