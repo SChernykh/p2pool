@@ -22,8 +22,8 @@
 #include "quantize_rewards.h"
 
 #include "RandomX/src/cpu.hpp"
-#include "blake2/blake2.h"
 #include "soft_aes.h"
+#include "blake2/blake2.h"
 
 #include <numeric>
 
