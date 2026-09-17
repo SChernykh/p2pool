@@ -411,7 +411,7 @@ jobs:
 
   build-windows-msbuild:
 
-    timeout-minutes: 60
+    timeout-minutes: 90
     runs-on: windows-${{ matrix.config.os }}
 
     strategy:

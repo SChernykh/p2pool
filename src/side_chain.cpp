@@ -383,6 +383,7 @@ bool SideChain::get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* 
 
 	std::vector<MinerShare>& shares = window.m_shares;
 	window.m_powHash = tip->m_powHash;
+	window.m_weightTruncated = false;
 
 	const int L = quiet ? 6 : 3;
 
@@ -491,6 +492,7 @@ bool SideChain::get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* 
 
 		// One non-uncle share can go above the limit, but it will also guarantee that "shares" is never empty
 		if (pplns_weight > max_pplns_weight) {
+			window.m_weightTruncated = true;
 			break;
 		}
 

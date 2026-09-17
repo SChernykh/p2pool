@@ -51,6 +51,7 @@ void clear_crypto_cache(uint64_t timestamp = 0);
 #ifdef P2POOL_UNIT_TESTS
 size_t get_last_carrot_public_key_batch_size();
 size_t get_last_sender_receiver_secret_batch_size();
+size_t get_last_coinbase_output_batch_size();
 uint32_t get_from_bytes_cache_state(const hash& public_key);
 #endif
 

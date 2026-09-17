@@ -23,6 +23,8 @@
 #include "wallet.h"
 #include "keccak.h"
 #include "params.h"
+#include "carrot.h"
+#include "quantize_rewards.h"
 #include "gtest/gtest.h"
 
 namespace p2pool {
@@ -33,6 +35,74 @@ static hash H(const char* s)
 	from_hex(s, strlen(s), result);
 	return result;
 };
+
+TEST(block_template, prewarm_carrot_outputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+	bkg_jobs_tracker = new BackgroundJobTracker();
+
+	// queue_work() runs independently of libuv, so wait for the tracked job to finish.
+	auto wait_for_prewarm = []() {
+		while (!bkg_jobs_tracker->get_jobs().empty()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	};
+
+	ON_SCOPE_LEAVE([&wait_for_prewarm]() {
+		wait_for_prewarm();
+		thread_pool_destroy();
+
+		delete bkg_jobs_tracker;
+		bkg_jobs_tracker = nullptr;
+
+		destroy_crypto_cache();
+	});
+
+	Params params;
+	params.m_miningWallet = Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH");
+
+	MinerData data{};
+
+	data.major_version = HARDFORK_VERSION_CARROT;
+	data.height = 3012000;
+	data.prev_id = keccak("pre-warmup mainchain tip");
+	data.difficulty = difficulty_type(1000000000000ULL);
+	data.median_weight = 300000;
+	data.already_generated_coins = 18204981557254756780ULL;
+	data.median_timestamp = 1780000000;
+
+	// SideChain's destructor clears the crypto cache, so keep it alive through the cache-hit check.
+	SideChain sidechain(nullptr, NetworkType::Testnet, "default");
+
+	sidechain.m_testMainChainDiff = data.difficulty;
+
+	hash txkey_sec;
+	{
+		BlockTemplate tpl(&sidechain, nullptr);
+
+		Mempool mempool;
+
+		tpl.update(data, mempool, params);
+		txkey_sec = tpl.pool_block_template()->m_txkeySec;
+
+		ASSERT_EQ(tpl.get_reward(), BASE_BLOCK_REWARD);
+		ASSERT_FALSE(tpl.prewarm_carrot_outputs(hash()));
+		ASSERT_TRUE(tpl.prewarm_carrot_outputs(data.prev_id));
+		// Destroy the source template and wallets while the worker owns its snapshot.
+	}
+
+	wait_for_prewarm();
+
+	std::vector<carrot::coinbase_tx_output> outputs;
+
+	const uint64_t amount = BASE_BLOCK_REWARD + PAYOUT_GRID_STEP;
+
+	ASSERT_TRUE(carrot::build_coinbase_outputs(txkey_sec, data.height, { &params.m_miningWallet }, { amount }, outputs));
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+	ASSERT_EQ(outputs.size(), 1U);
+	EXPECT_EQ(outputs[0].amount, amount);
+}
 
 TEST(block_template, update)
 {

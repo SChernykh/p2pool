@@ -1258,6 +1258,10 @@ void p2pool::update_block_template()
 	stratum_on_block();
 	api_update_pool_stats(m_blockTemplate->get_bottom_height());
 
+	if ((data.prev_id != m_carrotPrewarmPrevId) && m_blockTemplate->prewarm_carrot_outputs(data.prev_id)) {
+		m_carrotPrewarmPrevId = data.prev_id;
+	}
+
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	if (m_isAlternativeBlock.exchange(false)) {
 		MutexLock lock(m_minerLock);
