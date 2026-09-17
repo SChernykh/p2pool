@@ -49,6 +49,7 @@ PoolBlock::PoolBlock()
 	, m_txkeySecSeed{}
 	, m_txkeySec{}
 	, m_parent{}
+	, m_parentNonce(0)
 	, m_sidechainHeight(0)
 	, m_difficulty{}
 	, m_cumulativeDifficulty{}
@@ -66,6 +67,7 @@ PoolBlock::PoolBlock()
 	, m_localTimestamp(seconds_since_epoch())
 	, m_receivedTimestamp(0)
 	, m_auxNonce(0)
+	, m_parentPowHashValid(false)
 	, m_parentPtrCache(nullptr)
 {
 }
@@ -110,6 +112,7 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_txkeySecSeed = b.m_txkeySecSeed;
 	m_txkeySec = b.m_txkeySec;
 	m_parent = b.m_parent;
+	m_parentNonce = b.m_parentNonce;
 	m_uncles = b.m_uncles;
 	m_sidechainHeight = b.m_sidechainHeight;
 	m_difficulty = b.m_difficulty;
@@ -140,6 +143,8 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 
 	m_powHash = b.m_powHash;
 	m_seed = b.m_seed;
+	m_parentPowHash = b.m_parentPowHash;
+	m_parentPowHashValid = b.m_parentPowHashValid;
 
 	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
@@ -319,6 +324,11 @@ std::vector<uint8_t> PoolBlock::serialize_sidechain_data() const
 	data.insert(data.end(), m_txkeySecSeed.h, m_txkeySecSeed.h + HASH_SIZE);
 	data.insert(data.end(), m_parent.h, m_parent.h + HASH_SIZE);
 
+	if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		const uint8_t* p = reinterpret_cast<const uint8_t*>(&m_parentNonce);
+		data.insert(data.end(), p, p + NONCE_SIZE);
+	}
+
 	writeVarint(m_uncles.size(), data);
 
 	for (const hash& id : m_uncles) {
@@ -396,6 +406,9 @@ void PoolBlock::reset_offchain_data()
 	m_powHash = {};
 	m_seed = {};
 
+	m_parentPowHash = {};
+	m_parentPowHashValid = false;
+
 	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	m_cachedNextDifficulty = {};
@@ -404,6 +417,11 @@ void PoolBlock::reset_offchain_data()
 }
 
 bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane)
+{
+	return get_hashing_blob(m_hashingBlob, m_coinbase_tx_hash) && hasher->calculate(m_hashingBlob.data(), m_hashingBlob.size(), height, seed_hash, pow_hash, force_light_mode, lane);
+}
+
+bool PoolBlock::get_hashing_blob(std::vector<uint8_t>& hashing_blob, hash& coinbase_tx_hash, const uint32_t* nonce, const uint32_t* extra_nonce) const
 {
 	// Calculate the coinbase tx hash, then the merkle root of all transactions in the block - this merkle root is what goes into the hashing blob
 
@@ -423,7 +441,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 
 	{
 		MainchainLayout layout;
-		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(&layout);
+		const std::vector<uint8_t> mainchain_data = serialize_mainchain_data(&layout, nonce, extra_nonce);
 
 		if (!layout.header_size || !layout.miner_tx_size || (mainchain_data.size() < layout.header_size + layout.miner_tx_size)) {
 			LOGERR(1, "tried to calculate PoW of uninitialized block");
@@ -440,7 +458,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		keccak(miner_tx, static_cast<int>(layout.miner_tx_size) - 1, tmp.h);
 		memcpy(hashes, tmp.h, HASH_SIZE);
 
-		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, m_coinbase_tx_hash.h);
+		keccak(reinterpret_cast<uint8_t*>(hashes), HASH_SIZE * 3, coinbase_tx_hash.h);
 
 		std::vector<hash> transactions;
 		transactions.reserve(m_transactions.size() + 3);
@@ -452,7 +470,7 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 		// 3. FCMP++ tree root
 		// 4. All other txs
 
-		transactions.emplace_back(m_coinbase_tx_hash);
+		transactions.emplace_back(coinbase_tx_hash);
 
 		if (m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
 			transactions.emplace_back();
@@ -477,9 +495,9 @@ bool PoolBlock::get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const
 	writeVarint(count, [&blob, &blob_size](uint8_t b) { blob[blob_size++] = b; });
 
 	// cppcheck-suppress danglingLifetime
-	m_hashingBlob.assign(blob, blob + blob_size);
+	hashing_blob.assign(blob, blob + blob_size);
 
-	return hasher->calculate(blob, blob_size, height, seed_hash, pow_hash, force_light_mode, lane);
+	return true;
 }
 
 uint64_t PoolBlock::get_payout(const Wallet& w) const

@@ -43,7 +43,7 @@ public:
 	void cleanup_incoming_blocks();
 
 	[[nodiscard]] bool add_external_block(PoolBlock& block, std::vector<hash>& missing_blocks);
-	[[nodiscard]] bool add_block(const PoolBlock& block);
+	[[nodiscard]] bool add_block(const PoolBlock& block, bool is_external = false);
 	void get_missing_blocks(unordered_set<hash>& missing_blocks) const;
 
 	[[nodiscard]] const PoolBlock* find_block(const hash& id) const;
@@ -53,7 +53,7 @@ public:
 	[[nodiscard]] difficulty_type get_cached_next_difficulty(const hash& id) const;
 
 	[[nodiscard]] const PoolBlock* get_block_blob(const hash& id, std::vector<uint8_t>& blob) const;
-	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, std::vector<uint8_t>& pubkeys_blob) const;
+	[[nodiscard]] bool get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, std::vector<uint8_t>& pubkeys_blob, bool* needs_parent_pow = nullptr) const;
 
 	void print_status(bool obtain_sidechain_lock = true) const;
 	[[nodiscard]] double get_reward_share(const Wallet& w) const;
@@ -90,6 +90,7 @@ public:
 
 #ifdef P2POOL_UNIT_TESTS
 	difficulty_type m_testMainChainDiff;
+	RandomX_Hasher_Base* m_testHasher = nullptr;
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
 	void set_chain_tip(PoolBlock* block) { WriteLock lock(m_sidechainLock); m_chainTip = block; }
 #endif
@@ -112,6 +113,10 @@ public:
 	);
 
 	[[nodiscard]] FORCEINLINE uint64_t monero_headers_required() const { return m_chainWindowSize * 4 * m_targetBlockTime / MONERO_BLOCK_TIME; }
+	[[nodiscard]] FORCEINLINE bool is_block_too_old(uint64_t block_height, uint64_t mainchain_height) const
+	{
+		return (mainchain_height >= block_height) && (mainchain_height - block_height >= monero_headers_required());
+	}
 
 private:
 	p2pool* m_pool;
@@ -119,9 +124,18 @@ private:
 	static NetworkType s_networkType;
 
 private:
-	[[nodiscard]] bool get_payout_window(const PoolBlock& block, const PoolBlock* parent, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
+	enum class ParentPowStatus {
+		Valid,
+		Unavailable,
+		Invalid
+	};
+
+	[[nodiscard]] ParentPowStatus get_parent_pow_hash(PoolBlock& block, const PoolBlock* parent, bool allow_recalc) const;
+
+	[[nodiscard]] bool get_payout_window(PoolBlock& block, const PoolBlock* parent, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	[[nodiscard]] bool get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	[[nodiscard]] int get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
+
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(PoolBlock* block);

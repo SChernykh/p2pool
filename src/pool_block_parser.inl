@@ -27,6 +27,7 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 {
 	try {
 		m_outputsComputed = false;
+		m_parentPowHashValid = false;
 
 		// Sanity check
 		if (!data || (size > MAX_BLOCK_SIZE_NEW)) {
@@ -396,6 +397,17 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_txkeySecSeed.h, HASH_SIZE);
 		READ_BUF(m_parent.h, HASH_SIZE);
+
+		if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+			READ_BUF(&m_parentNonce, NONCE_SIZE);
+		}
+		else {
+			m_parentNonce = 0;
+		}
+
+		// Both must be 0 for the genesis block
+		if (m_parent.empty() && (m_parentNonce != 0)) return __LINE__;
+
 		m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 		m_transactions.clear();
@@ -551,6 +563,10 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 
 		READ_BUF(m_sidechainExtraBuf, sizeof(m_sidechainExtraBuf));
 
+		if ((sidechain.network_major_version(m_txinGenHeight + sidechain.monero_headers_required() + 10) >= HARDFORK_VERSION_CARROT) && (m_sidechainExtraBuf[3] != m_extraNonce)) {
+			return __LINE__;
+		}
+
 #undef READ_BYTE
 #undef EXPECT_BYTE
 #undef READ_VARINT
@@ -560,8 +576,12 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 			return __LINE__;
 		}
 
-		if ((num_outputs == 0) && !sidechain.get_outputs_blob(this, total_reward, outputs_blob, pubkeys_blob)) {
-			return __LINE__;
+		if (num_outputs == 0) {
+			bool needs_parent_pow = false;
+
+			if (!sidechain.get_outputs_blob(this, total_reward, outputs_blob, pubkeys_blob, &needs_parent_pow)) {
+				return needs_parent_pow ? static_cast<int>(DeserializeStatus::NEEDS_PARENT_POW) : __LINE__;
+			}
 		}
 
 		if (static_cast<int>(outputs_blob.size()) != outputs_blob_size) {

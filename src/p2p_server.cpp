@@ -3276,6 +3276,13 @@ bool P2PServer::P2PClient::on_block_broadcast(const uint8_t* buf, uint32_t size,
 	MutexLock lock(server->m_blockLock);
 
 	const int result = server->deserialize_block(buf, size, compact, true, received_timestamp);
+
+	if (result == static_cast<int>(PoolBlock::DeserializeStatus::NEEDS_PARENT_POW)) {
+		// A different parent nonce requires RandomX. Request the full child block so its own PoW can be checked on a worker thread.
+		on_block_notify(server->get_block()->m_sidechainId.h);
+		return true;
+	}
+
 	if (result != 0) {
 		LOGWARN(3, "peer " << static_cast<char*>(m_addrString) << " sent an invalid block, error " << result);
 		return false;
@@ -4044,6 +4051,14 @@ bool P2PServer::P2PClient::handle_incoming_block_async(const PoolBlock* block, u
 {
 	P2PServer* server = static_cast<P2PServer*>(m_owner);
 	SideChain& side_chain = server->m_pool->side_chain();
+
+	// Apply the age limit to requested and cached blocks as well, including during initial sync.
+	const uint64_t mainchain_height = server->m_pool->miner_data().height;
+
+	if (side_chain.is_block_too_old(block->m_txinGenHeight, mainchain_height)) {
+		LOGINFO(4, "ignoring old block " << block->m_sidechainId << " (mainchain height " << block->m_txinGenHeight << ", current height " << mainchain_height << ')');
+		return true;
+	}
 
 	// Limit system clock difference between connected peers
 	// Check only new blocks (not added to side_chain yet)

@@ -164,8 +164,12 @@ struct PoolBlock
 	hash m_txkeySecSeed;
 	hash m_txkeySec;
 
-	// Side-chain parent and uncle blocks
+	// Side-chain parent
 	hash m_parent;
+	// post-Carrot fork: parent's nonce to calculate parent's PoW hash which is used as a seed for the reward split
+	uint32_t m_parentNonce;
+
+	// Side-chain uncle blocks
 	std::vector<hash> m_uncles;
 
 	// Blockchain data
@@ -189,7 +193,7 @@ struct PoolBlock
 	//
 	std::map<hash, std::vector<uint8_t>> m_mergeMiningExtra;
 
-	// Arbitrary extra data
+	// Arbitrary extra data in indices 0..2. Index 3 must contain the extra nonce (enforced shortly before Carrot fork).
 	uint32_t m_sidechainExtraBuf[4];
 
 	// HASH (see diagram in the comment above)
@@ -220,6 +224,9 @@ struct PoolBlock
 	hash m_powHash;
 	hash m_seed;
 
+	hash m_parentPowHash;
+	bool m_parentPowHashValid;
+
 	mutable std::atomic<PoolBlock*> m_parentPtrCache;
 
 	// Used to speed up SideChain::get_difficulty
@@ -241,10 +248,15 @@ struct PoolBlock
 	std::vector<uint8_t> serialize_mainchain_data(MainchainLayout* layout = nullptr, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 	std::vector<uint8_t> serialize_sidechain_data() const;
 
+	enum class DeserializeStatus {
+		NEEDS_PARENT_POW = -1,
+	};
+
 	[[nodiscard]] int deserialize(const uint8_t* data, size_t size, const SideChain& sidechain, bool compact, bool allow_pruned);
 	void reset_offchain_data();
 
-	bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane);
+	[[nodiscard]] bool get_pow_hash(RandomX_Hasher_Base* hasher, uint64_t height, const hash& seed_hash, hash& pow_hash, bool force_light_mode, size_t lane);
+	[[nodiscard]] bool get_hashing_blob(std::vector<uint8_t>& hashing_blob, hash& coinbase_tx_hash, const uint32_t* nonce = nullptr, const uint32_t* extra_nonce = nullptr) const;
 
 	uint64_t get_payout(const Wallet& w) const;
 
@@ -312,4 +324,3 @@ namespace robin_hood {
 	};
 
 } // namespace robin_hood
-
