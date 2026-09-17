@@ -43,6 +43,7 @@ public:
 	FORCEINLINE BlockTemplate& operator=(const BlockTemplate& b) { WriteLock lock(m_lock); return copy_nolock(b); }
 
 	void update(const MinerData& data, const Mempool& mempool, const Params& params);
+	[[nodiscard]] bool prewarm_carrot_outputs(const hash& prev_id) const;
 	[[nodiscard]] uint64_t last_updated() const { return m_lastUpdated.load(); }
 
 	[[nodiscard]] bool get_difficulties(const uint32_t template_id, uint64_t& height, uint64_t& sidechain_height, difficulty_type& mainchain_difficulty, difficulty_type& aux_diff, difficulty_type& sidechain_difficulty) const;

@@ -49,8 +49,10 @@ struct PPLNSWindow
 {
 	std::vector<MinerShare> m_shares;
 	hash m_powHash;
+	// Set to true when PPLNS window gets smaller than the configured size (max PPLNS weight is reached)
+	bool m_weightTruncated = false;
 
-	FORCEINLINE void clear() { m_shares.clear(); m_powHash = {}; }
+	FORCEINLINE void clear() { m_shares.clear(); m_powHash = {}; m_weightTruncated = false; }
 
 	[[nodiscard]] FORCEINLINE bool empty() const { return m_shares.empty(); }
 	[[nodiscard]] FORCEINLINE size_t size() const { return m_shares.size(); }

@@ -22,6 +22,7 @@
 namespace p2pool {
 
 class Wallet;
+struct PPLNSWindow;
 
 namespace carrot {
 	template<size_t N, typename T>
@@ -180,6 +181,9 @@ namespace carrot {
 
 	// out[i].valid == false means out[i] is invalid (gen_onetime_address would've returned false for in[i]), and the rest of out[i] is left zeroed.
 	bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_tx_output>& out);
+
+	// Warm-up the cache with likely grid amounts for every wallet, including wallets with no current payout.
+	void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLNSWindow& window, uint64_t reward);
 
 	// Builds Carrot coinbase tx outputs. Uses internal retry_counter (uint8_t) to guarantee that all
 	// Carrot consensus check pass (no zero/duplicate anchors, no zero/duplicate D_e, no duplicate K_o)

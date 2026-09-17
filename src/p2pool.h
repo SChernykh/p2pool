@@ -193,6 +193,7 @@ private:
 
 	mutable uv_rwlock_t m_minerDataLock;
 	MinerData m_minerData;
+	hash m_carrotPrewarmPrevId;
 
 	enum { TIMESTAMP_WINDOW = 60 };
 	bool get_timestamps(uint64_t (&timestamps)[TIMESTAMP_WINDOW]) const;

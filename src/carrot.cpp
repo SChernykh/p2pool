@@ -19,6 +19,8 @@
 #include "carrot.h"
 #include "crypto.h"
 #include "wallet.h"
+#include "pool_block.h"
+#include "quantize_rewards.h"
 #include "uv_util.h"
 #include "blake2/blake2.h"
 
@@ -327,6 +329,87 @@ bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<ha
 	}
 
 	return result;
+}
+
+void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLNSWindow& window, uint64_t reward)
+{
+	if (window.empty() || !reward) {
+		return;
+	}
+
+	std::vector<const Wallet*> wallets;
+	std::vector<hash> view_public_keys;
+
+	wallets.reserve(window.size());
+	view_public_keys.reserve(window.size());
+
+	difficulty_type total_weight;
+
+	for (const MinerShare& s : window.m_shares) {
+		if (!s.m_wallet || !s.m_wallet->valid()) {
+			return;
+		}
+
+		wallets.emplace_back(s.m_wallet);
+		view_public_keys.emplace_back(s.m_wallet->view_public_key());
+
+		total_weight += s.m_weight;
+	}
+
+	if (total_weight.empty()) {
+		return;
+	}
+
+	std::vector<janus_anchor> anchors;
+	std::vector<hash> eph_priv_keys;
+	std::vector<std::pair<hash, bool>> eph_pub_keys, sender_receiver_secrets, ctx_secrets;
+
+	if (!batch_eph_privkeys(txkey_sec, 0, height, wallets, anchors, eph_priv_keys) ||
+		!batch_eph_pubkeys(eph_priv_keys, eph_pub_keys) ||
+		!batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, sender_receiver_secrets) ||
+		!batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height, ctx_secrets)) {
+		return;
+	}
+
+	constexpr size_t MAX_OUTPUTS = 20'000;
+	constexpr uint64_t T = PAYOUT_GRID_STEP;
+
+	std::vector<coinbase_output_input> in;
+	in.reserve(std::min(window.size() * 3, MAX_OUTPUTS));
+
+	difficulty_type weight;
+	uint64_t reward_given = 0;
+
+	for (size_t i = 0; (i < window.size()) && (in.size() < MAX_OUTPUTS); ++i) {
+		// Match the exact cumulative-floor split before quantization.
+		weight += window.m_shares[i].m_weight;
+
+		const uint64_t next_value = (weight * reward / total_weight).lo;
+		const uint64_t amount = next_value - reward_given;
+
+		reward_given = next_value;
+
+		uint64_t lo = amount / T;
+
+		if (window.m_weightTruncated && lo) {
+			--lo;
+		}
+
+		// lo...hi == a_i...ceil(1.1 * s_i / T), and a_i - 1, but only on a sidechain whose window is truncated by max_pplns_weight
+		const uint64_t hi = std::min(((u128(amount) * 11 + (10 * T - 1)) / (10 * T)).lo, std::numeric_limits<uint64_t>::max() / T);
+
+		// Zero-amount outputs are omitted from actual transactions.
+		for (uint64_t k = std::max<uint64_t>(lo, 1); (k <= hi) && (in.size() < MAX_OUTPUTS); ++k) {
+			in.emplace_back(coinbase_output_input{
+				wallets[i]->spend_public_key(), sender_receiver_secrets[i].first,
+				ctx_secrets[i].first, anchors[i], k * T
+			});
+		}
+	}
+
+	std::vector<coinbase_tx_output> out;
+
+	batch_coinbase_outputs(height, in, out);
 }
 
 bool build_coinbase_outputs(

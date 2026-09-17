@@ -130,6 +130,7 @@ public:
 		: derivations(new DerivationsMap())
 		, carrot_public_keys(new CarrotPublicKeysMap())
 		, sender_receiver_secrets(new SenderReceiverSecretsMap())
+		, coinbase_outputs(new CoinbaseOutputsMap())
 		, public_keys(new PublicKeysMap())
 		, tx_keys(new TxKeysMap())
 		, from_bytes(new FromBytesMap())
@@ -137,6 +138,7 @@ public:
 		uv_rwlock_init_checked(&derivations_lock);
 		uv_rwlock_init_checked(&carrot_public_keys_lock);
 		uv_rwlock_init_checked(&sender_receiver_secrets_lock);
+		uv_rwlock_init_checked(&coinbase_outputs_lock);
 		uv_rwlock_init_checked(&public_keys_lock);
 		uv_rwlock_init_checked(&tx_keys_lock);
 		uv_rwlock_init_checked(&from_bytes_lock);
@@ -147,6 +149,7 @@ public:
 		delete derivations;
 		delete carrot_public_keys;
 		delete sender_receiver_secrets;
+		delete coinbase_outputs;
 		delete public_keys;
 		delete tx_keys;
 		delete from_bytes;
@@ -154,6 +157,7 @@ public:
 		uv_rwlock_destroy(&derivations_lock);
 		uv_rwlock_destroy(&carrot_public_keys_lock);
 		uv_rwlock_destroy(&sender_receiver_secrets_lock);
+		uv_rwlock_destroy(&coinbase_outputs_lock);
 		uv_rwlock_destroy(&public_keys_lock);
 		uv_rwlock_destroy(&tx_keys_lock);
 		uv_rwlock_destroy(&from_bytes_lock);
@@ -813,11 +817,14 @@ public:
 	// Calculates the entire amount-dependent part of a Carrot coinbase transaction in one go: K_o, the view tag
 	// and the encrypted Janus anchor for every output.
 	//
-	// Deliberately not cached: every new share re-splits the reward, and so does every transaction added to the
-	// block template, so two peers on the same sidechain tip will rarely be hashing the same amounts.
+	// Quantized rewards let the same wallet reuse these outputs across many templates and shares.
 	bool batch_coinbase_outputs(uint64_t height, const std::vector<carrot::coinbase_output_input>& in, std::vector<carrot::coinbase_tx_output>& out)
 	{
 		out.clear();
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastCoinbaseOutputBatchSize.store(0);
+#endif
 
 		const size_t N = in.size();
 
@@ -826,6 +833,36 @@ public:
 		}
 
 		out.assign(N, carrot::coinbase_tx_output{});
+
+		std::vector<size_t> batch;
+		batch.reserve(N);
+		{
+			ReadLock lock(coinbase_outputs_lock);
+
+			for (size_t i = 0; i < N; ++i) {
+				auto it = coinbase_outputs->find(coinbase_output_index(height, in[i]));
+
+				if (it == coinbase_outputs->end()) {
+					batch.emplace_back(i);
+				}
+				else {
+					out[i].onetime_address = it->second.m_onetimeAddress;
+					out[i].vt = it->second.m_viewTag;
+					out[i].anchor_enc = it->second.m_anchorEnc;
+					out[i].valid = true;
+				}
+			}
+		}
+
+#ifdef P2POOL_UNIT_TESTS
+		m_lastCoinbaseOutputBatchSize.store(batch.size());
+#endif
+
+		if (batch.empty()) {
+			return true;
+		}
+
+		const size_t batch_size = batch.size();
 
 		std::atomic<bool> result = true;
 
@@ -837,14 +874,14 @@ public:
 			bool cache_update = false;
 		};
 
-		std::vector<SpendKeyData> spend_key_data(N);
+		std::vector<SpendKeyData> spend_key_data(batch_size);
 
 		// Copy all available cache data while holding the read lock only once, and write back below.
 		{
 			ReadLock lock(from_bytes_lock);
 
-			for (size_t i = 0; i < N; ++i) {
-				auto it = from_bytes->find(in[i].spend_public_key);
+			for (size_t i = 0; i < batch_size; ++i) {
+				auto it = from_bytes->find(in[batch[i]].spend_public_key);
 
 				if (it == from_bytes->end()) {
 					continue;
@@ -863,11 +900,11 @@ public:
 		struct M {
 			ge_p2 p; // the original point p
 			fe P;    // partial products of p.Z (segmented, P_i = Z_a*Z_{a+1}*...*Z_i for a <= i < b)
-			fe Q;    // inverses of p.Z (Q_i = Z_i^-1 for 0 <= i < N). Calculated in segments.
+			fe Q;    // inverses of p.Z (Q_i = Z_i^-1 for 0 <= i < batch_size). Calculated in segments.
 		};
 
-		// N*200 bytes for the scratchpad
-		std::vector<M> scratchpad(N);
+		// batch_size*200 bytes for the scratchpad
+		std::vector<M> scratchpad(batch_size);
 
 		std::atomic<uint32_t> counter = 0;
 		std::atomic<bool> cache_update = false;
@@ -875,21 +912,22 @@ public:
 		// Montgomery's trick to batch invert all Z values with a single fe_invert call (parallel version)
 		parallel_run([&](uint32_t thread_index, uint32_t total_thread_count) {
 			// Always have at least 1 element per thread
-			const uint32_t thread_count = static_cast<uint32_t>(std::min<size_t>(total_thread_count, N));
+			const uint32_t thread_count = static_cast<uint32_t>(std::min<size_t>(total_thread_count, batch_size));
 
 			if (thread_index >= thread_count) {
 				return;
 			}
 
-			// 0 <= thread_index < thread_count <= N at this point, so
-			// 0 <= a < b <= N (non-empty segments with valid bounds) is guaranteed
-			const size_t a = (N * thread_index) / thread_count;
-			const size_t b = (N * (thread_index + 1)) / thread_count;
+			// 0 <= thread_index < thread_count <= batch_size at this point, so
+			// 0 <= a < b <= batch_size (non-empty segments with valid bounds) is guaranteed
+			const size_t a = (batch_size * thread_index) / thread_count;
+			const size_t b = (batch_size * (thread_index + 1)) / thread_count;
 
 			uint32_t next_counter = thread_count;
 
 			for (size_t i = a; i < b; ++i) {
-				const carrot::coinbase_output_input& t = in[i];
+				const size_t j = batch[i];
+				const carrot::coinbase_output_input& t = in[j];
 
 				SpendKeyData& data = spend_key_data[i];
 
@@ -903,7 +941,7 @@ public:
 
 				if (!data.valid) {
 					result = false;
-					out[i].valid = false;
+					out[j].valid = false;
 
 					// A zero Z would zero the product chain and take every other output in the batch down with it,
 					// so invalid elements get a dummy point with Z = 1 and are skipped at the end.
@@ -912,7 +950,7 @@ public:
 					fe_1(point5.Z);
 				}
 				else {
-					out[i].valid = true;
+					out[j].valid = true;
 
 					// k^o_g and k^o_t
 					const hash sender_extension_g = carrot::gen_sender_extension_g(t.contextualized_sender_receiver_secret, t.amount, t.spend_public_key);
@@ -945,26 +983,26 @@ public:
 			// Last thread at the sync point is likely the first one to continue execution,
 			// so make it calculate each segment end's inverse using Montgomery's trick
 			if (last) {
-				// Work over the whole range 0...N-1, but inverse only each segment's end
+				// Work over the whole range 0...batch_size-1, but inverse only each segment's end
 				// One fe_invert, thread_count*3 - 3 fe_mul calls
 
 				// Calculate partial products of segment ends
-				size_t k = N * (0 + 1) / thread_count - 1;
+				size_t k = batch_size * (0 + 1) / thread_count - 1;
 				memcpy(scratchpad[k].Q, scratchpad[k].P, sizeof(fe));
 
 				for (uint32_t i = 1; i < thread_count; ++i) {
-					const size_t next_k = N * (i + 1) / thread_count - 1;
+					const size_t next_k = batch_size * (i + 1) / thread_count - 1;
 					fe_mul(scratchpad[next_k].Q, scratchpad[k].Q, scratchpad[next_k].P);
 					k = next_k;
 				}
 
-				// Invert the product of all segment ends. k == N - 1 here (because see how the loop above exits).
+				// Invert the product of all segment ends. k == batch_size - 1 here (because see how the loop above exits).
 				fe t;
 				fe_invert(t, scratchpad[k].Q);
 
 				// Walk back to calculate inverses of segment ends
 				for (uint32_t i = thread_count - 1; i > 0; --i) {
-					const size_t prev_k = N * i / thread_count - 1;
+					const size_t prev_k = batch_size * i / thread_count - 1;
 
 					fe_mul(scratchpad[k].Q, t, scratchpad[prev_k].Q);
 					fe_mul(t, t, scratchpad[k].P);
@@ -991,7 +1029,9 @@ public:
 
 			// Last step - replicate ge_tobytes() code for each segment, then hash the encoded K_o twice
 			for (size_t i = a; i < b; ++i) {
-				if (!out[i].valid) {
+				const size_t j = batch[i];
+
+				if (!out[j].valid) {
 					continue;
 				}
 
@@ -1001,12 +1041,12 @@ public:
 				fe_mul(x, scratchpad[i].p.X, r);
 				fe_mul(y, scratchpad[i].p.Y, r);
 
-				unsigned char* s = out[i].onetime_address.h;
+				unsigned char* s = out[j].onetime_address.h;
 				fe_tobytes(s, y);
 				s[31] ^= fe_isnegative(x) << 7;
 
-				out[i].vt = carrot::gen_view_tag(in[i].sender_receiver_secret, height, out[i].onetime_address);
-				out[i].anchor_enc = carrot::gen_encrypted_janus_anchor(in[i].contextualized_sender_receiver_secret, in[i].anchor, out[i].onetime_address);
+				out[j].vt = carrot::gen_view_tag(in[j].sender_receiver_secret, height, out[j].onetime_address);
+				out[j].anchor_enc = carrot::gen_encrypted_janus_anchor(in[j].contextualized_sender_receiver_secret, in[j].anchor, out[j].onetime_address);
 			}
 		}, true);
 
@@ -1015,16 +1055,33 @@ public:
 
 			WriteLock lock(from_bytes_lock);
 
-			for (size_t i = 0; i < N; ++i) {
+			for (size_t i = 0; i < batch_size; ++i) {
 				const SpendKeyData& data = spend_key_data[i];
 
 				if (data.cache_update) {
-					from_bytes->emplace(in[i].spend_public_key, FromBytesEntry(data.valid, data.point, t, nullptr));
+					from_bytes->emplace(in[batch[i]].spend_public_key, FromBytesEntry(data.valid, data.point, t, nullptr));
 				}
 			}
 
 			limit_size(from_bytes, 20'000, 10'000);
 		}
+
+		// Keep scalar verification cache-independent in debug builds
+#if !defined(P2POOL_DEBUGGING) || defined(P2POOL_UNIT_TESTS)
+		{
+			const uint32_t t = static_cast<uint32_t>(seconds_since_epoch());
+
+			WriteLock lock(coinbase_outputs_lock);
+
+			for (const size_t i : batch) {
+				if (out[i].valid) {
+					coinbase_outputs->emplace(coinbase_output_index(height, in[i]), CoinbaseOutputEntry{ out[i].anchor_enc, out[i].onetime_address, out[i].vt, t });
+				}
+			}
+
+			limit_size(coinbase_outputs, 40'000, 20'000);
+		}
+#endif
 
 #ifdef P2POOL_DEBUGGING
 		for (size_t i = 0; i < N; ++i) {
@@ -1077,6 +1134,11 @@ public:
 	size_t get_last_sender_receiver_secret_batch_size() const
 	{
 		return m_lastSenderReceiverSecretBatchSize.load();
+	}
+
+	size_t get_last_coinbase_output_batch_size() const
+	{
+		return m_lastCoinbaseOutputBatchSize.load();
 	}
 
 	uint32_t get_from_bytes_cache_state(const hash& public_key)
@@ -1856,6 +1918,10 @@ public:
 				clean_old(sender_receiver_secrets, t);
 			}
 			{
+				WriteLock lock(coinbase_outputs_lock);
+				clean_old(coinbase_outputs, t);
+			}
+			{
 				WriteLock lock(public_keys_lock);
 				clean_old(public_keys, t);
 			}
@@ -1885,6 +1951,12 @@ public:
 			delete sender_receiver_secrets;
 			sender_receiver_secrets = new SenderReceiverSecretsMap();
 			sender_receiver_secrets->reserve(5000);
+		}
+		{
+			WriteLock lock(coinbase_outputs_lock);
+			delete coinbase_outputs;
+			coinbase_outputs = new CoinbaseOutputsMap();
+			coinbase_outputs->reserve(5000);
 		}
 		{
 			WriteLock lock(public_keys_lock);
@@ -1970,6 +2042,33 @@ private:
 		uint32_t m_timestamp = 0;
 	};
 
+	struct CoinbaseOutputEntry
+	{
+		carrot::janus_anchor m_anchorEnc;
+		hash m_onetimeAddress;
+		carrot::view_tag m_viewTag;
+		// cppcheck-suppress unusedStructMember
+		uint32_t m_timestamp;
+	};
+
+	// Include all inputs: batch_coinbase_outputs also accepts independently supplied height,
+	// s_sr and anchor, even though normal construction binds them through s^ctx_sr.
+	using CoinbaseOutputIndex = std::array<uint8_t, HASH_SIZE * 3 + CARROT_JANUS_ANCHOR_BYTES + sizeof(uint64_t) * 2>;
+
+	static FORCEINLINE CoinbaseOutputIndex coinbase_output_index(uint64_t height, const carrot::coinbase_output_input& in)
+	{
+		CoinbaseOutputIndex index;
+
+		memcpy(index.data(), in.contextualized_sender_receiver_secret.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE, in.spend_public_key.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE * 2, in.sender_receiver_secret.h, HASH_SIZE);
+		memcpy(index.data() + HASH_SIZE * 3, in.anchor.data, CARROT_JANUS_ANCHOR_BYTES);
+		memcpy(index.data() + HASH_SIZE * 3 + CARROT_JANUS_ANCHOR_BYTES, &in.amount, sizeof(in.amount));
+		memcpy(index.data() + HASH_SIZE * 3 + CARROT_JANUS_ANCHOR_BYTES + sizeof(in.amount), &height, sizeof(height));
+
+		return index;
+	}
+
 	struct PublicKeyEntry
 	{
 		indexed_hash m_key;
@@ -2020,6 +2119,7 @@ private:
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, DerivationEntry> DerivationsMap;
 	typedef unordered_map<hash, CarrotPublicKeyEntry> CarrotPublicKeysMap;
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, SenderReceiverSecretEntry> SenderReceiverSecretsMap;
+	typedef unordered_map<CoinbaseOutputIndex, CoinbaseOutputEntry> CoinbaseOutputsMap;
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2 + sizeof(size_t)>, PublicKeyEntry> PublicKeysMap;
 	typedef unordered_map<std::array<uint8_t, HASH_SIZE * 2>, TxKeyEntry> TxKeysMap;
 	typedef unordered_map<hash, FromBytesEntry> FromBytesMap;
@@ -2033,6 +2133,9 @@ private:
 	uv_rwlock_t sender_receiver_secrets_lock;
 	SenderReceiverSecretsMap* sender_receiver_secrets;
 
+	uv_rwlock_t coinbase_outputs_lock;
+	CoinbaseOutputsMap* coinbase_outputs;
+
 	uv_rwlock_t public_keys_lock;
 	PublicKeysMap* public_keys;
 
@@ -2045,6 +2148,7 @@ private:
 #ifdef P2POOL_UNIT_TESTS
 	std::atomic<size_t> m_lastCarrotPublicKeyBatchSize{ 0 };
 	std::atomic<size_t> m_lastSenderReceiverSecretBatchSize{ 0 };
+	std::atomic<size_t> m_lastCoinbaseOutputBatchSize{ 0 };
 #endif
 };
 
@@ -2078,6 +2182,11 @@ size_t get_last_carrot_public_key_batch_size()
 size_t get_last_sender_receiver_secret_batch_size()
 {
 	return cache->get_last_sender_receiver_secret_batch_size();
+}
+
+size_t get_last_coinbase_output_batch_size()
+{
+	return cache->get_last_coinbase_output_batch_size();
 }
 
 uint32_t get_from_bytes_cache_state(const hash& public_key)

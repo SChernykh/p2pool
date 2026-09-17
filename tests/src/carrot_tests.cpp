@@ -21,12 +21,15 @@
 #include "wallet.h"
 #include "keccak.h"
 #include "thread_pool.h"
+#include "pool_block.h"
+#include "quantize_rewards.h"
 #include "blake2/blake2.h"
 
 #include "gtest/gtest.h"
 #include <random>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 namespace p2pool {
 
@@ -1252,6 +1255,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, {}, out));
 	ASSERT_TRUE(out.empty());
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
 	// The same enote as in carrot.coinbase_enote, one output at a time
 	Wallet w(nullptr);
@@ -1277,6 +1281,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
 	ASSERT_EQ(out.size(), 1U);
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 	ASSERT_TRUE(out[0].valid);
 	ASSERT_EQ(out[0].onetime_address, hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"));
 
@@ -1293,6 +1298,28 @@ TEST(carrot, batch_coinbase_outputs)
 	}
 
 	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
+
+	// All amount-dependent fields must survive a cache hit.
+	ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
+
+	// Each independently supplied secret/anchor is part of the cache key.
+	for (size_t field = 0; field < 3; ++field) {
+		coinbase_output_input changed = known;
+
+		if (field == 0) changed.sender_receiver_secret.h[0] ^= 1;
+		if (field == 1) changed.contextualized_sender_receiver_secret.h[0] ^= 1;
+		if (field == 2) changed.anchor.data[0] ^= 1;
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, { known, changed }, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
+		EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
+		EXPECT_TRUE(equal_outputs(out[1], reference_coinbase_output(height, changed)));
+		ASSERT_TRUE(batch_coinbase_outputs(height, { changed, known }, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+		EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, changed)));
+	}
 
 	// Torsioned and identity spend keys are accepted here for the same reason gen_onetime_address accepts
 	// them: K_o has torsion if and only if K_s does, and rejecting that is Wallet's job
@@ -1391,6 +1418,8 @@ TEST(carrot, batch_coinbase_outputs)
 		ASSERT_TRUE(reference[i].valid) << "input index " << i;
 	}
 
+	clear_crypto_cache();
+
 	size_t range_begin = 0;
 
 	for (size_t n = 1; n <= 33; ++n) {
@@ -1402,6 +1431,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 		ASSERT_TRUE(batch_coinbase_outputs(height, range, out)) << "batch size " << n;
 		ASSERT_EQ(out.size(), n);
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), n);
 
 		for (size_t i = 0; i < n; ++i) {
 			EXPECT_TRUE(equal_outputs(out[i], reference[range_begin + i])) << "batch size " << n << ", element " << i;
@@ -1413,6 +1443,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
 	ASSERT_EQ(out.size(), inputs.size());
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		EXPECT_TRUE(equal_outputs(out[i], reference[i])) << "element " << i;
@@ -1431,6 +1462,22 @@ TEST(carrot, batch_coinbase_outputs)
 		EXPECT_EQ(std::adjacent_find(onetime_addresses.begin(), onetime_addresses.end()), onetime_addresses.end());
 	}
 
+	// Misses scattered among hits must map back to the original output positions.
+	{
+		auto changed = inputs;
+
+		for (const size_t i : { size_t(0), changed.size() / 2, changed.size() - 1 }) {
+			changed[i].amount += 1234567;
+		}
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, changed, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 3U);
+
+		for (size_t i = 0; i < changed.size(); ++i) {
+			EXPECT_TRUE(equal_outputs(out[i], reference_coinbase_output(height, changed[i]))) << i;
+		}
+	}
+
 	// A single failed element in the middle of a large batch doesn't disturb the rest of it
 	{
 		std::vector<coinbase_output_input> mixed = inputs;
@@ -1438,6 +1485,7 @@ TEST(carrot, batch_coinbase_outputs)
 		mixed[mixed_index].spend_public_key = invalid_public_key;
 
 		ASSERT_FALSE(batch_coinbase_outputs(height, mixed, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 		ASSERT_EQ(out.size(), mixed.size());
 
 		for (size_t i = 0; i < mixed.size(); ++i) {
@@ -1449,6 +1497,37 @@ TEST(carrot, batch_coinbase_outputs)
 				EXPECT_TRUE(equal_outputs(out[i], reference[i])) << "element " << i;
 			}
 		}
+	}
+
+	// Both cleanup modes discard the new cache too.
+	for (uint64_t timestamp : { seconds_since_epoch() + 1, uint64_t(0) }) {
+		clear_crypto_cache(timestamp);
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
+		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+	}
+
+	// Construction, verification and cache cleanup can run concurrently.
+	std::thread workers[2];
+
+	for (auto& worker : workers) {
+		worker = std::thread([&]() {
+			for (size_t pass = 0; pass < 3; ++pass) {
+				std::vector<coinbase_tx_output> outputs;
+				EXPECT_TRUE(batch_coinbase_outputs(height, inputs, outputs));
+				for (size_t i = 0; i < inputs.size(); ++i) {
+					EXPECT_TRUE(equal_outputs(outputs[i], reference[i])) << i;
+				}
+			}
+		});
+	}
+
+	clear_crypto_cache();
+
+	for (auto& worker : workers) {
+		worker.join();
 	}
 }
 
@@ -1477,6 +1556,93 @@ static std::vector<Wallet> make_test_wallets(size_t n)
 	}
 
 	return wallets;
+}
+
+TEST(carrot, prewarm_coinbase_outputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	const auto wallets = make_test_wallets(3);
+	const hash txkey_sec = keccak("Carrot pre-warmup");
+
+	constexpr uint64_t height = 3812345;
+	constexpr uint64_t T = PAYOUT_GRID_STEP;
+
+	PPLNSWindow window;
+
+	// Exact payouts: 10.2 T, 2.7 T, 0.1 T. The last wallet normally gets no output.
+	window.m_shares.emplace_back(difficulty_type(102), &wallets[0]);
+	window.m_shares.emplace_back(difficulty_type(27), &wallets[1]);
+	window.m_shares.emplace_back(difficulty_type(1), &wallets[2]);
+
+	for (bool truncated : { false, true }) {
+		clear_crypto_cache();
+
+		window.m_weightTruncated = truncated;
+
+		prewarm_coinbase_outputs(txkey_sec, height, window, 13 * T);
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), truncated ? 8U : 6U);
+
+		prewarm_coinbase_outputs(txkey_sec, height, window, 13 * T);
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+
+		std::vector<coinbase_output_input> inputs;
+
+		for (size_t i = 0; i < wallets.size(); ++i) {
+			coinbase_output_input input{};
+
+			input.spend_public_key = wallets[i].spend_public_key();
+			input.anchor = gen_janus_anchor(txkey_sec, 0, wallets[i]);
+
+			hash priv, pub;
+
+			ASSERT_TRUE(gen_eph_privkey(input.anchor, height, wallets[i], priv));
+			ASSERT_TRUE(gen_eph_pubkey(priv, pub));
+			ASSERT_TRUE(gen_sender_receiver_secret(priv, wallets[i].view_public_key(), input.sender_receiver_secret));
+
+			input.contextualized_sender_receiver_secret = gen_contextualized_sender_receiver_secret(input.sender_receiver_secret, pub, height);
+
+			const uint64_t lo[] = { truncated ? 9U : 10U, truncated ? 1U : 2U, 1U };
+			const uint64_t hi[] = { 12, 3, 1 };
+
+			for (uint64_t k = lo[i]; k <= hi[i]; ++k) {
+				input.amount = k * T;
+				inputs.emplace_back(input);
+			}
+		}
+
+		std::vector<coinbase_tx_output> out;
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+
+		for (size_t i = 0; i < inputs.size(); ++i) {
+			EXPECT_TRUE(equal_outputs(out[i], reference_coinbase_output(height, inputs[i]))) << i;
+		}
+
+		// The range is bounded on both sides; off-grid amounts remain on demand.
+		inputs.resize(3, inputs[0]);
+		inputs[0].amount = (truncated ? 8 : 9) * T;
+		inputs[1] = inputs[0];
+		inputs[1].amount = 13 * T;
+		inputs[2] = inputs[0];
+		inputs[2].amount = 10 * T + 1;
+
+		ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 3U);
+	}
+
+	// Same-height reorgs change txkey_sec; a new height changes the input context.
+	for (const auto& epoch : { std::make_pair(keccak("alternate tx key"), height), std::make_pair(txkey_sec, height + 1) }) {
+		prewarm_coinbase_outputs(epoch.first, epoch.second, window, 13 * T);
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 8U);
+	}
 }
 
 TEST(carrot, batch_eph_privkeys)

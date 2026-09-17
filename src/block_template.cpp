@@ -921,6 +921,52 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	m_mempoolTxsOrder2.clear();
 }
 
+bool BlockTemplate::prewarm_carrot_outputs(const hash& prev_id) const
+{
+	struct Work {
+		std::vector<Wallet> wallets;
+		PPLNSWindow window;
+		hash txkey_sec;
+		uint64_t height;
+		uint64_t reward;
+	};
+
+	Work* work;
+	{
+		ReadLock lock(m_lock);
+
+		if ((m_prevId != prev_id) || (m_poolBlockTemplate->m_majorVersion < HARDFORK_VERSION_CARROT) || m_payoutWindow.empty()) {
+			return false;
+		}
+
+		work = new Work();
+
+		work->wallets.reserve(m_payoutWindow.size());
+		work->window = m_payoutWindow;
+		work->txkey_sec = m_poolBlockTemplate->m_txkeySec;
+		work->height = m_height;
+		work->reward = m_finalReward;
+
+		// Own the wallet data so pruning or a new template cannot invalidate it.
+		for (MinerShare& s : work->window.m_shares) {
+			work->wallets.emplace_back(*s.m_wallet);
+			s.m_wallet = &work->wallets.back();
+		}
+	}
+
+	// Must start it here for shutdown sequence and for unit tests to be able to track it without a race
+	BACKGROUND_JOB_START(carrot_prewarm);
+
+	queue_work([work](){
+		carrot::prewarm_coinbase_outputs(work->txkey_sec, work->height, work->window, work->reward);
+		delete work;
+
+		BACKGROUND_JOB_STOP(carrot_prewarm);
+	});
+
+	return true;
+}
+
 #if TEST_MEMPOOL_PICKING_ALGORITHM
 void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_reward, uint64_t miner_tx_weight, uint64_t& best_reward, uint64_t& final_fees, uint64_t& final_weight)
 {
