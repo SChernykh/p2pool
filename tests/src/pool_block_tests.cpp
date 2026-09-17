@@ -298,8 +298,8 @@ TEST(pool_block, deserialize_carrot)
 	constexpr uint64_t payouts[4][4] = {
 		{ 600123456789ULL, 0, 0, 0 },
 		{ 600123456789ULL, 0, 0, 0 },
-		{ 300000000000ULL, 300123456789ULL, 0, 0 },
-		{ 199923456789ULL, 200400000000ULL, 199800000000ULL, 0 },
+		{ 300123456789ULL, 300000000000ULL, 0, 0 },
+		{ 200400000000ULL, 199800000000ULL, 199923456789ULL, 0 },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -314,10 +314,10 @@ TEST(pool_block, deserialize_carrot)
 		hash coinbase_hash;
 		const char* hashing_blob;
 	} expected[] = {
-		{ 4396, 5085, 0, 0, H("93efc370237e5fb59c843de5f392fa81179751564175e5bd13e42a677edef309"), H("1010e11212434d2dd5dfb6c583fde95eccdba044abdde54b836a9afd0ef04fd1"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8978563412763dab04b71117f54717cc5ae4770044882c2808900f080fccff667ec2c124398301" },
-		{ 4396, 5085, 1058, 1109, H("1de7dca04f0434d8b5f1631a59bf787edce8ecc91cd54f87f7ae74776584706a"), H("75218b6e3a85727928640026449dc801dc04951660ab39cae529104dd35a17d0"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8979563412ba8f6882eab600ecafb89aab850d2960bb42ed1ab09c673b59056eea6e65a3f98301" },
-		{ 4487, 5085, 1058, 1200, H("a984ac0c6325c96c9c8841ade8fd1716f713f48d8f44245f3cdf1b13f7c91e36"), H("031cfe67e48409184f6792e93da69ec28120dee7635c04f0d6cafa3cf78a820e"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634120a4d66e67b343da964c98daa0ca856680d9cb4a9454d81a352b60f6b604329ad8301" },
-		{ 4578, 5087, 1092, 1323, H("6c5cb1d56d7b1a88dbd609d99d5c191db8a9280867088833d92c4ab0ee8d340a"), H("c558947a861d7eefbd37ee362492ccaed312ac48b6d8c90b60d43692e33d59ee"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b56341220bea6662fd3cf08a662f990d276b8cce620e436559dd77b45542b97b43f66be8301" },
+		{ 4396, 5089, 0, 0, H("c73a23a4f25e33fca0edd64a4ad306e9a58a94ef67eabf5f19f1f867a42ccf30"), H("7f0f04eaa4a362aa79ab43c3ee216829dbe5f49ffb25ca2a1068da72666054b5"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89785634124827be2837c61f7e86dca59bcef706767c3c689cf151e9a1439ae2129dce3b5d8301" },
+		{ 4396, 5089, 1062, 1113, H("59d56d2ca7480edcc9f88dc775cbe73cea33222f3d03b7c2e8600a9b69ae3b8f"), H("890f10a108fe3032195a94fbfdef0ee491479568cd49584efa72016c670002bb"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89795634126a4c0d6a4e8e5f733a536b139618200b463774131364f7b686e35410712d50c08301" },
+		{ 4487, 5089, 1062, 1204, H("93cec08c1d6cb9c25cc16a4906527561eb297f2059f6dc9205e8ae2dd8ecc81e"), H("8d5809d49e6f5a77c4549b83dc75a4a4ff88be0015d4b9f5c81276657ddd048e"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634128fc54d89ba4c15b674a3f74821fa8b3a7e6623408c44c94629add841618ab7c58301" },
+		{ 4578, 5091, 1096, 1327, H("ad0229ed71b94bae4a540686e501c79f774f7e743bbbab6da65ca86c9b9fba86"), H("5469fe02ec0c996cc9d616172b71dc3d52450ff202ad17e75b92684f4f7aea49"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b5634129b9d4bfb0f587902c7586199b2ec730f3e6214718709cd7683c1275f848ed33e8301" },
 	};
 
 	PoolBlock decoded;
@@ -395,7 +395,8 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(b.m_fcmp_pp_tree_root, H("61b736ce93b62a3d3778ab204da85d3b4cdc07250f5da7e3df2629928134d526"));
 		ASSERT_EQ(b.m_mergeMiningExtra.size(), 4U);
 		ASSERT_FALSE(b.m_merkleProof.empty());
-		ASSERT_EQ(b.m_sidechainExtraBuf[3], 0x99aabbccU + i);
+		ASSERT_EQ(b.m_sidechainExtraBuf[3], b.m_extraNonce);
+		ASSERT_EQ(b.m_parentNonce, i ? (0x12345678U + i - 1) : 0U);
 
 		uint32_t chains, mm_nonce;
 		b.decode_merkle_tree_data(chains, mm_nonce);
@@ -560,17 +561,19 @@ TEST(pool_block, deserialize_carrot)
 
 			auto changed_nonces = pruned;
 			changed_nonces[layout.header_size - NONCE_SIZE] ^= 0x80;
-			changed_nonces[(nonce_tag - begin) + 2] ^= 0x40;
 
 			ASSERT_EQ(decoded.deserialize(changed_nonces.data(), changed_nonces.size(), sidechain, false, true), 0);
 			ASSERT_EQ(decoded.m_sidechainId, b.m_sidechainId);
 			ASSERT_EQ(decoded.m_nonce, b.m_nonce ^ 0x80);
-			ASSERT_EQ(decoded.m_extraNonce, b.m_extraNonce ^ 0x40);
+			ASSERT_EQ(decoded.m_extraNonce, b.m_extraNonce);
 
 			const uint32_t nonce = b.m_nonce ^ 0x80;
-			const uint32_t extra_nonce = b.m_extraNonce ^ 0x40;
+			const uint32_t extra_nonce = b.m_extraNonce;
 
 			ASSERT_EQ(decoded.serialize_mainchain_data(), b.serialize_mainchain_data(nullptr, &nonce, &extra_nonce));
+
+			changed_nonces[(nonce_tag - begin) + 2] ^= 0x40;
+			EXPECT_NE(decoded.deserialize(changed_nonces.data(), changed_nonces.size(), sidechain, false, true), 0);
 
 			for (size_t offset : {size_t(id - begin), pruned.size() - 1, pruned.size() - side.size() - HASH_SIZE, pruned.size() - side.size() - HASH_SIZE - 2}) {
 				auto bad = pruned;
@@ -680,6 +683,296 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(decoded.m_sidechainId, b->m_sidechainId);
 		ASSERT_EQ(decoded.serialize_mainchain_data(), b->serialize_mainchain_data());
 		ASSERT_EQ(decoded.serialize_sidechain_data(), b->serialize_sidechain_data());
+	}
+}
+
+struct ParentNonceTestHasher : RandomX_Hasher_Base
+{
+	uint32_t calls = 0;
+	bool available = true;
+	bool valid = true;
+	uint64_t height = 0;
+	hash seed;
+	std::vector<uint8_t> blob;
+
+	bool calculate(const void* data, size_t size, uint64_t h, const hash& s, hash& result, bool, size_t lane) override
+	{
+		++calls;
+		height = h;
+		seed = s;
+		const auto* p = static_cast<const uint8_t*>(data);
+		blob.assign(p, p + size);
+		EXPECT_EQ(lane, size_t(VM_LANE_P2P));
+		if (!available) return false;
+		keccak(p, static_cast<int>(size), result.h);
+		// Deterministic stand-in for mined solutions, comfortably below the test difficulty target.
+		memset(result.h + HASH_SIZE - 4, 0, 4);
+		if (!valid) memset(result.h, 0xFF, HASH_SIZE);
+		return true;
+	}
+};
+
+TEST(pool_block, duplicate_pow_solutions)
+{
+	thread_pool_init();
+	init_crypto_cache();
+
+	auto cleanup = ScopeGuard{[]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+#ifdef WITH_INDEXED_HASHES
+		indexed_hash::cleanup_storage();
+#endif
+	}};
+
+	SideChain sidechain(nullptr, NetworkType::Testnet, "default");
+	sidechain.m_testMainChainDiff = difficulty_type(1000000000000ULL);
+	ParentNonceTestHasher hasher;
+	sidechain.m_testHasher = &hasher;
+	BlockTemplate tpl(&sidechain, nullptr);
+	Mempool mempool;
+	Params params;
+	params.m_miningWallet = Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH");
+	MinerData data{};
+	data.major_version = HARDFORK_VERSION_CARROT;
+	data.height = 3012000;
+	data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+	data.seed_hash = keccak("duplicate PoW seed");
+	data.difficulty = sidechain.m_testMainChainDiff;
+	data.median_weight = 300000;
+	data.already_generated_coins = 18204981557254756780ULL;
+	data.median_timestamp = 1780000000;
+	tpl.update(data, mempool, params);
+
+	const PoolBlock& block = *tpl.pool_block_template();
+	const auto side = block.serialize_sidechain_data();
+	PoolBlock variants[2];
+	for (uint32_t i = 0; i < 2; ++i) {
+		const uint32_t nonce = 42 + i;
+		auto wire = block.serialize_mainchain_data(nullptr, &nonce);
+		wire.insert(wire.end(), side.begin(), side.end());
+		ASSERT_EQ(variants[i].deserialize(wire.data(), wire.size(), sidechain, false, false), 0);
+		variants[i].m_seed = data.seed_hash;
+		ASSERT_TRUE(variants[i].get_pow_hash(&hasher, data.height, data.seed_hash, variants[i].m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+		ASSERT_TRUE(variants[i].m_difficulty.check_pow(variants[i].m_powHash));
+		ASSERT_FALSE(sidechain.incoming_block_seen(variants[i]));
+	}
+	ASSERT_EQ(variants[0].m_sidechainId, variants[1].m_sidechainId);
+	ASSERT_NE(variants[0].m_powHash, variants[1].m_powHash);
+
+	// Reproduce both external workers passing the initial lookup before either inserts its solution.
+	std::atomic<uint32_t> ready{0};
+	bool initially_missing[2] = {};
+	bool accepted[2] = {};
+	std::thread workers[2];
+	for (uint32_t i = 0; i < 2; ++i) {
+		workers[i] = std::thread([&, i]() {
+			initially_missing[i] = !sidechain.find_block(variants[i].m_sidechainId);
+			ready.fetch_add(1);
+			while (ready.load() != 2) std::this_thread::yield();
+			accepted[i] = sidechain.add_block(variants[i], true);
+		});
+	}
+	for (auto& worker : workers) worker.join();
+	ASSERT_TRUE(initially_missing[0]);
+	ASSERT_TRUE(initially_missing[1]);
+	ASSERT_TRUE(accepted[0]);
+	ASSERT_TRUE(accepted[1]);
+	ASSERT_EQ(sidechain.blocksById().size(), 1U);
+
+	const PoolBlock* stored = sidechain.chainTip();
+	ASSERT_NE(stored, nullptr);
+	ASSERT_TRUE(stored->m_verified);
+	ASSERT_FALSE(stored->m_invalid);
+	ASSERT_GE(stored->m_nonce, 42U);
+	ASSERT_LE(stored->m_nonce, 43U);
+	const PoolBlock& winner = variants[stored->m_nonce - 42];
+	EXPECT_EQ(stored->m_powHash, winner.m_powHash);
+	EXPECT_EQ(stored->m_cumulativeDifficulty, winner.m_cumulativeDifficulty);
+
+	// A later external duplicate succeeds without replacing the first stored solution.
+	std::vector<hash> missing_blocks;
+	ASSERT_TRUE(sidechain.add_external_block(variants[43 - stored->m_nonce], missing_blocks));
+	EXPECT_TRUE(missing_blocks.empty());
+	EXPECT_EQ(sidechain.chainTip(), stored);
+
+	// Local submissions from both current and old templates must still reject another nonce for this ID.
+	for (uint32_t nonce : { 44U, 45U }) {
+		std::vector<uint8_t> blob;
+		hash coinbase_hash, pow_hash;
+		ASSERT_TRUE(winner.get_hashing_blob(blob, coinbase_hash, &nonce));
+		ASSERT_TRUE(hasher.calculate(blob.data(), blob.size(), data.height, data.seed_hash, pow_hash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+		ASSERT_TRUE(winner.m_difficulty.check_pow(pow_hash));
+		ASSERT_FALSE(tpl.submit_sidechain_block(1, nonce, 0, pow_hash));
+		if (nonce == 44) tpl.update(data, mempool, params);
+	}
+	EXPECT_EQ(sidechain.blocksById().size(), 1U);
+	EXPECT_EQ(tpl.pool_block_template()->m_parentNonce, winner.m_nonce);
+	EXPECT_EQ(tpl.pool_block_template()->m_parentPowHash, winner.m_powHash);
+}
+
+TEST(pool_block, carrot_parent_nonce)
+{
+	thread_pool_init();
+	init_crypto_cache();
+
+	auto cleanup = ScopeGuard{[]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+#ifdef WITH_INDEXED_HASHES
+		indexed_hash::cleanup_storage();
+#endif
+	}};
+
+	const Wallet wallets[] = {
+		Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH"),
+		Wallet("43VbH7CQCJqhH1d327TBenCs9hFN3zvcgX5YZdGyJfEE5rabasAtKhyPsKmbYSU9AmMReACZrz9j5U2Ba6WXWoQpVi38AJn"),
+		Wallet("46r3PD45TYH9jVf8sEejW9JdK1EgNe6BeYLdGyJTU1MRctoevAHXpzSjBMJhdkLirGXwiWdZejSRZ8MZP72artSD17LprKY"),
+	};
+
+	const struct {
+		const char* name;
+		bool legacy, change_nonce, change_extra, valid, available, late_parent;
+	} cases[] = {
+		{ "cached", false, false, false, true, true, false },
+		{ "other nonce", false, true, false, true, true, false },
+		{ "insufficient parent PoW", false, true, false, false, true, false },
+		{ "hasher unavailable", false, true, false, true, false, false },
+		{ "legacy parent", true, false, false, true, true, false },
+		{ "legacy extra nonce", true, false, true, true, true, false },
+		{ "parent arrives later", false, true, false, true, true, true },
+	};
+
+	for (const auto& test : cases) {
+		SCOPED_TRACE(test.name);
+		SideChain source(nullptr, NetworkType::Testnet, "default");
+		SideChain target(nullptr, NetworkType::Testnet, "default");
+		source.m_testMainChainDiff = target.m_testMainChainDiff = difficulty_type(1000000000000ULL);
+		ParentNonceTestHasher hasher;
+		target.m_testHasher = &hasher;
+		BlockTemplate tpl(&source, nullptr);
+		tpl.rng().seed(123);
+		Mempool mempool;
+		Params params;
+		MinerData data{};
+		data.major_version = test.legacy ? (HARDFORK_VERSION_CARROT - 1) : HARDFORK_VERSION_CARROT;
+		data.height = test.legacy ? 2762973 : 3012000;
+		data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+		data.seed_hash = keccak("parent RandomX seed");
+		data.difficulty = source.m_testMainChainDiff;
+		data.median_weight = 300000;
+		data.already_generated_coins = 18204981557254756780ULL;
+		data.median_timestamp = 1780000000;
+
+		PoolBlock delayed_parent;
+		for (uint32_t i = 0; i < 3; ++i) {
+			params.m_miningWallet = wallets[i];
+			tpl.update(data, mempool, params);
+			PoolBlock mined(*tpl.pool_block_template());
+			mined.m_nonce = 42 + i;
+			ASSERT_TRUE(mined.get_pow_hash(&hasher, data.height, data.seed_hash, mined.m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+			ASSERT_TRUE(mined.m_difficulty.check_pow(mined.m_powHash));
+			ASSERT_TRUE(tpl.submit_sidechain_block(i + 1, mined.m_nonce, 0, mined.m_powHash));
+			ASSERT_EQ(source.chainTip()->m_seed, data.seed_hash);
+
+			const uint32_t nonce = mined.m_nonce + ((i == 2 && test.change_nonce) ? 1 : 0);
+			const uint32_t extra_nonce = (i == 2 && test.change_extra) ? 1 : 0;
+			auto wire = mined.serialize_mainchain_data(nullptr, &nonce, &extra_nonce);
+			const auto side = mined.serialize_sidechain_data();
+			wire.insert(wire.end(), side.begin(), side.end());
+			PoolBlock received;
+			ASSERT_EQ(received.deserialize(wire.data(), wire.size(), target, false, false), 0);
+			ASSERT_EQ(received.m_sidechainId, mined.m_sidechainId);
+			received.m_seed = data.seed_hash;
+			ASSERT_TRUE(received.get_pow_hash(&hasher, data.height, data.seed_hash, received.m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+			if ((i == 2) && test.late_parent) {
+				delayed_parent = received;
+			}
+			else {
+				ASSERT_TRUE(target.add_block(received));
+			}
+			ASSERT_TRUE(target.chainTip()->m_verified);
+			ASSERT_FALSE(target.chainTip()->m_invalid);
+			data.median_timestamp += source.block_time();
+		}
+
+		const PoolBlock* parent = source.chainTip();
+		const PoolBlock* stored_parent = test.late_parent ? &delayed_parent : target.chainTip();
+		const auto parent_main = stored_parent->serialize_mainchain_data();
+		const auto parent_blob = stored_parent->m_hashingBlob;
+		const hash parent_coinbase = stored_parent->m_coinbase_tx_hash;
+		const hash parent_pow = stored_parent->m_powHash;
+
+		data.major_version = HARDFORK_VERSION_CARROT;
+		data.height = 3012001;
+		data.prev_id.h[0] ^= 1;
+		data.seed_hash = keccak("child RandomX seed");
+		tpl.update(data, mempool, params);
+		const PoolBlock& child = *tpl.pool_block_template();
+		ASSERT_EQ(child.m_parentNonce, parent->m_nonce);
+		ASSERT_EQ(child.m_parentPowHash, parent->m_powHash);
+		ASSERT_EQ(child.m_carrotOutputs.size(), 3U);
+		const P2PServer::Broadcast broadcast(child, parent);
+
+		PoolBlock decoded;
+		const uint32_t calls = hasher.calls;
+		const bool different = test.change_nonce || test.change_extra;
+		const int pruned_result = decoded.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), target, false, true);
+		if (test.late_parent) {
+			ASSERT_NE(pruned_result, 0);
+		}
+		else {
+			ASSERT_EQ(pruned_result, different ? static_cast<int>(PoolBlock::DeserializeStatus::NEEDS_PARENT_POW) : 0);
+		}
+		ASSERT_EQ(hasher.calls, calls); // Deserialization must never calculate RandomX.
+
+		// The serialized parent nonce is committed by the child's sidechain ID.
+		auto changed = broadcast.blob;
+		changed[child.serialize_mainchain_data().size() + HASH_SIZE * 4] ^= 1;
+		ASSERT_NE(decoded.deserialize(changed.data(), changed.size(), target, false, false), 0);
+		ASSERT_EQ(decoded.deserialize(broadcast.blob.data(), broadcast.blob.size(), target, false, false), 0);
+		decoded.m_seed = data.seed_hash;
+		ASSERT_TRUE(decoded.get_pow_hash(&hasher, data.height, data.seed_hash, decoded.m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+		ASSERT_TRUE(decoded.m_difficulty.check_pow(decoded.m_powHash));
+
+		hasher.calls = 0;
+		hasher.valid = test.valid;
+		hasher.available = test.available;
+		if (!test.valid) decoded.m_outputsComputed = true; // Must not bypass the parent proof check.
+		ASSERT_TRUE(target.add_block(decoded));
+		const PoolBlock* checked = target.find_block(child.m_sidechainId);
+		ASSERT_NE(checked, nullptr);
+		if (test.late_parent) {
+			ASSERT_FALSE(checked->m_verified);
+			ASSERT_EQ(hasher.calls, 0U);
+			ASSERT_TRUE(target.add_block(delayed_parent));
+			stored_parent = target.find_block(parent->m_sidechainId);
+			ASSERT_NE(stored_parent, nullptr);
+		}
+		EXPECT_EQ(checked->m_verified, test.available);
+		EXPECT_EQ(checked->m_invalid, !test.valid);
+		EXPECT_EQ(hasher.calls, different ? 1U : 0U);
+		if (different) {
+			EXPECT_EQ(hasher.height, parent->m_txinGenHeight);
+			EXPECT_EQ(hasher.seed, parent->m_seed);
+			std::vector<uint8_t> expected_blob;
+			hash coinbase_hash;
+			ASSERT_TRUE(parent->get_hashing_blob(expected_blob, coinbase_hash));
+			EXPECT_EQ(hasher.blob, expected_blob);
+		}
+		EXPECT_EQ(stored_parent->serialize_mainchain_data(), parent_main);
+		EXPECT_EQ(stored_parent->m_hashingBlob, parent_blob);
+		EXPECT_EQ(stored_parent->m_coinbase_tx_hash, parent_coinbase);
+		EXPECT_EQ(stored_parent->m_powHash, parent_pow);
+
+		if (test.valid && test.available) {
+			ASSERT_TRUE(checked->m_parentPowHashValid);
+			EXPECT_EQ(checked->m_parentPowHash, parent->m_powHash);
+			EXPECT_EQ(checked->serialize_mainchain_data(), child.serialize_mainchain_data());
+			// A known child can subsequently be reconstructed even when the local parent nonce differs.
+			ASSERT_EQ(decoded.deserialize(broadcast.pruned_blob.data(), broadcast.pruned_blob.size(), target, false, true), 0);
+			EXPECT_EQ(decoded.serialize_mainchain_data(), child.serialize_mainchain_data());
+		}
 	}
 }
 

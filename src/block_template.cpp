@@ -1756,6 +1756,7 @@ bool BlockTemplate::submit_sidechain_block(uint32_t template_id, uint32_t nonce,
 		}
 
 		m_poolBlockTemplate->m_powHash = pow_hash;
+		m_poolBlockTemplate->m_seed = m_seedHash;
 		m_poolBlockTemplate->m_verified = true;
 
 		if (!m_sidechain->incoming_block_seen(*m_poolBlockTemplate)) {

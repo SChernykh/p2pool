@@ -250,6 +250,8 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, PPLNSWindow& window, uint6
 {
 	block.m_uncles.clear();
 	block.m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
+	block.m_parentNonce = 0;
+	block.m_parentPowHashValid = false;
 
 	ReadLock lock(m_sidechainLock);
 
@@ -270,6 +272,11 @@ bool SideChain::fill_sidechain_data(PoolBlock& block, PPLNSWindow& window, uint6
 	get_tx_keys(block.m_txkeyPub, block.m_txkeySec, block.m_txkeySecSeed, block.m_prevId);
 
 	block.m_parent = tip->m_sidechainId;
+
+	if (block.m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		block.m_parentNonce = tip->m_nonce;
+	}
+
 	block.m_sidechainHeight = tip->m_sidechainHeight + 1;
 
 	// Collect uncles from 3 previous block heights
@@ -542,14 +549,74 @@ bool SideChain::get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* 
 	return true;
 }
 
-bool SideChain::get_payout_window(const PoolBlock& block, const PoolBlock* parent, PPLNSWindow& window, uint64_t* bottom_height, bool quiet) const
+SideChain::ParentPowStatus SideChain::get_parent_pow_hash(PoolBlock& block, const PoolBlock* parent, bool allow_recalc) const
+{
+	if (block.m_parentPowHashValid) {
+		return ParentPowStatus::Valid;
+	}
+
+	if (!parent) {
+		return ParentPowStatus::Unavailable;
+	}
+
+	// This also pins the extra nonce when a Carrot child references a pre-Carrot parent.
+	const uint32_t extra_nonce = parent->m_sidechainExtraBuf[3];
+
+	if ((block.m_parentNonce == parent->m_nonce) && (extra_nonce == parent->m_extraNonce)) {
+		// Every stored parent's own PoW has already been checked before add_block().
+		block.m_parentPowHash = parent->m_powHash;
+		block.m_parentPowHashValid = true;
+
+		return ParentPowStatus::Valid;
+	}
+
+	if (!allow_recalc) {
+		return ParentPowStatus::Unavailable;
+	}
+
+	RandomX_Hasher_Base* hasher = m_pool ? m_pool->hasher() : nullptr;
+
+	// Both external and locally mined blocks retain the seed used for their own PoW.
+	const hash& seed = parent->m_seed;
+
+#ifdef P2POOL_UNIT_TESTS
+	if (!m_pool) {
+		hasher = m_testHasher;
+	}
+#endif
+
+	if (!hasher) {
+		return ParentPowStatus::Unavailable;
+	}
+
+	std::vector<uint8_t> blob;
+	hash coinbase_hash, pow_hash;
+
+	if (!parent->get_hashing_blob(blob, coinbase_hash, &block.m_parentNonce, &extra_nonce) ||
+		!hasher->calculate(blob.data(), blob.size(), parent->m_txinGenHeight, seed, pow_hash, false, RandomX_Hasher_Base::VM_LANE_P2P)) {
+		return ParentPowStatus::Unavailable;
+	}
+
+	if (!parent->m_difficulty.check_pow(pow_hash)) {
+		return ParentPowStatus::Invalid;
+	}
+
+	block.m_parentPowHash = pow_hash;
+	block.m_parentPowHashValid = true;
+
+	return ParentPowStatus::Valid;
+}
+
+bool SideChain::get_payout_window(PoolBlock& block, const PoolBlock* parent, PPLNSWindow& window, uint64_t* bottom_height, bool quiet) const
 {
 	if ((block.m_majorVersion >= HARDFORK_VERSION_CARROT) && (block.m_sidechainHeight != 0)) {
-		if (!parent) {
+		// Callers on an event loop may only use an already checked parent solution.
+		if ((get_parent_pow_hash(block, parent, false) != ParentPowStatus::Valid) || !get_shares(parent, window, bottom_height, quiet)) {
 			return false;
 		}
 
-		return get_shares(parent, window, bottom_height, quiet);
+		window.m_powHash = block.m_parentPowHash;
+		return true;
 	}
 
 	if (!get_shares(&block, window, bottom_height, quiet)) {
@@ -708,6 +775,26 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		}
 	}
 
+	if ((block.m_majorVersion >= HARDFORK_VERSION_CARROT) && block.m_sidechainHeight) {
+		ReadLock lock(m_sidechainLock);
+
+		const PoolBlock* parent = get_parent(&block);
+
+		// Check this only after the child's own PoW. A temporarily unavailable hasher must not leave an unverified block in m_blocksById that future retries skip.
+		if (parent) {
+			const ParentPowStatus status = get_parent_pow_hash(block, parent, true);
+
+			if (status == ParentPowStatus::Invalid) {
+				return false;
+			}
+
+			if (status == ParentPowStatus::Unavailable) {
+				forget_incoming_block(block);
+				return true;
+			}
+		}
+	}
+
 	m_pool->on_external_block(block);
 
 	bool block_found = false;
@@ -754,10 +841,10 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		m_pool->api_update_block_found(&data, &block);
 	}
 
-	return add_block(block);
+	return add_block(block, true);
 }
 
-bool SideChain::add_block(const PoolBlock& block)
+bool SideChain::add_block(const PoolBlock& block, bool is_external)
 {
 	LOGINFO(3, "add_block: height = " << block.m_sidechainHeight <<
 		", id = " << block.m_sidechainId <<
@@ -808,7 +895,9 @@ bool SideChain::add_block(const PoolBlock& block)
 		);
 
 		delete new_block;
-		return false;
+
+		// Don't ban a peer when it sends such block
+		return is_external;
 	}
 
 	m_blocksByHeight[new_block->m_sidechainHeight].push_back(new_block);
@@ -909,10 +998,14 @@ const PoolBlock* SideChain::get_block_blob(const hash& id, std::vector<uint8_t>&
 	return block;
 }
 
-bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, std::vector<uint8_t>& pubkeys_blob) const
+bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::vector<uint8_t>& blob, std::vector<uint8_t>& pubkeys_blob, bool* needs_parent_pow) const
 {
 	blob.clear();
 	pubkeys_blob.clear();
+
+	if (needs_parent_pow) {
+		*needs_parent_pow = false;
+	}
 
 	std::vector<const Wallet*> tmpWallets;
 	std::vector<uint64_t> tmpRewards;
@@ -987,10 +1080,19 @@ bool SideChain::get_outputs_blob(PoolBlock* block, uint64_t total_reward, std::v
 			return total_reward_check == total_reward;
 		}
 
+		const PoolBlock* parent = get_parent(block);
+
+		if ((block->m_majorVersion >= HARDFORK_VERSION_CARROT) && block->m_sidechainHeight && parent && (get_parent_pow_hash(*block, parent, false) != ParentPowStatus::Valid)) {
+			if (needs_parent_pow) {
+				*needs_parent_pow = true;
+			}
+
+			return false;
+		}
+
 		PPLNSWindow window;
 
-		if (!get_payout_window(*block, get_parent(block), window) ||
-			!split_reward(block->m_majorVersion, total_reward, window, tmpWallets, tmpRewards)) {
+		if (!get_payout_window(*block, parent, window) || !split_reward(block->m_majorVersion, total_reward, window, tmpWallets, tmpRewards)) {
 			return false;
 		}
 	}
@@ -1806,6 +1908,7 @@ void SideChain::verify(PoolBlock* block)
 	// Genesis block
 	if (block->m_sidechainHeight == 0) {
 		if (!block->m_parent.empty() ||
+			((block->m_majorVersion >= HARDFORK_VERSION_CARROT) && (block->m_parentNonce != 0)) ||
 			!block->m_uncles.empty() ||
 			(block->m_difficulty != m_minDifficulty) ||
 			(block->m_cumulativeDifficulty != m_minDifficulty) ||
@@ -1862,6 +1965,17 @@ void SideChain::verify(PoolBlock* block)
 		block->m_verified = true;
 		block->m_invalid = true;
 		return;
+	}
+
+	// Authenticate the selected parent solution even when outputs were reconstructed or precalculated.
+	if (block->m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		const ParentPowStatus status = get_parent_pow_hash(*block, parent, true);
+
+		if (status != ParentPowStatus::Valid) {
+			block->m_verified = (status == ParentPowStatus::Invalid);
+			block->m_invalid = block->m_verified;
+			return;
+		}
 	}
 
 	// Check m_txkeySecSeed
