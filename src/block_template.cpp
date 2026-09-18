@@ -927,8 +927,8 @@ bool BlockTemplate::prewarm_carrot_outputs(const hash& prev_id) const
 		std::vector<Wallet> wallets;
 		PPLNSWindow window;
 		hash txkey_sec;
-		uint64_t height;
-		uint64_t reward;
+		uint64_t height = 0;
+		uint64_t reward = 0;
 	};
 
 	Work* work;
