@@ -2046,9 +2046,9 @@ private:
 	{
 		carrot::janus_anchor m_anchorEnc;
 		hash m_onetimeAddress;
-		carrot::view_tag m_viewTag;
+		carrot::view_tag m_viewTag = {};
 		// cppcheck-suppress unusedStructMember
-		uint32_t m_timestamp;
+		uint32_t m_timestamp = 0;
 	};
 
 	// Include all inputs: batch_coinbase_outputs also accepts independently supplied height,
