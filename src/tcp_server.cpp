@@ -18,7 +18,10 @@
 #include "common.h"
 #include "tcp_server.h"
 
+#ifdef P2POOL_DEBUGGING
 static thread_local void* server_event_loop_thread = nullptr;
+#endif
+
 static thread_local const char* log_category_prefix = "TCPServer ";
 
 namespace p2pool {
@@ -692,7 +695,10 @@ void TCPServer::loop(void* data)
 	}
 
 	LOGINFO(1, "event loop started");
+
+#ifdef P2POOL_DEBUGGING
 	server_event_loop_thread = data;
+#endif
 
 	// Allocate lists for up to max possible buffer size
 	// 128 buckets for callback buf = 131072 bytes
