@@ -360,6 +360,27 @@ static void fe_frombytes_relaxed(fe h, const unsigned char *s) {
   h[4] = (l3 >> 12) & FE51_MASK;
 }
 
+/*
+Decode 32 bytes as a full 256-bit little-endian integer mod p. Unlike fe_frombytes_relaxed,
+bit 255 is part of the value, not discarded: hash-to-point consumes uniform bytes, so dropping
+that bit would give a different point than Monero's ge_fromfe_frombytes_vartime for half of all
+inputs. Keep this in sync with the !FE_RADIX_51 version below.
+*/
+static void fe_frombytes_unmasked(fe h, const unsigned char *s) {
+  uint64_t l0 = load_8(s), l1 = load_8(s + 8), l2 = load_8(s + 16), l3 = load_8(s + 24);
+
+  /* 2^255 == 19 (mod p), so bit 255 folds back into the low limb */
+  h[0] = (l0 & FE51_MASK) + 19 * (l3 >> 63);
+  h[1] = ((l0 >> 51) | (l1 << 13)) & FE51_MASK;
+  h[2] = ((l1 >> 38) | (l2 << 26)) & FE51_MASK;
+  h[3] = ((l2 >> 25) | (l3 << 39)) & FE51_MASK;
+  h[4] = (l3 >> 12) & FE51_MASK;
+
+  /* h[0] can reach 2^51 + 18; one carry restores the reduced bound */
+  h[1] += h[0] >> 51;
+  h[0] &= FE51_MASK;
+}
+
 int fe_frombytes_vartime(fe h, const unsigned char *s) {
   fe_frombytes_relaxed(h, s);
 
@@ -2982,8 +3003,11 @@ void ge_mul8(ge_p1p1 *r, const ge_p2 *t) {
 
 #if !FE_RADIX_51
 
-/* Decode 32 bytes, ignoring bit 255. Does not check for canonical input */
-static void fe_frombytes_relaxed(fe h, const unsigned char *s) {
+/*
+Decode 32 bytes as a full 256-bit little-endian integer mod p. Bit 255 is part of the value:
+the carry9 step below folds it back in as 19. Keep this in sync with the FE_RADIX_51 version above.
+*/
+static void fe_frombytes_unmasked(fe h, const unsigned char *s) {
   int64_t h0 = load_4(s);
   int64_t h1 = load_3(s + 4) << 6;
   int64_t h2 = load_3(s + 7) << 5;
@@ -3032,7 +3056,7 @@ void ge_fromfe_frombytes_vartime(ge_p2 *r, const unsigned char *s) {
   fe u, v, w, x, y, z;
   unsigned char sign;
 
-  fe_frombytes_relaxed(u, s);
+  fe_frombytes_unmasked(u, s);
 
   fe_sq2(v, u); /* 2 * u^2 */
   fe_1(w);
