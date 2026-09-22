@@ -81,8 +81,8 @@ private:
 private:
 	BlockTemplate& copy_nolock(const BlockTemplate& b);
 
-	void select_mempool_transactions(const Mempool& mempool);
-	[[nodiscard]] int create_miner_tx(const MinerData& data, uint64_t max_reward_amounts_weight, bool dry_run);
+	[[nodiscard]] size_t select_mempool_transactions(const Mempool& mempool);
+	[[nodiscard]] int create_miner_tx(const MinerData& data, bool dry_run);
 	[[nodiscard]] hash calc_sidechain_hash(uint32_t sidechain_extra_nonce) const;
 	[[nodiscard]] hash calc_miner_tx_hash(uint32_t extra_nonce) const;
 	void calc_merkle_tree_main_branch();

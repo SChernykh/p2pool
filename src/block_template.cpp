@@ -30,6 +30,7 @@
 #include "pool_block.h"
 #include "merkle.h"
 #include "pow_hash.h"
+#include "quantize_rewards.h"
 #include <zmq.hpp>
 #include <ctime>
 #include <numeric>
@@ -510,210 +511,288 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	init_merge_mining_merkle_proof();
 
-	select_mempool_transactions(mempool);
+	// This can over-estimate because:
+	// - amount varint sizes can be smaller
+	// - reward quantization algorithm can reduce the number of outputs
+	const size_t miner_tx_weight_estimate = select_mempool_transactions(mempool);
 
 	const uint64_t base_reward = get_base_reward(data.already_generated_coins);
 
 	uint64_t total_tx_fees = 0;
 	uint64_t total_tx_weight = 0;
+
 	for (const TxMempoolData& tx : m_mempoolTxs) {
 		total_tx_fees += tx.fee;
 		total_tx_weight += tx.weight;
 	}
-
-	// TODO: rework how miner tx is constructed post-Carrot, because size variability will be much bigger. Use an iterative algorithm until it converges.
-	const uint64_t max_reward = base_reward + total_tx_fees;
 
 	LOGINFO(3, "base  reward = " << log::Gray() << log::XMRAmount(base_reward) << log::NoColor() <<
 		", " << log::Gray() << m_mempoolTxs.size() << log::NoColor() <<
 		" transactions, fees = " << log::Gray() << log::XMRAmount(total_tx_fees) << log::NoColor() <<
 		", weight = " << log::Gray() << total_tx_weight);
 
-	if (!SideChain::split_reward(data.major_version, max_reward, m_payoutWindow, m_wallets, m_rewards)) {
-		use_old_template();
-		return;
-	}
+	// Block reward depends on block size penalty and transactions selected
+	// Block size penalty depends on median block size, transactions selected and miner tx size
+	// Miner tx size depends on block reward
+	//
+	// This is a self-dependency, so the only way to resolve it is an iterative algorithm which stops
+	// when the final block reward = exactly what was given to split_reward in the beginning of an iteration
+	//
+	// A good initial estimate of the block reward is very important for fast convergence
+	uint64_t reward_estimate = base_reward;
 
-	auto get_reward_amounts_weight = [this]() {
-		return std::accumulate(m_rewards.begin(), m_rewards.end(), 0ULL,
-			[](uint64_t a, uint64_t b)
-			{
-				writeVarint(b, [&a](uint8_t) { ++a; });
-				return a;
-			});
-	};
-	uint64_t max_reward_amounts_weight = get_reward_amounts_weight();
-
-	if (create_miner_tx(data, max_reward_amounts_weight, true) < 0) {
-		use_old_template();
-		return;
-	}
-
-	uint64_t miner_tx_weight = m_minerTx.size();
-
-	// Select transactions from the mempool
-	uint64_t final_reward, final_fees, final_weight;
-
-	m_mempoolTxsOrder.resize(m_mempoolTxs.size());
+	// Sort all transactions by fee per byte (highest to lowest)
+	std::vector<int> mempool_txs_order;
+	mempool_txs_order.reserve(m_mempoolTxs.size());
 	for (size_t i = 0; i < m_mempoolTxs.size(); ++i) {
-		m_mempoolTxsOrder[i] = static_cast<int>(i);
+		mempool_txs_order.emplace_back(static_cast<int>(i));
+	}
+	std::sort(mempool_txs_order.begin(), mempool_txs_order.end(), [this](int a, int b) { return m_mempoolTxs[a] < m_mempoolTxs[b]; });
+
+	// Greedily pick best-paying transactions and skip the ones not increasing the final reward
+	for (uint64_t i = 0, n = m_mempoolTxs.size(), w = miner_tx_weight_estimate, f = 0; i < n; ++i) {
+		const TxMempoolData& tx = m_mempoolTxs[mempool_txs_order[i]];
+
+		const uint64_t new_reward = get_block_reward(base_reward, data.median_weight, f + tx.fee, w + tx.weight);
+
+		if (new_reward > reward_estimate) {
+			reward_estimate = new_reward;
+			f += tx.fee;
+			w += tx.weight;
+		}
 	}
 
-	// if a block doesn't get into the penalty zone, just pick all transactions
-	if (total_tx_weight + miner_tx_weight <= data.median_weight) {
-		final_fees = 0;
-		final_weight = miner_tx_weight;
+	uint64_t final_reward = reward_estimate;
+	uint64_t miner_tx_weight = 0;
+	uint64_t final_fees = 0;
+	uint64_t final_weight = 0;
 
-		shuffle_tx_order();
+	constexpr size_t MAX_ITER = 12;
 
-		m_numTransactionHashes = m_mempoolTxsOrder.size();
-		m_transactionHashes.assign(HASH_SIZE, 0);
+	uint64_t reward_estimate_history[MAX_ITER] = {};
+	size_t loop_escape_tx_drop_count = 0;
 
-		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
-			m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
-			m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
-		}
+	for (size_t iter = 0; iter < MAX_ITER; ++iter) {
+		reward_estimate = final_reward;
+		reward_estimate_history[iter] = reward_estimate;
 
-		m_transactionHashesSet.clear();
-		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
-		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
-			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
-			if (!m_transactionHashesSet.insert(tx.id).second) {
-				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
-				continue;
-			}
-			const hash h = tx.id;
-			m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
-			final_fees += tx.fee;
-			final_weight += tx.weight;
-		}
+		bool loop_detected = false;
 
-		final_reward = base_reward + final_fees;
-	}
-	else {
-		// Picking all transactions will result in the base reward penalty
-		// Use a heuristic algorithm to pick transactions and get the maximum possible reward
-		// Testing has shown that this algorithm is very close to the optimal selection
-		// Usually no more than 0.5 micronero away from the optimal discrete knapsack solution
-		// Sometimes it even finds the optimal solution
-
-		// Sort all transactions by fee per byte (highest to lowest)
-		std::sort(m_mempoolTxsOrder.begin(), m_mempoolTxsOrder.end(), [this](int a, int b) { return m_mempoolTxs[a] < m_mempoolTxs[b]; });
-
-		final_reward = base_reward;
-		final_fees = 0;
-		final_weight = miner_tx_weight;
-
-		m_mempoolTxsOrder2.clear();
-		for (int i = 0; i < static_cast<int>(m_mempoolTxsOrder.size()); ++i) {
-			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
-
-			int k = -1;
-
-			const uint64_t reward = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee, final_weight + tx.weight);
-			if (reward > final_reward) {
-				// If simply adding this transaction increases the reward, remember it
-				final_reward = reward;
-				k = i;
-			}
-
-			// Try replacing other transactions when we are above the limit
-			if (final_weight + tx.weight > data.median_weight) {
-				// Don't check more than 100 transactions deep because they have higher and higher fee/byte
-				const int n = static_cast<int>(m_mempoolTxsOrder2.size());
-				for (int j = n - 1, j1 = std::max<int>(0, n - 100); j >= j1; --j) {
-					const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[j]];
-					const uint64_t reward2 = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee - prev_tx.fee, final_weight + tx.weight - prev_tx.weight);
-					if (reward2 > final_reward) {
-						// If replacing some other transaction increases the reward even more, remember it
-						// And keep trying to replace other transactions
-						final_reward = reward2;
-						k = j;
-					}
-				}
-			}
-
-			if (k == i) {
-				// Simply adding this tx improves the reward
-				m_mempoolTxsOrder2.push_back(m_mempoolTxsOrder[i]);
-				final_fees += tx.fee;
-				final_weight += tx.weight;
-			}
-			else if (k >= 0) {
-				// Replacing another tx with this tx improves the reward
-				const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[k]];
-				m_mempoolTxsOrder2[k] = m_mempoolTxsOrder[i];
-				final_fees += tx.fee - prev_tx.fee;
-				final_weight += tx.weight - prev_tx.weight;
+		for (size_t i = 0; i + 1 < iter; ++i) {
+			if (reward_estimate_history[i] == reward_estimate) {
+				loop_detected = true;
+				++loop_escape_tx_drop_count;
+				break;
 			}
 		}
-		m_mempoolTxsOrder = m_mempoolTxsOrder2;
 
-		final_fees = 0;
-		final_weight = miner_tx_weight;
-
-		shuffle_tx_order();
-
-		m_numTransactionHashes = m_mempoolTxsOrder.size();
-		m_transactionHashes.assign(HASH_SIZE, 0);
-
-		if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
-			m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
-			m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
-			m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
+		// The last 4 iterations use a different loop escape mechanism
+		if (iter >= MAX_ITER - 4) {
+			loop_escape_tx_drop_count = 0;
 		}
 
-		m_transactionHashesSet.clear();
-		m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
-		for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
-			const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
-			if (!m_transactionHashesSet.insert(tx.id).second) {
-				LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
-				continue;
-			}
-			const hash h = tx.id;
-			m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
-			final_fees += tx.fee;
-			final_weight += tx.weight;
-		}
-
-		final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
-
-		if (final_reward < base_reward) {
-			LOGERR(1, "final_reward < base_reward, this should never happen. Fix the code!");
+		if (!SideChain::split_reward(data.major_version, reward_estimate, m_payoutWindow, m_wallets, m_rewards)) {
 			use_old_template();
 			return;
 		}
 
-#if TEST_MEMPOOL_PICKING_ALGORITHM
-		LOGINFO(3, "final_reward = " << log::XMRAmount(final_reward) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
+		if (create_miner_tx(data, true) < 0) {
+			use_old_template();
+			return;
+		}
 
-		uint64_t final_reward2;
-		fill_optimal_knapsack(data, base_reward, miner_tx_weight, final_reward2, final_fees, final_weight);
-		LOGINFO(3, "best_reward  = " << log::XMRAmount(final_reward2) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
-		if (final_reward2 < final_reward) {
-			LOGERR(1, "fill_optimal_knapsack has a bug, found solution is not optimal. Fix it!");
+		// If miner tx size didn't change between iterations, and we're not escaping a loop now, then the algorithm converged
+		if ((m_minerTx.size() == miner_tx_weight) && !loop_detected && (iter != MAX_ITER - 4)) {
+			break;
 		}
-		LOGINFO(3, "difference   = " << static_cast<int64_t>(final_reward2 - final_reward));
-		final_reward = final_reward2;
-		{
-			uint64_t fee_check = 0;
-			uint64_t weight_check = miner_tx_weight;
-			for (int i : m_mempoolTxsOrder) {
-				const TxMempoolData& tx = m_mempoolTxs[i];
-				fee_check += tx.fee;
-				weight_check += tx.weight;
+
+		miner_tx_weight = m_minerTx.size();
+
+		// Select transactions from the mempool
+		m_mempoolTxsOrder = mempool_txs_order;
+
+		// if a block doesn't get into the penalty zone, just pick all transactions
+		if (total_tx_weight + miner_tx_weight <= data.median_weight) {
+			final_fees = 0;
+			final_weight = miner_tx_weight;
+
+			// Drop transactions to break the loop
+			for (size_t i = 0; (i < loop_escape_tx_drop_count) && !m_mempoolTxsOrder.empty(); ++i) {
+				m_mempoolTxsOrder.pop_back();
 			}
-			const uint64_t reward_check = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
-			if ((reward_check != final_reward) || (fee_check != final_fees) || (weight_check != final_weight)) {
-				LOGERR(1, "fill_optimal_knapsack has a bug, expected " << final_reward << ", got " << reward_check << " reward. Fix it!");
+
+			shuffle_tx_order();
+
+			m_numTransactionHashes = m_mempoolTxsOrder.size();
+			m_transactionHashes.assign(HASH_SIZE, 0);
+
+			if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+				m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
+				m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
+				m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
 			}
+
+			m_transactionHashesSet.clear();
+			m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
+
+			for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
+				const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+
+				if (!m_transactionHashesSet.insert(tx.id).second) {
+					LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
+					continue;
+				}
+
+				const hash h = tx.id;
+				m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
+
+				final_fees += tx.fee;
+				final_weight += tx.weight;
+			}
+
+			final_reward = base_reward + final_fees;
 		}
+		else {
+			// Picking all transactions will result in the base reward penalty
+			// Use a heuristic algorithm to pick transactions and get the maximum possible reward
+			// Testing has shown that this algorithm is very close to the optimal selection
+			// Usually no more than 0.5 micronero away from the optimal discrete knapsack solution
+			// Sometimes it even finds the optimal solution
+
+			final_reward = base_reward;
+			final_fees = 0;
+			final_weight = miner_tx_weight;
+
+			m_mempoolTxsOrder2.clear();
+
+			for (int i = 0; i < static_cast<int>(m_mempoolTxsOrder.size()); ++i) {
+				const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+
+				// Don't go into the penalty zone on the last 4 iterations to guarantee convergence
+				if ((iter >= MAX_ITER - 4) && (final_weight + tx.weight > data.median_weight)) {
+					continue;
+				}
+
+				int k = -1;
+
+				const uint64_t reward = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee, final_weight + tx.weight);
+
+				if (reward > final_reward) {
+					// If simply adding this transaction increases the reward, remember it
+					final_reward = reward;
+					k = i;
+				}
+
+				// Try replacing other transactions when we are above the limit
+				if (final_weight + tx.weight > data.median_weight) {
+					// Don't check more than 100 transactions deep because they have higher and higher fee/byte
+					const int n = static_cast<int>(m_mempoolTxsOrder2.size());
+
+					for (int j = n - 1, j1 = std::max<int>(0, n - 100); j >= j1; --j) {
+						const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[j]];
+						const uint64_t reward2 = get_block_reward(base_reward, data.median_weight, final_fees + tx.fee - prev_tx.fee, final_weight + tx.weight - prev_tx.weight);
+
+						if (reward2 > final_reward) {
+							// If replacing some other transaction increases the reward even more, remember it
+							// And keep trying to replace other transactions
+							final_reward = reward2;
+							k = j;
+						}
+					}
+				}
+
+				if (k == i) {
+					// Simply adding this tx improves the reward
+					m_mempoolTxsOrder2.push_back(m_mempoolTxsOrder[i]);
+					final_fees += tx.fee;
+					final_weight += tx.weight;
+				}
+				else if (k >= 0) {
+					// Replacing another tx with this tx improves the reward
+					const TxMempoolData& prev_tx = m_mempoolTxs[m_mempoolTxsOrder2[k]];
+					m_mempoolTxsOrder2[k] = m_mempoolTxsOrder[i];
+					final_fees += tx.fee - prev_tx.fee;
+					final_weight += tx.weight - prev_tx.weight;
+				}
+			}
+
+			// Drop transactions to break the loop
+			for (size_t i = 0; (i < loop_escape_tx_drop_count) && !m_mempoolTxsOrder2.empty(); ++i) {
+				m_mempoolTxsOrder2.pop_back();
+			}
+
+			m_mempoolTxsOrder = m_mempoolTxsOrder2;
+
+			final_fees = 0;
+			final_weight = miner_tx_weight;
+
+			shuffle_tx_order();
+
+			m_numTransactionHashes = m_mempoolTxsOrder.size();
+			m_transactionHashes.assign(HASH_SIZE, 0);
+
+			if (data.major_version >= HARDFORK_VERSION_FCMP_PP) {
+				m_transactionHashes.emplace_back(data.fcmp_pp_n_tree_layers);
+				m_transactionHashes.insert(m_transactionHashes.end(), HASH_SIZE - 1, 0);
+				m_transactionHashes.insert(m_transactionHashes.end(), data.fcmp_pp_tree_root.h, data.fcmp_pp_tree_root.h + HASH_SIZE);
+			}
+
+			m_transactionHashesSet.clear();
+			m_transactionHashesSet.reserve(m_mempoolTxsOrder.size());
+
+			for (size_t i = 0; i < m_mempoolTxsOrder.size(); ++i) {
+				const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
+
+				if (!m_transactionHashesSet.insert(tx.id).second) {
+					LOGERR(1, "Added transaction " << tx.id << " twice. Fix the code!");
+					continue;
+				}
+
+				const hash h = tx.id;
+				m_transactionHashes.insert(m_transactionHashes.end(), h.h, h.h + HASH_SIZE);
+
+				final_fees += tx.fee;
+				final_weight += tx.weight;
+			}
+
+			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
+
+			if (final_reward < base_reward) {
+				LOGERR(1, "final_reward < base_reward, this should never happen. Fix the code!");
+				use_old_template();
+				return;
+			}
+
+#if TEST_MEMPOOL_PICKING_ALGORITHM
+			LOGINFO(3, "final_reward = " << log::XMRAmount(final_reward) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
+
+			uint64_t final_reward2;
+			fill_optimal_knapsack(data, base_reward, miner_tx_weight, final_reward2, final_fees, final_weight);
+			LOGINFO(3, "best_reward  = " << log::XMRAmount(final_reward2) << ", transactions = " << m_numTransactionHashes << ", final_weight = " << final_weight);
+			if (final_reward2 < final_reward) {
+				LOGERR(1, "fill_optimal_knapsack has a bug, found solution is not optimal. Fix it!");
+			}
+			LOGINFO(3, "difference   = " << static_cast<int64_t>(final_reward2 - final_reward));
+			final_reward = final_reward2;
+			{
+				uint64_t fee_check = 0;
+				uint64_t weight_check = miner_tx_weight;
+				for (int i : m_mempoolTxsOrder) {
+					const TxMempoolData& tx = m_mempoolTxs[i];
+					fee_check += tx.fee;
+					weight_check += tx.weight;
+				}
+				const uint64_t reward_check = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
+				if ((reward_check != final_reward) || (fee_check != final_fees) || (weight_check != final_weight)) {
+					LOGERR(1, "fill_optimal_knapsack has a bug, expected " << final_reward << ", got " << reward_check << " reward. Fix it!");
+				}
+			}
 #endif
+		}
 	}
 
-	if (!SideChain::split_reward(data.major_version, final_reward, m_payoutWindow, m_wallets, m_rewards)) {
+	// Iterative algorithm didn't converge
+	if (!final_weight || (final_reward != reward_estimate)) {
 		use_old_template();
 		return;
 	}
@@ -722,53 +801,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		uv_sem_wait(&precalc->sem);
 	}
 
-	const int create_miner_tx_result = create_miner_tx(data, max_reward_amounts_weight, false);
-	if (create_miner_tx_result < 0) {
-		if (create_miner_tx_result == -3) {
-			// Too many extra bytes were added, refine max_reward_amounts_weight and miner_tx_weight
-			LOGINFO(4, "Readjusting miner_tx to reduce extra nonce size");
-
-			// The difference between max possible reward and the actual reward can't reduce the size of output amount varints by more than 1 byte each
-			// So block weight will be >= current weight - number of outputs
-			const uint64_t w = (final_weight > m_rewards.size()) ? (final_weight - m_rewards.size()) : 0;
-
-			// Block reward will be <= r due to how block size penalty works
-			const uint64_t r = get_block_reward(base_reward, data.median_weight, final_fees, w);
-
-			if (!r || !SideChain::split_reward(data.major_version, r, m_payoutWindow, m_wallets, m_rewards)) {
-				use_old_template();
-				return;
-			}
-
-			max_reward_amounts_weight = get_reward_amounts_weight();
-
-			if (create_miner_tx(data, max_reward_amounts_weight, true) < 0) {
-				use_old_template();
-				return;
-			}
-
-			final_weight -= miner_tx_weight;
-			final_weight += m_minerTx.size();
-			miner_tx_weight = m_minerTx.size();
-
-			final_reward = get_block_reward(base_reward, data.median_weight, final_fees, final_weight);
-
-			if (!final_reward || !SideChain::split_reward(data.major_version, final_reward, m_payoutWindow, m_wallets, m_rewards)) {
-				use_old_template();
-				return;
-			}
-
-			if (create_miner_tx(data, max_reward_amounts_weight, false) < 0) {
-				use_old_template();
-				return;
-			}
-
-			LOGINFO(4, "New extra nonce size = " << m_poolBlockTemplate->m_extraNonceSize);
-		}
-		else {
-			use_old_template();
-			return;
-		}
+	if (create_miner_tx(data, false) < 0) {
+		use_old_template();
+		return;
 	}
 
 	if (m_minerTx.size() != miner_tx_weight) {
@@ -1055,7 +1090,7 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 }
 #endif
 
-void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
+size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 {
 	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006/0.02 XMR) transactions
 	m_mempoolTxs.clear();
@@ -1084,36 +1119,46 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	b->m_carrotOutputs.clear();
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
-	size_t k = b->serialize_mainchain_data().size() + b->serialize_sidechain_data().size() - 2;
+	const size_t sidechain_size = b->serialize_sidechain_data().size() - 1;
+
+	size_t k = (b->serialize_mainchain_data().size() - 1) + sidechain_size;
+
+	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
+	// Use the hard-coded BASE_BLOCK_REWARD (0.6 XMR) because we're in the tail emission now
+	uint64_t r = BASE_BLOCK_REWARD;
+	for (const auto& tx : m_mempoolTxs) {
+		r += tx.fee;
+	}
 
 	// Add output and tx count real varints
-	writeVarint(m_payoutWindow.size(), [&k](uint8_t) { ++k; });
+	size_t num_outputs = m_payoutWindow.size();
+
+	if (b->m_majorVersion >= HARDFORK_VERSION_CARROT) {
+		num_outputs = std::min<size_t>(num_outputs, (r / PAYOUT_GRID_STEP) + 1);
+	}
+
+	writeVarint(num_outputs, [&k](uint8_t) { ++k; });
 	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
-	k += m_payoutWindow.size() * b->output_blob_size_estimate();
+	k += num_outputs * b->output_blob_size_estimate();
 
-	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
-	{
-		uint64_t r = BASE_BLOCK_REWARD;
-		for (const auto& tx : m_mempoolTxs) {
-			r += tx.fee;
-		}
-		k += r / 34359738368ULL;
-	}
+	// Account for outputs with > 5 bytes of the reward's varint
+	const uint64_t max_large_outputs = std::min<uint64_t>(r / 34359738368ULL, num_outputs * 5);
+	k += max_large_outputs;
 
 	if (is_fcmp_pp) {
 		// tx_extra size varint adjustment (conservative estimate)
 		--k;
-		writeVarint(m_payoutWindow.size() * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
+		writeVarint(num_outputs * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
 
 		// eph pubkey count varint
-		if (m_payoutWindow.size() > 1) {
-			writeVarint(m_payoutWindow.size(), [&k](uint8_t) { ++k; });
+		if (num_outputs > 1) {
+			writeVarint(num_outputs, [&k](uint8_t) { ++k; });
 		}
 
 		// eph pubkeys
-		k += m_payoutWindow.size() * HASH_SIZE;
+		k += num_outputs * HASH_SIZE;
 	}
 
 	const uint64_t N = b->max_block_size();
@@ -1122,16 +1167,31 @@ void BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 
 	if (max_transactions == 0) {
 		m_mempoolTxs.clear();
+
+		// readjust the estimated number of 6-byte output amount varints
+		k = k - max_large_outputs + std::min<uint64_t>(BASE_BLOCK_REWARD / 34359738368ULL, num_outputs * 5);
 	}
 	else if (m_mempoolTxs.size() > max_transactions) {
 		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end());
 		m_mempoolTxs.resize(max_transactions);
+
+		// readjust the estimated number of 6-byte output amount varints
+		k -= max_large_outputs;
+
+		r = BASE_BLOCK_REWARD;
+		for (size_t i = 0; i < max_transactions; ++i) {
+			r += m_mempoolTxs[i].fee;
+		}
+		k += std::min<uint64_t>(r / 34359738368ULL, num_outputs * 5);
 	}
 
 	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
+
+	// Return a conservative estimate of miner tx size
+	return k - sidechain_size - ((b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) ? (m_blockHeaderSize + 1 + HASH_SIZE) : m_blockHeaderSize);
 }
 
-int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_amounts_weight, bool dry_run)
+int BlockTemplate::create_miner_tx(const MinerData& data, bool dry_run)
 {
 	// Miner transaction (coinbase)
 	m_minerTx.clear();
@@ -1163,8 +1223,6 @@ int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_am
 	m_poolBlockTemplate->m_viewTags.clear();
 	m_poolBlockTemplate->m_carrotOutputs.clear();
 
-	uint64_t reward_amounts_weight = 0;
-
 	if (data.major_version >= HARDFORK_VERSION_CARROT) {
 		if (dry_run) {
 			m_poolBlockTemplate->m_carrotOutputs.resize(num_outputs);
@@ -1190,9 +1248,8 @@ int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_am
 			// Wrong order for the dry run, but we only need to know how many bytes they take
 			const uint64_t amount = dry_run ? m_rewards[i] : o.amount;
 
-			writeVarint(amount, [this, &reward_amounts_weight](uint8_t b) {
+			writeVarint(amount, [this](uint8_t b) {
 				m_minerTx.push_back(b);
-				++reward_amounts_weight;
 			});
 
 			m_minerTx.push_back(TXOUT_TO_CARROT_V1);
@@ -1213,10 +1270,9 @@ int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_am
 		m_poolBlockTemplate->m_viewTags.reserve(num_outputs);
 
 		for (size_t i = 0; i < num_outputs; ++i) {
-			writeVarint(m_rewards[i], [this, &reward_amounts_weight](uint8_t b)
+			writeVarint(m_rewards[i], [this](uint8_t b)
 				{
 					m_minerTx.push_back(b);
-					++reward_amounts_weight;
 				});
 			m_minerTx.push_back(TXOUT_TO_TAGGED_KEY);
 
@@ -1238,17 +1294,6 @@ int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_am
 
 			m_minerTx.emplace_back(view_tag);
 		}
-	}
-
-	if (dry_run) {
-		if (reward_amounts_weight != max_reward_amounts_weight) {
-			LOGERR(1, "create_miner_tx: incorrect miner rewards during the dry run (" << reward_amounts_weight << " != " <<  max_reward_amounts_weight << ")");
-			return -1;
-		}
-	}
-	else if (reward_amounts_weight > max_reward_amounts_weight) {
-		LOGERR(1, "create_miner_tx: incorrect miner rewards during the real run (" << reward_amounts_weight << " > " << max_reward_amounts_weight << ")");
-		return -2;
 	}
 
 	// TX_EXTRA begin
@@ -1275,21 +1320,12 @@ int BlockTemplate::create_miner_tx(const MinerData& data, uint64_t max_reward_am
 	}
 
 	m_minerTxExtra.push_back(TX_EXTRA_NONCE);
-
-	const uint64_t corrected_extra_nonce_size = EXTRA_NONCE_SIZE + max_reward_amounts_weight - reward_amounts_weight;
-	if (corrected_extra_nonce_size > EXTRA_NONCE_SIZE) {
-		if (corrected_extra_nonce_size > EXTRA_NONCE_MAX_SIZE) {
-			LOGWARN(5, "create_miner_tx: corrected_extra_nonce_size (" << corrected_extra_nonce_size << ") is too large");
-			return -3;
-		}
-		LOGINFO(4, "increased EXTRA_NONCE from " << EXTRA_NONCE_SIZE << " to " << corrected_extra_nonce_size << " bytes to maintain miner tx weight");
-	}
-	writeVarint(corrected_extra_nonce_size, m_minerTxExtra);
+	writeVarint(EXTRA_NONCE_SIZE, m_minerTxExtra);
 
 	uint64_t extraNonceOffsetInMinerTx = m_minerTxExtra.size();
-	m_minerTxExtra.insert(m_minerTxExtra.end(), corrected_extra_nonce_size, 0);
+	m_minerTxExtra.insert(m_minerTxExtra.end(), EXTRA_NONCE_SIZE, 0);
 
-	m_poolBlockTemplate->m_extraNonceSize = corrected_extra_nonce_size;
+	m_poolBlockTemplate->m_extraNonceSize = EXTRA_NONCE_SIZE;
 
 	m_minerTxExtra.push_back(TX_EXTRA_MERGE_MINING_TAG);
 
