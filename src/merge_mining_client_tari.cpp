@@ -21,7 +21,6 @@
 #include "p2pool.h"
 #include "params.h"
 #include "block_template.h"
-#include "keccak.h"
 #include "pool_block.h"
 #include "merkle.h"
 #include "side_chain.h"
@@ -246,7 +245,7 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 		// Path bitmap (always 0 for the coinbase tx)
 		data.append(1, 0);
 
-		// coinbase_tx_hasher
+		// Parse the coinbase transaction
 		const uint8_t* coinbase_tx = blob.data() + nonce_offset + sizeof(uint32_t);
 
 		const uint8_t* p = coinbase_tx;
@@ -266,40 +265,17 @@ void MergeMiningClientTari::submit_solution(const std::vector<uint8_t>& coinbase
 			p += 1 + HASH_SIZE + 1; // tx_type, public key, view tag
 		}
 
-		std::array<uint64_t, 25> keccak_state = {};
-
-		size_t offset = p - coinbase_tx;
+		// Everything that is hashed before tx_extra: version, unlock height, inputs, outputs.
+		const uint32_t coinbase_tx_prefix_size = static_cast<uint32_t>(p - coinbase_tx);
 
 		uint32_t tx_extra_size;
 		p = readVarint(p, e, tx_extra_size); if (!p) return;
 
 		const uint8_t* tx_extra_begin = p;
-		p = coinbase_tx;
 
-		while (offset >= KeccakParams::HASH_DATA_AREA) {
-			for (size_t i = 0; i < KeccakParams::HASH_DATA_AREA / sizeof(uint64_t); ++i) {
-				keccak_state[i] ^= read_unaligned(reinterpret_cast<const uint64_t*>(p) + i);
-			}
-			keccakf(keccak_state);
-			p += KeccakParams::HASH_DATA_AREA;
-			offset -= KeccakParams::HASH_DATA_AREA;
-		}
-
-		for (size_t i = 0; i < offset; ++i, ++p) {
-			reinterpret_cast<uint8_t*>(keccak_state.data())[i] ^= *p;
-		}
-
-		// coinbase_tx_hasher.buffer
-		data.append(reinterpret_cast<const char*>(keccak_state.data()), sizeof(keccak_state));
-
-		// coinbase_tx_hasher.offset
-		data.append(1, static_cast<char>(static_cast<uint8_t>(offset)));
-
-		// coinbase_tx_hasher.rate
-		data.append(1, static_cast<char>(static_cast<uint8_t>(KeccakParams::HASH_DATA_AREA)));
-
-		// coinbase_tx_hasher.mode
-		data.append(1, 1);
+		// coinbase_tx_prefix
+		data.append(reinterpret_cast<const char*>(&coinbase_tx_prefix_size), sizeof(coinbase_tx_prefix_size));
+		data.append(reinterpret_cast<const char*>(coinbase_tx), coinbase_tx_prefix_size);
 
 		// coinbase_tx_extra
 		data.append(reinterpret_cast<const char*>(&tx_extra_size), sizeof(tx_extra_size));
