@@ -298,8 +298,8 @@ TEST(pool_block, deserialize_carrot)
 	constexpr uint64_t payouts[4][4] = {
 		{ 600123456789ULL, 0, 0, 0 },
 		{ 600123456789ULL, 0, 0, 0 },
-		{ 300123456789ULL, 300000000000ULL, 0, 0 },
-		{ 200400000000ULL, 199800000000ULL, 199923456789ULL, 0 },
+		{ 300000000000ULL, 300123456789ULL, 0, 0 },
+		{ 199923456789ULL, 200400000000ULL, 199800000000ULL, 0 },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -314,10 +314,10 @@ TEST(pool_block, deserialize_carrot)
 		hash coinbase_hash;
 		const char* hashing_blob;
 	} expected[] = {
-		{ 4396, 5089, 0, 0, H("c73a23a4f25e33fca0edd64a4ad306e9a58a94ef67eabf5f19f1f867a42ccf30"), H("7f0f04eaa4a362aa79ab43c3ee216829dbe5f49ffb25ca2a1068da72666054b5"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89785634124827be2837c61f7e86dca59bcef706767c3c689cf151e9a1439ae2129dce3b5d8301" },
-		{ 4396, 5089, 1062, 1113, H("59d56d2ca7480edcc9f88dc775cbe73cea33222f3d03b7c2e8600a9b69ae3b8f"), H("890f10a108fe3032195a94fbfdef0ee491479568cd49584efa72016c670002bb"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89795634126a4c0d6a4e8e5f733a536b139618200b463774131364f7b686e35410712d50c08301" },
-		{ 4487, 5089, 1062, 1204, H("93cec08c1d6cb9c25cc16a4906527561eb297f2059f6dc9205e8ae2dd8ecc81e"), H("8d5809d49e6f5a77c4549b83dc75a4a4ff88be0015d4b9f5c81276657ddd048e"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634128fc54d89ba4c15b674a3f74821fa8b3a7e6623408c44c94629add841618ab7c58301" },
-		{ 4578, 5091, 1096, 1327, H("ad0229ed71b94bae4a540686e501c79f774f7e743bbbab6da65ca86c9b9fba86"), H("5469fe02ec0c996cc9d616172b71dc3d52450ff202ad17e75b92684f4f7aea49"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b5634129b9d4bfb0f587902c7586199b2ec730f3e6214718709cd7683c1275f848ed33e8301" },
+		{ 4386, 5079, 0, 0, H("e61b3b06600dbf583cf6f4e14cfa6560a78d6699c0281cee9e7f11d09b1879a9"), H("76b8bf0515f40ee311592644ed712e44293e11e6a16c81237305cc06dd21c017"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897856341249b0a721bcb90d339029a0a41a5bdee7860fe5ca482bd2cee3a72313dfeb02538301" },
+		{ 4386, 5079, 1052, 1103, H("1d321f8fa45e6a3f53b7ff1e8bbd4f4d18823c834c0848d1ccf364d6555abc45"), H("6828be9cc3fd5435c920907a2552b18b50919b24e6253f1770b79a9de49ea99f"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a8979563412ec0c783426676605a5d0c533d772063b3bfdddf7dc1445ef7f92c87cce805dca8301" },
+		{ 4477, 5079, 1052, 1194, H("5e492f2b20288719b5ba4df6387c128170f1d70be893cecab8008ab453af7e32"), H("eea0fb4bd8d5f18b1132c87fae90c5e66073efb967cf95c56012d3de92bbdbc3"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a563412214ef2d4116a28f13d84074d8ca543580751ec247a329bd3fc111cacf60d3e5f8301" },
+		{ 4568, 5081, 1086, 1317, H("06bfd291d227d7fb4dd2d71577d3dbdd67bc57f2195eaa20e376ff1f244e615c"), H("7e30b05f18f6caaba02cb4a09a2481cac1fc0fd5c9ecd6450078ecc80639ee12"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412d2b15170b46e6231a0eb59309f4c74ed4fae13554c0aa689cec2f9f067bfe9668301" },
 	};
 
 	PoolBlock decoded;
@@ -364,6 +364,21 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(main.size(), expected[i].main_size);
 		ASSERT_EQ(b.m_sidechainId, expected[i].sidechain_id);
 
+		// Post-Carrot the extra nonce must be exactly EXTRA_NONCE_SIZE bytes
+		{
+			const size_t extra_nonce_tag_offset = static_cast<size_t>(layout.pubkeys_offset + layout.pubkeys_blob_size);
+
+			ASSERT_LT(extra_nonce_tag_offset + 1, buf.size());
+			ASSERT_EQ(buf[extra_nonce_tag_offset], TX_EXTRA_NONCE);
+			ASSERT_EQ(buf[extra_nonce_tag_offset + 1], EXTRA_NONCE_SIZE);
+
+			std::vector<uint8_t> padded(buf);
+			padded[extra_nonce_tag_offset + 1] = EXTRA_NONCE_SIZE + 1;
+
+			PoolBlock rejected;
+			ASSERT_NE(rejected.deserialize(padded.data(), padded.size(), sidechain, false, false), 0);
+		}
+
 		CarrotBlockTestHasher hasher;
 		hash pow_hash;
 
@@ -385,7 +400,7 @@ TEST(pool_block, deserialize_carrot)
 		ASSERT_EQ(b.m_timestamp, 1780000000U + i * 10);
 		ASSERT_EQ(b.m_nonce, 0x12345678U + i);
 		ASSERT_EQ(b.m_extraNonce, 0x9abcdef0U + i);
-		ASSERT_EQ(b.m_extraNonceSize, 14U);
+		ASSERT_EQ(b.m_extraNonceSize, static_cast<uint64_t>(EXTRA_NONCE_SIZE));
 		ASSERT_EQ(b.m_carrotOutputs.size(), std::max<size_t>(i, 1));
 		ASSERT_TRUE(b.m_ephPublicKeys.empty());
 		ASSERT_TRUE(b.m_outputAmounts.empty());
@@ -991,8 +1006,8 @@ TEST(pool_block, verify)
 		bool m_shuffle;
 		hash m_templateBlobsHash;
 	} tests[6] = {
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("fd6bd6b38ed20a770c7eca6de3715e36453765908ef52a1d4df822d5eb66de5d") },
-		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("fd6bd6b38ed20a770c7eca6de3715e36453765908ef52a1d4df822d5eb66de5d") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, false, H("5c8a0b2459abf27ec062bf5baa0539511bd0a7ffc3ec585a1bd7a8bb5cf84c37") },
+		{ "default", "sidechain_dump.dat", 3456189, 11704382, 53, true, H("5c8a0b2459abf27ec062bf5baa0539511bd0a7ffc3ec585a1bd7a8bb5cf84c37") },
 		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, false, H("a0746d4a39a1a72aa48ddacc0c38d44504c77022bff92d937dbf45478cb8e4cb") },
 		{ "mini", "sidechain_dump_mini.dat", 3456189, 11207082, 578, true, H("a0746d4a39a1a72aa48ddacc0c38d44504c77022bff92d937dbf45478cb8e4cb") },
 		{ "nano", "sidechain_dump_nano.dat", 3456189, 188542, 115, false, H("2b5a6abd276e99a1a8165c42e4ef3b4a7bcb4e79e483fc891e77288f8498a417") },

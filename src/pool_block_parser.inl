@@ -277,7 +277,13 @@ int PoolBlock::deserialize(const uint8_t* data, size_t size, const SideChain& si
 		READ_VARINT(m_extraNonceSize);
 
 		// Sanity check
-		if ((m_extraNonceSize < EXTRA_NONCE_SIZE) || (m_extraNonceSize > EXTRA_NONCE_MAX_SIZE)) return __LINE__;
+		if (m_majorVersion >= HARDFORK_VERSION_CARROT) {
+			// Extra nonce must be exactly 4 bytes post-Carrot
+			if (m_extraNonceSize != EXTRA_NONCE_SIZE) return __LINE__;
+		}
+		else {
+			if ((m_extraNonceSize < EXTRA_NONCE_SIZE) || (m_extraNonceSize > EXTRA_NONCE_MAX_SIZE)) return __LINE__;
+		}
 
 		const int extra_nonce_offset = static_cast<int>((data - data_begin) + outputs_blob_size_diff + pubkeys_blob_size_diff);
 		READ_BUF(&m_extraNonce, EXTRA_NONCE_SIZE);
