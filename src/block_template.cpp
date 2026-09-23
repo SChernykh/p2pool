@@ -567,7 +567,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 	uint64_t final_fees = 0;
 	uint64_t final_weight = 0;
 
-	constexpr size_t MAX_ITER = 12;
+	constexpr size_t MAX_ITER = 10;
 
 	uint64_t reward_estimate_history[MAX_ITER] = {};
 	size_t loop_escape_tx_drop_count = 0;
@@ -586,8 +586,8 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			}
 		}
 
-		// The last 4 iterations use a different loop escape mechanism
-		if (iter >= MAX_ITER - 4) {
+		// The last 2 iterations use a different loop escape mechanism
+		if (iter >= MAX_ITER - 2) {
 			loop_escape_tx_drop_count = 0;
 		}
 
@@ -602,17 +602,20 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 		}
 
 		// If miner tx size didn't change between iterations, and we're not escaping a loop now, then the algorithm converged
-		if ((m_minerTx.size() == miner_tx_weight) && !loop_detected && (iter != MAX_ITER - 4)) {
+		if ((m_minerTx.size() == miner_tx_weight) && !loop_detected && (iter != MAX_ITER - 2)) {
 			break;
 		}
 
 		miner_tx_weight = m_minerTx.size();
 
+		// Use the fixed "miner_tx_weight_estimate" instead of variable "miner_tx_weight" here to avoid pathological loops
+		const uint64_t w = (iter >= MAX_ITER - 2) ? std::max<uint64_t>(miner_tx_weight_estimate, miner_tx_weight) : miner_tx_weight;
+
 		// Select transactions from the mempool
 		m_mempoolTxsOrder = mempool_txs_order;
 
 		// if a block doesn't get into the penalty zone, just pick all transactions
-		if (total_tx_weight + miner_tx_weight <= data.median_weight) {
+		if (total_tx_weight + w <= data.median_weight) {
 			final_fees = 0;
 			final_weight = miner_tx_weight;
 
@@ -668,8 +671,9 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			for (int i = 0; i < static_cast<int>(m_mempoolTxsOrder.size()); ++i) {
 				const TxMempoolData& tx = m_mempoolTxs[m_mempoolTxsOrder[i]];
 
-				// Don't go into the penalty zone on the last 4 iterations to guarantee convergence
-				if ((iter >= MAX_ITER - 4) && (final_weight + tx.weight > data.median_weight)) {
+				// Don't go into the penalty zone on the last 2 iterations to guarantee convergence
+				// Use the fixed "miner_tx_weight_estimate" instead of variable "miner_tx_weight" here to avoid pathological loops
+				if ((iter >= MAX_ITER - 2) && (final_weight + tx.weight + w - miner_tx_weight > data.median_weight)) {
 					continue;
 				}
 
@@ -1090,6 +1094,8 @@ void BlockTemplate::fill_optimal_knapsack(const MinerData& data, uint64_t base_r
 }
 #endif
 
+// Assumes tail emission (base block reward = 0.6 XMR)
+// Returns miner tx size estimate. The estimate is always >= the real miner tx size.
 size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 {
 	// Only choose transactions that were received 5 or more seconds ago, or high fee (>= 0.006/0.02 XMR) transactions
@@ -1100,6 +1106,7 @@ size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 
 	PoolBlock* b = m_poolBlockTemplate;
 	const bool is_fcmp_pp = (b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP);
+	const bool is_carrot = (b->m_majorVersion >= HARDFORK_VERSION_CARROT);
 
 	mempool.iterate([this, cur_time_mcs, &total_mempool_transactions, is_fcmp_pp](const hash&, const TxMempoolData& tx) {
 		++total_mempool_transactions;
@@ -1119,9 +1126,8 @@ size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	b->m_carrotOutputs.clear();
 
 	// Block template size without coinbase outputs and transactions (minus 2 bytes for output and tx count dummy varints)
-	const size_t sidechain_size = b->serialize_sidechain_data().size() - 1;
-
-	size_t k = (b->serialize_mainchain_data().size() - 1) + sidechain_size;
+	PoolBlock::MainchainLayout layout;
+	size_t k = b->serialize_mainchain_data(&layout).size() + b->serialize_sidechain_data().size() - 2;
 
 	// >= 0.034359738368 XMR is required for a 6 byte varint, add 1 byte per each potential 6-byte varint
 	// Use the hard-coded BASE_BLOCK_REWARD (0.6 XMR) because we're in the tail emission now
@@ -1133,12 +1139,11 @@ size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	// Add output and tx count real varints
 	size_t num_outputs = m_payoutWindow.size();
 
-	if (b->m_majorVersion >= HARDFORK_VERSION_CARROT) {
-		num_outputs = std::min<size_t>(num_outputs, (r / PAYOUT_GRID_STEP) + 1);
+	if (is_carrot) {
+		num_outputs = std::min<size_t>(num_outputs, r / PAYOUT_GRID_STEP);
 	}
 
 	writeVarint(num_outputs, [&k](uint8_t) { ++k; });
-	writeVarint(m_mempoolTxs.size(), [&k](uint8_t) { ++k; });
 
 	// Add a rough upper bound estimation of outputs' size. All outputs have <= 5 bytes for each output's reward (< 0.034359738368 XMR per output)
 	k += num_outputs * b->output_blob_size_estimate();
@@ -1147,7 +1152,7 @@ size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	const uint64_t max_large_outputs = std::min<uint64_t>(r / 34359738368ULL, num_outputs * 5);
 	k += max_large_outputs;
 
-	if (is_fcmp_pp) {
+	if (is_carrot) {
 		// tx_extra size varint adjustment (conservative estimate)
 		--k;
 		writeVarint(num_outputs * HASH_SIZE + 64, [&k](uint8_t) { ++k; });
@@ -1162,33 +1167,56 @@ size_t BlockTemplate::select_mempool_transactions(const Mempool& mempool)
 	}
 
 	const uint64_t N = b->max_block_size();
-	const uint32_t max_transactions = static_cast<uint32_t>((N > k) ? ((N - k) / HASH_SIZE) : 0);
+	uint32_t max_transactions = static_cast<uint32_t>((N > k) ? ((N - k) / HASH_SIZE) : 0);
+
+	if (max_transactions) {
+		uint64_t t = 0;
+		writeVarint(max_transactions, [&t](uint8_t) { ++t; });
+
+		if (max_transactions * HASH_SIZE + k + t > N) {
+			--max_transactions;
+		}
+	}
+
 	LOGINFO(6, max_transactions << " transactions can be taken with current block size limit");
 
 	if (max_transactions == 0) {
 		m_mempoolTxs.clear();
-
-		// readjust the estimated number of 6-byte output amount varints
-		k = k - max_large_outputs + std::min<uint64_t>(BASE_BLOCK_REWARD / 34359738368ULL, num_outputs * 5);
 	}
 	else if (m_mempoolTxs.size() > max_transactions) {
 		std::nth_element(m_mempoolTxs.begin(), m_mempoolTxs.begin() + max_transactions, m_mempoolTxs.end());
 		m_mempoolTxs.resize(max_transactions);
-
-		// readjust the estimated number of 6-byte output amount varints
-		k -= max_large_outputs;
-
-		r = BASE_BLOCK_REWARD;
-		for (size_t i = 0; i < max_transactions; ++i) {
-			r += m_mempoolTxs[i].fee;
-		}
-		k += std::min<uint64_t>(r / 34359738368ULL, num_outputs * 5);
 	}
 
 	LOGINFO(4, "mempool has " << total_mempool_transactions << " transactions, taking " << m_mempoolTxs.size() << " transactions from it");
 
-	// Return a conservative estimate of miner tx size
-	return k - sidechain_size - ((b->m_majorVersion >= HARDFORK_VERSION_FCMP_PP) ? (m_blockHeaderSize + 1 + HASH_SIZE) : m_blockHeaderSize);
+	r = BASE_BLOCK_REWARD;
+	for (const auto& tx : m_mempoolTxs) {
+		r += tx.fee;
+	}
+
+	if (is_carrot) {
+		num_outputs = std::min<size_t>(num_outputs, r / PAYOUT_GRID_STEP);
+	}
+
+	size_t outputs_size_estimate = num_outputs * b->output_blob_size_estimate();
+	writeVarint(num_outputs, [&outputs_size_estimate](uint8_t) { ++outputs_size_estimate; });
+
+	outputs_size_estimate += std::min<uint64_t>(r / 34359738368ULL, num_outputs * 5);
+
+	if (is_carrot) {
+		--outputs_size_estimate;
+		writeVarint(num_outputs * HASH_SIZE + 64, [&outputs_size_estimate](uint8_t) { ++outputs_size_estimate; });
+
+		if (num_outputs > 1) {
+			writeVarint(num_outputs, [&outputs_size_estimate](uint8_t) { ++outputs_size_estimate; });
+		}
+
+		outputs_size_estimate += num_outputs * HASH_SIZE;
+	}
+
+	// Return a conservative estimate of miner tx size. "- 1" is for the output count varint from the empty (0 outputs) serialized miner tx
+	return layout.miner_tx_size + outputs_size_estimate - 1;
 }
 
 int BlockTemplate::create_miner_tx(const MinerData& data, bool dry_run)
