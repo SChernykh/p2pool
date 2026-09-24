@@ -667,35 +667,48 @@ void fe_invert(fe out, const fe z) {
   return;
 }
 
+/* From fe_isnonzero.c, modified */
+
+static int fe_isnonzero(const fe f) {
+  unsigned char s[32];
+  fe_tobytes(s, f);
+  return (((int) (s[0] | s[1] | s[2] | s[3] | s[4] | s[5] | s[6] | s[7] | s[8] |
+    s[9] | s[10] | s[11] | s[12] | s[13] | s[14] | s[15] | s[16] | s[17] |
+    s[18] | s[19] | s[20] | s[21] | s[22] | s[23] | s[24] | s[25] | s[26] |
+    s[27] | s[28] | s[29] | s[30] | s[31]) - 1) >> 8) + 1;
+}
+
 // Montgomery's trick
 // https://iacr.org/archive/pkc2004/29470042/29470042.pdf 2.2
-int fe_batch_invert(fe *out, const fe *in, const int n) {
+int fe_batch_invert(fe* __restrict out, const fe* __restrict in, const unsigned int n) {
   if (n == 0) {
     return 0;
   }
 
+  assert(out);
+  assert(in);
+  assert(in != out); // also should not overlap
+
   // Step 1: collect initial muls
-  fe *init_muls = (fe *) malloc(n * sizeof(fe));
-  if (!init_muls) {
-    return 1;
-  }
-  memcpy(&init_muls[0], &in[0], sizeof(fe));
-  for (int i = 1; i < n; ++i) {
-    fe_mul(init_muls[i], init_muls[i-1], in[i]);
+  fe_copy(out[0], in[0]);
+  for (unsigned int i = 1; i < n; ++i) {
+    fe_mul(out[i], out[i-1], in[i]);
   }
 
   // Step 2: get the inverse of all elems multiplied together
+  if (!fe_isnonzero(out[n-1])) {
+    // Don't divide by 0
+    return -1;
+  }
   fe a;
-  fe_invert(a, init_muls[n-1]);
+  fe_invert(a, out[n-1]);
 
   // Step 3: get each inverse
-  for (int i = n; i > 1; --i) {
-    fe_mul(out[i-1], a, init_muls[i-2]);
+  for (unsigned int i = n; i > 1; --i) {
+    fe_mul(out[i-1], a, out[i-2]);
     fe_mul(a, a, in[i-1]);
   }
-  memcpy(&out[0], &a, sizeof(fe));
-
-  free(init_muls);
+  fe_copy(out[0], a);
 
   return 0;
 }
@@ -714,17 +727,6 @@ int fe_isnegative(const fe f) {
   unsigned char s[32];
   fe_tobytes(s, f);
   return s[0] & 1;
-}
-
-/* From fe_isnonzero.c, modified */
-
-static int fe_isnonzero(const fe f) {
-  unsigned char s[32];
-  fe_tobytes(s, f);
-  return (((int) (s[0] | s[1] | s[2] | s[3] | s[4] | s[5] | s[6] | s[7] | s[8] |
-    s[9] | s[10] | s[11] | s[12] | s[13] | s[14] | s[15] | s[16] | s[17] |
-    s[18] | s[19] | s[20] | s[21] | s[22] | s[23] | s[24] | s[25] | s[26] |
-    s[27] | s[28] | s[29] | s[30] | s[31]) - 1) >> 8) + 1;
 }
 
 /* From fe_mul.c */
@@ -4537,7 +4539,9 @@ int sc_isnonzero(const unsigned char *s) {
     s[27] | s[28] | s[29] | s[30] | s[31]) - 1) >> 8) + 1;
 }
 
-static void edwardsYZ_to_x25519(unsigned char *xbytes, const fe Y, const fe Z) {
+static int edwardsYZ_to_x25519(unsigned char *xbytes, const fe Y, const fe Z) {
+  //! @see Section 4.1 of RFC 7748: https://www.rfc-editor.org/rfc/rfc7748.html#section-4.1
+  //
   // y = Y/Z
   // x_mont = (1 + y) / (1 - y)
   //        = (1 + Y/Z) / (1 - Y/Z)
@@ -4545,31 +4549,27 @@ static void edwardsYZ_to_x25519(unsigned char *xbytes, const fe Y, const fe Z) {
 
   fe tmp0;
   fe tmp1;
+  int r;
   fe_add(tmp0, Z, Y);       // Z + Y
   fe_sub(tmp1, Z, Y);       // Z - Y
+  r = -!fe_isnonzero(tmp1); // succeed iff 0 != (Z - Y). AKA fail if identity point or some invalid reprs
   fe_invert(tmp1, tmp1);    // 1/(Z - Y)
   fe_mul(tmp0, tmp0, tmp1); // (Z + Y) / (Z - Y)
   fe_tobytes(xbytes, tmp0); // tobytes((Z + Y) / (Z - Y))
+  return r;                 // 0 on success, otherwise -1
 }
 
-void ge_p3_to_x25519(unsigned char *xbytes, const ge_p3 *h)
-{
-  edwardsYZ_to_x25519(xbytes, h->Y, h->Z);
-} 
+int ge_p3_to_x25519(unsigned char *xbytes, const ge_p3 *h) {
+  return edwardsYZ_to_x25519(xbytes, h->Y, h->Z);
+}
 
-int edwards_bytes_to_x25519_vartime(unsigned char *xbytes, const unsigned char *s)
-{
-  fe Y;
-  if (fe_frombytes_vartime(Y, s) != 0) {
-    return -1;
-  }
+int edwards_bytes_to_x25519_vartime(unsigned char *xbytes, const unsigned char *s) {
+  ge_p3 h;
+  const int r = ge_frombytes_vartime(&h, s);
+  if (0 != r)
+    return r;
 
-  fe Z;
-  fe_1(Z);
-
-  edwardsYZ_to_x25519(xbytes, Y, Z);
-
-  return 0;
+  return edwardsYZ_to_x25519(xbytes, h.Y, h.Z);
 }
 
 int ge_p3_is_point_at_infinity_vartime(const ge_p3 *p) {

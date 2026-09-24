@@ -92,7 +92,6 @@ SideChain::SideChain(p2pool* pool, NetworkType type, const char* pool_name)
 	//
 	// This branch is a work in progress for the v17 hard fork and can't produce or verify a valid chain yet:
 	// - hardforks.cpp has no mainnet height for v17, so PoolBlock::deserialize would reject eventual v17 blocks.
-	// - RandomX v2 is not fully supported yet.
 	//
 	// Unit tests build mainnet sidechains on purpose, so they skip this.
 #ifndef P2POOL_UNIT_TESTS
