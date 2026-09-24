@@ -70,32 +70,32 @@ static constexpr hash gen_janus_anchor_txkey_sec = keccak("gen_janus_anchor test
 
 static constexpr char test_wallet_address[] = "44MnN1f3Eto8DZYUWuE5XZNUtE3vcRzt2j6PzqWpPau34e6Cf4fAxt6X2MBmrm6F9YMEiMNjN6W4Shn4pLcfNAja621jwyg";
 
-static constexpr hash eph_priv_key("46a29e25fb6caafe8d5f40e279ff4830fdcca68232237461b0884520e2dea507");
-static constexpr hash eph_priv_key_negated("a73157371ff66759483db7c064fa95e40233597dcddc8b9e4f77badf1d215a08");
-static constexpr hash eph_pub_key("924e14b4c6664450530266de4aafa87a019484a22e193728d6cad09824690224");
+static constexpr hash eph_priv_key("794486278f8c0a9781fa54400df74be554a0949edb04ae2a68c33e7ad2f63e0e");
+static constexpr hash eph_priv_key_negated("748f6f358bd607c154a2a262d102932fab5f6b6124fb51d5973cc1852d09c101");
+static constexpr hash eph_pub_key("5cd04e8b809d25b57ef45c5d7441e2b111ffc123cea579580a0d69e923ea480f");
 
 static constexpr janus_anchor convergence_anchor = {
 	0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55
 };
 
-static constexpr hash convergence_eph_priv_key("6aea0ed0c34ad3483415377658841a75e0da8b462e637d8bf783b9bcd320b303");
-static constexpr hash convergence_eph_pub_key_cryptonote("8df2a40a42ecc10348a461310c1afc2c2b1be7b29fd27a3921a1aefba5efa27b");
-static constexpr hash convergence_eph_pub_key_subaddress("a3c3cdf84fd301cfc4675096f1c896543f2efc1001d899bbab3a0fd137f6a630");
-static constexpr hash convergence_view_public_key("369bdcf4f434f42eb09f4372cb6be30de7b17d21e4f98e244459a90b58cd0610");
-static constexpr hash convergence_spend_public_key("8f2f38e702678ae59751dc55818240e0330851e77bfaff003b671885ed06871e");
-static constexpr hash convergence_sender_receiver_secret("1f848f8384e7a9f217dc9dc2691703cf392eaf6c92931acd0fc840c900d3ed49");
-static constexpr hash convergence_contextualized_secret("6e99852ed7b3744177bb669e73fd1c544d88555ea6fffe3787ca6af48d2fe9f6");
-static constexpr hash convergence_onetime_address("522347147e41f22ebe155abc32b9def985b2e454045c6edd8921ee4253cd4516");
-static constexpr hash convergence_onetime_address_coinbase("0c4ee83d079ebd77882f894b2e0a43e3d572af9c330871f1dfbcc62f5c64e4ae");
+static constexpr hash convergence_eph_priv_key("ae5802c6757d77bd7032e071f72fc99c31a01b9f1bc3af2671c482c8e458140e");
+static constexpr hash convergence_eph_pub_key_cryptonote("f2296f8bd12d705b63d4d827011dd2b2834f2c3396e3546969110173fd14c11a");
+static constexpr hash convergence_eph_pub_key_subaddress("09b26146c8e458ea0822958af12d5f99de17600849388d9f85eabda24934c346");
+static constexpr hash convergence_view_public_key("99a684cd429d88815cb1f90b794522b32812388a9f35120cfc08c7435f7bd51f");
+static constexpr hash convergence_spend_public_key("97d227d0ff67e521b805d05d3a51390fd889181e334bf68156cb1e2d5aee6dd4");
+static constexpr hash convergence_sender_receiver_secret("1ab57d1f23d12d3f67bb52587dd0c74123cbba6e1c4fd10d0a93067caff19647");
+static constexpr hash convergence_contextualized_secret("911a15979c3d448aca2b81cd91d16ba2bf2ca4fa4f6dd16ad596c6304eb52227");
+static constexpr hash convergence_onetime_address("cd9610e64abdae97e2f8d8580550dbdd0ed543c99740c9c90f9f2cc854841bfa");
+static constexpr hash convergence_onetime_address_coinbase("4f01c472b41a0d85f3c9bc88ad38b7fd47a24029508f84aea84f55d221a48d29");
 static constexpr uint64_t convergence_amount = 67000000000000ULL;
 
-static constexpr hash convergence_account_spend_public_key("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4");
-static constexpr hash convergence_account_view_public_key("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d");
+static constexpr hash convergence_account_spend_public_key("905f67e69c39948e03dacbcfaeb2e766bfb407cdae53f1b11a813df99d9444e5");
+static constexpr hash convergence_account_view_public_key("34e4a36c249e3e0d22a4ee4d6a4da5ee89b12dc42223a12195af8dd727eb35fc");
 
 // unbiased_hash_to_ec(keccak("Monero Generator T")), the FCMP++ generator
 static constexpr uint8_t T_bytes[HASH_SIZE] = {
-	97, 183, 54, 206, 147, 182, 42, 61, 55, 120, 171, 32, 77, 168, 93, 59,
-	76, 220, 7, 37, 15, 93, 167, 227, 223, 38, 41, 146, 129, 52, 213, 38
+	220, 66, 225, 211, 48, 123, 45, 75, 59, 2, 114, 154, 190, 87, 126, 35,
+	29, 121, 71, 129, 65, 203, 91, 49, 12, 169, 250, 110, 18, 118, 22, 163
 };
 
 
@@ -212,22 +212,22 @@ TEST(carrot, gen_eph_privkey)
 	ASSERT_EQ(out, eph_priv_key);
 
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, 0, w, out));
-	ASSERT_EQ(out, hash("f74b73f6c1000b129e3d5e45b890a1270d502d355d19d2ab306335c1a2fdba0a"));
+	ASSERT_EQ(out, hash("63d0402a4f705488f40a6782b3bdaa3b848ecb16373b32c3f8955ef8de74200e"));
 
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, 1, w, out));
-	ASSERT_EQ(out, hash("11b2458517d9302ee01f36861f87994a445e80269c6aa5850911d25d01158c03"));
+	ASSERT_EQ(out, hash("0800e395933abc0dbcc92834a4fa6ac07c2246d6a20bff92aa8690e2c0162b01"));
 
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, 0x100000000ULL, w, out));
-	ASSERT_EQ(out, hash("c5c08ca1732aa701b67ead205f775a7e5c6c54a89e519034a71bf2eea55df80d"));
+	ASSERT_EQ(out, hash("434ed6931891ec31da92d47446ba55e6706e61bfb1ff635490215f4ef00c7a0e"));
 
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, 0x100000000000000ULL, w, out));
-	ASSERT_EQ(out, hash("387538402d587c1cf9ab46f26c9e3de604d3015dc9d75b6b7a2a5127ce71d308"));
+	ASSERT_EQ(out, hash("2a1af4200084b8ca2229f8f7b41e55311af3d4c2fc38cb153d5b9c8b9f3ba606"));
 
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, std::numeric_limits<uint64_t>::max(), w, out));
-	ASSERT_EQ(out, hash("ee85353f13513e88e8b4c30d7916bd5cf88e80c35728027e7cf1fa9a2c19bf00"));
+	ASSERT_EQ(out, hash("18759c1967c497f48f066ef56711db806e8f23d36294abe16c93969014c8e208"));
 
 	ASSERT_TRUE(gen_eph_privkey(all_ones_anchor, 3812345, w, out));
-	ASSERT_EQ(out, hash("6de606ddb6e11c57f6ab2cc9af485388350a93c1ac330bc968eaa490eee9ef05"));
+	ASSERT_EQ(out, hash("d387fc79d564146b989c149fd7c2507ac3e44be7d0ac51cfef19c8caac589b0d"));
 
 	ASSERT_EQ(sc_check(out.h), 0);
 	ASSERT_FALSE(out.empty());
@@ -288,15 +288,15 @@ TEST(carrot, gen_sender_receiver_secret)
 
 TEST(carrot, gen_contextualized_sender_receiver_secret)
 {
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 3812345),                              hash("25cb54120bdf74a519f8953c50c3ce5f00d0928ab83add4ec43b75af8dded1ac"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0),                                    hash("08a86fbc7ab62721ed896c56273944cf465086288c4947dd1b2e38d08afd35a0"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 1),                                    hash("4697636430bb5fa613bd46a619ccb90c4462a40f8b6ecf7ed61c1f48298ed6fe"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0xff),                                 hash("20f5f62e40926823d005c54b283a82666348d7aaae55a9346213cf017dcea55d"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100),                                hash("1a3709ff74a527fb54551f3434beec3d5395cdc86218a6bbddcc2a2b67792129"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0xffffffffUL),                         hash("36e5d243210c6300b1f99015534ee6475e714d248c331a0fa33df0d94b6ceae8"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100000000ULL),                       hash("45d1069cd97a3d50bb8d97aab8f25e10fdc8a790d3a1871b2f628e09844e2b5c"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100000000000000ULL),                 hash("d9af3e721e68a0811168eb8180f2f46fa922eeb13532fd4bc73b488db6e2f49b"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, std::numeric_limits<uint64_t>::max()), hash("3a14bdf375b0ff2163f8a5e61a384f57af7afa3ac28f5856db892626baf85e3d"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 3812345),                              hash("3132fe87647496d9516e4c0254ecfb49719d869aaf9aa0fe2e1bc462fb4f6a0d"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0),                                    hash("551a7f34d59c4b857c9ad4bb6d15bcb4e288aff8637910a1f0bec030a3b2c870"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 1),                                    hash("17457cba6a862b067b3bc0ccfcf3145876cc9d035b075f241174cd3f1314f760"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0xff),                                 hash("b081565f62a79be3240e55efe22e1d2e7a521a2be93c21cd62feac9cf743107e"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100),                                hash("ebb6721cd51b17e85e6f260ff65b73501866dac69fbbb0228030f23542061ad7"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0xffffffffUL),                         hash("9be38da7057281e5d2cb2d4dd25f772e5ed6630290215a25d458189d44d04e7f"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100000000ULL),                       hash("6060204b96bebf0e75f85ff6b70efa2bb06438b71b6c96b76804c7527ba6fb20"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100000000000000ULL),                 hash("d0a18efad226efbfbd4a23ab96e71ee8df228b64aa41593a9d4817b3dd1b03ca"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, std::numeric_limits<uint64_t>::max()), hash("97113f24d89c96dfe4bf296121ccf12cd3c5ecf4ddc439a9d56fbe5d12c51629"));
 
 	ASSERT_NE(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 1),
 	          gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0x100000000000000ULL));
@@ -305,9 +305,9 @@ TEST(carrot, gen_contextualized_sender_receiver_secret)
 	ASSERT_NE(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_cryptonote, 3812345),
 	          gen_contextualized_sender_receiver_secret(convergence_eph_pub_key_cryptonote, convergence_sender_receiver_secret, 3812345));
 
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_eph_pub_key_cryptonote, convergence_sender_receiver_secret, 3812345), hash("9404ae50361f3da6028e03078fe11c1caddc8b6940d4f5a39db31d9b8bd28c4c"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(hash(), convergence_eph_pub_key_subaddress, 0), hash("f3898a68e2da50294286d29f7fd30d405f04ec961839a5706fc9901dd84b9c1d"));
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, hash(), 0), hash("9dd4e5cb4a63419c744f2a0d59238c9bcf9d9ca5a8c2c297f2a97ad9b970233a"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_eph_pub_key_cryptonote, convergence_sender_receiver_secret, 3812345), hash("90f3218de832a77906a84da743f2b8251362cae531293606d84d5825331e80cc"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(hash(), convergence_eph_pub_key_subaddress, 0), hash("1e46592cf9b89d2bd8e1bd46ff011b678dca7772d5fc5cf3f7eab9168b167fb5"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, hash(), 0), hash("6381634570576ee8f049c080d0e5b372fec2ab0061310bb86d5a6270c0a6f123"));
 	ASSERT_EQ(gen_contextualized_sender_receiver_secret(hash(), hash(), 0), hash("2fc1bf02347d71f095d7a1fb678234efe6e80eef7d2a7da49b9d2bdec942ce99"));
 
 	// The whole P2Pool coinbase derivation chain, checked against Monero's vectors at every step
@@ -319,7 +319,7 @@ TEST(carrot, gen_contextualized_sender_receiver_secret)
 	ASSERT_TRUE(gen_sender_receiver_secret(convergence_eph_priv_key, convergence_view_public_key, sender_receiver_secret_out));
 	ASSERT_EQ(sender_receiver_secret_out, convergence_sender_receiver_secret);
 
-	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret_out, eph_pub_key_out, 3812345), hash("422e64bff67b3c0be6a745556b6c1f01d769bd893a70689e82da83a4525ed429"));
+	ASSERT_EQ(gen_contextualized_sender_receiver_secret(sender_receiver_secret_out, eph_pub_key_out, 3812345), hash("511222a5c105101125cd869cb6ececa35a9203c08587042aa504ee7f59d58cce"));
 }
 
 TEST(carrot, gen_sender_extension)
@@ -327,42 +327,42 @@ TEST(carrot, gen_sender_extension)
 	const hash& s = convergence_contextualized_secret;
 	const hash& k = convergence_spend_public_key;
 
-	ASSERT_EQ(gen_sender_extension_g(s, convergence_amount, k), hash("86c8e59ec3f19b652711e1feb53c69af595713d5dac7933525cc122ad2611707"));
-	ASSERT_EQ(gen_sender_extension_t(s, convergence_amount, k), hash("b286e46164b6eca2b4fd48ef53a110dda7d7760aa8e817741ba130b4f2abb607"));
+	ASSERT_EQ(gen_sender_extension_g(s, convergence_amount, k), hash("4c9193ad4544275bdb5d4d13c4e862a92a66e363cb93a6e105c2f43115be3e05"));
+	ASSERT_EQ(gen_sender_extension_t(s, convergence_amount, k), hash("dc9bff346a7e6d2e05bce5623eb931749d42874b5dde0057db31b0ebaf69a10a"));
 
 	ASSERT_NE(gen_sender_extension_g(s, convergence_amount, k), gen_sender_extension_t(s, convergence_amount, k));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0, k), hash("22ffd5f470876ad254f4be748c0c710bfc386364fea49bcc37864b1a32746800"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0, k), hash("82c14d47c80e86c373c1df11cb0f8c52dbfe9c72dfa6e4ef050460aeba9f7903"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0, k), hash("86e4cca6a133d70cdfe290cc94e976e2b46800846e70e32e66ee4e99f96b5108"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0, k), hash("1c7be908ff264cf08953f00525fa8909e5d598cb6b45737538425446e15b390f"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 1, k), hash("678dec72c356aa92e2021b591941f83cdbf7283765108fa516586c2685bd4300"));
-	ASSERT_EQ(gen_sender_extension_t(s, 1, k), hash("eaf647dedad80295022449f8f360888dd8edc4a6807b6c135601db11778b4e01"));
+	ASSERT_EQ(gen_sender_extension_g(s, 1, k), hash("86e89bf4140ada7577c146de7eb211d7024b1a1da6b64ac2e78e3ebac3ad7704"));
+	ASSERT_EQ(gen_sender_extension_t(s, 1, k), hash("8310030112a3ac927facb7ecdde425de91d04ab429a0a415ff1583f590f4af0e"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0xff, k), hash("e5013a58a56ca3025af3a40b8dad0e81ff37f58991da59ce16523faef2a4f900"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0xff, k), hash("dd7105a6cf03e6dfc3e1728999aa608054131948e63ea0aaa1656adea5313706"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0xff, k), hash("f877b55cf3211581a5d2443dbb9f5dca855b22bb21dfd928d7bf0f171d60b700"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0xff, k), hash("dcee82520cc169245848481e9f6a63c6485d5b0e9f90224b7b176aad949b440b"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0x100, k), hash("6eba7bb81e19e5b5f9d17b36d071d7606085d9c5888ff06e2c1782ea6f82bd05"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0x100, k), hash("14712a1a1c2e4e86b4a870db485e95f067f6e46843566aff58aa0cb6d90a410b"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0x100, k), hash("b20db32638eff88a994b26fb0be69ccb0f6c0eeba74e3bdbde23f948492c9c0a"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0x100, k), hash("68937eb893b721ae97c9ef7c4fc0b267dc8a5874823789e7533d8514ca2f1902"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0xffffffffUL, k), hash("e8111f7bb5e99253f04ec238dfaff205b8984ca8d28cdf23fd320c6493ebba0e"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0xffffffffUL, k), hash("8dce683278006a5fa09e6ff44d0163d814c63e24d21a66243da8a41bcc7e640a"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0xffffffffUL, k), hash("587b919ea4d2f25e268287dbcf82e7b4154a64595284b5012d30d74f31a90106"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0xffffffffUL, k), hash("7e24723a2af8def5672b48a4e0761a9014e135eff00afd1e601a47bda0b2d20a"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0x100000000ULL, k), hash("068eae9fdb7a283c1ac556620b7cdb380465e24578c5a05e97e8394d2dec2705"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0x100000000ULL, k), hash("56c93999c03505d842cc826c32c059722db4b7b0c0f85139a82a183b1edaae0e"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0x100000000ULL, k), hash("80cb739c46a8339935aafdb52a82ba0603e14d67732b96c1709c1f9b0251a40b"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0x100000000ULL, k), hash("152fa59e403ec5ea52b02e4defd3e2763e7e62743046bd65ce6e4b14836bb409"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, 0x100000000000000ULL, k), hash("51beeeb1b8d34a4fc544cc9f0a6b408e6d05042fe130fb52956c8f32df7e3d0b"));
-	ASSERT_EQ(gen_sender_extension_t(s, 0x100000000000000ULL, k), hash("0a3a72afe33d63b4a80cc2d2c2707cb76c5873ffdf1293411d76e512f1da2205"));
+	ASSERT_EQ(gen_sender_extension_g(s, 0x100000000000000ULL, k), hash("38bc191755a37688a901d9f94a9ef7fd18bca06941a884bc6e850a983cf87a0c"));
+	ASSERT_EQ(gen_sender_extension_t(s, 0x100000000000000ULL, k), hash("2f171a9a0cb3ac2fcf466549e779949ed403fe4e5fb6e5c569f91a267c8d7000"));
 
 	ASSERT_NE(gen_sender_extension_g(s, 1, k), gen_sender_extension_g(s, 0x100000000000000ULL, k));
 
-	ASSERT_EQ(gen_sender_extension_g(s, std::numeric_limits<uint64_t>::max(), k), hash("c5401a4e69149b641ce3b0c8a922f3b239860a4a7a3f3445f12259ad6e13e302"));
-	ASSERT_EQ(gen_sender_extension_t(s, std::numeric_limits<uint64_t>::max(), k), hash("ca07ec683dec8de3efd8bc482e82a2f454e4ceead35fdfcce4c17908828bdf0b"));
+	ASSERT_EQ(gen_sender_extension_g(s, std::numeric_limits<uint64_t>::max(), k), hash("64ff01e6dc990e380b28344b103721c29f3908e015ffa34f9ff22e1e50b60909"));
+	ASSERT_EQ(gen_sender_extension_t(s, std::numeric_limits<uint64_t>::max(), k), hash("bf277cc3dad6a38c2b215c4724227c137d135642277ed255b3fb763f43962b04"));
 
-	ASSERT_EQ(gen_sender_extension_g(hash(), convergence_amount, k), hash("520dab93cab6762d55c4507f614bba5686a4445c8488d51e5d60ec45cfa84f0b"));
-	ASSERT_EQ(gen_sender_extension_t(hash(), convergence_amount, k), hash("8e7524e25feca23a5caf903fc2c0060096eba84186c0bb8fd7e5a618d2388100"));
+	ASSERT_EQ(gen_sender_extension_g(hash(), convergence_amount, k), hash("405733f8222720a72fa80246bc4af2f4ec27557bc52b93c76c5b00f3437d510d"));
+	ASSERT_EQ(gen_sender_extension_t(hash(), convergence_amount, k), hash("80293ea5d0ac9b68552da753a64b707a756581d96d974226bf85def04e1ac801"));
 
-	ASSERT_EQ(gen_sender_extension_g(s, convergence_amount, hash()), hash("02c24bca4071cc201ee259ff1e6b8063810e92929f991ea4fe56736232b3c30c"));
-	ASSERT_EQ(gen_sender_extension_t(s, convergence_amount, hash()), hash("07b76a1adf93ab7fae4be3ed86324c990e22f8552e3abbe58856e48d0dc9a302"));
+	ASSERT_EQ(gen_sender_extension_g(s, convergence_amount, hash()), hash("eea0b9c7f57ef79a4c591375a26305c2c831650133a58506dd50f35ced522306"));
+	ASSERT_EQ(gen_sender_extension_t(s, convergence_amount, hash()), hash("5b30544f396aeb0def2398070599e6dd4be5c9ac79fea58ccd38f368717f600d"));
 
 	ASSERT_EQ(gen_sender_extension_g(all_ones, std::numeric_limits<uint64_t>::max(), all_ones), hash("6a8e6d4aee5412e82dabf437008cd48dbfe3995cd8b3896d51ed9ee71018ae05"));
 	ASSERT_EQ(gen_sender_extension_t(all_ones, std::numeric_limits<uint64_t>::max(), all_ones), hash("6c8b0c36142877510353c8893b7a3c348c3f981994b075611da31f0525d6d80a"));
@@ -522,20 +522,20 @@ TEST(carrot, gen_view_tag)
 		EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), expected);
 	};
 
-	check(gen_view_tag(s_sr, 0, k), "e1b385");
-	check(gen_view_tag(s_sr, 1, k), "f8fd45");
-	check(gen_view_tag(s_sr, 3812345, k), "130d27");
-	check(gen_view_tag(s_sr, 0x100000000ULL, k), "4f6c36");
-	check(gen_view_tag(s_sr, std::numeric_limits<uint64_t>::max(), k), "71c4f9");
+	check(gen_view_tag(s_sr, 0, k), "724499");
+	check(gen_view_tag(s_sr, 1, k), "314b67");
+	check(gen_view_tag(s_sr, 3812345, k), "0c22ec");
+	check(gen_view_tag(s_sr, 0x100000000ULL, k), "db1f5e");
+	check(gen_view_tag(s_sr, std::numeric_limits<uint64_t>::max(), k), "daa025");
 
-	check(gen_view_tag(s_sr, 0x100000000000000ULL, k), "bb7369");
+	check(gen_view_tag(s_sr, 0x100000000000000ULL, k), "0b6e97");
 
-	check(gen_view_tag(s_sr, 3812345, convergence_onetime_address_coinbase), "e7828b");
+	check(gen_view_tag(s_sr, 3812345, convergence_onetime_address_coinbase), "84c5a3");
 
-	check(gen_view_tag(convergence_contextualized_secret, 3812345, k), "4e67ad");
+	check(gen_view_tag(convergence_contextualized_secret, 3812345, k), "8c7532");
 
-	check(gen_view_tag(hash(), 0, k), "eab61b");
-	check(gen_view_tag(s_sr, 0, hash()), "fd0dcb");
+	check(gen_view_tag(hash(), 0, k), "bb075f");
+	check(gen_view_tag(s_sr, 0, hash()), "147b94");
 }
 
 TEST(carrot, gen_encrypted_janus_anchor)
@@ -553,16 +553,16 @@ TEST(carrot, gen_encrypted_janus_anchor)
 		EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), expected);
 	};
 
-	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, k), "a149f2098c65dd728daf9146b74c0381");
+	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, k), "2783bff2477209c30e3c02efb44312e0");
 
-	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, convergence_onetime_address_coinbase), "4473243363dae8741fa6f787bbc77b22");
+	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, convergence_onetime_address_coinbase), "84310bb5a369f769307eee82d8904367");
 
-	check(gen_encrypted_janus_anchor(s_ctx, janus_anchor{}, k), "6ba7e188fb315ad2158ac6b6652408d4");
+	check(gen_encrypted_janus_anchor(s_ctx, janus_anchor{}, k), "ed6dac7330268e639619551f662b19b5");
 
-	check(gen_encrypted_janus_anchor(s_ctx, all_ones_anchor, k), "94581e7704cea52dea7539499adbf72b");
+	check(gen_encrypted_janus_anchor(s_ctx, all_ones_anchor, k), "1292538ccfd9719c69e6aae099d4e64a");
 
-	check(gen_encrypted_janus_anchor(hash(), convergence_anchor, k), "8eb6677cec2f7ddb79947c3c627a4368");
-	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, hash()), "e6ee29d3243a451d2254dd2b625ebe43");
+	check(gen_encrypted_janus_anchor(hash(), convergence_anchor, k), "17289de1a10a1f459470ef3a2a87ca55");
+	check(gen_encrypted_janus_anchor(s_ctx, convergence_anchor, hash()), "c80bc5de7ae14e3119ae2cd2f47a967c");
 
 	const std::array<janus_anchor, 3> anchors = { convergence_anchor, janus_anchor{}, all_ones_anchor };
 
@@ -584,14 +584,14 @@ TEST(carrot, coinbase_enote)
 
 	ASSERT_TRUE(w.assign(convergence_account_spend_public_key, convergence_account_view_public_key, NetworkType::Mainnet));
 
-	// d_e = H_n(anchor_norm, input_context, K_s, pid)
+	// d_e = H_n(anchor_norm, input_context, K_s, K_v, pid)
 	hash eph_priv_key_out;
 	ASSERT_TRUE(gen_eph_privkey(convergence_anchor, height, w, eph_priv_key_out));
 
 	// D_e = ConvertPointE(d_e G)
 	hash eph_pub_key_out;
 	ASSERT_TRUE(gen_eph_pubkey(eph_priv_key_out, eph_pub_key_out));
-	ASSERT_EQ(eph_pub_key_out, hash("e665b92465a2c041a9ea58aeba5231402556b3d5e578ce6cdd29ff7c5dc75d68"));
+	ASSERT_EQ(eph_pub_key_out, hash("5e1ccb90a305060825ca6ce2df32685fac8d2fff26c1d2f299c4d7a1415f0a33"));
 
 	// s_sr = ConvertPointE(d_e K_v)
 	hash sender_receiver_secret;
@@ -607,7 +607,7 @@ TEST(carrot, coinbase_enote)
 	// K_o = K_s + k^o_g G + k^o_t T
 	hash onetime_address;
 	ASSERT_TRUE(gen_onetime_address(w.spend_public_key(), sender_extension_g, sender_extension_t, onetime_address));
-	ASSERT_EQ(onetime_address, hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"));
+	ASSERT_EQ(onetime_address, hash("45bf7a2bd2050e4ff329f6e577ad03e59157c356dea673319bc1851b4294a075"));
 
 	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
 
@@ -618,7 +618,7 @@ TEST(carrot, coinbase_enote)
 		log::Stream s(buf);
 		s << log::hex_buf(&v);
 
-		ASSERT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), "3005d4");
+		ASSERT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), "4b5dd4");
 	}
 
 	// anchor_enc = anchor_norm XOR H_16[s^ctx_sr](K_o)
@@ -628,7 +628,7 @@ TEST(carrot, coinbase_enote)
 		log::Stream s(buf);
 		s << anchor_enc;
 
-		ASSERT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "246b90aaa7e33b9e1c0619d70860c56c");
+		ASSERT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "303a38aae1b9885d08947cb66fb04736");
 	}
 }
 
@@ -662,60 +662,71 @@ TEST(carrot, coinbase_enote_vectors)
 
 	static const Vector vectors[] = {
 		// convergence account, the vector carrot.coinbase_enote already uses
-		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
-		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		{ hash("905f67e69c39948e03dacbcfaeb2e766bfb407cdae53f1b11a813df99d9444e5"),
+		  hash("34e4a36c249e3e0d22a4ee4d6a4da5ee89b12dc42223a12195af8dd727eb35fc"),
 		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
 		  3812345ULL, 600000000000ULL,
-		  hash("1d7e3ad3b7fb1ba4a935f1afd9715462b6bd7904a7cb386d1b3035660c0fcf0b"),
-		  hash("e665b92465a2c041a9ea58aeba5231402556b3d5e578ce6cdd29ff7c5dc75d68"),
-		  hash("81b0c5305287189d7e9ccf68e723cb7fb838d593874f925bc6cab59e906a7a05"),
-		  hash("f973ae7cd118cb988f5ee89410142c4894df1f49c138f33a0b1a5c27ee6eef44"),
-		  hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"),
-		  "3005d4", "246b90aaa7e33b9e1c0619d70860c56c" },
+		  hash("6395d55ba3bc7ec5e0e2ef7e5b640b193a129deca0c00cb67a307b628d877b06"),
+		  hash("5e1ccb90a305060825ca6ce2df32685fac8d2fff26c1d2f299c4d7a1415f0a33"),
+		  hash("63127dd4aaeb8a2adfaf4a8cadb6783091a0f600889c22c40b7cabb57e36ca61"),
+		  hash("d5ce1a892e38d55c30d21a12e8494caad1a1c4b3ad40ba96ec7d043e8b5b60cd"),
+		  hash("45bf7a2bd2050e4ff329f6e577ad03e59157c356dea673319bc1851b4294a075"),
+		  "4b5dd4", "303a38aae1b9885d08947cb66fb04736" },
 		// height 0, amount 0
-		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
-		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		{ hash("905f67e69c39948e03dacbcfaeb2e766bfb407cdae53f1b11a813df99d9444e5"),
+		  hash("34e4a36c249e3e0d22a4ee4d6a4da5ee89b12dc42223a12195af8dd727eb35fc"),
 		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
 		  0ULL, 0ULL,
-		  hash("43b0a2e192c6aae9fb02ec729fab9d1b8e8ea48542a980b516266961d5b29600"),
-		  hash("91faf11fe12752ffb90b2c637e377991dde3cc887eee56aca53d1b5e35c0e069"),
-		  hash("103d9cc297da5c6870a7c0f9d905e23396df938571bd64ebc379372d6a934d71"),
-		  hash("eb856676e772926a7544bc93a6ede7d67b9f520ff09bdbdee75f91300ab64373"),
-		  hash("f9fda7a4cc21b3d4eea22f7fde8527c1095f03759e3eeba0dc6d9463631aa3a9"),
-		  "62a6e7", "24925c2428114fc86fc8f6d50d1b44b2" },
+		  hash("cb0fb803c2937543164f991e4a6a9f69671c09e83e574ce361384a3fe6343509"),
+		  hash("0224a90e26b42b9001d20aa5858970129b45607ef55d03957d32932d0732955f"),
+		  hash("ac452de669a6449331fad34b4c42b5591c75165e0c68561710da50af7c06fd26"),
+		  hash("12317c9b207a2e575721dae4b2cd857855b7c4f0e12d4ce385827c92a079dbcb"),
+		  hash("d80d1000e8a79c81594e3aff1ee60c33eec19832475589972c34e62d3cbd6f80"),
+		  "7cf31c", "8f020891c123264ab32c5fae9c975893" },
 		// maximum amount
-		{ hash("4198f391723f6c64eb75e4f0e341d576dc344e8a8ad3164444451855dbd862b4"),
-		  hash("14d12188409591353096b41abeccf66a88d916dfe0e6d1998672293ebc1cc83d"),
+		{ hash("905f67e69c39948e03dacbcfaeb2e766bfb407cdae53f1b11a813df99d9444e5"),
+		  hash("34e4a36c249e3e0d22a4ee4d6a4da5ee89b12dc42223a12195af8dd727eb35fc"),
 		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
 		  1ULL, 18446744073709551615ULL,
-		  hash("74fb5c26d7c23e2e7be763394833d0d7d242275eef39b90f3a61db05c0564608"),
-		  hash("66b2f4c657732d604859272f3e601a8685e816e36f25eafc61189cc4220a0d3e"),
-		  hash("93d4f009b19de0da5064db77c3d404b7946c6a6ea0abb55194f8d6039777861e"),
-		  hash("ce840a7e9eb700aa836bbd3a12c0a641b50f6486e251c12148cbb1d4e33e89eb"),
-		  hash("67a9ba75af0680b750bd5c6eaf8ab811f871e73b558fe45b13cf541541f8b9fe"),
-		  "c893a8", "d3a0143df0f55753158443527b5bff2d" },
+		  hash("b0de47cc46a71310542945817b8c1a8b561868135619d559e4b6278745482709"),
+		  hash("c173b48039bf617fd12b622b59cfe86f14b3e69a52e0586846ee48f7d2c2ff79"),
+		  hash("6423eee040be0d0f9b63d1b95aea10f668170199b34b9b48669d0827c1801370"),
+		  hash("850b37d4302847c01453841dc6ba4a5b321028f8015104507399764a83262243"),
+		  hash("dcb4b3f94657c65df05775bf12865b806e1408ff1e6224a1aa6ae1cd28dafed1"),
+		  "acc257", "7d0a24df00139a43fc627915d830d62c" },
 		// test wallet, height 2^32, zero anchor
 		{ hash("48313a5b1865002b25225520212c24806ccb92347089a3fba869a8c7e6586e15"),
 		  hash("c24e9aa0f7aef7b37f4ad0a906210f78fc5794b4fa9f73f3ca2bf5a09423b12c"),
 		  { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
 		  4294967296ULL, 67000000000000ULL,
-		  hash("bd0f590dbe1084cecb8a6e9f0ccf8ccdd32d02c2a0463649319d078255891408"),
-		  hash("4295788adced1aee81ef7bebf2af71cc51b3ed37e6a94b493552c311158ac82a"),
-		  hash("9341ad2394d4d4022491e4400181547e97e8f1256f47b683d2a5b9601239671f"),
-		  hash("30218e47d03d4899b265191253c31a073327431cbbadeb11d4dc2d7aaad6aedd"),
-		  hash("7cecb3e0cff3524a3c6b5e667de847541ab9b559e5ae900a08bae8f689ae8e99"),
-		  "51df2b", "9fea1a0d41518bdc2d97b3ef1d5539e8" },
+		  hash("ef2e6bfaf7cd21a8b3d4c2e951e52ddc6953d7f5eb8131b017ed716a1b69e40b"),
+		  hash("492d1b32a704dfed8dbf34090af83efe642f4e0d09c38b51f85fefe1a6836e56"),
+		  hash("41f51e03e7ae9e951f20116cd280e2455df3a5fdb8af57ca18fc7c6050fd7f51"),
+		  hash("ed3829e31e9acc1459dccb4e8ad432033c79f3ae8f1fb339f8c875e8318173a9"),
+		  hash("ee3ce12705203e30a9a68c8f3a74fe7f288543154a19f70999eb3d37afcda888"),
+		  "73d50f", "78d4d510d8c329d748be4ab702ad6c31" },
 		// test wallet, maximum height, all-ones anchor
 		{ hash("48313a5b1865002b25225520212c24806ccb92347089a3fba869a8c7e6586e15"),
 		  hash("c24e9aa0f7aef7b37f4ad0a906210f78fc5794b4fa9f73f3ca2bf5a09423b12c"),
 		  { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
 		  18446744073709551615ULL, 1ULL,
-		  hash("eb1f5bc40545c3cd7be4c45881c2bbbe55cf776c981ac6335624c53ab167070a"),
-		  hash("44543cb8a7182115c7079d9f42392704470074a59e5a7880138ff2381e1cc20f"),
-		  hash("eac4c77e893c9ee0d9f78ba2a23cd6dbdc9d070c899f0e4737a71bb3cc401b25"),
-		  hash("77daef1421818a739c8c0513b1d683efcbea2ad7a224db85c4bdc6203556af81"),
-		  hash("d090ec2d448bd4ea3a3db320b3e044e0c0e2bde34dc8bc4ba5d2ccb043337c72"),
-		  "6cf282", "eaf2251fd3ff70acf02766117355bd07" },
+		  hash("8462ab6ddabb12133e8019b029f789b1f0da452dc22e77520e6cc3710beeba09"),
+		  hash("49785a2eae04bf254291ea0d753bca20ed106c1deeb4c721660a2c63adc67a7d"),
+		  hash("e6e2fe3c577ff9f49a2c1b540da9848a6d8648d0c9cf3dc58bc2e11350cbda7e"),
+		  hash("ef7226980986221c23cf93eddc3872cf47ba3e4a9c4c13e248b4ebdc5ce13720"),
+		  hash("bf1b6148fb514176b7c1ab686e0b5ab07978584ddbd8f520ebdc877cb8f08ff9"),
+		  "b926ac", "12d36007b1178c47b98c011fdf35e650" },
+		// convergence main address (K_s, k_v G)
+		{ hash("905f67e69c39948e03dacbcfaeb2e766bfb407cdae53f1b11a813df99d9444e5"),
+		  hash("19925849a0ededef6ea6604f707f45567056205f9d32511a57ecf63081b3a106"),
+		  { { 0xca, 0xee, 0x13, 0x81, 0x77, 0x54, 0x87, 0xa0, 0x98, 0x25, 0x57, 0xf0, 0xd2, 0x68, 0x0b, 0x55 } },
+		  3812345ULL, 600000000000ULL,
+		  hash("95c5aea280cb6fd67c62de8bc4be1d7b268ace61ea66f9682789feb4bfe8240e"),
+		  hash("5769be98d5c4d3005d1d7ddf4cbdaac3182275ac5039760f19d45a33003ae640"),
+		  hash("da6f686d655e0c35ce8dcb011e3f1ef8af23e526e1c3694f8a10a8c849b5475f"),
+		  hash("5f01a99782fb263d9a651e5a30e9f5e3b4a0d08c9d34ce11d750e7a06ee3cb1e"),
+		  hash("e2efd74a233fd8488d6bbf88e474d9d73cb22588627907611c84dc9012cec64f"),
+		  "c13696", "a326f5c233637c18f7c803b8028f5c9b" },
 	};
 
 	char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
@@ -726,7 +737,7 @@ TEST(carrot, coinbase_enote_vectors)
 		Wallet w(nullptr);
 		ASSERT_TRUE(w.assign(v.spend_public_key, v.view_public_key, NetworkType::Mainnet));
 
-		// d_e = H_n(anchor_norm, input_context, K_s, pid)
+		// d_e = H_n(anchor_norm, input_context, K_s, K_v, pid)
 		hash eph_priv_key;
 		ASSERT_TRUE(gen_eph_privkey(v.anchor, v.height, w, eph_priv_key));
 		EXPECT_EQ(eph_priv_key, v.eph_priv_key);
@@ -1283,18 +1294,18 @@ TEST(carrot, batch_coinbase_outputs)
 	ASSERT_EQ(out.size(), 1U);
 	EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 	ASSERT_TRUE(out[0].valid);
-	ASSERT_EQ(out[0].onetime_address, hash("79899297f3e205ec2e37db9ff31cf08fa6c5c1112003936490810e06ed1f19ee"));
+	ASSERT_EQ(out[0].onetime_address, hash("45bf7a2bd2050e4ff329f6e577ad03e59157c356dea673319bc1851b4294a075"));
 
 	{
 		char buf[CARROT_JANUS_ANCHOR_BYTES * 2 + 1] = {};
 
 		log::Stream s1(buf);
 		s1 << log::hex_buf(&out[0].vt);
-		EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), "3005d4");
+		EXPECT_EQ(std::string_view(buf, CARROT_VIEW_TAG_BYTES * 2), "4b5dd4");
 
 		log::Stream s2(buf);
 		s2 << out[0].anchor_enc;
-		EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "246b90aaa7e33b9e1c0619d70860c56c");
+		EXPECT_EQ(std::string_view(buf, CARROT_JANUS_ANCHOR_BYTES * 2), "303a38aae1b9885d08947cb66fb04736");
 	}
 
 	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));

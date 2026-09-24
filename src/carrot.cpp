@@ -98,6 +98,7 @@ bool gen_eph_privkey(const janus_anchor& anchor_norm, uint64_t height, const Wal
 		anchor_norm,
 		'C', height, padding<CARROT_INPUT_CONTEXT_PADDING_BYTES>(),
 		w.spend_public_key(),
+		w.view_public_key(),
 		padding<LEGACY_PAYMENT_ID_BYTES>()
 	);
 
@@ -110,13 +111,7 @@ bool gen_eph_pubkey(const hash& eph_priv_key, hash& eph_pub_key)
 	ge_scalarmult_base_vartime(&point, eph_priv_key.h);
 
 	// ConvertPointE is not defined for the point at infinity (Z - Y = 0 there)
-	if (ge_p3_is_point_at_infinity_vartime(&point)) {
-		return false;
-	}
-
-	ge_p3_to_x25519(eph_pub_key.h, &point);
-
-	return true;
+	return ge_p3_to_x25519(eph_pub_key.h, &point) == 0;
 }
 
 // Pre-condition: view_public_key must be in the prime order subgroup. batch_sender_receiver_secrets relies on the same pre-condition.
@@ -130,13 +125,7 @@ bool gen_sender_receiver_secret(const hash& eph_priv_key, const hash& view_publi
 	ge_p3 point;
 	ge_scalarmult_p3(&point, eph_priv_key.h, &view_point);
 
-	if (ge_p3_is_point_at_infinity_vartime(&point)) {
-		return false;
-	}
-
-	ge_p3_to_x25519(secret.h, &point);
-
-	return true;
+	return ge_p3_to_x25519(secret.h, &point) == 0;
 }
 
 hash gen_contextualized_sender_receiver_secret(const hash& sender_receiver_secret, const hash& eph_pub_key, uint64_t height)
