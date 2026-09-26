@@ -268,7 +268,7 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 			return x < y;
 		};
 
-	std::nth_element(order.begin(), order.begin() + M, order.end(), ranks_lower);
+	std::nth_element(order.begin(), order.begin() + static_cast<ptrdiff_t>(M), order.end(), ranks_lower);
 
 	// r_i: the payout, before the remainder
 	for (size_t i = 0; i < n; ++i) {
@@ -308,7 +308,7 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 				LOGERR(1, "rho > 0 but nothing is ranked. Check the code!");
 				return false;
 			}
-			h = M ? *std::max_element(order.begin(), order.begin() + M, ranks_lower) : *std::min_element(order.begin(), order.end(), ranks_lower);
+			h = M ? *std::max_element(order.begin(), order.begin() + static_cast<ptrdiff_t>(M), ranks_lower) : *std::min_element(order.begin(), order.end(), ranks_lower);
 		}
 
 		rewards[h] += rho;

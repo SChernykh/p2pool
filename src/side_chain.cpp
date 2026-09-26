@@ -552,6 +552,10 @@ bool SideChain::get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* 
 
 bool SideChain::get_cached_shares(const PoolBlock* block, PPLNSWindow& window, uint64_t* bottom_height, bool quiet) const
 {
+	if (!block) {
+		return false;
+	}
+
 	const PPLNSWindow& cached = block->m_cachedShares;
 
 	if (!pool_block_debug() && !cached.empty()) {
