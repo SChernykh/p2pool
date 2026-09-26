@@ -65,7 +65,7 @@ TEST(block_template, prewarm_carrot_outputs)
 	MinerData data{};
 
 	data.major_version = HARDFORK_VERSION_CARROT;
-	data.height = 3012000;
+	data.height = 3102800;
 	data.prev_id = keccak("pre-warmup mainchain tip");
 	data.difficulty = difficulty_type(1000000000000ULL);
 	data.median_weight = 300000;
@@ -393,7 +393,7 @@ TEST(block_template, genesis_tx_key_seed)
 			MinerData data{};
 
 			data.major_version = version;
-			data.height = (version < HARDFORK_VERSION_CARROT) ? 2762973 : 3012000;
+			data.height = (version < HARDFORK_VERSION_CARROT) ? 2762973 : 3102800;
 			data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
 			data.difficulty = sidechain.m_testMainChainDiff;
 			data.median_weight = 300000;
@@ -418,7 +418,7 @@ TEST(block_template, genesis_tx_key_seed)
 
 				const hash expected_seed = genesis
 					? (change_prev_id ? genesis->calculate_tx_key_seed() : genesis->m_txkeySecSeed)
-					: ((version < HARDFORK_VERSION_CARROT) ? sidechain.consensus_hash() : H("0206fa01e57831c64ec64607664e9b53753035c508a7d76358951440ef8d5c5d"));
+					: ((version < HARDFORK_VERSION_CARROT) ? sidechain.consensus_hash() : H("3a8e489cba8ff2db2f834619b213c8c2b5dfc74e3467af129e1889b8ba80e6ab"));
 
 				ASSERT_EQ(b->m_txkeySecSeed, expected_seed);
 

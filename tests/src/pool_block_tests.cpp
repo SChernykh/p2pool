@@ -67,10 +67,10 @@ TEST(pool_block, genesis_tx_key_seed)
 			H("b3354891c5722dabfe6200c2ee17efb008b38414471500826b0b46e5545c32bf"),
 			H("9f3e9cffab3dc768649f2de52ffda2235f6ec4f479a777dfea7a82ff2a798215"),
 			H("a1f0b44e5d144ef1c02779acf7a823ded868f7bd732fe634e5aba26a86b026b8") } },
-		{ 3012000, {
-			H("67e87aa830837d231f01ac4b30d1709c0c21040a4f2cae8c22de6256eb3a5c06"),
-			H("0206fa01e57831c64ec64607664e9b53753035c508a7d76358951440ef8d5c5d"),
-			H("981c99fed06592c81e941829a3fd8afed6429300c8c23f2844ad05def874ac0d") } },
+		{ 3102800, {
+			H("ebcfb71716e38168dc27801b1a9df3dbed1c69fe7c9cd51ed5e49a7560851cc9"),
+			H("3a8e489cba8ff2db2f834619b213c8c2b5dfc74e3467af129e1889b8ba80e6ab"),
+			H("9bc4081a78aa124e1ca2c62650e94e0b2d1135c7fc56c47bd0f6a5aacf73703d") } },
 		{ 0x100000000ULL, {
 			H("43d259d2173c487207e7a743ead45bea3c88649067ea03c97abb04bd57dd0536"),
 			H("a846eea0b5581a1b90c13c1ae69eb709e6e18114e307055ddac12c159b52e18f"),
@@ -299,7 +299,7 @@ TEST(pool_block, deserialize_carrot)
 		{ 600123456789ULL, 0, 0, 0 },
 		{ 600123456789ULL, 0, 0, 0 },
 		{ 300000000000ULL, 300123456789ULL, 0, 0 },
-		{ 200400000000ULL, 199800000000ULL, 199923456789ULL, 0 },
+		{ 199800000000ULL, 200400000000ULL, 199923456789ULL, 0 },
 	};
 
 	std::ifstream ancestors("block_carrot_ancestors.dat", std::ios::binary);
@@ -314,10 +314,10 @@ TEST(pool_block, deserialize_carrot)
 		hash coinbase_hash;
 		const char* hashing_blob;
 	} expected[] = {
-		{ 4386, 5079, 0, 0, H("25cac7af43aaa0a9304de1cebca2d3f46f5dceb640779aafbd14209cabe120be"), H("7e8f150bf3bf371d456cee2c5abdeef64f11c8569beef0ea6299c6d7b6c9c942"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89785634128dfb65b76fc722d125c9f8c223a7258551254b5c0c351d0aab8fd15b6ae02db68301" },
-		{ 4386, 5079, 1052, 1103, H("2bc3bc9c3e2bcce7f8df4395dee9e0baaeae350fc0d6b4fc976e2462e3ed7866"), H("8ea409a00df52e6146290bdec31293082c525b1a8db3fd1373bd2d249d46e2d8"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a89795634127308c40cbb06392c1f2db9f57089946e81fbc3012ab8ec6f50e23226ef67c56e8301" },
-		{ 4477, 5079, 1052, 1194, H("17356749bd1aa11a447c4ef4318eb36e9a43b00337b9a53407ea0e0b0439760b"), H("ef142bb0cd6050523032d148288223816db9c64d85d84f7d4e64781204fd9faf"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a563412086776a11305e10a57a8a58746f6e549b9c6ae3254ec184abbf0f16dc20d29fc8301" },
-		{ 4568, 5081, 1086, 1317, H("170f24cce5a463cc7bfd1261db3b64c02f912ae0966d39e4acbdc3d3d18e6aef"), H("20d473a995d2601b76b1bc018ffe45e4349e53eb425a43d906a7d172a716f7ee"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412d4b7af7f53b2e1e95abf661f29d972d3e59b28ae8d26282ba337415c6ceb62878301" },
+		{ 4386, 5079, 0, 0, H("918309a3619958fc58717cfe64ad9ecdec437f3057f3f69d3e6de2b07916705e"), H("552d2704514754ff4475d87b889a48228786e2beb49e8e1a340e981369e685bb"), "111280cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897856341217fea4f8db518b3589e6f6218d941be7bdf4c8f362ade80e9f1613bd80c72d4e8301" },
+		{ 4386, 5079, 1052, 1103, H("f98d904b199e6e2e761055f5ae50a33e11065f4fc7313bd8a991b7a01f3e266f"), H("c307697707ba66facc4d7fc700632db7531bf88ba793e15337b77bfe23dea6fa"), "11128acae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897956341250c08b59031d71c0a6e7043079fb5da2fcc76f3fc0d64930877dd3cc0940bc2c8301" },
+		{ 4477, 5079, 1052, 1194, H("1e203462d608ef086092b679ab8c12dd913652acfa12facd43143ca94eae9cf3"), H("ece6a6719e555abba178fbd6c0f5d6ca636986115163880f2af6dbaaf7a62905"), "111294cae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897a5634121549d2f3e485ba5ce23cc878cbd63ad46956df848a2199e271cade56cbc53b238301" },
+		{ 4568, 5081, 1086, 1317, H("d3b834bb52428d6a92118aab2d3aa595ab2d510526485ab7438befd8a6e7e3e3"), H("64df04e7d29cce1f2d35fcf16f2a6fb68e2795381be5bbc191d2f7a795416e10"), "11129ecae2d006bdda1c810a375bad19096497a8e2129c9af02cbb6654571c900a1d82abbb3a897b563412b88dbc5e4521790efefe93977aacc046850c14356a07084573a7527280ce39e08301" },
 	};
 
 	PoolBlock decoded;
@@ -394,8 +394,8 @@ TEST(pool_block, deserialize_carrot)
 
 		ASSERT_EQ(b.m_majorVersion, HARDFORK_VERSION_CARROT);
 		ASSERT_EQ(b.m_minorVersion, 18U);
-		ASSERT_EQ(b.m_txinGenHeight, 3012000U);
-		ASSERT_EQ(b.m_txkeySecSeed, H("44898813cdaa6a4c41ed362a36e7bd128e763af57770a72b007f1c097462fe14"));
+		ASSERT_EQ(b.m_txinGenHeight, 3102800U);
+		ASSERT_EQ(b.m_txkeySecSeed, H("fd912d9f62f086f659bf4cec729abaee5ee59cd17020d18e6bb1f6cfdadea104"));
 		ASSERT_EQ(b.m_sidechainHeight, i);
 		ASSERT_EQ(b.m_timestamp, 1780000000U + i * 10);
 		ASSERT_EQ(b.m_nonce, 0x12345678U + i);
@@ -750,7 +750,7 @@ TEST(pool_block, duplicate_pow_solutions)
 	params.m_miningWallet = Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH");
 	MinerData data{};
 	data.major_version = HARDFORK_VERSION_CARROT;
-	data.height = 3012000;
+	data.height = 3102800;
 	data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
 	data.seed_hash = keccak("duplicate PoW seed");
 	data.difficulty = sidechain.m_testMainChainDiff;
@@ -871,7 +871,7 @@ TEST(pool_block, carrot_parent_nonce)
 		Params params;
 		MinerData data{};
 		data.major_version = test.legacy ? (HARDFORK_VERSION_CARROT - 1) : HARDFORK_VERSION_CARROT;
-		data.height = test.legacy ? 2762973 : 3012000;
+		data.height = test.legacy ? 2762973 : 3102800;
 		data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
 		data.seed_hash = keccak("parent RandomX seed");
 		data.difficulty = source.m_testMainChainDiff;
@@ -919,7 +919,7 @@ TEST(pool_block, carrot_parent_nonce)
 		const hash parent_pow = stored_parent->m_powHash;
 
 		data.major_version = HARDFORK_VERSION_CARROT;
-		data.height = 3012001;
+		data.height = 3102801;
 		data.prev_id.h[0] ^= 1;
 		data.seed_hash = keccak("child RandomX seed");
 		tpl.update(data, mempool, params);
@@ -1033,11 +1033,11 @@ TEST(pool_block, cached_shares)
 		bool cached;
 		uint64_t mainchain_diff;
 	} cases[] = {
-		{ "Carrot", HARDFORK_VERSION_CARROT, 3012000, true, 1000000000000ULL },
+		{ "Carrot", HARDFORK_VERSION_CARROT, 3102800, true, 1000000000000ULL },
 		// Max PPLNS weight is 2x Monero difficulty, so the window is cut after 4 blocks with the minimum difficulty (100000)
-		{ "Carrot, window cut by weight", HARDFORK_VERSION_CARROT, 3012000, true, 150000 },
+		{ "Carrot, window cut by weight", HARDFORK_VERSION_CARROT, 3102800, true, 150000 },
 		// The next Monero block is Carrot (testnet), so the first Carrot blocks will take these blocks' windows
-		{ "last pre-Carrot Monero block", HARDFORK_VERSION_CARROT - 1, 3011999, true, 1000000000000ULL },
+		{ "last pre-Carrot Monero block", HARDFORK_VERSION_CARROT - 1, 3102799, true, 1000000000000ULL },
 		{ "pre-Carrot", HARDFORK_VERSION_CARROT - 1, 2762973, false, 1000000000000ULL },
 	};
 
