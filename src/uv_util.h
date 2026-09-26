@@ -187,14 +187,17 @@ struct accepts_parallel_run_params<T, std::void_t<decltype(std::declval<T&>()(
 	std::declval<uint32_t>()  // thread count
 ))>> : std::true_type{};
 
+constexpr uint32_t PARALLEL_RUN_MAX_THREADS = 16u;
+
 // Runs the callback in parallel on up to 16 threads
 template<typename T>
-void parallel_run(T&& callback, bool wait = false)
+void parallel_run(T&& callback, bool wait = false, uint32_t max_threads = 0)
 {
 	static_assert(!std::is_lvalue_reference_v<T>, "parallel_run() requires an rvalue callback; use std::move or pass a temporary lambda");
 	using CallbackT = std::decay_t<T>;
 
-	const uint32_t THREAD_CAPACITY = std::min<uint32_t>(std::thread::hardware_concurrency(), 16u);
+	const uint32_t hw_threads = std::min<uint32_t>(std::thread::hardware_concurrency(), PARALLEL_RUN_MAX_THREADS);
+	const uint32_t THREAD_CAPACITY = (max_threads && (max_threads < hw_threads)) ? max_threads : hw_threads;
 
 	// Run synchronously on single-CPU systems
 	if (THREAD_CAPACITY <= 1) {
@@ -260,6 +263,11 @@ void parallel_run(T&& callback, bool wait = false)
 			std::this_thread::yield();
 		}
 	}
+}
+
+[[nodiscard]] FORCEINLINE constexpr uint32_t parallel_run_threads(size_t n, size_t min_items_per_thread)
+{
+	return static_cast<uint32_t>(std::min<size_t>(std::max<size_t>(n / min_items_per_thread, 1u), PARALLEL_RUN_MAX_THREADS));
 }
 
 // Thread sync point to use inside parallel_run's callback

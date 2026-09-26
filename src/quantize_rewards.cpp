@@ -249,7 +249,7 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 	//     Q_i = (u_i / (T - u_i)) * ((T - f'_i) / f'_i)
 	//
 	// and let the M smallest round up
-	std::sort(order.begin(), order.end(),
+	auto ranks_lower =
 		[&u, &fp, &shares](size_t x, size_t y)
 		{
 			// Q_x < Q_y, cross-multiplied
@@ -266,7 +266,9 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 			}
 
 			return x < y;
-		});
+		};
+
+	std::nth_element(order.begin(), order.begin() + M, order.end(), ranks_lower);
 
 	// r_i: the payout, before the remainder
 	for (size_t i = 0; i < n; ++i) {
@@ -283,9 +285,10 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 
 		// The first wallet past the cut that is owed at least one whole step
 		for (size_t k = M; k < order.size(); ++k) {
-			if (a[order[k]] >= 1) {
-				h = order[k];
-				break;
+			const size_t i = order[k];
+
+			if ((a[i] >= 1) && ((h == n) || ranks_lower(i, h))) {
+				h = i;
 			}
 		}
 
@@ -305,7 +308,7 @@ bool quantize_rewards(const PPLNSWindow& window, uint64_t reward, std::vector<co
 				LOGERR(1, "rho > 0 but nothing is ranked. Check the code!");
 				return false;
 			}
-			h = order[M ? (M - 1) : 0];
+			h = M ? *std::max_element(order.begin(), order.begin() + M, ranks_lower) : *std::min_element(order.begin(), order.end(), ranks_lower);
 		}
 
 		rewards[h] += rho;

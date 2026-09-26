@@ -371,32 +371,10 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 			LOGINFO(6, "BlockTemplate::update batch start");
 
 			if (major_version >= HARDFORK_VERSION_CARROT) {
-				std::vector<carrot::janus_anchor> anchors;
-				std::vector<hash> eph_priv_keys;
+				std::vector<carrot::coinbase_secrets> secrets;
 
 				// Non-zero retry counter is so improbable we can just always use 0 where it's not critical for consensus
-				if (!carrot::batch_eph_privkeys(txKeySec, 0, height, wallet_ptrs, anchors, eph_priv_keys)) {
-					return;
-				}
-
-				LOGINFO(6, "BlockTemplate::update batch, stage 2 start");
-
-				std::vector<hash> view_public_keys;
-				view_public_keys.reserve(wallets.size());
-
-				for (const Wallet& w : wallets) {
-					view_public_keys.emplace_back(w.view_public_key());
-				}
-
-				std::vector<std::pair<hash, bool>> tmp;
-
-				if (!carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, tmp)) {
-					return;
-				}
-
-				LOGINFO(6, "BlockTemplate::update batch, stage 3 start");
-
-				if (!carrot::batch_eph_pubkeys(eph_priv_keys, tmp)) {
+				if (!carrot::batch_coinbase_secrets(txKeySec, 0, height, wallet_ptrs, secrets)) {
 					return;
 				}
 			}
