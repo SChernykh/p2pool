@@ -32,6 +32,10 @@ struct batch_public_key_input
 	hash base;
 };
 
+// h = a * G and h = a * G + b * T (T is the FCMP++ generator), with the tables init_crypto_cache() builds. Pre-conditions: a[31] <= 127, b[31] <= 127
+void ge_scalarmult_base_vartime(ge_p3* h, const uint8_t* a);
+void ge_double_scalarmult_base_T_vartime(ge_p3* h, const uint8_t* a, const uint8_t* b);
+
 void generate_keys_deterministic(hash& pub, hash& sec, const uint8_t* entropy, size_t len);
 void get_tx_keys(hash& pub, hash& sec, const hash& seed, const hash& monero_block_id);
 bool check_keys(const hash& pub, const hash& sec);
@@ -48,9 +52,12 @@ void init_crypto_cache();
 void destroy_crypto_cache();
 void clear_crypto_cache(uint64_t timestamp = 0);
 
+// How many Carrot coinbase outputs (different amounts) the cache keeps for one wallet at one Monero height.
+// When it's full, a new amount replaces the oldest one
+constexpr size_t MAX_COINBASE_OUTPUTS_PER_WALLET = 32;
+
 #ifdef P2POOL_UNIT_TESTS
-size_t get_last_carrot_public_key_batch_size();
-size_t get_last_sender_receiver_secret_batch_size();
+size_t get_last_coinbase_secrets_batch_size();
 size_t get_last_coinbase_output_batch_size();
 uint32_t get_from_bytes_cache_state(const hash& public_key);
 #endif

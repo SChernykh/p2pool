@@ -265,12 +265,7 @@ bool batch_eph_privkeys(const hash& txkey_sec, uint8_t retry_counter, uint64_t h
 		}
 	};
 
-	if (N <= 80) {
-		work(0, 1);
-	}
-	else {
-		parallel_run(std::move(work), true);
-	}
+	parallel_run(std::move(work), true, parallel_run_threads(N, 12));
 
 	return result;
 }
@@ -310,12 +305,7 @@ bool batch_contextualized_sender_receiver_secrets(const std::vector<std::pair<ha
 		}
 	};
 
-	if (N <= 80) {
-		work(0, 1);
-	}
-	else {
-		parallel_run(std::move(work), true);
-	}
+	parallel_run(std::move(work), true, parallel_run_threads(N, 12));
 
 	return result;
 }
@@ -327,10 +317,7 @@ void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLN
 	}
 
 	std::vector<const Wallet*> wallets;
-	std::vector<hash> view_public_keys;
-
 	wallets.reserve(window.size());
-	view_public_keys.reserve(window.size());
 
 	difficulty_type total_weight;
 
@@ -340,8 +327,6 @@ void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLN
 		}
 
 		wallets.emplace_back(s.m_wallet);
-		view_public_keys.emplace_back(s.m_wallet->view_public_key());
-
 		total_weight += s.m_weight;
 	}
 
@@ -349,27 +334,25 @@ void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLN
 		return;
 	}
 
-	std::vector<janus_anchor> anchors;
-	std::vector<hash> eph_priv_keys;
-	std::vector<std::pair<hash, bool>> eph_pub_keys, sender_receiver_secrets, ctx_secrets;
+	std::vector<coinbase_secrets> secrets;
 
-	if (!batch_eph_privkeys(txkey_sec, 0, height, wallets, anchors, eph_priv_keys) ||
-		!batch_eph_pubkeys(eph_priv_keys, eph_pub_keys) ||
-		!batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, sender_receiver_secrets) ||
-		!batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height, ctx_secrets)) {
+	if (!batch_coinbase_secrets(txkey_sec, 0, height, wallets, secrets)) {
 		return;
 	}
 
 	constexpr size_t MAX_OUTPUTS = 20'000;
 	constexpr uint64_t T = PAYOUT_GRID_STEP;
 
-	std::vector<coinbase_output_input> in;
-	in.reserve(std::min(window.size() * 3, MAX_OUTPUTS));
+	std::vector<const Wallet*> output_wallets;
+	std::vector<uint64_t> amounts;
+
+	output_wallets.reserve(std::min(window.size() * 3, MAX_OUTPUTS));
+	amounts.reserve(std::min(window.size() * 3, MAX_OUTPUTS));
 
 	difficulty_type weight;
 	uint64_t reward_given = 0;
 
-	for (size_t i = 0; (i < window.size()) && (in.size() < MAX_OUTPUTS); ++i) {
+	for (size_t i = 0; (i < window.size()) && (amounts.size() < MAX_OUTPUTS); ++i) {
 		// Match the exact cumulative-floor split before quantization.
 		weight += window.m_shares[i].m_weight;
 
@@ -388,17 +371,28 @@ void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLN
 		const uint64_t hi = std::min(((u128(amount) * 11 + (10 * T - 1)) / (10 * T)).lo, std::numeric_limits<uint64_t>::max() / T);
 
 		// Zero-amount outputs are omitted from actual transactions.
-		for (uint64_t k = std::max<uint64_t>(lo, 1); (k <= hi) && (in.size() < MAX_OUTPUTS); ++k) {
-			in.emplace_back(coinbase_output_input{
-				wallets[i]->spend_public_key(), sender_receiver_secrets[i].first,
-				ctx_secrets[i].first, anchors[i], k * T
-			});
+		lo = std::max<uint64_t>(lo, 1);
+
+		if (lo > hi) {
+			continue;
+		}
+
+		// The lowest amounts, as many as the cache keeps for one wallet, but added from the highest down. The cache replaces
+		// the oldest amounts first, and the lowest ones are the closest to the current payout.
+		const uint64_t count = std::min<uint64_t>({ hi - lo + 1, MAX_COINBASE_OUTPUTS_PER_WALLET, MAX_OUTPUTS - amounts.size() });
+
+		for (uint64_t k = lo + count; k-- > lo;) {
+			output_wallets.emplace_back(wallets[i]);
+			amounts.emplace_back(k * T);
 		}
 	}
 
-	std::vector<coinbase_tx_output> out;
+	std::vector<coinbase_tx_output> outputs;
 
-	batch_coinbase_outputs(height, in, out);
+	// All secrets are cached by now, so this only finds out which outputs are cached already
+	if (batch_coinbase_secrets(txkey_sec, 0, height, output_wallets, amounts, secrets, outputs)) {
+		complete_coinbase_outputs(txkey_sec, 0, height, output_wallets, amounts, secrets, outputs);
+	}
 }
 
 bool build_coinbase_outputs(
@@ -420,24 +414,14 @@ bool build_coinbase_outputs(
 		return true;
 	}
 
-	std::vector<hash> view_public_keys;
-	view_public_keys.reserve(N);
-
 	// Assumes that all wallet keys are torsion-free (Wallet class enforces it)
 	for (const Wallet* w : wallets) {
 		if (!w || !w->valid()) {
 			return false;
 		}
-
-		view_public_keys.emplace_back(w->view_public_key());
 	}
 
-	std::vector<janus_anchor> anchors;
-	std::vector<hash> eph_priv_keys;
-	std::vector<std::pair<hash, bool>> eph_pub_keys;
-	std::vector<std::pair<hash, bool>> sender_receiver_secrets;
-	std::vector<std::pair<hash, bool>> ctx_secrets;
-	std::vector<coinbase_output_input> in;
+	std::vector<coinbase_secrets> secrets;
 	std::vector<coinbase_tx_output> out;
 
 	constexpr janus_anchor zero_anchor = {};
@@ -453,8 +437,8 @@ bool build_coinbase_outputs(
 	for (size_t rc = 0; rc <= std::numeric_limits<uint8_t>::max(); ++rc) {
 		const uint8_t retry_counter = static_cast<uint8_t>(rc);
 
-		// anchor_norm and d_e
-		if (!batch_eph_privkeys(txkey_sec, retry_counter, height, wallets, anchors, eph_priv_keys)) {
+		// anchor_norm, D_e, s_sr, s^ctx_sr, and the outputs that are cached already
+		if (!batch_coinbase_secrets(txkey_sec, retry_counter, height, wallets, amounts, secrets, out)) {
 			continue;
 		}
 
@@ -463,9 +447,9 @@ bool build_coinbase_outputs(
 
 		bool anchors_ok = true;
 
-		for (const janus_anchor& a : anchors) {
+		for (const coinbase_secrets& s : secrets) {
 			// Either a duplicate, or a zero anchor
-			if (!anchors_set.insert(a).second) {
+			if (!anchors_set.insert(s.anchor).second) {
 				anchors_ok = false;
 				break;
 			}
@@ -475,19 +459,14 @@ bool build_coinbase_outputs(
 			continue;
 		}
 
-		// D_e
-		if (!batch_eph_pubkeys(eph_priv_keys, eph_pub_keys)) {
-			continue;
-		}
-
 		eph_pub_keys_set.clear();
 		eph_pub_keys_set.insert(zero_hash);
 
 		bool eph_pub_keys_ok = true;
 
-		for (const auto& k : eph_pub_keys) {
-			// Either a duplicate, or a zero key, or an invalid key
-			if (!k.second || !eph_pub_keys_set.insert(k.first).second) {
+		for (const coinbase_secrets& s : secrets) {
+			// Either a duplicate, or a zero key (all keys are valid here: batch_coinbase_secrets checked it)
+			if (!eph_pub_keys_set.insert(s.eph_pub_key).second) {
 				eph_pub_keys_ok = false;
 				break;
 			}
@@ -497,31 +476,8 @@ bool build_coinbase_outputs(
 			continue;
 		}
 
-		// s_sr
-		if (!batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, sender_receiver_secrets)) {
-			continue;
-		}
-
-		// s^ctx_sr
-		if (!batch_contextualized_sender_receiver_secrets(sender_receiver_secrets, eph_pub_keys, height, ctx_secrets)) {
-			continue;
-		}
-
-		// K_o, vt and anchor_enc
-		in.clear();
-		in.reserve(N);
-
-		for (size_t i = 0; i < N; ++i) {
-			in.emplace_back(coinbase_output_input{
-				wallets[i]->spend_public_key(),
-				sender_receiver_secrets[i].first,
-				ctx_secrets[i].first,
-				anchors[i],
-				amounts[i]
-			});
-		}
-
-		if (!batch_coinbase_outputs(height, in, out)) {
+		// K_o, vt and anchor_enc for the rest of the outputs
+		if (!complete_coinbase_outputs(txkey_sec, retry_counter, height, wallets, amounts, secrets, out)) {
 			continue;
 		}
 
@@ -539,19 +495,7 @@ bool build_coinbase_outputs(
 			continue;
 		}
 
-		outputs.clear();
-		outputs.reserve(N);
-
-		for (size_t i = 0; i < N; ++i) {
-			outputs.emplace_back(coinbase_tx_output{
-				out[i].anchor_enc,
-				out[i].onetime_address,
-				eph_pub_keys[i].first,
-				amounts[i],
-				out[i].vt,
-				true
-			});
-		}
+		outputs = std::move(out);
 
 		std::sort(outputs.begin(), outputs.end());
 

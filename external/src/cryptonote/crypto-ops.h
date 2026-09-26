@@ -87,11 +87,7 @@ void ge_add(ge_p1p1 *, const ge_p3 *, const ge_cached *);
 /* From ge_double_scalarmult.c, modified */
 
 typedef ge_cached ge_dsmp[8];
-extern const ge_precomp ge_Bi[8];
 void ge_dsm_precomp(ge_dsmp r, const ge_p3 *s);
-void ge_double_scalarmult_base_vartime(ge_p2 *, const unsigned char *, const ge_p3 *, const unsigned char *);
-void ge_triple_scalarmult_base_vartime(ge_p2 *, const unsigned char *, const unsigned char *, const ge_dsmp, const unsigned char *, const ge_dsmp);
-void ge_double_scalarmult_base_vartime_p3(ge_p3 *, const unsigned char *, const ge_p3 *, const unsigned char *);
 
 /* From ge_frombytes.c, modified */
 
@@ -125,16 +121,30 @@ void ge_p3_to_p2(ge_p2 *, const ge_p3 *);
 
 void ge_p3_tobytes(unsigned char *, const ge_p3 *);
 
-/* From ge_scalarmult_base.c */
+/* Comb table for an arbitrary point A: 64 points, (j + 1) * 16^(8 * i) * A for 0 <= i, j < 8 */
+typedef ge_precomp ge_combp[64];
+int ge_comb_precomp(ge_combp t, const ge_p3 *A);
 
-extern const ge_precomp ge_base[32][8];
-extern const ge_precomp ge_T_base[32][8];
-void ge_scalarmult_base(ge_p3 *, const unsigned char *);
+/* h = a * A, a[31] <= 127 */
+void ge_scalarmult_comb_vartime(ge_p3 *h, const ge_combp t, const unsigned char *a);
 
-void ge_scalarmult_base_vartime(ge_p3 *h, const unsigned char *a);
+/*
+Single-pass fixed-base table with signed 6-bit digits: (j + 1) * 64^i * B for 0 <= i < 43, 0 <= j < 32
+43 rows cover every scalar with a[31] <= 127, so a multiplication is at most 43 mixed additions and no doublings
+*/
+#define GE_WTABLE_ROWS 43
+#define GE_WTABLE_ROW_SIZE 32
+typedef ge_precomp ge_wtable[GE_WTABLE_ROWS * GE_WTABLE_ROW_SIZE];
 
-/* h = a * B + b * T, where T is the FCMP++ generator */
-void ge_double_scalarmult_base_T_vartime(ge_p3 *h, const unsigned char *a, const unsigned char *b);
+/* The tables for the Ed25519 base point B and the FCMP++ generator T (P2Pool builds them in init_crypto_cache()). Return 0 on success. */
+int ge_wtable_precomp_base(ge_wtable t);
+int ge_wtable_precomp_T(ge_wtable t);
+
+/* h = a * B, a[31] <= 127 */
+void ge_scalarmult_wtable_vartime(ge_p3 *h, const ge_wtable t, const unsigned char *a);
+
+/* h = a * A + b * B, a[31] <= 127, b[31] <= 127 */
+void ge_double_scalarmult_wtable_vartime(ge_p3 *h, const ge_wtable ta, const unsigned char *a, const ge_wtable tb, const unsigned char *b);
 
 /* From ge_tobytes.c */
 

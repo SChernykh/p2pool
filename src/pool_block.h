@@ -234,6 +234,10 @@ struct PoolBlock
 	// Used to speed up SideChain::get_difficulty
 	mutable difficulty_type m_cachedNextDifficulty;
 
+	// Used to speed up SideChain::get_shares for the chain tip and a few blocks below it
+	PPLNSWindow m_cachedShares;
+	uint64_t m_cachedSharesBottomHeight;
+
 	hash m_coinbase_tx_hash;
 
 	struct MainchainLayout {

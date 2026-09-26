@@ -182,6 +182,29 @@ namespace carrot {
 	// out[i].valid == false means out[i] is invalid (gen_onetime_address would've returned false for in[i]), and the rest of out[i] is left zeroed.
 	bool batch_coinbase_outputs(uint64_t height, const std::vector<coinbase_output_input>& in, std::vector<coinbase_tx_output>& out);
 
+	// Everything in a Carrot coinbase output that doesn't depend on the amount
+	struct coinbase_secrets {
+		janus_anchor anchor = {};                    // anchor_norm
+		hash eph_pub_key;                            // D_e
+		hash sender_receiver_secret;                 // s_sr
+		hash contextualized_sender_receiver_secret;  // s^ctx_sr
+
+		FORCEINLINE bool valid() const { return !eph_pub_key.empty(); }
+	};
+	static_assert(sizeof(coinbase_secrets) == CARROT_JANUS_ANCHOR_BYTES + HASH_SIZE * 3);
+
+	// batch_eph_privkeys, batch_eph_pubkeys, batch_sender_receiver_secrets and batch_contextualized_sender_receiver_secrets
+	// in one go, cached per (txkey_sec, wallet, height, retry_counter). secrets[i].valid() == false if any of them failed for wallets[i].
+	bool batch_coinbase_secrets(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, std::vector<coinbase_secrets>& secrets);
+
+	// The same, and outputs[i] is the cached output paying amounts[i] to wallets[i] (outputs[i].valid == false if it's not in the cache).
+	// Only anchor_enc, onetime_address and vt are filled in, complete_coinbase_outputs() sets the rest. A wallet can be repeated with different amounts.
+	bool batch_coinbase_secrets(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, const std::vector<uint64_t>& amounts, std::vector<coinbase_secrets>& secrets, std::vector<coinbase_tx_output>& outputs);
+
+	// Calculates every outputs[i] that's still invalid after batch_coinbase_secrets() (called with the same arguments), and caches them.
+	// Also sets eph_pub_key and amount in all outputs. Returns false if any output is still invalid after that.
+	bool complete_coinbase_outputs(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const std::vector<const Wallet*>& wallets, const std::vector<uint64_t>& amounts, const std::vector<coinbase_secrets>& secrets, std::vector<coinbase_tx_output>& outputs);
+
 	// Warm-up the cache with likely grid amounts for every wallet, including wallets with no current payout.
 	void prewarm_coinbase_outputs(const hash& txkey_sec, uint64_t height, const PPLNSWindow& window, uint64_t reward);
 

@@ -21,11 +21,15 @@
 #include "wallet.h"
 #include "gtest/gtest.h"
 
+#include "soft_aes.h"
+#include "blake2/blake2.h"
+
 #include <cstring>
 #include <deque>
 #include <fstream>
 #include <limits>
 #include <numeric>
+#include <random>
 #include <sstream>
 
 namespace p2pool {
@@ -144,6 +148,316 @@ static void expected_outputs(const RewardVector& v, std::vector<std::pair<const 
 		}
 		++i;
 	}
+}
+
+// quantize_rewards() as it was before std::nth_element replaced its std::sort, the reference for quantize_rewards.same_as_a_full_sort.
+// The only other changes: no logging, software AES (it gives the same draws as the hardware path), and branch counters.
+struct SortReferenceStats
+{
+	uint64_t no_round_up = 0;    // M == 0
+	uint64_t round_up = 0;       // M > 0
+	uint64_t no_remainder = 0;   // rho == 0
+	uint64_t tie_weight = 0;     // the ranking had to fall back to comparing weights
+	uint64_t tie_index = 0;      // ... and then indices
+	uint64_t past_the_cut = 0;   // the remainder went to the first wallet past the cut owed a whole step
+	uint64_t exact_multiple = 0; // ... to a wallet owed an exact multiple of T
+	uint64_t other_side = 0;     // ... to the wallet on the other side of the cut
+};
+
+[[nodiscard]] static uint64_t reference_uniform(const rx_vec_i128 (&seed)[4], const Wallet& w)
+{
+	rx_vec_i128 key[4];
+	memcpy(key, w.keys(), sizeof(key));
+
+	rx_vec_i128 s = aesenc<true>(key[0], seed[0]);
+
+	for (uint32_t r = 1; r < 4; ++r) {
+		s = aesenc<true>(rx_xor_vec_i128(s, key[r]), seed[r]);
+	}
+
+	rx_vec_i128 out;
+	rx_store_vec_i128(&out, s);
+
+	uint64_t h;
+	memcpy(&h, &out, sizeof(h));
+
+	uint64_t hi;
+	umul128(h, T, &hi);
+
+	return hi;
+}
+
+static bool quantize_rewards_with_sort(const PPLNSWindow& window, uint64_t reward, std::vector<const Wallet*>& wallets, std::vector<uint64_t>& rewards, SortReferenceStats& stats)
+{
+	const std::vector<MinerShare>& shares = window.m_shares;
+	const size_t n = rewards.size();
+
+	if ((n == 0) || (wallets.size() != n) || (shares.size() != n)) {
+		return false;
+	}
+
+	rx_vec_i128 seed[4];
+	{
+		static constexpr char domain[] = "p2pool payout seed";
+
+		blake2b_state state;
+		blake2b_init(&state, sizeof(seed));
+		blake2b_update(&state, domain, sizeof(domain) - 1);
+		blake2b_update(&state, window.m_powHash.h, HASH_SIZE);
+		blake2b_final(&state, reinterpret_cast<uint8_t*>(seed), sizeof(seed));
+	}
+
+	// a_i: whole grid steps owed, f_i: the fraction of a step owed on top of them
+	std::vector<uint64_t> a(n), f(n), u(n);
+
+	uint64_t F = 0;
+
+	for (size_t i = 0; i < n; ++i) {
+		a[i] = rewards[i] / T;
+		f[i] = rewards[i] % T;
+		u[i] = reference_uniform(seed, *wallets[i]);
+
+		F += f[i];
+	}
+
+	const uint64_t M = F / T;   // M: how many wallets round up
+	const uint64_t rho = F % T; // rho: the one sub-grid remainder, == reward % T
+
+	++(M ? stats.round_up : stats.no_round_up);
+
+	if (!rho) {
+		++stats.no_remainder;
+	}
+
+	std::vector<uint64_t> c(n, 0); // c_i: atomic units deducted from f_i
+
+	std::vector<size_t> big; // B: the wallets that can hold the remainder
+	big.reserve(n);
+
+	// V at the uncorrected target, over B and over the rest of the ranking
+	u128 W1, DZ;
+
+	for (size_t i = 0; i < n; ++i) {
+		if (f[i] == 0) {
+			continue;
+		}
+
+		const uint64_t V = f[i] * (T - f[i]);
+
+		if (a[i] >= 1) {
+			big.emplace_back(i);
+			W1 += V;
+		}
+		else {
+			DZ += V;
+		}
+	}
+
+	const uint64_t rho_T = rho * T;
+
+	if (rho && (W1 > u128(rho_T))) {
+		// g0 = f, the uncorrected target
+		std::vector<uint64_t> g(f);
+		std::vector<fp64> w(big.size());
+		std::vector<uint64_t> wq(big.size());
+
+		for (uint32_t eval = 0; eval < PAYOUT_EVALS; ++eval) {
+			// V at the current target, over B
+			u128 Wg;
+
+			for (const size_t i : big) {
+				Wg += g[i] * (T - g[i]);
+			}
+
+			if (Wg <= u128(rho_T)) {
+				break;
+			}
+
+			// V over the whole ranking
+			const u128 Vall = Wg + DZ;
+
+			const bool refine = (Wg > u128(rho_T + 2 * T * (T - 1)));
+
+			const fp64 Vallf(Vall);
+			const fp64 Wgf(Wg);
+
+			bool any = false;
+			int64_t es = 0;
+
+			for (size_t k = 0, cnt = big.size(); k < cnt; ++k) {
+				const size_t i = big[k];
+				const uint64_t V = g[i] * (T - g[i]);
+
+				// A zero weight stays zero: its target is already fully deducted
+				if (V == 0) {
+					w[k] = fp64();
+					continue;
+				}
+
+				fp64 x(V);
+
+				if (refine) {
+					const uint64_t gT = g[i] * T;
+
+					// Vall*Wg - (Vall + DZ)*g*T == Vall*(Wg - 2*g*T) + Wg*(g*T)
+					x *= fp64(Vallf.mul_wide(fp64(Wg - gT * 2)) + Wgf.mul_wide(fp64(gT)));
+				}
+
+				w[k] = x;
+
+				if (!any || (x.exponent() > es)) {
+					es = x.exponent();
+					any = true;
+				}
+			}
+
+			if (!any) {
+				break;
+			}
+
+			u128 W;
+
+			for (size_t k = 0, cnt = big.size(); k < cnt; ++k) {
+				wq[k] = w[k].at(es);
+				W += wq[k];
+			}
+
+			if (W == 0) {
+				break;
+			}
+
+			u128 cum, acc;
+
+			for (size_t k = 0, cnt = big.size(); k < cnt; ++k) {
+				cum += wq[k];
+
+				const u128 next_value = cum * rho / W;
+				c[big[k]] = (next_value - acc).lo;
+				acc = next_value;
+			}
+
+			if (acc != u128(rho)) {
+				return false;
+			}
+
+			for (size_t i = 0; i < n; ++i) {
+				if (c[i] > f[i]) {
+					return false;
+				}
+				g[i] = f[i] - c[i];
+			}
+		}
+	}
+
+	// f'_i: the corrected target. sum(f'_i) == M*T exactly, or == F if a guard skipped the correction
+	std::vector<uint64_t> fp(n);
+	std::vector<size_t> order;
+	order.reserve(n);
+
+	for (size_t i = 0; i < n; ++i) {
+		fp[i] = f[i] - c[i];
+
+		if (fp[i]) {
+			order.emplace_back(i);
+		}
+	}
+
+	if (M && (M >= order.size())) {
+		return false;
+	}
+
+	// Pareto order sampling (Rosen 1997): rank by
+	//
+	//     Q_i = (u_i / (T - u_i)) * ((T - f'_i) / f'_i)
+	//
+	// and let the M smallest round up
+	std::sort(order.begin(), order.end(),
+		[&u, &fp, &shares, &stats](size_t x, size_t y)
+		{
+			// Q_x < Q_y, cross-multiplied
+			const u128 qx = u128(u[x] * (T - fp[x])) * ((T - u[y]) * fp[y]);
+			const u128 qy = u128(u[y] * (T - fp[y])) * ((T - u[x]) * fp[x]);
+
+			if (qx != qy) {
+				return qx < qy;
+			}
+
+			// Ties: weight descending, then the order the shares came in
+			if (shares[x].m_weight != shares[y].m_weight) {
+				++stats.tie_weight;
+				return shares[x].m_weight > shares[y].m_weight;
+			}
+
+			++stats.tie_index;
+			return x < y;
+		});
+
+	// r_i: the payout, before the remainder
+	for (size_t i = 0; i < n; ++i) {
+		rewards[i] = a[i] * T;
+	}
+
+	for (uint64_t k = 0; k < M; ++k) {
+		rewards[order[k]] += T;
+	}
+
+	// The remainder goes to the wallet that just missed rounding up, which reaches that position with probability c_i/rho - exactly what came off its target
+	if (rho) {
+		size_t h = n;
+
+		// The first wallet past the cut that is owed at least one whole step
+		for (size_t k = M; k < order.size(); ++k) {
+			if (a[order[k]] >= 1) {
+				h = order[k];
+				++stats.past_the_cut;
+				break;
+			}
+		}
+
+		// Every wallet past the cut is sub-grid: a wallet owed an exact multiple of T
+		if (h == n) {
+			for (size_t i = 0; i < n; ++i) {
+				if ((fp[i] == 0) && (a[i] >= 1)) {
+					h = i;
+					++stats.exact_multiple;
+					break;
+				}
+			}
+		}
+
+		// The wallet on the other side of the cut
+		if (h == n) {
+			if (order.empty()) {
+				return false;
+			}
+			h = order[M ? (M - 1) : 0];
+			++stats.other_side;
+		}
+
+		rewards[h] += rho;
+	}
+
+	// Only the wallets with a non-zero payout get an output
+	size_t num_outputs = 0;
+
+	for (size_t i = 0; i < n; ++i) {
+		if (rewards[i]) {
+			wallets[num_outputs] = wallets[i];
+			rewards[num_outputs] = rewards[i];
+			++num_outputs;
+		}
+	}
+
+	wallets.resize(num_outputs);
+	rewards.resize(num_outputs);
+
+	if (std::accumulate(rewards.begin(), rewards.end(), 0ULL) != reward) {
+		wallets.clear();
+		rewards.clear();
+		return false;
+	}
+
+	return true;
 }
 
 TEST(quantize_rewards, conformance_vectors)
@@ -420,6 +734,101 @@ TEST(quantize_rewards, input_order_matters)
 
 	ASSERT_GT(different, 0U) << "the wallet order changed nothing at all, check the code";
 	ASSERT_EQ(compared, 34U);
+}
+
+// The std::nth_element ranking must give exactly what the full sort gave. The random windows are shaped to reach every branch of
+// the ranking: no wallet rounding up, no remainder, ties decided by weight and by index, and all three places the remainder can go.
+TEST(quantize_rewards, same_as_a_full_sort)
+{
+	std::mt19937_64 rng(20260925);
+
+	auto random_hash = [&rng]() {
+		hash h;
+		for (size_t k = 0; k < HASH_SIZE / sizeof(uint64_t); ++k) {
+			h.u64()[k] = rng();
+		}
+		return h;
+	};
+
+	SortReferenceStats stats;
+	uint64_t mini_sized = 0;
+
+	for (uint32_t iter = 0; iter < 50000; ++iter) {
+		// Mostly small windows, where every branch is easy to reach, and now and then a mini-sized one
+		const bool big = (iter % 250 == 0);
+		const size_t n = big ? (1000 + rng() % 1200) : (1 + rng() % 24);
+		const uint64_t scenario = rng() % 5;
+
+		mini_sized += big ? 1 : 0;
+
+		// Repeated wallets with the same amount tie in the ranking itself, and then only the weight and the index are left
+		const size_t distinct = (scenario == 4) ? (1 + rng() % 3) : n;
+
+		std::deque<Wallet> wallets;
+		std::vector<uint64_t> amounts(distinct);
+
+		for (size_t i = 0; i < distinct; ++i) {
+			wallets.emplace_back(nullptr);
+			wallets.back().assign_unchecked(random_hash(), random_hash(), NetworkType::Mainnet);
+			amounts[i] = (rng() % 3) * T + rng() % T;
+		}
+
+		PPLNSWindow window;
+		window.m_powHash = random_hash();
+
+		std::vector<const Wallet*> ptrs(n);
+		std::vector<uint64_t> rewards(n);
+
+		for (size_t i = 0; i < n; ++i) {
+			ptrs[i] = &wallets[i % distinct];
+
+			// Only a few different weights, so tied wallets often have the same weight too
+			window.m_shares.emplace_back(difficulty_type(1 + rng() % 3), ptrs[i]);
+
+			switch (scenario) {
+			case 0: // Whole steps and a fraction
+				rewards[i] = (rng() % 8) * T + rng() % T;
+				break;
+			case 1: // Dust: nobody is owed a whole step
+				rewards[i] = rng() % T;
+				break;
+			case 2: // Exact multiples of T next to dust
+				rewards[i] = (rng() & 1) ? ((1 + rng() % 4) * T) : (rng() % T);
+				break;
+			case 3: // Everything on the grid, except sometimes the first wallet
+				rewards[i] = (rng() % 5) * T + (((i == 0) && (rng() & 1)) ? (rng() % T) : 0);
+				break;
+			default:
+				rewards[i] = amounts[i % distinct];
+				break;
+			}
+		}
+
+		const uint64_t reward = std::accumulate(rewards.begin(), rewards.end(), 0ULL);
+
+		std::vector<const Wallet*> wallets1 = ptrs, wallets2 = ptrs;
+		std::vector<uint64_t> rewards1 = rewards, rewards2 = rewards;
+
+		const bool ok1 = quantize_rewards(window, reward, wallets1, rewards1);
+		const bool ok2 = quantize_rewards_with_sort(window, reward, wallets2, rewards2, stats);
+
+		ASSERT_TRUE(ok2) << "window " << iter;
+		ASSERT_EQ(ok1, ok2) << "window " << iter;
+		ASSERT_EQ(wallets1, wallets2) << "window " << iter;
+		ASSERT_EQ(rewards1, rewards2) << "window " << iter;
+	}
+
+	ASSERT_GT(mini_sized, 0U);
+
+	// Every branch of the ranking was reached
+	EXPECT_GT(stats.no_round_up, 0U);
+	EXPECT_GT(stats.round_up, 0U);
+	EXPECT_GT(stats.no_remainder, 0U);
+	EXPECT_GT(stats.tie_weight, 0U);
+	EXPECT_GT(stats.tie_index, 0U);
+	EXPECT_GT(stats.past_the_cut, 0U);
+	EXPECT_GT(stats.exact_multiple, 0U);
+	EXPECT_GT(stats.other_side, 0U);
 }
 
 } // namespace p2pool

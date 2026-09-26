@@ -550,6 +550,94 @@ bool SideChain::get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* 
 	return true;
 }
 
+bool SideChain::get_cached_shares(const PoolBlock* block, PPLNSWindow& window, uint64_t* bottom_height, bool quiet) const
+{
+	const PPLNSWindow& cached = block->m_cachedShares;
+
+	if (!pool_block_debug() && !cached.empty()) {
+		window.m_shares = cached.m_shares;
+		window.m_powHash = block->m_powHash;
+		window.m_weightTruncated = cached.m_weightTruncated;
+
+		if (bottom_height) {
+			*bottom_height = block->m_cachedSharesBottomHeight;
+		}
+
+		return true;
+	}
+
+	uint64_t h = 0;
+
+	if (!get_shares(block, window, &h, quiet)) {
+		return false;
+	}
+
+	if (pool_block_debug() && !cached.empty()) {
+		bool same = (cached.size() == window.size()) && (cached.m_weightTruncated == window.m_weightTruncated) && (block->m_cachedSharesBottomHeight == h);
+
+		if (same) {
+			for (size_t i = 0, n = window.size(); i < n; ++i) {
+				if ((cached.m_shares[i].m_weight != window.m_shares[i].m_weight) || (cached.m_shares[i].m_wallet != window.m_shares[i].m_wallet)) {
+					same = false;
+					break;
+				}
+			}
+		}
+
+		if (!same) {
+			LOGERR(1, "SideChain::get_cached_shares: PPLNS window caching is broken. Fix the code!");
+		}
+	}
+
+	if (bottom_height) {
+		*bottom_height = h;
+	}
+
+	return true;
+}
+
+void SideChain::update_cached_shares(PoolBlock* tip)
+{
+	// A new child of a block more than UNCLE_BLOCK_DEPTH below the tip would be too deep to be included as an uncle. Only a rare late
+	// or alternative chain block still needs this block's PPLNS window, and get_cached_shares() calculates it as usual then.
+	auto& v = m_cachedSharesBlocks;
+
+	v.erase(std::remove_if(v.begin(), v.end(),
+		[tip](PoolBlock* b) {
+			if (b->m_sidechainHeight + UNCLE_BLOCK_DEPTH < tip->m_sidechainHeight) {
+				b->m_cachedShares = {};
+				b->m_cachedSharesBottomHeight = 0;
+				return true;
+			}
+			return false;
+		}
+	), v.end());
+
+	// Only Carrot blocks use their parent's PPLNS window (see get_payout_window()), so pre-Carrot children never read it
+	if ((tip->m_majorVersion < HARDFORK_VERSION_CARROT) && (network_major_version(tip->m_txinGenHeight + 1) < HARDFORK_VERSION_CARROT)) {
+		return;
+	}
+
+	// The same block can become the chain tip again after a reorg
+	if (!tip->m_cachedShares.empty()) {
+		return;
+	}
+
+	PPLNSWindow window;
+	uint64_t bottom_height = 0;
+
+	if (!get_shares(tip, window, &bottom_height, true)) {
+		return;
+	}
+
+	tip->m_cachedShares = std::move(window);
+	tip->m_cachedSharesBottomHeight = bottom_height;
+
+	if (std::find(v.begin(), v.end(), tip) == v.end()) {
+		v.push_back(tip);
+	}
+}
+
 SideChain::ParentPowStatus SideChain::get_parent_pow_hash(PoolBlock& block, const PoolBlock* parent, bool allow_recalc) const
 {
 	if (block.m_parentPowHashValid) {
@@ -612,7 +700,7 @@ bool SideChain::get_payout_window(PoolBlock& block, const PoolBlock* parent, PPL
 {
 	if ((block.m_majorVersion >= HARDFORK_VERSION_CARROT) && (block.m_sidechainHeight != 0)) {
 		// Callers on an event loop may only use an already checked parent solution.
-		if ((get_parent_pow_hash(block, parent, false) != ParentPowStatus::Valid) || !get_shares(parent, window, bottom_height, quiet)) {
+		if ((get_parent_pow_hash(block, parent, false) != ParentPowStatus::Valid) || !get_cached_shares(parent, window, bottom_height, quiet)) {
 			return false;
 		}
 
@@ -1240,10 +1328,8 @@ void SideChain::print_status(bool obtain_sidechain_lock) const
 
 	PPLNSWindow window;
 	uint64_t bh = 0;
-	if (tip) {
-		if (!get_shares(tip, window, &bh, true)) {
-			LOGERR(6, "print_status: get_shares failed");
-		}
+	if (tip && !get_cached_shares(tip, window, &bh, true)) {
+		LOGERR(6, "print_status: get_shares failed");
 	}
 
 	const uint64_t window_size = (tip && bh) ? (tip->m_sidechainHeight - bh + 1U) : m_chainWindowSize;
@@ -2366,6 +2452,8 @@ void SideChain::update_chain_tip(PoolBlock* block)
 				m_curDifficulty = diff;
 			}
 
+			update_cached_shares(block);
+
 			LOGINFO(2, "new chain tip: next height = " << log::Gray() << block->m_sidechainHeight + 1 << log::NoColor() <<
 				", next difficulty = " << log::Gray() << diff << log::NoColor() <<
 				", main chain height = " << log::Gray() << block->m_txinGenHeight);
@@ -2854,6 +2942,17 @@ void SideChain::prune_old_blocks()
 			}
 		}
 
+		if (!m_cachedSharesBlocks.empty()) {
+			for (const PoolBlock* b : blocks_to_prune) {
+				auto it2 = std::find(m_cachedSharesBlocks.begin(), m_cachedSharesBlocks.end(), b);
+
+				if (it2 != m_cachedSharesBlocks.end()) {
+					LOGERR(1, "pruned block " << b->m_sidechainId << " still had cached shares. Fix the code!");
+					m_cachedSharesBlocks.erase(it2);
+				}
+			}
+		}
+
 		// These blocks have already been unlinked from m_blocksById/m_blocksByHeight/m_blocksByMerkleRoot
 		// above, so no new lookup can return them. Place them in a queue for deletion 1 minute later.
 		for (PoolBlock* b : blocks_to_prune) {
@@ -3078,10 +3177,7 @@ void SideChain::precalc_worker()
 	std::vector<std::pair<hash, bool>> out2;
 
 	std::vector<const Wallet*> carrot_wallets;
-	std::vector<carrot::janus_anchor> anchors;
-
-	std::vector<hash> eph_priv_keys;
-	std::vector<hash> view_public_keys;
+	std::vector<carrot::coinbase_secrets> secrets;
 
 	do {
 		const PoolBlock* job;
@@ -3141,28 +3237,14 @@ void SideChain::precalc_worker()
 
 		if (is_carrot) {
 			carrot_wallets.clear();
-			view_public_keys.clear();
-
 			carrot_wallets.reserve(n);
-			view_public_keys.reserve(n);
 
 			for (const auto& w : wallets) {
 				carrot_wallets.emplace_back(w.second);
-				view_public_keys.emplace_back(w.second->view_public_key());
 			}
 
-			if (!carrot::batch_eph_privkeys(job->m_txkeySec, 0, job->m_txinGenHeight, carrot_wallets, anchors, eph_priv_keys)) {
-				LOGWARN(6, "batch_eph_privkeys failed in precalc_worker");
-				continue;
-			}
-
-			if (!carrot::batch_eph_pubkeys(eph_priv_keys, out2)) {
-				LOGWARN(6, "batch_eph_pubkeys failed in precalc_worker");
-				continue;
-			}
-
-			if (!carrot::batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, out2)) {
-				LOGWARN(6, "batch_sender_receiver_secrets failed in precalc_worker");
+			if (!carrot::batch_coinbase_secrets(job->m_txkeySec, 0, job->m_txinGenHeight, carrot_wallets, secrets)) {
+				LOGWARN(6, "batch_coinbase_secrets failed in precalc_worker");
 			}
 
 			continue;

@@ -312,13 +312,13 @@ static_assert(alignof(view_tag) == 1, "struct view_tag has invalid alignment, ch
 
 struct coinbase_tx_output
 {
-	janus_anchor anchor_enc; // Carrot Janus anchor, encrypted
+	janus_anchor anchor_enc = {}; // Carrot Janus anchor, encrypted
 
-	hash onetime_address;    // K_o
-	hash eph_pub_key;        // D_e, goes into tx_extra at the same index
+	hash onetime_address;         // K_o
+	hash eph_pub_key;             // D_e, goes into tx_extra at the same index
 
 	uint64_t amount = 0;
-	view_tag vt = {};        // Carrot view tag
+	view_tag vt = {};             // Carrot view tag
 
 	bool valid = false;
 
@@ -872,11 +872,11 @@ extern const char* BLOCK_FOUND;
 } // namespace p2pool
 
 #include "util.h"
+#include "fp64.h"
 
 #ifdef DEBUG_BUILD
 #undef FORCEINLINE
 #define FORCEINLINE NOINLINE
 #endif
 
-#include "fp64.h"
 #include "log.h"

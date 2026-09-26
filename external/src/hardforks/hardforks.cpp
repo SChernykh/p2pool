@@ -106,6 +106,9 @@ const hardfork_t testnet_hard_forks[] = {
   { 16, 1983520, 0, 1652813400 },
   { 17, 3012000, 0, 1779901200 }, // MRL meeting start Wednesday, May 27th at 17:00 UTC, rounded down to 100 blocks
   { 18, 3012720, 0, 1779987600 }, // 24 hours after v17
+  // FCMP++/Carrot Beta v3 hardfork
+  //{ 17, 3102800, 0, 1652813401 },
+  //{ 18, 3103520, 0, 1652813402 },
 };
 const size_t num_testnet_hard_forks = sizeof(testnet_hard_forks) / sizeof(testnet_hard_forks[0]);
 const uint64_t testnet_hard_fork_version_1_till = 624633;

@@ -151,6 +151,10 @@ TEST(crypto, ops)
 
 TEST(crypto, is_in_main_subgroup)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	// -1 = doesn't decode to a curve point at all, 0 = valid point outside the main subgroup, 1 = main subgroup
 	auto check = [](const char (&public_key)[HASH_SIZE * 2 + 1]) -> int
 	{
@@ -210,9 +214,11 @@ TEST(crypto, check_public_key)
 	constexpr uint32_t TORSION_CHECKED = 8U;
 	constexpr uint32_t TORSION_FREE = 16U;
 
-	// k*G, so in the prime order subgroup
+	// k*G, so in the prime order subgroup. Generating it needs the tables init_crypto_cache() builds.
 	hash good, sec;
 	constexpr uint64_t seed = 42;
+
+	init_crypto_cache();
 	generate_keys_deterministic(good, sec, reinterpret_cast<const uint8_t*>(&seed), sizeof(seed));
 
 	// A valid curve point carrying torsion, a small order point, and 32 bytes that aren't a point
@@ -510,52 +516,80 @@ static constexpr uint8_t T_bytes[HASH_SIZE] = {
 	29, 121, 71, 129, 65, 203, 91, 49, 12, 169, 250, 110, 18, 118, 22, 163
 };
 
-TEST(crypto, t_base_table)
+// The Ed25519 base point G
+static constexpr uint8_t G_bytes[HASH_SIZE] = {
+	0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+	0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+};
+
+// Every entry of the G and T tables, (j + 1) * 64^i times the generator, against the generic scalar multiplication
+TEST(crypto, generator_tables)
 {
-	ge_p3 T;
-	ASSERT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
+	std::vector<ge_precomp> tables[2] = {
+		std::vector<ge_precomp>(GE_WTABLE_ROWS * GE_WTABLE_ROW_SIZE),
+		std::vector<ge_precomp>(GE_WTABLE_ROWS * GE_WTABLE_ROW_SIZE),
+	};
 
-	for (size_t i = 0; i < 32; ++i) {
-		for (size_t j = 0; j < 8; ++j) {
-			uint8_t scalar[32] = {};
-			scalar[i] = static_cast<uint8_t>(j + 1);
+	ASSERT_EQ(ge_wtable_precomp_base(tables[0].data()), 0);
+	ASSERT_EQ(ge_wtable_precomp_T(tables[1].data()), 0);
 
-			ge_p2 expected;
-			ge_scalarmult(&expected, scalar, &T);
+	const uint8_t* generators[2] = { G_bytes, T_bytes };
 
-			const ge_precomp& entry = ge_T_base[i][j];
-			ge_p3 actual;
-			fe_add(actual.Y, entry.yplusx, entry.yminusx);
-			fe_mul(actual.Y, actual.Y, fe_inv2);
-			fe_sub(actual.X, entry.yplusx, entry.yminusx);
-			fe_mul(actual.X, actual.X, fe_inv2);
-			fe_1(actual.Z);
-			fe_mul(actual.T, actual.X, actual.Y);
+	for (size_t k = 0; k < 2; ++k) {
+		ge_p3 generator;
+		ASSERT_EQ(ge_frombytes_vartime(&generator, generators[k]), 0);
 
-			uint8_t expected_bytes[32];
-			uint8_t actual_bytes[32];
-			ge_tobytes(expected_bytes, &expected);
-			ge_p3_tobytes(actual_bytes, &actual);
-			ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "i = " << i << ", j = " << j;
+		for (size_t i = 0; i < GE_WTABLE_ROWS; ++i) {
+			for (size_t j = 0; j < GE_WTABLE_ROW_SIZE; ++j) {
+				// The scalar (j + 1) * 2^(6 * i) goes up to 2^257. Both generators have order l, so reducing it mod l
+				// changes nothing, and keeps it within the a[31] <= 127 pre-condition of ge_scalarmult().
+				uint8_t scalar[64] = {};
 
-			fe expected_xy2d;
-			fe_mul(expected_xy2d, actual.T, fe_d2);
-			fe_tobytes(expected_bytes, expected_xy2d);
-			fe_tobytes(actual_bytes, entry.xy2d);
-			ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "i = " << i << ", j = " << j;
+				const size_t bit = i * 6;
+				const uint32_t v = static_cast<uint32_t>(j + 1) << (bit % 8);
+
+				scalar[bit / 8] = static_cast<uint8_t>(v);
+				scalar[bit / 8 + 1] = static_cast<uint8_t>(v >> 8);
+
+				sc_reduce(scalar);
+
+				ge_p2 expected;
+				ge_scalarmult(&expected, scalar, &generator);
+
+				const ge_precomp& entry = tables[k][i * GE_WTABLE_ROW_SIZE + j];
+				ge_p3 actual;
+				fe_add(actual.Y, entry.yplusx, entry.yminusx);
+				fe_mul(actual.Y, actual.Y, fe_inv2);
+				fe_sub(actual.X, entry.yplusx, entry.yminusx);
+				fe_mul(actual.X, actual.X, fe_inv2);
+				fe_1(actual.Z);
+				fe_mul(actual.T, actual.X, actual.Y);
+
+				uint8_t expected_bytes[32];
+				uint8_t actual_bytes[32];
+				ge_tobytes(expected_bytes, &expected);
+				ge_p3_tobytes(actual_bytes, &actual);
+				ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "table " << k << ", i = " << i << ", j = " << j;
+
+				fe expected_xy2d;
+				fe_mul(expected_xy2d, actual.T, fe_d2);
+				fe_tobytes(expected_bytes, expected_xy2d);
+				fe_tobytes(actual_bytes, entry.xy2d);
+				ASSERT_EQ(memcmp(actual_bytes, expected_bytes, sizeof(actual_bytes)), 0) << "table " << k << ", i = " << i << ", j = " << j;
+			}
 		}
 	}
 }
 
-
-// a * G + b * T, computed with the generic scalar multiplication routines instead of the combs
+// a * G + b * T, computed with the generic scalar multiplication routines instead of the generator tables
 static hash reference_double_scalarmult_base_T(const hash& a, const hash& b)
 {
-	ge_p3 T;
+	ge_p3 G, T;
+	EXPECT_EQ(ge_frombytes_vartime(&G, G_bytes), 0);
 	EXPECT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
 
 	ge_p3 aG, bT;
-	ge_scalarmult_base(&aG, a.h);
+	ge_scalarmult_p3(&aG, a.h, &G);
 	ge_scalarmult_p3(&bT, b.h, &T);
 
 	ge_cached bT_cached;
@@ -575,6 +609,10 @@ static hash reference_double_scalarmult_base_T(const hash& a, const hash& b)
 
 TEST(crypto, double_scalarmult_base_T)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	// "expected" values come from an independent Python implementation of Ed25519 point arithmetic
 	auto check = [](const hash& a, const hash& b, const char* expected)
 	{
@@ -607,7 +645,7 @@ TEST(crypto, double_scalarmult_base_T)
 		check(hash("0000000000000000000000000000000000000000000000000000000000000000"), hash("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), "0100000000000000000000000000000000000000000000000000000000000000"); // group order on T
 		check(hash("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), hash("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), "0100000000000000000000000000000000000000000000000000000000000000"); // group order on both
 		check(hash("ecd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), hash("ecd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), "a0135cbf011f5f403a9cd59a014a367384c9dca56f7363817c9927b240089ab1"); // -G - T
-		check(hash("0101010101010101010101010101010101010101010101010101010101010101"), hash("0000000000000000000000000000000000000000000000000000000000000000"), "130ae82201d7072e6fbfc0a1884fb54636554d14945b799125cf7ce38d477f51"); // every odd digit is zero, so the 16x doubling is skipped
+		check(hash("0101010101010101010101010101010101010101010101010101010101010101"), hash("0000000000000000000000000000000000000000000000000000000000000000"), "130ae82201d7072e6fbfc0a1884fb54636554d14945b799125cf7ce38d477f51"); // every odd digit is zero
 		check(hash("0000000000000000000000000000000000000000000000000000000000000000"), hash("0101010101010101010101010101010101010101010101010101010101010101"), "097ce048c81e2e6ddaf79a029d2934100ca5bad823697ee22e379a57333c68e1"); // same, on T
 		check(hash("0101010101010101010101010101010101010101010101010101010101010101"), hash("0101010101010101010101010101010101010101010101010101010101010101"), "209c5ff80c4d62dc9da34e391f11afa77afcc261f76a9fa0c9e6ea1bda182aa5"); // same, on both
 		check(hash("1010101010101010101010101010101010101010101010101010101010101010"), hash("1010101010101010101010101010101010101010101010101010101010101010"), "749ead6f960238c4a914b95f984ebfd38e5cf80713476309cedf7bc28173bc02"); // every even digit is zero
@@ -670,6 +708,254 @@ TEST(crypto, double_scalarmult_base_T)
 	}
 }
 
+
+// Scalars for the comb and wtable tests: the edge cases of both digit recodings, and random scalars below 2^255
+static std::vector<hash> test_scalars()
+{
+	std::vector<hash> scalars = {
+		hash(),
+		hash("0100000000000000000000000000000000000000000000000000000000000000"),
+		hash("0800000000000000000000000000000000000000000000000000000000000000"), // radix 16: 8 recodes to -8 with a carry
+		hash("2000000000000000000000000000000000000000000000000000000000000000"), // radix 64: 32 recodes to -32 with a carry
+		hash("ecd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), // l - 1
+		hash("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), // l
+		hash("eed3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010"), // l + 1
+		hash("0101010101010101010101010101010101010101010101010101010101010101"),
+		hash("8888888888888888888888888888888888888888888888888888888888888808"), // maximal carry propagation in radix 16
+		hash("2008822008822008822008822008822008822008822008822008822008822008"), // 32 in every 6-bit digit: maximal carry propagation in radix 64
+		hash("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"), // the largest scalar the pre-conditions allow
+	};
+
+	// Every single bit
+	for (size_t bit = 0; bit < 255; ++bit) {
+		hash k;
+		k.h[bit / 8] = static_cast<uint8_t>(1U << (bit % 8));
+		scalars.emplace_back(k);
+	}
+
+	std::mt19937_64 rng(456);
+
+	for (int i = 0; i < 300; ++i) {
+		hash k;
+
+		for (size_t j = 0; j < HASH_SIZE / sizeof(uint64_t); ++j) {
+			k.u64()[j] = rng();
+		}
+
+		// Half of them are reduced like every scalar P2Pool uses, the other half only meets the a[31] <= 127 pre-condition
+		if (i & 1) {
+			sc_reduce32(k.h);
+		}
+		else {
+			k.h[HASH_SIZE - 1] &= 0x7f;
+		}
+
+		scalars.emplace_back(k);
+	}
+
+	return scalars;
+}
+
+TEST(crypto, comb_scalarmult)
+{
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
+	std::vector<hash> keys = {
+		hash("5866666666666666666666666666666666666666666666666666666666666666"), // G
+		hash("0100000000000000000000000000000000000000000000000000000000000000"), // the identity
+		hash("ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"), // order 2
+		hash("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"), // order 8
+		hash("9599999999999999999999999999999999999999999999999999999999999999"), // order 2l
+		hash("da99e28ba529cdde35a25fba9059e78ecaee239f99755b9b1aa4f65df00803e2"), // order 8l
+	};
+
+	{
+		hash t;
+		memcpy(t.h, T_bytes, HASH_SIZE);
+		keys.emplace_back(t);
+	}
+
+	for (uint64_t i = 0; i < 4; ++i) {
+		hash pub, sec;
+		generate_keys_deterministic(pub, sec, reinterpret_cast<const uint8_t*>(&i), sizeof(i));
+		keys.emplace_back(pub);
+	}
+
+	const std::vector<hash> scalars = test_scalars();
+
+	for (const hash& key : keys) {
+		ge_p3 point;
+		ASSERT_EQ(ge_frombytes_vartime(&point, key.h), 0) << key;
+
+		ge_combp table;
+		ASSERT_EQ(ge_comb_precomp(table, &point), 0) << key;
+
+		for (const hash& a : scalars) {
+			// The sliding window multiplication works for any point, and for scalars below 2^255
+			ge_p2 expected;
+			ge_scalarmult_vartime(&expected, a.h, &point);
+
+			ge_p3 actual;
+			ge_scalarmult_comb_vartime(&actual, table, a.h);
+
+			hash expected_bytes, actual_bytes;
+			ge_tobytes(expected_bytes.h, &expected);
+			ge_p3_tobytes(actual_bytes.h, &actual);
+
+			ASSERT_EQ(actual_bytes, expected_bytes) << "key " << key << ", scalar " << a;
+		}
+	}
+}
+
+TEST(crypto, wtable_scalarmult)
+{
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
+	std::vector<ge_precomp> G_table(GE_WTABLE_ROWS * GE_WTABLE_ROW_SIZE);
+	std::vector<ge_precomp> T_table(GE_WTABLE_ROWS * GE_WTABLE_ROW_SIZE);
+
+	ASSERT_EQ(ge_wtable_precomp_base(G_table.data()), 0);
+	ASSERT_EQ(ge_wtable_precomp_T(T_table.data()), 0);
+
+	ge_p3 G, T;
+	ASSERT_EQ(ge_frombytes_vartime(&G, G_bytes), 0);
+	ASSERT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
+
+	// The generic scalar multiplication is the reference, and the double_scalarmult_base_T test has known values
+	auto check = [&](const hash& a, const hash& b)
+	{
+		ge_p3 aG, bT;
+		ge_scalarmult_p3(&aG, a.h, &G);
+		ge_scalarmult_p3(&bT, b.h, &T);
+
+		ge_cached bT_cached;
+		ge_p1p1 sum;
+		ge_p3 aG_bT;
+
+		ge_p3_to_cached(&bT_cached, &bT);
+		ge_add(&sum, &aG, &bT_cached);
+		ge_p1p1_to_p3(&aG_bT, &sum);
+
+		hash expected_a, expected_ab;
+		ge_p3_tobytes(expected_a.h, &aG);
+		ge_p3_tobytes(expected_ab.h, &aG_bT);
+
+		ge_p3 actual;
+		hash actual_bytes;
+
+		ge_scalarmult_wtable_vartime(&actual, G_table.data(), a.h);
+		ge_p3_tobytes(actual_bytes.h, &actual);
+		ASSERT_EQ(actual_bytes, expected_a) << "a = " << a;
+
+		ge_double_scalarmult_wtable_vartime(&actual, G_table.data(), a.h, T_table.data(), b.h);
+		ge_p3_tobytes(actual_bytes.h, &actual);
+		ASSERT_EQ(actual_bytes, expected_ab) << "a = " << a << ", b = " << b;
+
+		// The same through the tables P2Pool itself uses
+		ge_scalarmult_base_vartime(&actual, a.h);
+		ge_p3_tobytes(actual_bytes.h, &actual);
+		ASSERT_EQ(actual_bytes, expected_a) << "a = " << a;
+
+		ge_double_scalarmult_base_T_vartime(&actual, a.h, b.h);
+		ge_p3_tobytes(actual_bytes.h, &actual);
+		ASSERT_EQ(actual_bytes, expected_ab) << "a = " << a << ", b = " << b;
+	};
+
+	const std::vector<hash> scalars = test_scalars();
+
+	for (size_t i = 0; i < scalars.size(); ++i) {
+		check(scalars[i], scalars[(i * 7 + 3) % scalars.size()]);
+		check(scalars[i], hash());
+		check(hash(), scalars[i]);
+	}
+
+	// Every value of every 6-bit digit, including the ones that recode to a negative digit with a carry
+	for (int position = 0; position < GE_WTABLE_ROWS; ++position) {
+		for (int value = 1; value < 64; ++value) {
+			hash d;
+
+			const size_t bit = static_cast<size_t>(position) * 6;
+			const uint32_t v = static_cast<uint32_t>(value) << (bit % 8);
+
+			d.h[bit / 8] = static_cast<uint8_t>(v);
+
+			if (bit / 8 + 1 < HASH_SIZE) {
+				d.h[bit / 8 + 1] = static_cast<uint8_t>(v >> 8);
+			}
+			else if (v >> 8) {
+				continue;
+			}
+
+			// The top digit must stay within the a[31] <= 127 pre-condition
+			if (d.h[HASH_SIZE - 1] > 127) {
+				continue;
+			}
+
+			check(d, d);
+		}
+	}
+}
+
+// The legacy derivation 8 * key2 * key1 goes through key1's comb table, or through a sliding window for scalars with a[31] > 127
+TEST(crypto, generate_key_derivation_comb)
+{
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() {
+		clear_crypto_cache(0);
+		destroy_crypto_cache();
+	});
+
+	const std::vector<hash> keys = {
+		hash("5866666666666666666666666666666666666666666666666666666666666666"), // G
+		hash("da99e28ba529cdde35a25fba9059e78ecaee239f99755b9b1aa4f65df00803e2"), // order 8l: 8 * key2 * key1 only depends on key2 mod l
+	};
+
+	std::vector<hash> scalars = test_scalars();
+
+	// Scalars too big for the comb take the sliding window path P2Pool used for all scalars before, and must give the same results
+	{
+		hash k("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+		scalars.emplace_back(k);
+
+		k.h[0] = 0x55;
+		k.h[HASH_SIZE - 1] = 0x80;
+		scalars.emplace_back(k);
+	}
+
+	for (const hash& key : keys) {
+		ge_p3 point;
+		ASSERT_EQ(ge_frombytes_vartime(&point, key.h), 0);
+
+		for (int pass = 0; pass < 2; ++pass) {
+			for (const hash& a : scalars) {
+				ge_p2 p2;
+				ge_p1p1 p1p1;
+
+				ge_scalarmult_vartime(&p2, a.h, &point);
+				ge_mul8(&p1p1, &p2);
+				ge_p1p1_to_p2(&p2, &p1p1);
+
+				hash expected;
+				ge_tobytes(expected.h, &p2);
+
+				hash derivation;
+				uint8_t view_tag;
+
+				ASSERT_TRUE(generate_key_derivation(key, a, 0, derivation, view_tag)) << "key " << key << ", scalar " << a;
+				ASSERT_EQ(derivation, expected) << "key " << key << ", scalar " << a << ", pass " << pass;
+			}
+
+			// The second pass starts with the comb table in the cache, but no derivations
+			clear_crypto_cache(seconds_since_epoch() + 1);
+			ASSERT_EQ(get_from_bytes_cache_state(key) & 4U, 4U);
+		}
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Field arithmetic. These run against whichever representation is compiled in

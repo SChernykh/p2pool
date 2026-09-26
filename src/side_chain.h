@@ -93,6 +93,8 @@ public:
 	RandomX_Hasher_Base* m_testHasher = nullptr;
 	const unordered_map<hash, PoolBlock*>& blocksById() const { return m_blocksById; }
 	void set_chain_tip(PoolBlock* block) { WriteLock lock(m_sidechainLock); m_chainTip = block; }
+	[[nodiscard]] bool test_get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* bottom_height) const { ReadLock lock(m_sidechainLock); return get_shares(tip, window, bottom_height, true); }
+	[[nodiscard]] size_t test_cached_shares_blocks() const { ReadLock lock(m_sidechainLock); return m_cachedSharesBlocks.size(); }
 #endif
 
 	// Splits reward using weighted shares and output resulting reward split into (wallets, rewards)
@@ -136,6 +138,9 @@ private:
 	[[nodiscard]] bool get_shares(const PoolBlock* tip, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
 	[[nodiscard]] int get_difficulty(const PoolBlock* tip, std::vector<DifficultyData>& difficultyData, difficulty_type& curDifficulty) const;
 
+	[[nodiscard]] bool get_cached_shares(const PoolBlock* block, PPLNSWindow& window, uint64_t* bottom_height = nullptr, bool quiet = false) const;
+	void update_cached_shares(PoolBlock* tip);
+
 	void verify_loop(PoolBlock* block);
 	void verify(PoolBlock* block);
 	void update_chain_tip(PoolBlock* block);
@@ -159,6 +164,9 @@ private:
 
 	// Pruned blocks which will soon be deleted
 	std::deque<std::pair<uint64_t, PoolBlock*>> m_blocksToDelete;
+
+	// Blocks with PoolBlock::m_cachedShares filled in. Changed only by update_cached_shares() and prune_old_blocks()
+	std::vector<PoolBlock*> m_cachedSharesBlocks;
 
 	mutable ReadWriteLock m_seenDataLock;
 	unordered_map<hash, uint64_t> m_seenWallets;

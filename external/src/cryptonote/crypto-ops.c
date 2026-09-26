@@ -1608,149 +1608,6 @@ void ge_dsm_precomp(ge_dsmp r, const ge_p3 *s) {
   ge_add(&t, &s2, &r[6]); ge_p1p1_to_p3(&u, &t); ge_p3_to_cached(&r[7], &u);
 }
 
-/*
-r = a * A + b * B
-where a = a[0]+256*a[1]+...+256^31 a[31].
-and b = b[0]+256*b[1]+...+256^31 b[31].
-B is the Ed25519 base point (x,4/5) with x positive.
-*/
-
-void ge_double_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b) {
-  signed char aslide[256];
-  signed char bslide[256];
-  ge_dsmp Ai; /* A, 3A, 5A, 7A, 9A, 11A, 13A, 15A */
-  ge_p1p1 t;
-  ge_p3 u;
-  int i;
-
-  slide(aslide, a);
-  slide(bslide, b);
-  ge_dsm_precomp(Ai, A);
-
-  ge_p2_0(r);
-
-  for (i = 255; i >= 0; --i) {
-    if (aslide[i] || bslide[i]) break;
-  }
-
-  for (; i >= 0; --i) {
-    ge_p2_dbl(&t, r);
-
-    if (aslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_add(&t, &u, &Ai[aslide[i]/2]);
-    } else if (aslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_sub(&t, &u, &Ai[(-aslide[i])/2]);
-    }
-
-    if (bslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_madd(&t, &u, &ge_Bi[bslide[i]/2]);
-    } else if (bslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_msub(&t, &u, &ge_Bi[(-bslide[i])/2]);
-    }
-
-    ge_p1p1_to_p2(r, &t);
-  }
-}
-
-// Computes aG + bB + cC (G is the fixed basepoint)
-void ge_triple_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const unsigned char *b, const ge_dsmp Bi, const unsigned char *c, const ge_dsmp Ci) {
-  signed char aslide[256];
-  signed char bslide[256];
-  signed char cslide[256];
-  ge_p1p1 t;
-  ge_p3 u;
-  int i;
-
-  slide(aslide, a);
-  slide(bslide, b);
-  slide(cslide, c);
-
-  ge_p2_0(r);
-
-  for (i = 255; i >= 0; --i) {
-    if (aslide[i] || bslide[i] || cslide[i]) break;
-  }
-
-  for (; i >= 0; --i) {
-    ge_p2_dbl(&t, r);
-
-    if (aslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_madd(&t, &u, &ge_Bi[aslide[i]/2]);
-    } else if (aslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_msub(&t, &u, &ge_Bi[(-aslide[i])/2]);
-    }
-
-    if (bslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_add(&t, &u, &Bi[bslide[i]/2]);
-    } else if (bslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_sub(&t, &u, &Bi[(-bslide[i])/2]);
-    }
-
-    if (cslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_add(&t, &u, &Ci[cslide[i]/2]);
-    } else if (cslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_sub(&t, &u, &Ci[(-cslide[i])/2]);
-    }
-
-    ge_p1p1_to_p2(r, &t);
-  }
-}
-
-void ge_double_scalarmult_base_vartime_p3(ge_p3 *r3, const unsigned char *a, const ge_p3 *A, const unsigned char *b) {
-  signed char aslide[256];
-  signed char bslide[256];
-  ge_dsmp Ai; /* A, 3A, 5A, 7A, 9A, 11A, 13A, 15A */
-  ge_p1p1 t;
-  ge_p3 u;
-  ge_p2 r;
-  int i;
-
-  slide(aslide, a);
-  slide(bslide, b);
-  ge_dsm_precomp(Ai, A);
-
-  ge_p2_0(&r);
-
-  for (i = 255; i >= 0; --i) {
-    if (aslide[i] || bslide[i]) break;
-  }
-
-  for (; i >= 0; --i) {
-    ge_p2_dbl(&t, &r);
-
-    if (aslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_add(&t, &u, &Ai[aslide[i]/2]);
-    } else if (aslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_sub(&t, &u, &Ai[(-aslide[i])/2]);
-    }
-
-    if (bslide[i] > 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_madd(&t, &u, &ge_Bi[bslide[i]/2]);
-    } else if (bslide[i] < 0) {
-      ge_p1p1_to_p3(&u, &t);
-      ge_msub(&t, &u, &ge_Bi[(-bslide[i])/2]);
-    }
-
-    if (i == 0)
-      ge_p1p1_to_p3(r3, &t);
-    else
-      ge_p1p1_to_p2(&r, &t);
-  }
-}
-
 /* From fe_frombytes.c */
 
 #if !FE_RADIX_51
@@ -2008,14 +1865,6 @@ void ge_p3_tobytes(unsigned char *s, const ge_p3 *h) {
   s[31] ^= fe_isnegative(x) << 7;
 }
 
-/* From ge_precomp_0.c */
-
-static void ge_precomp_0(ge_precomp *h) {
-  fe_1(h->yplusx);
-  fe_1(h->yminusx);
-  fe_0(h->xy2d);
-}
-
 /* From ge_scalarmult_base.c */
 
 static unsigned char equal(signed char b, signed char c) {
@@ -2032,151 +1881,6 @@ static unsigned char negative(signed char b) {
   unsigned long long x = b; /* 18446744073709551361..18446744073709551615: yes; 0..255: no */
   x >>= 63; /* 1: yes; 0: no */
   return x;
-}
-
-static void ge_precomp_cmov(ge_precomp *t, const ge_precomp *u, unsigned char b) {
-  fe_cmov(t->yplusx, u->yplusx, b);
-  fe_cmov(t->yminusx, u->yminusx, b);
-  fe_cmov(t->xy2d, u->xy2d, b);
-}
-
-static void _select(ge_precomp *t, int pos, signed char b) {
-  ge_precomp minust;
-  unsigned char bnegative = negative(b);
-  unsigned char babs = b - (((-bnegative) & b) << 1);
-
-  ge_precomp_0(t);
-  ge_precomp_cmov(t, &ge_base[pos][0], equal(babs, 1));
-  ge_precomp_cmov(t, &ge_base[pos][1], equal(babs, 2));
-  ge_precomp_cmov(t, &ge_base[pos][2], equal(babs, 3));
-  ge_precomp_cmov(t, &ge_base[pos][3], equal(babs, 4));
-  ge_precomp_cmov(t, &ge_base[pos][4], equal(babs, 5));
-  ge_precomp_cmov(t, &ge_base[pos][5], equal(babs, 6));
-  ge_precomp_cmov(t, &ge_base[pos][6], equal(babs, 7));
-  ge_precomp_cmov(t, &ge_base[pos][7], equal(babs, 8));
-  fe_copy(minust.yplusx, t->yminusx);
-  fe_copy(minust.yminusx, t->yplusx);
-  fe_neg(minust.xy2d, t->xy2d);
-  ge_precomp_cmov(t, &minust, bnegative);
-}
-
-// With these select_vartime/ge_scalarmult_base_vartime I got ~25% speed up comparing to the select/ge_scalarmult_base -- sowle
-static void select_vartime(ge_precomp *t, int pos, signed char b) {
-  unsigned char bnegative = negative(b);
-  unsigned char babs = b - (((-bnegative) & b) << 1);
-  const ge_precomp* base;
-
-  if (babs == 0)
-  {
-    ge_precomp_0(t);
-  }
-  else if (bnegative == 0)
-  {
-    base = &ge_base[pos][babs - 1];
-    fe_copy(t->yplusx,  base->yplusx);
-    fe_copy(t->yminusx, base->yminusx);
-    fe_copy(t->xy2d,    base->xy2d);
-  }
-  else
-  {
-    base = &ge_base[pos][babs - 1];
-    fe_copy(t->yplusx,  base->yminusx);
-    fe_copy(t->yminusx, base->yplusx);
-    fe_neg(t->xy2d,     base->xy2d);
-  }
-}
-
-/*
-h = a * B
-where a = a[0]+256*a[1]+...+256^31 a[31]
-B is the Ed25519 base point (x,4/5) with x positive.
-
-Preconditions:
-  a[31] <= 127
-*/
-
-void ge_scalarmult_base(ge_p3 *h, const unsigned char *a) {
-  signed char e[64];
-  signed char carry;
-  ge_p1p1 r;
-  ge_p2 s;
-  ge_precomp t;
-  int i;
-
-  for (i = 0; i < 32; ++i) {
-    e[2 * i + 0] = (a[i] >> 0) & 15;
-    e[2 * i + 1] = (a[i] >> 4) & 15;
-  }
-  /* each e[i] is between 0 and 15 */
-  /* e[63] is between 0 and 7 */
-
-  carry = 0;
-  for (i = 0; i < 63; ++i) {
-    e[i] += carry;
-    carry = e[i] + 8;
-    carry >>= 4;
-    e[i] -= carry << 4;
-  }
-  e[63] += carry;
-  /* each e[i] is between -8 and 8 */
-
-  ge_p3_0(h);
-  for (i = 1; i < 64; i += 2) {
-    _select(&t, i / 2, e[i]);
-    ge_madd(&r, h, &t); ge_p1p1_to_p3(h, &r);
-  }
-
-  ge_p3_dbl(&r, h);  ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p3(h, &r);
-
-  for (i = 0; i < 64; i += 2) {
-    _select(&t, i / 2, e[i]);
-    ge_madd(&r, h, &t); ge_p1p1_to_p3(h, &r);
-  }
-}
-
-void ge_scalarmult_base_vartime(ge_p3 *h, const unsigned char *a) {
-  signed char e[64];
-  signed char carry;
-  ge_p1p1 r;
-  ge_p2 s;
-  ge_precomp t;
-  int i;
-
-  for (i = 0; i < 32; ++i) {
-    e[2 * i + 0] = (a[i] >> 0) & 15;
-    e[2 * i + 1] = (a[i] >> 4) & 15;
-  }
-  /* each e[i] is between 0 and 15 */
-  /* e[63] is between 0 and 7 */
-
-  carry = 0;
-  for (i = 0; i < 63; ++i) {
-    e[i] += carry;
-    carry = e[i] + 8;
-    carry >>= 4;
-    e[i] -= carry << 4;
-  }
-  e[63] += carry;
-  /* each e[i] is between -8 and 8 */
-
-  ge_p3_0(h);
-  for (i = 1; i < 64; i += 2) {
-    select_vartime(&t, i / 2, e[i]);
-    ge_madd(&r, h, &t); ge_p1p1_to_p3(h, &r);
-  }
-
-  ge_p3_dbl(&r, h);  ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-  ge_p2_dbl(&r, &s); ge_p1p1_to_p3(h, &r);
-
-  for (i = 0; i < 64; i += 2) {
-    select_vartime(&t, i / 2, e[i]);
-    ge_madd(&r, h, &t); ge_p1p1_to_p3(h, &r);
-  }
 }
 
 /*
@@ -2239,11 +1943,11 @@ static void ge_precomp_to_p3(ge_p3 *h, const ge_precomp *q, int negative) {
 }
 
 /*
-h += e * row[0], where row is one row of a comb table and -8 <= e <= 8.
+h += e * row[0], where row holds the multiples 1 * row[0] ... |e| * row[0] (8 of them in a ge_combp row, 32 in a ge_wtable row).
 
-Zero digits (1 in 16 on average for a uniformly random scalar) are skipped entirely
-instead of adding the point at infinity, and the sign is folded into the choice of
-ge_madd/ge_msub so the table entry can be used in place - no copy and no fe_neg.
+Zero digits are skipped entirely instead of adding the point at infinity, and the sign is
+folded into the choice of ge_madd/ge_msub so the table entry can be used in place - no copy
+and no fe_neg.
 
 *initialized is 0 while h is still the point at infinity, in which case the first
 addition initializes h directly from the table entry.
@@ -2275,51 +1979,273 @@ static void ge_comb_add(ge_p3 *h, int *initialized, const ge_precomp *row, signe
 }
 
 /*
-h = a * B + b * T
-where a = a[0]+256*a[1]+...+256^31 a[31]
-      b = b[0]+256*b[1]+...+256^31 b[31]
-B is the Ed25519 base point (x,4/5) with x positive, T is the FCMP++ generator unbiased_hash_to_ec(keccak("Monero Generator T")).
+out[i] = in[i] in the ge_precomp format (y + x, y - x, 2*d*x*y), for 0 <= i < n. All points share a single
+field inversion. z and zinv are scratch space for n field elements each.
 
-Both scalars are consumed by the same comb, so the 16x doubling that separates the odd
-and even digit passes is shared instead of being done once per scalar, and the two
-half-results never have to be added together at the end.
+The first two fields are fully reduced (fe_reduce), which is what ge_madd, ge_msub and ge_precomp_to_p3
+need them to be, in both field representations. The third one is a product, and only goes into fe_mul.
+*/
+
+static int ge_p3_to_precomp_batch(ge_precomp *out, const ge_p3 *in, fe *z, fe *zinv, unsigned int n) {
+  unsigned int i;
+
+  for (i = 0; i < n; ++i) {
+    fe_copy(z[i], in[i].Z);
+  }
+
+  /* The cast only adds const, but MSVC's C compiler warns about pointer-to-array qualifier conversions without it */
+  if (fe_batch_invert(zinv, (const fe *) z, n) != 0) {
+    return -1;
+  }
+
+  for (i = 0; i < n; ++i) {
+    fe x, y, t;
+
+    fe_mul(x, in[i].X, zinv[i]);
+    fe_mul(y, in[i].Y, zinv[i]);
+
+    fe_add(t, y, x);
+    fe_reduce(out[i].yplusx, t);
+
+    fe_sub(t, y, x);
+    fe_reduce(out[i].yminusx, t);
+
+    fe_mul(t, x, y);
+    fe_mul(out[i].xy2d, t, fe_d2);
+  }
+
+  return 0;
+}
+
+/*
+Comb table for an arbitrary point A: t[8 * i + j] = (j + 1) * 16^(8 * i) * A for 0 <= i < 8, 0 <= j < 8
+
+With it, a * A is a fixed-base multiplication: the 64 signed nibbles of a go into 8 passes of 8 digits
+each (digit 8 * i + k is added in pass k, from row i), with 4 doublings between the passes. That's
+64 mixed additions and 28 doublings, instead of 252 doublings plus ~50 additions for a sliding window.
+
+Returns 0 on success
+*/
+
+int ge_comb_precomp(ge_combp t, const ge_p3 *A) {
+  ge_p3 points[64];
+  fe z[64];
+  fe zinv[64];
+  ge_p3 base = *A;
+  ge_cached base_cached;
+  ge_p1p1 r;
+  ge_p2 s;
+  int i, j;
+
+  for (i = 0; i < 8; ++i) {
+    ge_p3 *row = points + i * 8;
+
+    row[0] = base;
+    ge_p3_to_cached(&base_cached, &base);
+
+    for (j = 1; j < 8; ++j) {
+      ge_add(&r, &row[j - 1], &base_cached);
+      ge_p1p1_to_p3(&row[j], &r);
+    }
+
+    /* base = 16^8 * base */
+    if (i < 7) {
+      ge_p3_to_p2(&s, &base);
+
+      for (j = 0; j < 31; ++j) {
+        ge_p2_dbl(&r, &s);
+        ge_p1p1_to_p2(&s, &r);
+      }
+
+      ge_p2_dbl(&r, &s);
+      ge_p1p1_to_p3(&base, &r);
+    }
+  }
+
+  return ge_p3_to_precomp_batch(t, points, z, zinv, 64);
+}
+
+/*
+h = a * A, where t is A's table from ge_comb_precomp()
+
+Preconditions:
+  a[31] <= 127
+*/
+
+void ge_scalarmult_comb_vartime(ge_p3 *h, const ge_combp t, const unsigned char *a) {
+  signed char e[64];
+  ge_p1p1 r;
+  ge_p2 s;
+  int initialized = 0;
+  int pass, i;
+
+  ge_signed_nibbles(e, a);
+
+  /* Digit 8 * i + pass has weight 16^pass * 16^(8 * i), and row i holds multiples of 16^(8 * i) * A */
+  for (pass = 7; pass >= 0; --pass) {
+    /* h = 16 * h, skipped while h is still the point at infinity */
+    if (initialized) {
+      ge_p3_dbl(&r, h);  ge_p1p1_to_p2(&s, &r);
+      ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
+      ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
+      ge_p2_dbl(&r, &s); ge_p1p1_to_p3(h, &r);
+    }
+
+    for (i = 0; i < 8; ++i) {
+      ge_comb_add(h, &initialized, t + i * 8, e[i * 8 + pass]);
+    }
+  }
+
+  /* The scalar was zero */
+  if (!initialized) {
+    ge_p3_0(h);
+  }
+}
+
+/*
+Split a scalar into signed 6-bit digits: a = sum(e[i] * 64^i), -32 <= e[i] < 32.
+
+The top digit (bits 252 and up) is at most 8, so it never carries out of the last row.
+
+Preconditions:
+  a[31] <= 127
+*/
+
+static void ge_signed_sextets(signed char e[GE_WTABLE_ROWS], const unsigned char *a) {
+  int carry = 0;
+  int i;
+
+  for (i = 0; i < GE_WTABLE_ROWS; ++i) {
+    const int bit = i * 6;
+    const int byte = bit >> 3;
+    const int shift = bit & 7;
+
+    int v = a[byte] >> shift;
+
+    /* The digit continues in the next byte. Only the top digit starts in a[31], and it lies entirely in it */
+    if ((shift > 2) && (byte < 31)) {
+      v |= a[byte + 1] << (8 - shift);
+    }
+
+    v = (v & 63) + carry;
+    carry = (v + 32) >> 6;
+    e[i] = (signed char) (v - (carry << 6));
+  }
+}
+
+/* t[GE_WTABLE_ROW_SIZE * i + j] = (j + 1) * 64^i * B */
+static int ge_wtable_precomp(ge_wtable t, const ge_p3 *B) {
+  ge_p3 row[GE_WTABLE_ROW_SIZE];
+  fe z[GE_WTABLE_ROW_SIZE];
+  fe zinv[GE_WTABLE_ROW_SIZE];
+  ge_p3 base = *B;
+  ge_cached base_cached;
+  ge_p1p1 r;
+  ge_p2 s;
+  int i, j;
+
+  for (i = 0; i < GE_WTABLE_ROWS; ++i) {
+    row[0] = base;
+    ge_p3_to_cached(&base_cached, &base);
+
+    for (j = 1; j < GE_WTABLE_ROW_SIZE; ++j) {
+      ge_add(&r, &row[j - 1], &base_cached);
+      ge_p1p1_to_p3(&row[j], &r);
+    }
+
+    if (ge_p3_to_precomp_batch(t + i * GE_WTABLE_ROW_SIZE, row, z, zinv, GE_WTABLE_ROW_SIZE) != 0) {
+      return -1;
+    }
+
+    /* base = 64 * base */
+    ge_p3_to_p2(&s, &base);
+
+    for (j = 0; j < 5; ++j) {
+      ge_p2_dbl(&r, &s);
+      ge_p1p1_to_p2(&s, &r);
+    }
+
+    ge_p2_dbl(&r, &s);
+    ge_p1p1_to_p3(&base, &r);
+  }
+
+  return 0;
+}
+
+/* The table for the Ed25519 base point B = (x, 4/5) with x positive */
+int ge_wtable_precomp_base(ge_wtable t) {
+  static const unsigned char B_bytes[32] = {
+    0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+    0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+  };
+
+  ge_p3 B;
+  if (ge_frombytes_vartime(&B, B_bytes) != 0) {
+    return -1;
+  }
+
+  return ge_wtable_precomp(t, &B);
+}
+
+/* The table for the FCMP++ generator T = unbiased_hash_to_ec(keccak("Monero Generator T")) */
+int ge_wtable_precomp_T(ge_wtable t) {
+  static const unsigned char T_bytes[32] = {
+    0xdc, 0x42, 0xe1, 0xd3, 0x30, 0x7b, 0x2d, 0x4b, 0x3b, 0x02, 0x72, 0x9a, 0xbe, 0x57, 0x7e, 0x23,
+    0x1d, 0x79, 0x47, 0x81, 0x41, 0xcb, 0x5b, 0x31, 0x0c, 0xa9, 0xfa, 0x6e, 0x12, 0x76, 0x16, 0xa3
+  };
+
+  ge_p3 T;
+  if (ge_frombytes_vartime(&T, T_bytes) != 0) {
+    return -1;
+  }
+
+  return ge_wtable_precomp(t, &T);
+}
+
+/*
+h = a * B, where t is B's table: one mixed addition per non-zero digit, no doublings
+
+Preconditions:
+  a[31] <= 127
+*/
+
+void ge_scalarmult_wtable_vartime(ge_p3 *h, const ge_wtable t, const unsigned char *a) {
+  signed char e[GE_WTABLE_ROWS];
+  int initialized = 0;
+  int i;
+
+  ge_signed_sextets(e, a);
+
+  for (i = 0; i < GE_WTABLE_ROWS; ++i) {
+    ge_comb_add(h, &initialized, t + i * GE_WTABLE_ROW_SIZE, e[i]);
+  }
+
+  /* The scalar was zero */
+  if (!initialized) {
+    ge_p3_0(h);
+  }
+}
+
+/*
+h = a * A + b * B, where ta and tb are the tables for A and B
 
 Preconditions:
   a[31] <= 127
   b[31] <= 127
 */
 
-void ge_double_scalarmult_base_T_vartime(ge_p3 *h, const unsigned char *a, const unsigned char *b) {
-  signed char ea[64];
-  signed char eb[64];
-  ge_p1p1 r;
-  ge_p2 s;
+void ge_double_scalarmult_wtable_vartime(ge_p3 *h, const ge_wtable ta, const unsigned char *a, const ge_wtable tb, const unsigned char *b) {
+  signed char ea[GE_WTABLE_ROWS];
+  signed char eb[GE_WTABLE_ROWS];
   int initialized = 0;
   int i;
 
-  ge_signed_nibbles(ea, a);
-  ge_signed_nibbles(eb, b);
+  ge_signed_sextets(ea, a);
+  ge_signed_sextets(eb, b);
 
-  /* Digit i has weight 16^i, and row i/2 of both tables holds multiples of 256^(i/2) */
-
-  /* Odd digits: weight 16 * 256^(i/2) */
-  for (i = 1; i < 64; i += 2) {
-    ge_comb_add(h, &initialized, ge_base[i / 2], ea[i]);
-    ge_comb_add(h, &initialized, ge_T_base[i / 2], eb[i]);
-  }
-
-  /* h = 16 * h, skipped while h is still the point at infinity */
-  if (initialized) {
-    ge_p3_dbl(&r, h);  ge_p1p1_to_p2(&s, &r);
-    ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-    ge_p2_dbl(&r, &s); ge_p1p1_to_p2(&s, &r);
-    ge_p2_dbl(&r, &s); ge_p1p1_to_p3(h, &r);
-  }
-
-  /* Even digits: weight 256^(i/2) */
-  for (i = 0; i < 64; i += 2) {
-    ge_comb_add(h, &initialized, ge_base[i / 2], ea[i]);
-    ge_comb_add(h, &initialized, ge_T_base[i / 2], eb[i]);
+  for (i = 0; i < GE_WTABLE_ROWS; ++i) {
+    ge_comb_add(h, &initialized, ta + i * GE_WTABLE_ROW_SIZE, ea[i]);
+    ge_comb_add(h, &initialized, tb + i * GE_WTABLE_ROW_SIZE, eb[i]);
   }
 
   /* Both scalars were zero */

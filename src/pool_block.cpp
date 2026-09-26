@@ -69,6 +69,7 @@ PoolBlock::PoolBlock()
 	, m_auxNonce(0)
 	, m_parentPowHashValid(false)
 	, m_parentPtrCache(nullptr)
+	, m_cachedSharesBottomHeight(0)
 {
 }
 
@@ -149,6 +150,9 @@ PoolBlock& PoolBlock::operator=(const PoolBlock& b)
 	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	m_cachedNextDifficulty = b.m_cachedNextDifficulty;
+
+	m_cachedShares = {};
+	m_cachedSharesBottomHeight = 0;
 
 	m_coinbase_tx_hash = b.m_coinbase_tx_hash;
 
@@ -412,6 +416,9 @@ void PoolBlock::reset_offchain_data()
 	m_parentPtrCache.store(nullptr, std::memory_order_relaxed);
 
 	m_cachedNextDifficulty = {};
+
+	m_cachedShares = {};
+	m_cachedSharesBottomHeight = 0;
 
 	m_coinbase_tx_hash = {};
 }

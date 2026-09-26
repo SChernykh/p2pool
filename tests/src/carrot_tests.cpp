@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include <random>
 #include <fstream>
+#include <numeric>
 #include <sstream>
 #include <thread>
 
@@ -235,6 +236,10 @@ TEST(carrot, gen_eph_privkey)
 
 TEST(carrot, gen_eph_pubkey)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	hash out;
 	ASSERT_TRUE(gen_eph_pubkey(one, out));
 	ASSERT_EQ(out, base_x25519);
@@ -288,6 +293,10 @@ TEST(carrot, gen_sender_receiver_secret)
 
 TEST(carrot, gen_contextualized_sender_receiver_secret)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 3812345),                              hash("3132fe87647496d9516e4c0254ecfb49719d869aaf9aa0fe2e1bc462fb4f6a0d"));
 	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 0),                                    hash("551a7f34d59c4b857c9ad4bb6d15bcb4e288aff8637910a1f0bec030a3b2c870"));
 	ASSERT_EQ(gen_contextualized_sender_receiver_secret(convergence_sender_receiver_secret, convergence_eph_pub_key_subaddress, 1),                                    hash("17457cba6a862b067b3bc0ccfcf3145876cc9d035b075f241174cd3f1314f760"));
@@ -381,12 +390,13 @@ TEST(carrot, gen_sender_extension)
 // K_o = K_s + k^o_g G + k^o_t T, built from scratch with the generic scalar multiplication routines
 static hash reference_onetime_address(const hash& spend_public_key, const hash& sender_extension_g, const hash& sender_extension_t)
 {
-	ge_p3 T, spend_point;
+	ge_p3 G, T, spend_point;
+	EXPECT_EQ(ge_frombytes_vartime(&G, hash("5866666666666666666666666666666666666666666666666666666666666666").h), 0);
 	EXPECT_EQ(ge_frombytes_vartime(&T, T_bytes), 0);
 	EXPECT_EQ(ge_frombytes_vartime(&spend_point, spend_public_key.h), 0);
 
 	ge_p3 extension_g_point, extension_t_point;
-	ge_scalarmult_base(&extension_g_point, sender_extension_g.h);
+	ge_scalarmult_p3(&extension_g_point, sender_extension_g.h, &G);
 	ge_scalarmult_p3(&extension_t_point, sender_extension_t.h, &T);
 
 	ge_cached tmp_cached;
@@ -409,6 +419,10 @@ static hash reference_onetime_address(const hash& spend_public_key, const hash& 
 
 TEST(carrot, gen_onetime_address)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	const hash& s = convergence_contextualized_secret;
 	const hash& k = convergence_spend_public_key;
 
@@ -577,6 +591,10 @@ TEST(carrot, gen_encrypted_janus_anchor)
 
 TEST(carrot, coinbase_enote)
 {
+	init_crypto_cache();
+
+	ON_SCOPE_LEAVE([]() { destroy_crypto_cache(); });
+
 	constexpr uint64_t amount = 600000000000ULL;
 	constexpr uint64_t height = 3812345;
 
@@ -634,6 +652,14 @@ TEST(carrot, coinbase_enote)
 
 TEST(carrot, coinbase_enote_vectors)
 {
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
 	// Known answers produced by Monero's own carrot_core, walking the coinbase chain for each case:
 	// make_carrot_enote_ephemeral_privkey, make_carrot_enote_ephemeral_pubkey_cryptonote,
 	// try_make_carrot_shared_key_sender, make_carrot_contextualized_sender_receiver_secret,
@@ -788,16 +814,8 @@ TEST(carrot, coinbase_enote_vectors)
 		in.anchor = v.anchor;
 		in.amount = v.amount;
 
-		init_crypto_cache();
-		thread_pool_init();
-
 		std::vector<coinbase_tx_output> out;
-		const bool ok = batch_coinbase_outputs(v.height, { in }, out);
-
-		thread_pool_destroy();
-		destroy_crypto_cache();
-
-		ASSERT_TRUE(ok);
+		ASSERT_TRUE(batch_coinbase_outputs(v.height, { in }, out));
 		ASSERT_EQ(out.size(), 1U);
 		EXPECT_EQ(out[0].onetime_address, v.onetime_address);
 
@@ -936,7 +954,6 @@ TEST(carrot, batch_eph_pubkeys)
 		out.resize(1);
 
 		ASSERT_TRUE(batch_eph_pubkeys(range, out)) << "batch size " << n;
-		EXPECT_EQ(get_last_carrot_public_key_batch_size(), n) << "batch size " << n;
 		ASSERT_EQ(out.size(), n);
 		EXPECT_TRUE(equal_values(out, range_reference)) << "batch size " << n;
 
@@ -957,12 +974,11 @@ TEST(carrot, batch_eph_pubkeys)
 	ASSERT_EQ(out[out.size() - 1].first, out[out.size() - 2].first);
 	ASSERT_EQ(out[eph_priv_key_index].first, out[eph_priv_key_index + 1].first);
 
-	// A repeated batch is served entirely from the cache and schedules no parallel work.
+	// A repeated batch gives the same results
 	ASSERT_TRUE(batch_eph_pubkeys(in, out));
-	EXPECT_EQ(get_last_carrot_public_key_batch_size(), 0U);
 	ASSERT_TRUE(equal_values(out, reference));
 
-	// Scatter new scalars across the original index range and process only those compacted misses.
+	// Scatter new scalars across the original index range
 	std::vector<hash> scattered_in = in;
 	std::vector<hash> scattered_reference = reference;
 
@@ -980,15 +996,13 @@ TEST(carrot, batch_eph_pubkeys)
 	}
 
 	ASSERT_TRUE(batch_eph_pubkeys(scattered_in, out));
-	EXPECT_EQ(get_last_carrot_public_key_batch_size(), scattered_indices.size());
 	ASSERT_TRUE(equal_values(out, scattered_reference));
 
-	// A single failed element doesn't hide the results for a large batch, and it isn't cached either
+	// A single failed element doesn't hide the results for a large batch
 	std::vector<hash> mixed_in = in;
 	mixed_in[in.size() / 3] = group_order;
 
 	ASSERT_FALSE(batch_eph_pubkeys(mixed_in, out));
-	EXPECT_EQ(get_last_carrot_public_key_batch_size(), 1U);
 	ASSERT_EQ(out.size(), reference.size());
 
 	for (size_t i = 0; i < out.size(); ++i) {
@@ -1003,7 +1017,6 @@ TEST(carrot, batch_eph_pubkeys)
 	}
 
 	ASSERT_FALSE(batch_eph_pubkeys(mixed_in, out));
-	EXPECT_EQ(get_last_carrot_public_key_batch_size(), 1U);
 }
 
 TEST(carrot, batch_sender_receiver_secrets)
@@ -1133,7 +1146,6 @@ TEST(carrot, batch_sender_receiver_secrets)
 		out.resize(1);
 
 		ASSERT_TRUE(batch_sender_receiver_secrets(eph_priv_key_range, view_public_key_range, out)) << "batch size " << n;
-		EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), n) << "batch size " << n;
 		ASSERT_EQ(out.size(), n);
 		EXPECT_TRUE(equal_values(out, range_reference)) << "batch size " << n;
 
@@ -1141,11 +1153,11 @@ TEST(carrot, batch_sender_receiver_secrets)
 	}
 	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
 
+	// Every view public key has a comb table now, and the whole batch uses them
 	ASSERT_TRUE(batch_sender_receiver_secrets(eph_priv_keys, view_public_keys, out));
-	EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), 0U);
 	ASSERT_TRUE(equal_values(out, reference));
 
-	// Scatter misses across the original index range and verify that only those compacted entries are processed.
+	// Different scalars for some of the same view public keys
 	std::vector<hash> scattered_eph_priv_keys = eph_priv_keys;
 	std::vector<hash> scattered_reference = reference;
 
@@ -1157,10 +1169,9 @@ TEST(carrot, batch_sender_receiver_secrets)
 	}
 
 	ASSERT_TRUE(batch_sender_receiver_secrets(scattered_eph_priv_keys, view_public_keys, out));
-	EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), scattered_indices.size());
 	ASSERT_TRUE(equal_values(out, scattered_reference));
 
-	// A single failed element doesn't hide the results for a large batch, and it isn't cached either
+	// A single failed element doesn't hide the results for a large batch
 	std::vector<hash> mixed_view_public_keys = view_public_keys;
 	const size_t mixed_index = view_public_keys.size() / 3;
 	mixed_view_public_keys[mixed_index] = identity_public_key;
@@ -1169,7 +1180,6 @@ TEST(carrot, batch_sender_receiver_secrets)
 	mixed_reference[mixed_index] = hash();
 
 	ASSERT_FALSE(batch_sender_receiver_secrets(eph_priv_keys, mixed_view_public_keys, out));
-	EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), 1U);
 	ASSERT_EQ(out.size(), reference.size());
 
 	for (size_t i = 0; i < out.size(); ++i) {
@@ -1178,10 +1188,9 @@ TEST(carrot, batch_sender_receiver_secrets)
 	}
 
 	ASSERT_FALSE(batch_sender_receiver_secrets(eph_priv_keys, mixed_view_public_keys, out));
-	EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), 1U);
 
 	// Duplicate elements are valid inputs. Repeated (K_v, d_e) pairs, and one view public key shared by
-	// several elements, both have to survive being calculated and cached more than once in the same batch.
+	// several elements, both have to survive their comb table being built and cached more than once in the same batch.
 	{
 		hash dup_view_public_key, dup_eph_priv_key, other_eph_priv_key, other_pub;
 
@@ -1205,19 +1214,54 @@ TEST(carrot, batch_sender_receiver_secrets)
 
 		out.resize(1);
 		ASSERT_TRUE(batch_sender_receiver_secrets(dup_eph_priv_keys, dup_view_public_keys, out));
-
-		// Only two distinct (K_v, d_e) pairs, but every element is a cache miss and is calculated by the batch
-		EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), dup_eph_priv_keys.size());
 		ASSERT_TRUE(equal_values(out, dup_reference));
 
 		EXPECT_EQ(out[0].first, out[1].first);
 		EXPECT_EQ(out[0].first, out[3].first);
 		EXPECT_NE(out[0].first, out[2].first);
 
-		// Both distinct pairs are a single cache entry each now
+		// The shared view public key has a single cache entry with a comb table now
+		EXPECT_EQ(get_from_bytes_cache_state(dup_view_public_key), 7U);
+
 		ASSERT_TRUE(batch_sender_receiver_secrets(dup_eph_priv_keys, dup_view_public_keys, out));
-		EXPECT_EQ(get_last_sender_receiver_secret_batch_size(), 0U);
 		ASSERT_TRUE(equal_values(out, dup_reference));
+	}
+
+	// Scalars with a[31] > 127 are too big for ge_scalarmult_comb_vartime(), so they go through a sliding window instead.
+	// P2Pool never uses such scalars, but the result must still be right. gen_sender_receiver_secret() can't be the
+	// reference here, it has the same a[31] <= 127 pre-condition.
+	{
+		hash big_scalar = convergence_eph_priv_key;
+		big_scalar.h[HASH_SIZE - 1] |= 0x80;
+
+		// G + a point of order 8: reducing the scalar mod l would change the result for this one
+		const hash order_8l_public_key("da99e28ba529cdde35a25fba9059e78ecaee239f99755b9b1aa4f65df00803e2");
+
+		for (const hash& k : { convergence_view_public_key, order_8l_public_key }) {
+			ge_p3 point;
+			ASSERT_EQ(ge_frombytes_vartime(&point, k.h), 0);
+
+			ge_p2 product;
+			ge_scalarmult_vartime(&product, big_scalar.h, &point);
+
+			ge_p3 product_p3 = {};
+			memcpy(product_p3.Y, product.Y, sizeof(fe));
+			memcpy(product_p3.Z, product.Z, sizeof(fe));
+
+			hash expected;
+			ASSERT_EQ(ge_p3_to_x25519(expected.h, &product_p3), 0);
+
+			// Without a cached comb table, then with the one the first pass cached
+			clear_crypto_cache();
+
+			for (int pass = 0; pass < 2; ++pass) {
+				EXPECT_EQ(get_from_bytes_cache_state(k) & 4U, pass ? 4U : 0U) << "key " << k << ", pass " << pass;
+
+				ASSERT_TRUE(batch_sender_receiver_secrets({ big_scalar, convergence_eph_priv_key }, { k, k }, out));
+				ASSERT_EQ(out.size(), 2U);
+				EXPECT_EQ(out[0].first, expected) << "key " << k << ", pass " << pass;
+			}
+		}
 	}
 }
 
@@ -1266,7 +1310,6 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, {}, out));
 	ASSERT_TRUE(out.empty());
-	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
 	// The same enote as in carrot.coinbase_enote, one output at a time
 	Wallet w(nullptr);
@@ -1292,7 +1335,6 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
 	ASSERT_EQ(out.size(), 1U);
-	EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 	ASSERT_TRUE(out[0].valid);
 	ASSERT_EQ(out[0].onetime_address, hash("45bf7a2bd2050e4ff329f6e577ad03e59157c356dea673319bc1851b4294a075"));
 
@@ -1310,12 +1352,7 @@ TEST(carrot, batch_coinbase_outputs)
 
 	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
 
-	// All amount-dependent fields must survive a cache hit.
-	ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
-	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
-	EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
-
-	// Each independently supplied secret/anchor is part of the cache key.
+	// Each independently supplied secret/anchor goes into the output
 	for (size_t field = 0; field < 3; ++field) {
 		coinbase_output_input changed = known;
 
@@ -1324,11 +1361,10 @@ TEST(carrot, batch_coinbase_outputs)
 		if (field == 2) changed.anchor.data[0] ^= 1;
 
 		ASSERT_TRUE(batch_coinbase_outputs(height, { known, changed }, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 		EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, known)));
 		EXPECT_TRUE(equal_outputs(out[1], reference_coinbase_output(height, changed)));
+		EXPECT_FALSE(equal_outputs(out[0], out[1]));
 		ASSERT_TRUE(batch_coinbase_outputs(height, { changed, known }, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 		EXPECT_TRUE(equal_outputs(out[0], reference_coinbase_output(height, changed)));
 	}
 
@@ -1442,7 +1478,6 @@ TEST(carrot, batch_coinbase_outputs)
 
 		ASSERT_TRUE(batch_coinbase_outputs(height, range, out)) << "batch size " << n;
 		ASSERT_EQ(out.size(), n);
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), n);
 
 		for (size_t i = 0; i < n; ++i) {
 			EXPECT_TRUE(equal_outputs(out[i], reference[range_begin + i])) << "batch size " << n << ", element " << i;
@@ -1454,7 +1489,6 @@ TEST(carrot, batch_coinbase_outputs)
 
 	ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
 	ASSERT_EQ(out.size(), inputs.size());
-	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		EXPECT_TRUE(equal_outputs(out[i], reference[i])) << "element " << i;
@@ -1473,7 +1507,7 @@ TEST(carrot, batch_coinbase_outputs)
 		EXPECT_EQ(std::adjacent_find(onetime_addresses.begin(), onetime_addresses.end()), onetime_addresses.end());
 	}
 
-	// Misses scattered among hits must map back to the original output positions.
+	// Changed elements scattered through the batch stay at their own positions
 	{
 		auto changed = inputs;
 
@@ -1482,7 +1516,6 @@ TEST(carrot, batch_coinbase_outputs)
 		}
 
 		ASSERT_TRUE(batch_coinbase_outputs(height, changed, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 3U);
 
 		for (size_t i = 0; i < changed.size(); ++i) {
 			EXPECT_TRUE(equal_outputs(out[i], reference_coinbase_output(height, changed[i]))) << i;
@@ -1496,7 +1529,6 @@ TEST(carrot, batch_coinbase_outputs)
 		mixed[mixed_index].spend_public_key = invalid_public_key;
 
 		ASSERT_FALSE(batch_coinbase_outputs(height, mixed, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
 		ASSERT_EQ(out.size(), mixed.size());
 
 		for (size_t i = 0; i < mixed.size(); ++i) {
@@ -1510,17 +1542,7 @@ TEST(carrot, batch_coinbase_outputs)
 		}
 	}
 
-	// Both cleanup modes discard the new cache too.
-	for (uint64_t timestamp : { seconds_since_epoch() + 1, uint64_t(0) }) {
-		clear_crypto_cache(timestamp);
-
-		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
-		ASSERT_TRUE(batch_coinbase_outputs(height, { known }, out));
-		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
-	}
-
-	// Construction, verification and cache cleanup can run concurrently.
+	// Construction, verification and cleanup of the spend public key cache can run concurrently.
 	std::thread workers[2];
 
 	for (auto& worker : workers) {
@@ -1603,6 +1625,8 @@ TEST(carrot, prewarm_coinbase_outputs)
 		prewarm_coinbase_outputs(txkey_sec, height, window, 13 * T);
 		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
+		std::vector<const Wallet*> pair_wallets;
+		std::vector<uint64_t> amounts;
 		std::vector<coinbase_output_input> inputs;
 
 		for (size_t i = 0; i < wallets.size(); ++i) {
@@ -1625,12 +1649,19 @@ TEST(carrot, prewarm_coinbase_outputs)
 			for (uint64_t k = lo[i]; k <= hi[i]; ++k) {
 				input.amount = k * T;
 				inputs.emplace_back(input);
+
+				pair_wallets.emplace_back(&wallets[i]);
+				amounts.emplace_back(k * T);
 			}
 		}
 
+		std::vector<coinbase_secrets> secrets;
 		std::vector<coinbase_tx_output> out;
 
-		ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
+		// Everything is in the cache already
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pair_wallets, amounts, secrets, out));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pair_wallets, amounts, secrets, out));
 		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
 
 		for (size_t i = 0; i < inputs.size(); ++i) {
@@ -1638,14 +1669,11 @@ TEST(carrot, prewarm_coinbase_outputs)
 		}
 
 		// The range is bounded on both sides; off-grid amounts remain on demand.
-		inputs.resize(3, inputs[0]);
-		inputs[0].amount = (truncated ? 8 : 9) * T;
-		inputs[1] = inputs[0];
-		inputs[1].amount = 13 * T;
-		inputs[2] = inputs[0];
-		inputs[2].amount = 10 * T + 1;
+		const std::vector<const Wallet*> wallet0(3, &wallets[0]);
+		const std::vector<uint64_t> off_grid = { (truncated ? 8 : 9) * T, 13 * T, 10 * T + 1 };
 
-		ASSERT_TRUE(batch_coinbase_outputs(height, inputs, out));
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, wallet0, off_grid, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, wallet0, off_grid, secrets, out));
 		EXPECT_EQ(get_last_coinbase_output_batch_size(), 3U);
 	}
 
@@ -1654,13 +1682,519 @@ TEST(carrot, prewarm_coinbase_outputs)
 		prewarm_coinbase_outputs(epoch.first, epoch.second, window, 13 * T);
 		EXPECT_EQ(get_last_coinbase_output_batch_size(), 8U);
 	}
+
+	// A large payout (1000 T, so 1000 T...1100 T) gets only as many amounts as the cache keeps for one wallet, the lowest ones
+	{
+		PPLNSWindow solo;
+		solo.m_shares.emplace_back(difficulty_type(1), &wallets[0]);
+
+		clear_crypto_cache();
+
+		prewarm_coinbase_outputs(txkey_sec, height, solo, 1000 * T);
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), MAX_COINBASE_OUTPUTS_PER_WALLET);
+
+		std::vector<uint64_t> a;
+
+		for (uint64_t k = 999; k <= 1000 + MAX_COINBASE_OUTPUTS_PER_WALLET; ++k) {
+			a.emplace_back(k * T);
+		}
+
+		std::vector<coinbase_secrets> secrets;
+		std::vector<coinbase_tx_output> out;
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, std::vector<const Wallet*>(a.size(), &wallets[0]), a, secrets, out));
+
+		for (size_t i = 0; i < a.size(); ++i) {
+			const uint64_t k = a[i] / T;
+			EXPECT_EQ(out[i].valid, (k >= 1000) && (k < 1000 + MAX_COINBASE_OUTPUTS_PER_WALLET)) << k;
+		}
+	}
+}
+
+// The scalar chain for everything batch_coinbase_secrets() returns
+static coinbase_secrets reference_coinbase_secrets(const hash& txkey_sec, uint8_t retry_counter, uint64_t height, const Wallet& w)
+{
+	coinbase_secrets s{};
+
+	s.anchor = gen_janus_anchor(txkey_sec, retry_counter, w);
+
+	hash eph_priv_key;
+	EXPECT_TRUE(gen_eph_privkey(s.anchor, height, w, eph_priv_key));
+	EXPECT_TRUE(gen_eph_pubkey(eph_priv_key, s.eph_pub_key));
+	EXPECT_TRUE(gen_sender_receiver_secret(eph_priv_key, w.view_public_key(), s.sender_receiver_secret));
+
+	s.contextualized_sender_receiver_secret = gen_contextualized_sender_receiver_secret(s.sender_receiver_secret, s.eph_pub_key, height);
+
+	return s;
+}
+
+static bool equal_secrets(const coinbase_secrets& a, const coinbase_secrets& b)
+{
+	return (a.valid() == b.valid()) &&
+		equal_anchor(a.anchor, b.anchor) &&
+		(a.eph_pub_key == b.eph_pub_key) &&
+		(a.sender_receiver_secret == b.sender_receiver_secret) &&
+		(a.contextualized_sender_receiver_secret == b.contextualized_sender_receiver_secret);
+}
+
+TEST(carrot, batch_coinbase_secrets)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	constexpr uint64_t height = 3812345;
+	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
+
+	const hash& txkey_sec = gen_janus_anchor_txkey_sec;
+
+	std::vector<coinbase_secrets> secrets(1);
+
+	ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, {}, secrets));
+	ASSERT_TRUE(secrets.empty());
+	EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+
+	const std::vector<Wallet> wallets = make_test_wallets(BOUNDARY_INPUTS);
+
+	std::vector<const Wallet*> pointers;
+	std::vector<coinbase_secrets> reference;
+
+	for (const Wallet& w : wallets) {
+		pointers.emplace_back(&w);
+		reference.emplace_back(reference_coinbase_secrets(txkey_sec, 0, height, w));
+	}
+
+	// Disjoint ranges with sizes around all possible parallel_run thread-count boundaries. Every element is a cache miss.
+	size_t range_begin = 0;
+
+	for (size_t n = 1; n <= 33; ++n) {
+		const size_t range_end = range_begin + n;
+		const std::vector<const Wallet*> range(pointers.begin() + range_begin, pointers.begin() + range_end);
+
+		secrets.resize(1);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, range, secrets)) << "batch size " << n;
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), n);
+		ASSERT_EQ(secrets.size(), n);
+
+		for (size_t i = 0; i < n; ++i) {
+			EXPECT_TRUE(equal_secrets(secrets[i], reference[range_begin + i])) << "batch size " << n << ", element " << i;
+		}
+
+		range_begin = range_end;
+	}
+	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
+
+	// Everything is cached now, in any order
+	for (int reversed = 0; reversed < 2; ++reversed) {
+		std::vector<const Wallet*> w = pointers;
+		std::vector<coinbase_secrets> r = reference;
+
+		if (reversed) {
+			std::reverse(w.begin(), w.end());
+			std::reverse(r.begin(), r.end());
+		}
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+
+		for (size_t i = 0; i < w.size(); ++i) {
+			EXPECT_TRUE(equal_secrets(secrets[i], r[i])) << "reversed " << reversed << ", element " << i;
+		}
+	}
+
+	// txkey_sec, retry_counter and height are all part of the cache key
+	{
+		const std::vector<const Wallet*> w(pointers.begin(), pointers.begin() + 5);
+		const hash other_txkey_sec = keccak("batch_coinbase_secrets test");
+
+		const struct { hash key; uint8_t rc; uint64_t h; } variants[] = {
+			{ other_txkey_sec, 0, height },
+			{ txkey_sec, 1, height },
+			{ txkey_sec, 0, height + 1 },
+		};
+
+		for (const auto& v : variants) {
+			for (int pass = 0; pass < 2; ++pass) {
+				ASSERT_TRUE(batch_coinbase_secrets(v.key, v.rc, v.h, w, secrets));
+				EXPECT_EQ(get_last_coinbase_secrets_batch_size(), pass ? 0U : w.size());
+
+				for (size_t i = 0; i < w.size(); ++i) {
+					EXPECT_TRUE(equal_secrets(secrets[i], reference_coinbase_secrets(v.key, v.rc, v.h, *w[i]))) << i;
+					EXPECT_FALSE(equal_secrets(secrets[i], reference[i])) << i;
+				}
+			}
+		}
+	}
+
+	// A new wallet among cached ones is the only element that has to be calculated
+	{
+		const std::vector<Wallet> more = make_test_wallets(BOUNDARY_INPUTS + 1);
+
+		std::vector<const Wallet*> w = pointers;
+		w.insert(w.begin() + BOUNDARY_INPUTS / 2, &more.back());
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 1U);
+		EXPECT_TRUE(equal_secrets(secrets[BOUNDARY_INPUTS / 2], reference_coinbase_secrets(txkey_sec, 0, height, more.back())));
+		EXPECT_TRUE(equal_secrets(secrets.back(), reference.back()));
+	}
+
+	// Duplicate wallets get the same secrets. Duplicates that aren't cached yet are calculated more than once.
+	{
+		const std::vector<Wallet> more = make_test_wallets(BOUNDARY_INPUTS + 2);
+		const std::vector<const Wallet*> w = { &more.back(), pointers[0], &more.back() };
+		const coinbase_secrets r = reference_coinbase_secrets(txkey_sec, 0, height, more.back());
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 2U);
+		EXPECT_TRUE(equal_secrets(secrets[0], r));
+		EXPECT_TRUE(equal_secrets(secrets[1], reference[0]));
+		EXPECT_TRUE(equal_secrets(secrets[2], r));
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+	}
+
+	// A null wallet, or one with a view public key that isn't a valid point, only invalidates its own element, and isn't cached
+	{
+		Wallet bad(nullptr);
+		bad.assign_unchecked(wallets[0].spend_public_key(), invalid_public_key, NetworkType::Mainnet);
+
+		for (const Wallet* invalid : { static_cast<const Wallet*>(nullptr), static_cast<const Wallet*>(&bad) }) {
+			for (int pass = 0; pass < 2; ++pass) {
+				const std::vector<const Wallet*> w = { pointers[0], invalid, pointers[1] };
+
+				EXPECT_FALSE(batch_coinbase_secrets(txkey_sec, 0, height, w, secrets));
+				EXPECT_EQ(get_last_coinbase_secrets_batch_size(), invalid ? 1U : 0U);
+				ASSERT_EQ(secrets.size(), 3U);
+
+				EXPECT_TRUE(equal_secrets(secrets[0], reference[0]));
+				EXPECT_TRUE(equal_secrets(secrets[1], coinbase_secrets{}));
+				EXPECT_TRUE(equal_secrets(secrets[2], reference[1]));
+			}
+		}
+	}
+
+	// Both cleanup modes discard the cache
+	for (uint64_t timestamp : { seconds_since_epoch() + 1, uint64_t(0) }) {
+		clear_crypto_cache(timestamp);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), BOUNDARY_INPUTS);
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, secrets));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+	}
+}
+
+TEST(carrot, complete_coinbase_outputs)
+{
+	init_crypto_cache();
+	thread_pool_init();
+
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
+
+	constexpr uint64_t height = 3812345;
+	constexpr uint64_t amount = 600000000000ULL;
+	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
+
+	const hash& txkey_sec = gen_janus_anchor_txkey_sec;
+
+	const std::vector<Wallet> wallets = make_test_wallets(BOUNDARY_INPUTS);
+
+	std::vector<const Wallet*> pointers;
+	std::vector<uint64_t> amounts;
+	std::vector<coinbase_secrets> reference_secrets;
+
+	for (size_t i = 0; i < wallets.size(); ++i) {
+		pointers.emplace_back(&wallets[i]);
+		amounts.emplace_back(amount + i);
+		reference_secrets.emplace_back(reference_coinbase_secrets(txkey_sec, 0, height, wallets[i]));
+	}
+
+	auto reference_output = [&](size_t i, uint64_t a) {
+		coinbase_output_input in{};
+
+		in.spend_public_key = wallets[i].spend_public_key();
+		in.sender_receiver_secret = reference_secrets[i].sender_receiver_secret;
+		in.contextualized_sender_receiver_secret = reference_secrets[i].contextualized_sender_receiver_secret;
+		in.anchor = reference_secrets[i].anchor;
+		in.amount = a;
+
+		return reference_coinbase_output(height, in);
+	};
+
+	auto check_outputs = [&](const std::vector<size_t>& indices, const std::vector<uint64_t>& a, const std::vector<coinbase_tx_output>& out) {
+		ASSERT_EQ(out.size(), indices.size());
+
+		for (size_t k = 0; k < indices.size(); ++k) {
+			EXPECT_TRUE(equal_outputs(out[k], reference_output(indices[k], a[k]))) << "element " << k;
+			EXPECT_EQ(out[k].eph_pub_key, reference_secrets[indices[k]].eph_pub_key) << "element " << k;
+			EXPECT_EQ(out[k].amount, a[k]) << "element " << k;
+		}
+	};
+
+	std::vector<coinbase_secrets> secrets;
+	std::vector<coinbase_tx_output> out;
+
+	// Size mismatches
+	ASSERT_FALSE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, { amount }, secrets, out));
+	ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, { pointers[0] }, { amount }, secrets, out));
+	ASSERT_FALSE(complete_coinbase_outputs(txkey_sec, 0, height, { pointers[0] }, { amount, amount }, secrets, out));
+	ASSERT_FALSE(complete_coinbase_outputs(txkey_sec, 0, height, { pointers[0], pointers[1] }, { amount, amount }, secrets, out));
+
+	clear_crypto_cache();
+
+	// Disjoint ranges with sizes around all possible parallel_run thread-count boundaries.
+	// Nothing is cached, so batch_coinbase_secrets finds no outputs and complete_coinbase_outputs calculates all of them.
+	size_t range_begin = 0;
+
+	for (size_t n = 1; n <= 33; ++n) {
+		const size_t range_end = range_begin + n;
+
+		const std::vector<const Wallet*> w(pointers.begin() + range_begin, pointers.begin() + range_end);
+		const std::vector<uint64_t> a(amounts.begin() + range_begin, amounts.begin() + range_end);
+
+		std::vector<size_t> indices(n);
+		std::iota(indices.begin(), indices.end(), range_begin);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out)) << "batch size " << n;
+		ASSERT_EQ(out.size(), n);
+
+		for (const coinbase_tx_output& o : out) {
+			EXPECT_FALSE(o.valid);
+		}
+
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out)) << "batch size " << n;
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), n);
+
+		check_outputs(indices, a, out);
+
+		range_begin = range_end;
+	}
+	ASSERT_EQ(range_begin, BOUNDARY_INPUTS);
+
+	std::vector<size_t> all_indices(BOUNDARY_INPUTS);
+	std::iota(all_indices.begin(), all_indices.end(), 0);
+
+	// All outputs are cached now, and complete_coinbase_outputs only fills in eph_pub_key and amount
+	ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, amounts, secrets, out));
+	EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+
+	for (const coinbase_tx_output& o : out) {
+		EXPECT_TRUE(o.valid);
+	}
+
+	ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pointers, amounts, secrets, out));
+	EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+	check_outputs(all_indices, amounts, out);
+
+	// New amounts scattered through the batch are the only outputs that have to be calculated, and the old ones stay cached
+	{
+		std::vector<uint64_t> changed = amounts;
+
+		for (const size_t i : { size_t(0), changed.size() / 2, changed.size() - 1 }) {
+			changed[i] += 1234567;
+		}
+
+		for (int pass = 0; pass < 2; ++pass) {
+			ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, changed, secrets, out));
+			ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pointers, changed, secrets, out));
+			EXPECT_EQ(get_last_coinbase_output_batch_size(), pass ? 0U : 3U);
+			check_outputs(all_indices, changed, out);
+		}
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, amounts, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pointers, amounts, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+	}
+
+	// A wallet can be repeated with different amounts, like prewarm_coinbase_outputs does
+	{
+		const std::vector<const Wallet*> w(5, pointers[1]);
+		const std::vector<uint64_t> a = { amount * 2, amount * 3, amount * 2, amount * 4, amounts[1] };
+		const std::vector<size_t> indices(5, 1);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_EQ(get_last_coinbase_secrets_batch_size(), 0U);
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out));
+
+		// amount * 2 appears twice: it's calculated twice, but cached once. amounts[1] is cached already.
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 4U);
+		check_outputs(indices, a, out);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+		check_outputs(indices, a, out);
+	}
+
+	// There is a limit on how many amounts are cached for one wallet. When it's reached, a new amount replaces the oldest one.
+	{
+		constexpr size_t n = 100;
+
+		const std::vector<const Wallet*> w(n, pointers[2]);
+		const std::vector<size_t> indices(n, 2);
+
+		std::vector<uint64_t> a(n);
+
+		for (size_t i = 0; i < n; ++i) {
+			a[i] = amount * 10 + i;
+		}
+
+		// Which of these amounts are cached for pointers[2]. batch_coinbase_secrets() only looks them up, it doesn't change the cache.
+		auto cached = [&](const std::vector<uint64_t>& amounts_to_check) {
+			std::vector<coinbase_secrets> s;
+			std::vector<coinbase_tx_output> o;
+
+			EXPECT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, std::vector<const Wallet*>(amounts_to_check.size(), pointers[2]), amounts_to_check, s, o));
+
+			std::vector<bool> result;
+
+			for (const coinbase_tx_output& t : o) {
+				result.emplace_back(t.valid);
+			}
+
+			return result;
+		};
+
+		ASSERT_TRUE(cached({ amounts[2] })[0]);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), n);
+		check_outputs(indices, a, out);
+
+		// Only the newest amounts are left, and the one that was cached before all of them is gone
+		const std::vector<bool> c = cached(a);
+		const size_t limit = static_cast<size_t>(std::count(c.begin(), c.end(), true));
+
+		ASSERT_GT(limit, 1U);
+		ASSERT_LT(limit, n);
+
+		for (size_t i = 0; i < n; ++i) {
+			EXPECT_EQ(c[i], i >= n - limit) << i;
+		}
+
+		EXPECT_FALSE(cached({ amounts[2] })[0]);
+
+		// One more amount replaces the oldest one that's left
+		const uint64_t extra = amount * 11;
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, { pointers[2] }, { extra }, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, { pointers[2] }, { extra }, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
+		check_outputs({ 2 }, { extra }, out);
+
+		EXPECT_TRUE(cached({ extra })[0]);
+		EXPECT_FALSE(cached({ a[n - limit] })[0]);
+		EXPECT_TRUE(cached({ a[n - limit + 1] })[0]);
+
+		// A new amount repeated in one batch is cached once, so it replaces only one old amount
+		const uint64_t extra2 = amount * 12;
+		const std::vector<const Wallet*> w2(2, pointers[2]);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w2, { extra2, extra2 }, secrets, out));
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w2, { extra2, extra2 }, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 2U);
+		check_outputs({ 2, 2 }, { extra2, extra2 }, out);
+
+		EXPECT_EQ(cached({ extra, extra2 }), std::vector<bool>({ true, true }));
+		EXPECT_FALSE(cached({ a[n - limit + 1] })[0]);
+		EXPECT_TRUE(cached({ a[n - limit + 2] })[0]);
+	}
+
+	// Outputs calculated from secrets that don't belong to the cache entry for the given arguments are returned, but not cached
+	{
+		const std::vector<const Wallet*> w = { pointers[3] };
+		const std::vector<uint64_t> a = { amount * 20 };
+
+		std::vector<coinbase_secrets> other_secrets;
+		std::vector<coinbase_tx_output> other_out;
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height + 1, w, a, other_secrets, other_out));
+		ASSERT_FALSE(equal_secrets(other_secrets[0], reference_secrets[3]));
+
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, other_secrets, other_out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
+
+		ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_FALSE(out[0].valid);
+		ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 1U);
+		check_outputs({ 3 }, a, out);
+	}
+
+	// Invalid secrets leave their output invalid
+	{
+		const std::vector<const Wallet*> w = { pointers[0], nullptr, pointers[1] };
+		const std::vector<uint64_t> a = { amounts[0], amount, amounts[1] };
+
+		EXPECT_FALSE(batch_coinbase_secrets(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_FALSE(complete_coinbase_outputs(txkey_sec, 0, height, w, a, secrets, out));
+		EXPECT_EQ(get_last_coinbase_output_batch_size(), 0U);
+
+		EXPECT_TRUE(out[0].valid);
+		EXPECT_FALSE(out[1].valid);
+		EXPECT_TRUE(out[2].valid);
+	}
+
+	// Both cleanup modes discard the cached outputs too
+	for (uint64_t timestamp : { seconds_since_epoch() + 1, uint64_t(0) }) {
+		clear_crypto_cache(timestamp);
+
+		for (int pass = 0; pass < 2; ++pass) {
+			ASSERT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, amounts, secrets, out));
+			ASSERT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pointers, amounts, secrets, out));
+			EXPECT_EQ(get_last_coinbase_output_batch_size(), pass ? 0U : BOUNDARY_INPUTS);
+			check_outputs(all_indices, amounts, out);
+		}
+	}
+
+	// Construction, verification and cache cleanup can run concurrently
+	std::thread workers[2];
+
+	for (auto& worker : workers) {
+		worker = std::thread([&]() {
+			for (size_t pass = 0; pass < 3; ++pass) {
+				std::vector<coinbase_secrets> s;
+				std::vector<coinbase_tx_output> o;
+
+				EXPECT_TRUE(batch_coinbase_secrets(txkey_sec, 0, height, pointers, amounts, s, o));
+				EXPECT_TRUE(complete_coinbase_outputs(txkey_sec, 0, height, pointers, amounts, s, o));
+
+				for (size_t i = 0; i < o.size(); ++i) {
+					EXPECT_TRUE(equal_outputs(o[i], reference_output(i, amounts[i]))) << i;
+				}
+			}
+		});
+	}
+
+	for (int i = 0; i < 3; ++i) {
+		clear_crypto_cache(i ? 0 : (seconds_since_epoch() + 1));
+	}
+
+	for (auto& worker : workers) {
+		worker.join();
+	}
 }
 
 TEST(carrot, batch_eph_privkeys)
 {
+	init_crypto_cache();
 	thread_pool_init();
 
-	ON_SCOPE_LEAVE([]() { thread_pool_destroy(); });
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
 
 	constexpr uint64_t height = 3812345;
 	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;
@@ -1792,9 +2326,13 @@ TEST(carrot, batch_eph_privkeys)
 
 TEST(carrot, batch_contextualized_sender_receiver_secrets)
 {
+	init_crypto_cache();
 	thread_pool_init();
 
-	ON_SCOPE_LEAVE([]() { thread_pool_destroy(); });
+	ON_SCOPE_LEAVE([]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+	});
 
 	constexpr uint64_t height = 3812345;
 	constexpr size_t BOUNDARY_INPUTS = 33 * 34 / 2;

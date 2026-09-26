@@ -991,6 +991,180 @@ TEST(pool_block, carrot_parent_nonce)
 	}
 }
 
+TEST(pool_block, cached_shares)
+{
+	thread_pool_init();
+	init_crypto_cache();
+
+	auto cleanup = ScopeGuard{[]() {
+		thread_pool_destroy();
+		destroy_crypto_cache();
+#ifdef WITH_INDEXED_HASHES
+		indexed_hash::cleanup_storage();
+#endif
+	}};
+
+	// Same as in side_chain.cpp
+	constexpr uint64_t UNCLE_BLOCK_DEPTH = 3;
+
+	const Wallet wallets[] = {
+		Wallet("4B4aCvEcZr6GcusVJfEds2LXixCeJ2dQBaDUCguWmzi5L7PW5tVXfAnE4cn1mQdiNzH6zWcEPMQTiYTsNcX44ryxCJWZKZH"),
+		Wallet("43VbH7CQCJqhH1d327TBenCs9hFN3zvcgX5YZdGyJfEE5rabasAtKhyPsKmbYSU9AmMReACZrz9j5U2Ba6WXWoQpVi38AJn"),
+		Wallet("46r3PD45TYH9jVf8sEejW9JdK1EgNe6BeYLdGyJTU1MRctoevAHXpzSjBMJhdkLirGXwiWdZejSRZ8MZP72artSD17LprKY"),
+	};
+
+	// The same wallet objects (the blocks' own), weights, order and truncation
+	auto same_window = [](const PPLNSWindow& a, const PPLNSWindow& b) {
+		if ((a.size() != b.size()) || (a.m_weightTruncated != b.m_weightTruncated)) {
+			return false;
+		}
+		for (size_t i = 0; i < a.size(); ++i) {
+			if ((a.m_shares[i].m_weight != b.m_shares[i].m_weight) || (a.m_shares[i].m_wallet != b.m_shares[i].m_wallet)) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	const struct {
+		const char* name;
+		uint8_t major_version;
+		uint64_t height;
+		bool cached;
+		uint64_t mainchain_diff;
+	} cases[] = {
+		{ "Carrot", HARDFORK_VERSION_CARROT, 3012000, true, 1000000000000ULL },
+		// Max PPLNS weight is 2x Monero difficulty, so the window is cut after 4 blocks with the minimum difficulty (100000)
+		{ "Carrot, window cut by weight", HARDFORK_VERSION_CARROT, 3012000, true, 150000 },
+		// The next Monero block is Carrot (testnet), so the first Carrot blocks will take these blocks' windows
+		{ "last pre-Carrot Monero block", HARDFORK_VERSION_CARROT - 1, 3011999, true, 1000000000000ULL },
+		{ "pre-Carrot", HARDFORK_VERSION_CARROT - 1, 2762973, false, 1000000000000ULL },
+	};
+
+	for (const auto& test : cases) {
+		SCOPED_TRACE(test.name);
+
+		SideChain sidechain(nullptr, NetworkType::Testnet, "default");
+		sidechain.m_testMainChainDiff = difficulty_type(test.mainchain_diff);
+
+		ParentNonceTestHasher hasher;
+		BlockTemplate tpl(&sidechain, nullptr);
+		tpl.rng().seed(123);
+
+		Mempool mempool;
+		Params params;
+
+		MinerData data{};
+		data.major_version = test.major_version;
+		data.height = test.height;
+		data.prev_id = H("81a0260b29d5224e88d04b11faff321fbdc11c4570779386b2a1817a86dc622c");
+		data.seed_hash = keccak("cached shares seed");
+		data.difficulty = difficulty_type(1000000000000ULL);
+		data.median_weight = 300000;
+		data.already_generated_coins = 18204981557254756780ULL;
+		data.median_timestamp = 1780000000;
+
+		auto check_template = [&](const PoolBlock* tip) {
+			PPLNSWindow fresh;
+			uint64_t bottom_height = 0;
+			ASSERT_TRUE(sidechain.test_get_shares(tip, fresh, &bottom_height));
+			EXPECT_TRUE(same_window(tpl.get_payout_window(), fresh));
+			EXPECT_EQ(tpl.get_payout_window().m_powHash, tip->m_powHash);
+			EXPECT_EQ(tpl.get_bottom_height(), bottom_height);
+		};
+
+		std::vector<const PoolBlock*> chain;
+
+		for (uint32_t i = 0; i < 8; ++i) {
+			SCOPED_TRACE(i);
+
+			params.m_miningWallet = wallets[i % 3];
+			tpl.update(data, mempool, params);
+
+			// A Carrot template takes the window of the tip it's built on
+			if (!chain.empty() && (test.major_version >= HARDFORK_VERSION_CARROT)) {
+				check_template(chain.back());
+			}
+
+			// The template is not a side-chain block, so it never gets a cached window
+			EXPECT_TRUE(tpl.pool_block_template()->m_cachedShares.empty());
+
+			PoolBlock mined(*tpl.pool_block_template());
+			mined.m_nonce = 42 + i;
+			ASSERT_TRUE(mined.get_pow_hash(&hasher, data.height, data.seed_hash, mined.m_powHash, false, RandomX_Hasher_Base::VM_LANE_P2P));
+			ASSERT_TRUE(mined.m_difficulty.check_pow(mined.m_powHash));
+			ASSERT_TRUE(tpl.submit_sidechain_block(i + 1, mined.m_nonce, 0, mined.m_powHash));
+			EXPECT_TRUE(tpl.pool_block_template()->m_cachedShares.empty());
+
+			const PoolBlock* tip = sidechain.chainTip();
+			ASSERT_NE(tip, nullptr);
+			ASSERT_EQ(tip->m_sidechainHeight, i);
+			ASSERT_EQ(tip->m_majorVersion, test.major_version);
+			chain.push_back(tip);
+
+			// The tip and up to UNCLE_BLOCK_DEPTH blocks below it have exactly what get_shares() calculates, deeper blocks have nothing
+			for (const PoolBlock* b : chain) {
+				SCOPED_TRACE(b->m_sidechainHeight);
+
+				const bool expected = test.cached && (b->m_sidechainHeight + UNCLE_BLOCK_DEPTH >= tip->m_sidechainHeight);
+				ASSERT_EQ(!b->m_cachedShares.empty(), expected);
+
+				if (expected) {
+					PPLNSWindow fresh;
+					uint64_t bottom_height = 0;
+					ASSERT_TRUE(sidechain.test_get_shares(b, fresh, &bottom_height));
+					EXPECT_TRUE(same_window(b->m_cachedShares, fresh));
+					EXPECT_EQ(b->m_cachedShares.m_powHash, b->m_powHash);
+					EXPECT_EQ(b->m_cachedSharesBottomHeight, bottom_height);
+				}
+				else {
+					EXPECT_EQ(b->m_cachedSharesBottomHeight, 0U);
+				}
+			}
+
+			EXPECT_EQ(sidechain.test_cached_shares_blocks(), test.cached ? std::min<size_t>(i + 1, UNCLE_BLOCK_DEPTH + 1) : 0U);
+
+			// Copies (block templates, incoming blocks) never get a cached window from the block they copy
+			PoolBlock with_cache(*tip);
+			with_cache.m_cachedShares.m_shares.emplace_back(tip->m_difficulty, &tip->m_minerWallet);
+			with_cache.m_cachedSharesBottomHeight = 1;
+
+			const PoolBlock copy(with_cache);
+			EXPECT_TRUE(copy.m_cachedShares.empty());
+			EXPECT_EQ(copy.m_cachedSharesBottomHeight, 0U);
+
+			PoolBlock assigned;
+			assigned.m_cachedShares = with_cache.m_cachedShares;
+			assigned.m_cachedSharesBottomHeight = 1;
+			assigned = with_cache;
+			EXPECT_TRUE(assigned.m_cachedShares.empty());
+			EXPECT_EQ(assigned.m_cachedSharesBottomHeight, 0U);
+
+			with_cache.reset_offchain_data();
+			EXPECT_TRUE(with_cache.m_cachedShares.empty());
+			EXPECT_EQ(with_cache.m_cachedSharesBottomHeight, 0U);
+
+			data.median_timestamp += sidechain.block_time();
+		}
+
+		// Otherwise the bottom height and m_weightTruncated of the cached windows wouldn't be tested
+		if (test.mainchain_diff < 1000000) {
+			EXPECT_TRUE(chain.back()->m_cachedShares.m_weightTruncated);
+			EXPECT_GT(chain.back()->m_cachedSharesBottomHeight, 0U);
+		}
+
+		// The first Carrot template after the fork takes the window of the last pre-Carrot tip
+		if (test.cached && (test.major_version < HARDFORK_VERSION_CARROT)) {
+			data.major_version = HARDFORK_VERSION_CARROT;
+			data.height = test.height + 1;
+			data.prev_id.h[0] ^= 1;
+			tpl.update(data, mempool, params);
+
+			check_template(chain.back());
+		}
+	}
+}
+
 TEST(pool_block, verify)
 {
 	thread_pool_init();
