@@ -820,13 +820,17 @@ struct MinerData
 
 struct ChainMain
 {
-	FORCEINLINE ChainMain() : difficulty(), height(0), timestamp(0), reward(0), id() {}
+	FORCEINLINE ChainMain() : difficulty(), height(0), timestamp(0), reward(0), id(), prev_id(), fcmp_pp_n_tree_layers(0), fcmp_pp_tree_root() {}
 
 	difficulty_type difficulty;
 	uint64_t height;
 	uint64_t timestamp;
 	uint64_t reward;
 	hash id;
+	hash prev_id;
+
+	uint8_t fcmp_pp_n_tree_layers;
+	hash fcmp_pp_tree_root;
 };
 
 enum class NetworkType {

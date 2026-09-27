@@ -127,6 +127,7 @@ public:
 	void api_update_aux_data();
 
 	bool get_difficulty_at_height(uint64_t height, difficulty_type& diff);
+	bool get_fcmp_pp_tree_data(uint64_t height, const hash& prev_id, uint8_t& n_tree_layers, hash& tree_root) const;
 
 #if defined(WITH_RANDOMX) && !defined(P2POOL_UNIT_TESTS)
 	void start_mining(uint32_t threads);

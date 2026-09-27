@@ -686,6 +686,14 @@ void ZMQReader::parse(char* data, size_t size)
 				continue;
 			}
 
+			uint8_t major_version;
+
+			if (!PARSE(*i, m_chainmainData, prev_id) || !parseValue(*i, "major_version", major_version) || (major_version < HARDFORK_VERSION_FCMP_PP) ||
+				!PARSE(*i, m_chainmainData, fcmp_pp_n_tree_layers) || !PARSE(*i, m_chainmainData, fcmp_pp_tree_root)) {
+				m_chainmainData.fcmp_pp_n_tree_layers = 0;
+				m_chainmainData.fcmp_pp_tree_root = {};
+			}
+
 			m_handler->handle_chain_main(m_chainmainData, extra_it->value.GetString(), tx_hashes);
 		}
 

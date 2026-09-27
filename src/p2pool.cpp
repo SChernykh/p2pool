@@ -419,6 +419,9 @@ void p2pool::handle_miner_data(MinerData& data)
 		ChainMain& c0 = m_mainchainByHeight[data.height];
 		c0.height = data.height;
 		c0.difficulty = data.difficulty;
+		c0.prev_id = data.prev_id;
+		c0.fcmp_pp_n_tree_layers = data.fcmp_pp_n_tree_layers;
+		c0.fcmp_pp_tree_root = data.fcmp_pp_tree_root;
 
 		ChainMain& c1 = m_mainchainByHeight[data.height - 1];
 		c1.height = data.height - 1;
@@ -600,6 +603,10 @@ void p2pool::handle_chain_main(ChainMain& data, const char* extra, const std::ve
 		c.height = data.height;
 		c.timestamp = data.timestamp;
 		c.reward = data.reward;
+
+		c.prev_id = data.prev_id;
+		c.fcmp_pp_n_tree_layers = data.fcmp_pp_n_tree_layers;
+		c.fcmp_pp_tree_root = data.fcmp_pp_tree_root;
 
 		// data.id not filled in here, but c.id should be available. Copy it to data.id for logging
 		data.id = c.id;
@@ -1839,6 +1846,18 @@ void p2pool::parse_get_miner_data_rpc(const char* data, size_t size)
 	}
 }
 
+template<typename T>
+static void parse_block_header_fcmp_pp(const T& v, ChainMain& c)
+{
+	uint8_t major_version;
+
+	if (!parseValue(v, "prev_hash", c.prev_id) || !parseValue(v, "major_version", major_version) || (major_version < HARDFORK_VERSION_FCMP_PP) ||
+		!PARSE(v, c, fcmp_pp_n_tree_layers) || !PARSE(v, c, fcmp_pp_tree_root)) {
+		c.fcmp_pp_n_tree_layers = 0;
+		c.fcmp_pp_tree_root = {};
+	}
+}
+
 bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 {
 	rapidjson::Document doc;
@@ -1870,6 +1889,8 @@ bool p2pool::parse_block_header(const char* data, size_t size, ChainMain& c)
 		LOGERR(1, "parse_block_header: invalid JSON response from daemon: failed to parse 'block_header'");
 		return false;
 	}
+
+	parse_block_header_fcmp_pp(v, c);
 
 	{
 		WriteLock lock(m_mainchainLock);
@@ -1920,6 +1941,7 @@ uint32_t p2pool::parse_block_headers_range(const char* data, size_t size)
 		}
 
 		if (PARSE(*i, c, height) && PARSE(*i, c, timestamp) && PARSE(*i, c, reward) && parseValue(*i, "hash", c.id)) {
+			parse_block_header_fcmp_pp(*i, c);
 			min_height = std::min(min_height, c.height);
 			max_height = std::max(max_height, c.height);
 			m_mainchainByHeight[c.height] = c;
@@ -2219,6 +2241,22 @@ void p2pool::api_update_aux_data()
 			}
 			s << "]}";
 		});
+}
+
+bool p2pool::get_fcmp_pp_tree_data(uint64_t height, const hash& prev_id, uint8_t& n_tree_layers, hash& tree_root) const
+{
+	ReadLock lock(m_mainchainLock);
+
+	auto it = m_mainchainByHeight.find(height);
+
+	if ((it == m_mainchainByHeight.end()) || (it->second.prev_id != prev_id) || it->second.fcmp_pp_tree_root.empty()) {
+		return false;
+	}
+
+	n_tree_layers = it->second.fcmp_pp_n_tree_layers;
+	tree_root = it->second.fcmp_pp_tree_root;
+
+	return true;
 }
 
 bool p2pool::get_difficulty_at_height(uint64_t height, difficulty_type& diff)

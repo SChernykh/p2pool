@@ -812,6 +812,16 @@ bool SideChain::add_external_block(PoolBlock& block, std::vector<hash>& missing_
 		LOGWARN(3, "add_external_block: block is built on top of an unknown mainchain block " << block.m_prevId << ", mainchain reorg might've happened");
 	}
 
+	if (block.m_majorVersion >= HARDFORK_VERSION_FCMP_PP) {
+		uint8_t n_tree_layers;
+		hash tree_root;
+
+		if (m_pool->get_fcmp_pp_tree_data(block.m_txinGenHeight, block.m_prevId, n_tree_layers, tree_root) &&
+			((block.m_fcmp_pp_n_tree_layers != n_tree_layers) || (block.m_fcmp_pp_tree_root != tree_root))) {
+			LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": wrong FCMP++ tree data (" << block.m_fcmp_pp_n_tree_layers << ", " << block.m_fcmp_pp_tree_root << "), expected (" << n_tree_layers << ", " << tree_root << ") for mainchain height " << block.m_txinGenHeight << ", it can't be a valid Monero block");
+		}
+	}
+
 	if (!m_pool->get_seed(block.m_txinGenHeight, block.m_seed)) {
 		LOGWARN(3, "add_external_block mined by " << block.m_minerWallet << ": couldn't get seed hash for mainchain height " << block.m_txinGenHeight);
 		forget_incoming_block(block);
