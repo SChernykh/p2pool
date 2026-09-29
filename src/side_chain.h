@@ -76,6 +76,7 @@ public:
 	[[nodiscard]] bool is_default() const;
 	[[nodiscard]] bool is_mini() const;
 	[[nodiscard]] bool is_nano() const;
+	[[nodiscard]] bool is_beta() const;
 
 	[[nodiscard]] const PoolBlock* chainTip() const { return m_chainTip; }
 	[[nodiscard]] bool precalcFinished() const { return m_precalcFinished.load(); }

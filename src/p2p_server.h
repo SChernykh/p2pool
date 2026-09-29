@@ -35,6 +35,7 @@ static constexpr size_t PEER_LIST_RESPONSE_MAX_PEERS = 16;
 static constexpr int DEFAULT_P2P_PORT = 37889;
 static constexpr int DEFAULT_P2P_PORT_MINI = 37888;
 static constexpr int DEFAULT_P2P_PORT_NANO = 37890;
+static constexpr int DEFAULT_P2P_PORT_BETA = 47889;
 
 static constexpr int DEFAULT_P2P_PORT_ONION = 28722;
 static constexpr int DEFAULT_P2P_PORT_I2P = 28723;

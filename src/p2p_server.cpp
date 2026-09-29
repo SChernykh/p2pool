@@ -48,6 +48,7 @@ static constexpr char saved_i2p_peer_list_file_name[] = "p2pool_i2p_peers.txt";
 static const char* seed_nodes[] = { "seeds.p2pool.io", "main.p2poolpeers.net", "" };
 static const char* seed_nodes_mini[] = { "seeds-mini.p2pool.io", "mini.p2poolpeers.net", "" };
 static const char* seed_nodes_nano[] = { "seeds-nano.p2pool.io", "nano.p2poolpeers.net", ""};
+static const char* seed_nodes_beta[] = { "seeds-beta.p2pool.io", "beta.p2poolpeers.net", ""};
 
 static constexpr int DEFAULT_BACKLOG = 16;
 static constexpr uint64_t DEFAULT_BAN_TIME = 600;
@@ -469,7 +470,13 @@ void P2PServer::update_peer_connections()
 			for (const hash& seed_onion : seed_onion_nodes) {
 				if (pubkeys[k] == seed_onion) {
 					const SideChain& s = m_pool->side_chain();
-					port = s.is_mini() ? DEFAULT_P2P_PORT_MINI : (s.is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+
+					port =
+						(s.is_mini() ? DEFAULT_P2P_PORT_MINI :
+						(s.is_nano() ? DEFAULT_P2P_PORT_NANO :
+						(s.is_beta() ? DEFAULT_P2P_PORT_BETA : DEFAULT_P2P_PORT
+					)));
+
 					break;
 				}
 			}
@@ -502,7 +509,13 @@ void P2PServer::update_peer_connections()
 			for (const hash& seed_i2p : seed_i2p_nodes) {
 				if (dest_hashes[k] == seed_i2p) {
 					const SideChain& s = m_pool->side_chain();
-					port = s.is_mini() ? DEFAULT_P2P_PORT_MINI : (s.is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+
+					port =
+						(s.is_mini() ? DEFAULT_P2P_PORT_MINI :
+						(s.is_nano() ? DEFAULT_P2P_PORT_NANO :
+						(s.is_beta() ? DEFAULT_P2P_PORT_BETA : DEFAULT_P2P_PORT
+					)));
+
 					break;
 				}
 			}
@@ -813,6 +826,9 @@ void P2PServer::load_peer_list()
 		else if (s.is_nano()) {
 			load_from_seed_nodes(seed_nodes_nano, DEFAULT_P2P_PORT_NANO);
 		}
+		else if (s.is_beta()) {
+			load_from_seed_nodes(seed_nodes_beta, DEFAULT_P2P_PORT_BETA);
+		}
 	}
 
 	// Finally load peers from p2pool_peers.txt and p2pool_onion_peers.txt
@@ -960,7 +976,13 @@ void P2PServer::load_monerod_peer_list()
 
 #undef ERR_STR
 
-			const int port = m_pool->side_chain().is_mini() ? DEFAULT_P2P_PORT_MINI : (m_pool->side_chain().is_nano() ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+			const SideChain& s = m_pool->side_chain();
+
+			const int port =
+				(s.is_mini() ? DEFAULT_P2P_PORT_MINI :
+				(s.is_nano() ? DEFAULT_P2P_PORT_NANO :
+				(s.is_beta() ? DEFAULT_P2P_PORT_BETA : DEFAULT_P2P_PORT
+			)));
 
 			const SizeType n = white_list.Size();
 

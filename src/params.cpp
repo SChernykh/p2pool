@@ -82,7 +82,13 @@ Params::Params(const std::vector<std::vector<std::string>>& args)
 		m_hosts.emplace_back();
 	}
 
-	const int p2p_port = m_mini ? DEFAULT_P2P_PORT_MINI : (m_nano ? DEFAULT_P2P_PORT_NANO : DEFAULT_P2P_PORT);
+	const bool is_beta = m_mainWallet.get_type() == NetworkType::Testnet;
+
+	const int p2p_port =
+		(m_mini ? DEFAULT_P2P_PORT_MINI :
+		(m_nano ? DEFAULT_P2P_PORT_NANO :
+		(is_beta ? DEFAULT_P2P_PORT_BETA : DEFAULT_P2P_PORT
+	)));
 
 	if (m_noClearnetP2P) {
 		char buf[48] = {};
