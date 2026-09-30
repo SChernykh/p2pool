@@ -14,11 +14,12 @@ CURRENT_TIME=$(date -u -d @$BUILD_TIMESTAMP +"%H:%M:%S")
 TOUCH_DATE=$(date -u -d @$BUILD_TIMESTAMP +"%Y%m%d%H%M.%S")
 
 flags_size="-ffunction-sections -fdata-sections -Wl,-s -Wl,--gc-sections -Wl,--icf=safe"
-flags_datetime="-D__DATE__=\"\\\"$CURRENT_DATE\\\"\" -D__TIME__=\"\\\"$CURRENT_TIME\\\"\" -Wno-builtin-macro-redefined"
+flags_datetime="-D__DATE__=\"\\\"$CURRENT_DATE\\\"\" -D__TIME__=\"\\\"$CURRENT_TIME\\\"\""
+flags_warnings="-Wno-unused-command-line-argument -Wno-builtin-macro-redefined -Wno-deprecated-attributes -Wno-unknown-attributes"
 
 flags_libs="--target=x86_64-pc-windows-gnu -Os -flto -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -w $flags_size $flags_datetime"
 
-flags_p2pool="--target=x86_64-pc-windows-gnu -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -femulated-tls -Wno-unused-command-line-argument -Wno-unknown-attributes $flags_size $flags_datetime"
+flags_p2pool="--target=x86_64-pc-windows-gnu -Wl,/timestamp:$BUILD_TIMESTAMP -fuse-ld=lld -femulated-tls $flags_warnings $flags_size $flags_datetime"
 flags_cxx_headers="-isystem /usr/local/x86_64-w64-mingw32/include/c++ -isystem /usr/local/x86_64-w64-mingw32/include/c++/16.2.0 -isystem /usr/local/x86_64-w64-mingw32/include"
 
 cd /p2pool
