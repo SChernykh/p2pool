@@ -22,109 +22,11 @@ mkdir build && cd build
 make -j$(nproc)
 make install
 
-echo "Installing GCC 9.5.0"
+echo "Installing GCC 16.2.0"
 
 cd /root
 
-git clone --depth 1 --branch releases/gcc-9.5.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-9
-
-cd gcc-9
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-9
-make -j$(nproc)
-make install
-
-echo "Installing GCC 10.5.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-10.5.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-10
-
-cd gcc-10
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-10
-make -j$(nproc)
-make install
-
-echo "Installing GCC 11.5.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-11.5.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-11
-
-cd gcc-11
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-11
-make -j$(nproc)
-make install
-
-echo "Installing GCC 12.4.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-12.4.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-12
-
-cd gcc-12
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-12
-make -j$(nproc)
-make install
-
-echo "Installing GCC 13.4.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-13.4.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-13
-
-cd gcc-13
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-13
-make -j$(nproc)
-make install
-
-echo "Installing GCC 14.3.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-14.3.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-14
-
-cd gcc-14
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-14
-make -j$(nproc)
-make install
-
-echo "Installing GCC 15.2.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-15.2.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-15
-
-cd gcc-15
-contrib/download_prerequisites
-
-mkdir build && cd build
-../configure --enable-languages=c,c++ --disable-multilib --disable-bootstrap --prefix=/usr/local/gcc-15
-make -j$(nproc)
-make install
-
-echo "Installing GCC 16.1.0"
-
-cd /root
-
-git clone --depth 1 --branch releases/gcc-16.1.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-16
+git clone --depth 1 --branch releases/gcc-16.2.0 --jobs $(nproc) git://gcc.gnu.org/git/gcc.git gcc-16
 
 cd gcc-16
 contrib/download_prerequisites
@@ -141,7 +43,7 @@ cd /root
 curl -L -O https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
 
-for i in 17 18 19 20 21 22;
+for i in 17 23;
 do
 	./llvm.sh $i
 done

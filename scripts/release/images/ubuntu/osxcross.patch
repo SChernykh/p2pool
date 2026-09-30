@@ -1,17 +1,5 @@
-diff --git a/build_clang.sh b/build_clang.sh
-index 6f2da55..c0cbfac 100755
---- a/build_clang.sh
-+++ b/build_clang.sh
-@@ -61,6 +61,7 @@ function set_package_link()
-     CLANG_VERSION_PARTS=(${CLANG_VERSION//./ })
-     case ${CLANG_VERSION_PARTS[0]} in
-       next) CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/next.zip" ;;
-+      22)   CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/stable/20260427.zip" ;;
-       21)   CLANG_LLVM_PKG="https://github.com/apple/llvm-project/archive/refs/heads/stable/20250402.zip" ;;
-       # Can't find a stable branch for 20.
-       19)   CLANG_LLVM_PKG="https://github.com/apple/llvm-project/archive/refs/heads/stable/20240723.zip" ;;
 diff --git a/build_compiler_rt.sh b/build_compiler_rt.sh
-index 491cf9f..e1e6b2d 100755
+index af28bb8..d4cbbf6 100755
 --- a/build_compiler_rt.sh
 +++ b/build_compiler_rt.sh
 @@ -62,8 +62,9 @@ case $CLANG_VERSION in
