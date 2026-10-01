@@ -69,6 +69,8 @@ namespace p2pool {
 #define P2POOL_VERSION_MINOR 0
 #define P2POOL_VERSION_PATCH 0
 
+#define P2POOL_VERSION_SUFFIX "-beta"
+
 constexpr uint32_t P2POOL_VERSION = (P2POOL_VERSION_MAJOR << 16) | (P2POOL_VERSION_MINOR << 8) | P2POOL_VERSION_PATCH;
 
 extern const char* VERSION;

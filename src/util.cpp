@@ -74,7 +74,7 @@ namespace p2pool {
 #define P2POOL_VERSION_PATCH_STR ""
 #endif
 
-const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) P2POOL_VERSION_PATCH_STR " (built"
+const char* VERSION = "v" STR2(P2POOL_VERSION_MAJOR) "." STR2(P2POOL_VERSION_MINOR) P2POOL_VERSION_PATCH_STR P2POOL_VERSION_SUFFIX " (built"
 #if defined(__clang__)
 	" with clang/" __clang_version__
 #elif defined(__GNUC__)
@@ -978,7 +978,7 @@ void set_thread_name(const char* name)
 {
 #if (UV_VERSION_MAJOR > 1) || ((UV_VERSION_MAJOR == 1) && (UV_VERSION_MINOR >= 50))
 	const int err = uv_thread_setname(name);
-	if (err) {
+	if (err && (err != UV_ENOSYS)) {
 		LOGERR(1, "uv_thread_setname failed for " << name << ", error " << uv_err_name(err));
 	}
 #elif defined(HAVE_PTHREAD_SETNAME_NP)
