@@ -281,9 +281,17 @@ static void do_status(p2pool *m_pool, const char * /* args */)
 		}
 	}
 
-	if (stratum && (stratum->num_connections() == 0)) {
-		node_health -= 1;
-		comments.push_back("No stratum connections");
+	if (stratum) {
+		if (stratum->num_connections() == 0) {
+			node_health -= 1;
+			comments.push_back("No stratum connections");
+		}
+
+		const int32_t n = stratum->num_outdated_connections();
+		if (n != 0) {
+			node_health -= 2;
+			comments.push_back("Some stratum connections don't support RandomX v2");
+		}
 	}
 
 	auto health_color = [](int health) {

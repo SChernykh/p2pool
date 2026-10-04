@@ -94,9 +94,14 @@ public:
 
 		uint32_t m_stratumShares;
 		uint32_t m_sidechainShares;
+
+		// 0: unknown
+		// -1: doesn't support RandomX v2
+		// 1: supports RandomX v2
+		int m_supportsRandomX_v2;
 	};
 
-	[[nodiscard]] bool on_login(StratumClient* client, uint32_t id, const char* login);
+	[[nodiscard]] bool on_login(StratumClient* client, uint32_t id, const char* login, int32_t supports_rx_2);
 	[[nodiscard]] bool on_submit(StratumClient* client, uint32_t id, const char* job_id_str, const char* nonce_str, const char* result_str);
 	[[nodiscard]] uint32_t get_random32();
 
@@ -106,6 +111,8 @@ public:
 	void reset_share_counters();
 
 	bool http_enabled() const;
+
+	int32_t num_outdated_connections() const { return m_numOutdatedConnections.load(std::memory_order_relaxed); }
 
 private:
 	[[nodiscard]] const char* get_log_category() const override;
@@ -239,6 +246,8 @@ private:
 
 	alignas(8) char m_jsonParseValueBuf[STRATUM_BUF_SIZE * 16];
 	alignas(8) char m_jsonParseStackBuf[STRATUM_BUF_SIZE * 16];
+
+	std::atomic<int32_t> m_numOutdatedConnections;
 
 	void update_hashrate_data(uint64_t hashes, uint64_t timestamp);
 	void api_update_local_stats(uint64_t timestamp);

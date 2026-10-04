@@ -187,7 +187,8 @@ bool Wallet::decode(const char* address)
 
 	if (!torsion_check()) {
 		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");
-		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
+		m_type = NetworkType::Invalid;
+		return false;
 	}
 
 	return valid();
@@ -225,8 +226,8 @@ bool Wallet::assign(const hash& spend_pub_key, const hash& view_pub_key, Network
 	m_subaddress = subaddress;
 
 	if (!torsion_check()) {
-		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");		
-		// TODO: add "m_type = NetworkType::Invalid;" and return false in a later release, closer to FCMP++ hardfork
+		LOGWARN(1, "Torsion check failed for wallet " << *this << "! It will not be compatible with FCMP++.");
+		// Can't make it invalid here, or it will soft-fork different P2Pool v4.x versions
 	}
 
 	return true;

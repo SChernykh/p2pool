@@ -265,6 +265,8 @@ bool Params::process_arg(const std::vector<std::string>& arg)
 			LOGERR(1, "Subaddress " << s << " failed to decode");
 		}
 
+		m_hasSubaddress = true;
+
 		return true;
 	}
 
@@ -547,8 +549,13 @@ bool Params::valid() const
 		return false;
 	}
 
-	if (m_subaddress.valid() && !m_subaddress.torsion_check()) {
-		LOGERR(1, m_subaddress << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+	if (m_hasSubaddress && !m_subaddress.valid()) {
+		if (!m_subaddress.torsion_check()) {
+			LOGERR(1, m_subaddress << " didn't pass the torsion check. It will be incompatible with FCMP++.");
+		}
+		else {
+			LOGERR(1, m_subaddress << " is invalid");
+		}
 		return false;
 	}
 

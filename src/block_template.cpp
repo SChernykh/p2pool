@@ -212,6 +212,7 @@ void BlockTemplate::update(const MinerData& data, const Mempool& mempool, const 
 
 	if (data.major_version > HARDFORK_SUPPORTED_VERSION) {
 		LOGERR(1, "got hardfork version " << data.major_version << ", expected <= " << HARDFORK_SUPPORTED_VERSION);
+		LOGERR(1, "This P2Pool version doesn't support the Monero FCMP++/Carrot hardfork. Update to P2Pool v5, visit p2pool.io for more information");
 		return;
 	}
 

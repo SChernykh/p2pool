@@ -86,6 +86,7 @@ struct Params
 
 	Wallet m_mainWallet{ nullptr };
 	Wallet m_subaddress{ nullptr };
+	bool m_hasSubaddress = false;
 
 	Wallet m_miningWallet{ nullptr };
 

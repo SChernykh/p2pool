@@ -1710,6 +1710,8 @@ void P2PServer::check_for_updates(bool forced) const
 		LOGINFO(0, log::LightCyan() << "* An updated P2Pool version is available, visit p2pool.io for more information *");
 		LOGINFO(0, log::LightCyan() << "********************************************************************************");
 	}
+
+	m_pool->subaddress_warning();
 }
 
 P2PServer::P2PClient::P2PClient()

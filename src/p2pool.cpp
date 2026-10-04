@@ -84,6 +84,8 @@ p2pool::p2pool(const Params& params)
 
 	m_hostPing.resize(m_params.m_hosts.size());
 
+	subaddress_warning();
+
 	// Check that the wallet address is valid for get_eph_public_key (important when creating block templates)
 	{
 		constexpr uint8_t entropy[] = "Wallet address validation entropy";
@@ -2428,6 +2430,14 @@ int p2pool::run()
 
 	LOGINFO(1, "stopped");
 	return 0;
+}
+
+void p2pool::subaddress_warning()
+{
+	if (m_params.m_hasSubaddress) {
+		LOGWARN(1, "Subaddresses will be removed in P2Pool v5 because Monero FCMP++/Carrot hardfork does not support them for mining");
+		LOGWARN(1, "It is strongly recommended to switch to a regular wallet address for mining at least a day before the hardfork");
+	}
 }
 
 } // namespace p2pool

@@ -67,6 +67,7 @@ StratumServer::StratumServer(p2pool* pool)
 	, m_shareCheckInFlight(false)
 	, m_jsonParseValueBuf{}
 	, m_jsonParseStackBuf{}
+	, m_numOutdatedConnections(0)
 {
 	// Need a bigger buffer for the TLS handshake
 	m_callbackBuf.resize(STRATUM_CALLBACK_BUF_SIZE);
@@ -252,8 +253,13 @@ static bool get_custom_diff(const char* s, difficulty_type& diff)
 	return false;
 }
 
-bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login)
+bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* login, int32_t supports_rx_2)
 {
+	if (client->m_rpcId) {
+		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " tried to login, but it's already logged in");
+		return false;
+	}
+
 	const P2PServer* p2p_server = m_pool->p2p_server();
 
 	// If there are no connections to other P2Pool peers, don't let Stratum clients connect
@@ -272,9 +278,9 @@ bool StratumServer::on_login(StratumClient* client, uint32_t id, const char* log
 		return true;
 	}
 
-	if (client->m_rpcId) {
-		LOGWARN(4, "client " << static_cast<char*>(client->m_addrString) << " tried to login, but it's already logged in");
-		return false;
+	client->m_supportsRandomX_v2 = supports_rx_2;
+	if (supports_rx_2 < 0) {
+		m_numOutdatedConnections.fetch_add(1, std::memory_order_relaxed);
 	}
 
 	const uint32_t extra_nonce = m_extraNonce.fetch_add(1);
@@ -584,6 +590,7 @@ void StratumServer::show_workers()
 
 	LOGINFO(0, log::pad_right("IP:port", addr_len + 8)
 			<< "TLS    "
+			<< "rx/2   "
 			<< log::pad_right("uptime", 20)
 			<< log::pad_right("difficulty", 20)
 			<< log::pad_right("hashrate", 15)
@@ -608,12 +615,15 @@ void StratumServer::show_workers()
 		constexpr bool is_tls = false;
 #endif
 
+		const bool is_rx_2 = (c->m_supportsRandomX_v2 > 0);
+
 		char shares_buf[16] = {};
 		log::Stream s(shares_buf);
 		s << c->m_sidechainShares << '/' << c->m_stratumShares << '\0';
 
 		LOGINFO(0, log::pad_right(static_cast<const char*>(c->m_addrString), addr_len + 8)
-				<< (is_tls ? "yes    " : "no     ")
+				<< (is_tls  ? "yes    " : "no     ")
+				<< (is_rx_2 ? "yes    " : "no     ")
 				<< log::pad_right(log::Duration(cur_time - c->m_connectedTime), 20)
 				<< log::pad_right(diff, 20)
 				<< log::pad_right(log::Hashrate(c->m_autoDiff.lo / AUTO_DIFF_TARGET_TIME, m_autoDiff && (c->m_autoDiff != 0)), 15)
@@ -1325,6 +1335,7 @@ StratumServer::StratumClient::StratumClient()
 	, m_score(0)
 	, m_stratumShares(0)
 	, m_sidechainShares(0)
+	, m_supportsRandomX_v2(0)
 {
 	m_rawReadBuf[0] = '\0';
 	m_stratumReadBuf[0] = '\0';
@@ -1332,6 +1343,10 @@ StratumServer::StratumClient::StratumClient()
 
 void StratumServer::StratumClient::reset()
 {
+	if (m_supportsRandomX_v2 < 0) {
+		static_cast<StratumServer*>(m_owner)->m_numOutdatedConnections.fetch_sub(1, std::memory_order_relaxed);
+	}
+
 	Client::reset();
 
 	m_stratumReadBuf[0] = '\0';
@@ -1357,6 +1372,8 @@ void StratumServer::StratumClient::reset()
 
 	m_stratumShares = 0;
 	m_sidechainShares = 0;
+
+	m_supportsRandomX_v2 = 0;
 }
 
 bool StratumServer::StratumClient::on_connect()
@@ -1540,7 +1557,63 @@ bool StratumServer::StratumClient::process_login(T& doc, uint32_t id)
 		return false;
 	}
 
-	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString());
+	int32_t supports_rx_2 = 0;
+
+	const auto algo_it = params.FindMember("algo");
+	if (algo_it != params.MemberEnd()) {
+		const auto& algo_list = algo_it->value;
+
+		if (!algo_list.IsArray()) {
+			LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('algo' field is not an array)");
+			return false;
+		}
+
+		bool is_rx2 = false;
+
+		for (const auto& algo : algo_list.GetArray()) {
+			if (!algo.IsString()) {
+				LOGWARN(4, "client " << static_cast<char*>(m_addrString) << " invalid JSON login request ('algo[]' element is not a string)");
+				return false;
+			}
+
+			if (strcmp(algo.GetString(), "rx/2") == 0) {
+				is_rx2 = true;
+				break;
+			}
+		}
+
+		supports_rx_2 = is_rx2 ? 1 : -1;
+	}
+
+	// No algo list, try to deduce it from "agent" string
+	if (supports_rx_2 == 0) {
+		const auto agent_it = params.FindMember("agent");
+
+		if (agent_it != params.MemberEnd()) {
+			const auto& agent = agent_it->value;
+
+			if (agent.IsString()) {
+				const char* s = agent.GetString();
+				const size_t n = strlen(s);
+
+				if ((n >= 10) && (memcmp(s, "XMRig/", 6) == 0)) {
+					supports_rx_2 = (memcmp(s + 6, "6.26", 4) >= 0) ? 1 : -1;
+				}
+				else if ((n >= 16) && (memcmp(s, "xmrig-proxy/", 12) == 0)) {
+					supports_rx_2 = (memcmp(s + 12, "6.26", 4) >= 0) ? 1 : -1;
+				}
+			}
+		}
+	}
+
+	if (supports_rx_2 < 0) {
+		LOGWARN(3, "client " << static_cast<char*>(m_addrString) << " doesn't support RandomX v2, it won't be able to mine after the Monero hardfork. Update it to the latest version.");
+	}
+	else if (supports_rx_2 == 0) {
+		LOGWARN(3, "client " << static_cast<char*>(m_addrString) << ": RandomX v2 support status is unknown. Update it to the latest version.");
+	}
+
+	return static_cast<StratumServer*>(m_owner)->on_login(this, id, login.GetString(), supports_rx_2);
 }
 
 template<typename T>
