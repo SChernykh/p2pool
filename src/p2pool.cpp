@@ -2432,7 +2432,7 @@ int p2pool::run()
 	return 0;
 }
 
-void p2pool::subaddress_warning()
+void p2pool::subaddress_warning() const
 {
 	if (m_params.m_hasSubaddress) {
 		LOGWARN(1, "Subaddresses will be removed in P2Pool v5 because Monero FCMP++/Carrot hardfork does not support them for mining");

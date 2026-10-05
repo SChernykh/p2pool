@@ -144,7 +144,7 @@ public:
 	FORCEINLINE std::string get_current_host_fingerprint() const { ReadLock lock(m_currentHostFingerprintLock); return m_currentHostFingerprint; }
 #endif
 
-	void subaddress_warning();
+	void subaddress_warning() const;
 
 private:
 	p2pool(const p2pool&) = delete;
