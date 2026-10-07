@@ -491,6 +491,34 @@ FORCEINLINE std::string tolower(const std::string& s)
 	return result;
 }
 
+// Checks if the "<major>.<minor>" version at the start of s is at least the given one
+FORCEINLINE bool version_at_least(const char* s, unsigned long major, unsigned long minor)
+{
+	char* end;
+
+	const unsigned long a = strtoul(s, &end, 10);
+	if (end == s) {
+		return false;
+	}
+
+	if (a != major) {
+		return a > major;
+	}
+
+	if (*end != '.') {
+		return false;
+	}
+
+	s = end + 1;
+
+	const unsigned long b = strtoul(s, &end, 10);
+	if (end == s) {
+		return false;
+	}
+
+	return b >= minor;
+}
+
 constexpr char base32_alphabet[] = "abcdefghijklmnopqrstuvwxyz234567";
 
 std::string to_onion_v3(const hash& pubkey);

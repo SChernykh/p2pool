@@ -1597,10 +1597,10 @@ bool StratumServer::StratumClient::process_login(T& doc, uint32_t id)
 				const size_t n = strlen(s);
 
 				if ((n >= 10) && (memcmp(s, "XMRig/", 6) == 0)) {
-					supports_rx_2 = (memcmp(s + 6, "6.26", 4) >= 0) ? 1 : -1;
+					supports_rx_2 = version_at_least(s + 6, 6, 26) ? 1 : -1;
 				}
 				else if ((n >= 16) && (memcmp(s, "xmrig-proxy/", 12) == 0)) {
-					supports_rx_2 = (memcmp(s + 12, "6.26", 4) >= 0) ? 1 : -1;
+					supports_rx_2 = version_at_least(s + 12, 6, 26) ? 1 : -1;
 				}
 			}
 		}

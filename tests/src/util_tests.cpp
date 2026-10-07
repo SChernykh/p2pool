@@ -395,4 +395,29 @@ TEST(util, is_private_address)
 	ASSERT_FALSE(is_private_address("1.2.3.4"));
 }
 
+TEST(util, version_at_least)
+{
+	ASSERT_TRUE(version_at_least("6.26", 6, 26));
+	ASSERT_TRUE(version_at_least("6.26.0 (Linux x86_64) libuv/1.51.0", 6, 26));
+	ASSERT_TRUE(version_at_least("6.27.1", 6, 26));
+	ASSERT_TRUE(version_at_least("6.100.0", 6, 26));
+	ASSERT_TRUE(version_at_least("7.0.0", 6, 26));
+	ASSERT_TRUE(version_at_least("10.0.0", 6, 26));
+	ASSERT_TRUE(version_at_least("7", 6, 26));
+
+	ASSERT_FALSE(version_at_least("6.25.9", 6, 26));
+	ASSERT_FALSE(version_at_least("6.10.0", 6, 26));
+	ASSERT_FALSE(version_at_least("6.9.0", 6, 26));
+	ASSERT_FALSE(version_at_least("6.3.0", 6, 26));
+	ASSERT_FALSE(version_at_least("6.2.0", 6, 26));
+	ASSERT_FALSE(version_at_least("5.99.0", 6, 26));
+	ASSERT_FALSE(version_at_least("5", 6, 26));
+
+	ASSERT_FALSE(version_at_least("", 6, 26));
+	ASSERT_FALSE(version_at_least("6", 6, 26));
+	ASSERT_FALSE(version_at_least("6.", 6, 26));
+	ASSERT_FALSE(version_at_least("6.x", 6, 26));
+	ASSERT_FALSE(version_at_least("abc", 6, 26));
+}
+
 }
