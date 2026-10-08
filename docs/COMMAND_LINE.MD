@@ -52,6 +52,7 @@
 --no-stratum-http         Disable HTTP on Stratum ports
 --full-validation         Enables full share validation / increases CPU usage
 --onion-address           Tell other peers to use this .onion address to connect to this node through TOR
+--i2p-address             Tell other peers to use this .b32.i2p address to connect to this node through I2P
 --no-clearnet-p2p         Forces P2P server to listen on 127.0.0.1 and to not connect to clearnet IPs
 --params-file             File name to load parameters from. It can't be used together with any other command line parameters
 ```
