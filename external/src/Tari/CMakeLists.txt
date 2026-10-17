@@ -35,6 +35,7 @@ set(SOURCES
 include_directories(../grpc/third_party/protobuf/src)
 include_directories(../grpc/include)
 include_directories(../grpc/third_party/abseil-cpp)
+include_directories(../grpc/third_party/utf8_range)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /W0 /Zi /Od /Ob0 /MP /MTd")

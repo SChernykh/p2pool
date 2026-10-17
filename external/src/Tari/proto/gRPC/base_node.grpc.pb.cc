@@ -59,7 +59,6 @@ static const char* BaseNode_method_names[] = {
   "/tari.rpc.BaseNode/GetActiveValidatorNodes",
   "/tari.rpc.BaseNode/GetValidatorNodeChanges",
   "/tari.rpc.BaseNode/GetShardKey",
-  "/tari.rpc.BaseNode/GetTemplateRegistrations",
   "/tari.rpc.BaseNode/GetSideChainUtxos",
   "/tari.rpc.BaseNode/GetNetworkState",
   "/tari.rpc.BaseNode/SearchPaymentReferences",
@@ -108,11 +107,10 @@ BaseNode::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, 
   , rpcmethod_GetActiveValidatorNodes_(BaseNode_method_names[32], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
   , rpcmethod_GetValidatorNodeChanges_(BaseNode_method_names[33], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetShardKey_(BaseNode_method_names[34], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetTemplateRegistrations_(BaseNode_method_names[35], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetSideChainUtxos_(BaseNode_method_names[36], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_GetNetworkState_(BaseNode_method_names[37], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SearchPaymentReferences_(BaseNode_method_names[38], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_SearchPaymentReferencesViaOutputHash_(BaseNode_method_names[39], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetSideChainUtxos_(BaseNode_method_names[35], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_GetNetworkState_(BaseNode_method_names[36], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SearchPaymentReferences_(BaseNode_method_names[37], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  , rpcmethod_SearchPaymentReferencesViaOutputHash_(BaseNode_method_names[38], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
   {}
 
 ::grpc::ClientReader< ::tari::rpc::BlockHeaderResponse>* BaseNode::Stub::ListHeadersRaw(::grpc::ClientContext* context, const ::tari::rpc::ListHeadersRequest& request) {
@@ -850,22 +848,6 @@ void BaseNode::Stub::async::GetShardKey(::grpc::ClientContext* context, const ::
   return result;
 }
 
-::grpc::ClientReader< ::tari::rpc::GetTemplateRegistrationResponse>* BaseNode::Stub::GetTemplateRegistrationsRaw(::grpc::ClientContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest& request) {
-  return ::grpc::internal::ClientReaderFactory< ::tari::rpc::GetTemplateRegistrationResponse>::Create(channel_.get(), rpcmethod_GetTemplateRegistrations_, context, request);
-}
-
-void BaseNode::Stub::async::GetTemplateRegistrations(::grpc::ClientContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest* request, ::grpc::ClientReadReactor< ::tari::rpc::GetTemplateRegistrationResponse>* reactor) {
-  ::grpc::internal::ClientCallbackReaderFactory< ::tari::rpc::GetTemplateRegistrationResponse>::Create(stub_->channel_.get(), stub_->rpcmethod_GetTemplateRegistrations_, context, request, reactor);
-}
-
-::grpc::ClientAsyncReader< ::tari::rpc::GetTemplateRegistrationResponse>* BaseNode::Stub::AsyncGetTemplateRegistrationsRaw(::grpc::ClientContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-  return ::grpc::internal::ClientAsyncReaderFactory< ::tari::rpc::GetTemplateRegistrationResponse>::Create(channel_.get(), cq, rpcmethod_GetTemplateRegistrations_, context, request, true, tag);
-}
-
-::grpc::ClientAsyncReader< ::tari::rpc::GetTemplateRegistrationResponse>* BaseNode::Stub::PrepareAsyncGetTemplateRegistrationsRaw(::grpc::ClientContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncReaderFactory< ::tari::rpc::GetTemplateRegistrationResponse>::Create(channel_.get(), cq, rpcmethod_GetTemplateRegistrations_, context, request, false, nullptr);
-}
-
 ::grpc::ClientReader< ::tari::rpc::GetSideChainUtxosResponse>* BaseNode::Stub::GetSideChainUtxosRaw(::grpc::ClientContext* context, const ::tari::rpc::GetSideChainUtxosRequest& request) {
   return ::grpc::internal::ClientReaderFactory< ::tari::rpc::GetSideChainUtxosResponse>::Create(channel_.get(), rpcmethod_GetSideChainUtxos_, context, request);
 }
@@ -1291,16 +1273,6 @@ BaseNode::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       BaseNode_method_names[35],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
-      new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetTemplateRegistrationsRequest, ::tari::rpc::GetTemplateRegistrationResponse>(
-          [](BaseNode::Service* service,
-             ::grpc::ServerContext* ctx,
-             const ::tari::rpc::GetTemplateRegistrationsRequest* req,
-             ::grpc::ServerWriter<::tari::rpc::GetTemplateRegistrationResponse>* writer) {
-               return service->GetTemplateRegistrations(ctx, req, writer);
-             }, this)));
-  AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[36],
-      ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::GetSideChainUtxosRequest, ::tari::rpc::GetSideChainUtxosResponse>(
           [](BaseNode::Service* service,
              ::grpc::ServerContext* ctx,
@@ -1309,7 +1281,7 @@ BaseNode::Service::Service() {
                return service->GetSideChainUtxos(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[37],
+      BaseNode_method_names[36],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< BaseNode::Service, ::tari::rpc::GetNetworkStateRequest, ::tari::rpc::GetNetworkStateResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](BaseNode::Service* service,
@@ -1319,7 +1291,7 @@ BaseNode::Service::Service() {
                return service->GetNetworkState(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[38],
+      BaseNode_method_names[37],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::SearchPaymentReferencesRequest, ::tari::rpc::PaymentReferenceResponse>(
           [](BaseNode::Service* service,
@@ -1329,7 +1301,7 @@ BaseNode::Service::Service() {
                return service->SearchPaymentReferences(ctx, req, writer);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      BaseNode_method_names[39],
+      BaseNode_method_names[38],
       ::grpc::internal::RpcMethod::SERVER_STREAMING,
       new ::grpc::internal::ServerStreamingHandler< BaseNode::Service, ::tari::rpc::FetchMatchingUtxosRequest, ::tari::rpc::PaymentReferenceResponse>(
           [](BaseNode::Service* service,
@@ -1585,13 +1557,6 @@ BaseNode::Service::~Service() {
   (void) context;
   (void) request;
   (void) response;
-  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-}
-
-::grpc::Status BaseNode::Service::GetTemplateRegistrations(::grpc::ServerContext* context, const ::tari::rpc::GetTemplateRegistrationsRequest* request, ::grpc::ServerWriter< ::tari::rpc::GetTemplateRegistrationResponse>* writer) {
-  (void) context;
-  (void) request;
-  (void) writer;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

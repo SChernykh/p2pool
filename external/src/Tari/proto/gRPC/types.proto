@@ -145,6 +145,8 @@ message ConsensusConstants {
     uint64 max_block_coinbase_count = 37;
     uint32 vn_registration_max_vns_initial_epoch = 38;
     uint32 vn_registration_max_vns_per_epoch = 39;
+    // TIP-RFC-MT-0004: cap on the exponential same-algorithm PoW backoff modifier (1 = disabled)
+    uint64 pow_backoff_cap = 40;
 }
 
 // Unsigned decimal value, examples:

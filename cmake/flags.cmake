@@ -17,7 +17,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wundef -Wformat=2 -Wpointer-arith -Werror -Wno-error=inline -Wno-error=unused-function -Wno-error=strict-overflow")
+	set(WARNING_FLAGS "-Wall -Wextra -Wcast-qual -Wlogical-op -Wundef -Wformat=2 -Wpointer-arith -Werror -Wno-error=inline -Wno-error=unused-function -Wno-error=strict-overflow -Wno-deprecated-declarations")
 
 	if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.5.0)
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wstrict-overflow=2")
@@ -120,7 +120,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		set(GENERAL_FLAGS "${GENERAL_FLAGS} -fno-omit-frame-pointer -fsanitize=type")
 	endif()
 
-	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wno-unknown-warning-option -Wno-nan-infinity-disabled -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Werror")
+	set(WARNING_FLAGS "-Wall -Wextra -Wno-unused-function -Wno-undefined-internal -Wno-unknown-warning-option -Wno-nan-infinity-disabled -Wunreachable-code-aggressive -Wmissing-prototypes -Wmissing-variable-declarations -Wno-deprecated-declarations -Werror")
 
 	if (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20))
 		set(WARNING_FLAGS "${WARNING_FLAGS} -Wno-cpp")
