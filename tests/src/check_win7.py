@@ -301,6 +301,7 @@ allowedAPIs = {
 	"GetEnvironmentVariableW",
 	"RtlCaptureStackBackTrace",
 	"GetDynamicTimeZoneInformation",
+	"GetSystemDirectoryW",
 }
 
 f = open(sys.argv[1], 'r')

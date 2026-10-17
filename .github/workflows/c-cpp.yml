@@ -116,13 +116,14 @@ jobs:
     strategy:
       matrix:
         config:
-          - {os: ubuntu-22.04, c: gcc-9, cpp: g++-9, flags: ""}
-          - {os: ubuntu-22.04, c: gcc-10, cpp: g++-10, flags: ""}
-          - {os: ubuntu-22.04, c: gcc-11, cpp: g++-11, flags: ""}
-          - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: ""}
-          - {os: ubuntu-24.04, c: gcc-13, cpp: g++-13, flags: ""}
-          - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: ""}
-          - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: "-DFE_FORCE_RADIX_25_5", suffix: "-radix-2-25-5"}
+          - {os: ubuntu-22.04, c: gcc-9, cpp: g++-9, flags: "", cmake_flags: "-DWITH_GRPC=OFF"}
+          - {os: ubuntu-22.04, c: gcc-10, cpp: g++-10, flags: "", cmake_flags: ""}
+          - {os: ubuntu-22.04, c: gcc-11, cpp: g++-11, flags: "", cmake_flags: ""}
+          - {os: ubuntu-22.04, c: gcc-12, cpp: g++-12, flags: "", cmake_flags: ""}
+          - {os: ubuntu-24.04, c: gcc-13, cpp: g++-13, flags: "", cmake_flags: ""}
+          - {os: ubuntu-24.04, c: gcc-14, cpp: g++-14, flags: "", cmake_flags: ""}
+          - {os: ubuntu-26.04, c: gcc-15, cpp: g++-15, flags: "", cmake_flags: ""}
+          - {os: ubuntu-26.04, c: gcc-15, cpp: g++-15, flags: "-DFE_FORCE_RADIX_25_5", suffix: "-radix-2-25-5", cmake_flags: ""}
 
     steps:
     - name: Install dependencies
@@ -140,7 +141,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${{ matrix.config.c }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp }} -DCMAKE_C_FLAGS='${{ matrix.config.flags }}' -DCMAKE_CXX_FLAGS='${{ matrix.config.flags }}' -DCMAKE_POLICY_VERSION_MINIMUM="3.5" ${{ matrix.config.cmake_flags }}
         make -j$(nproc) p2pool
 
     - name: Run RandomX tests
@@ -639,7 +640,7 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v1.3.0
+      uses: cross-platform-actions/action@v1.6.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
@@ -708,7 +709,7 @@ jobs:
         rm -rf external/lib
 
     - name: Build p2pool
-      uses: cross-platform-actions/action@v1.3.0
+      uses: cross-platform-actions/action@v1.6.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.architecture }}
