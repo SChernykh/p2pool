@@ -8,7 +8,7 @@ set -o pipefail
 
 # Software versions to install
 
-APT_SNAPSHOT=20261014T000000Z
+APT_SNAPSHOT=20261019T000000Z
 
 _7ZIP_VERSION_MAJOR=26
 _7ZIP_VERSION_MINOR=04
@@ -27,6 +27,7 @@ CMAKE_SHA256="e5bb807f7728cb60cd8b27ebc97a2edb469b68655f21e844a600c3575b76f5bb"
 FREEBSD_VERSION=12.4
 FREEBSD_AARCH64_SHA256="6c401819bfb93e810c9f9aa670a1e4685f924df5e7e0c9c6397dd6c16c954fa2"
 FREEBSD_X86_64_SHA256="581c7edacfd2fca2bdf5791f667402d22fccd8a5e184635e0cac075564d57aa8"
+FREEBSD_MIRROR=https://ftpmirror.your.org/pub/FreeBSD-Archive/old-releases
 
 GCC_VERSION=16.2.0
 GCC_COMMIT_HASH=78d4ac73dd391005b895a6148cd9831e28e1208b
@@ -107,8 +108,8 @@ curl -fL -Z --fail-early --retry 10 --retry-all-errors \
 -O https://www.kernel.org/pub/linux/kernel/v5.x/$HEADERS_FILE \
 -O https://ftpmirror.gnu.org/glibc/$GLIBC_FILE \
 -O https://github.com/joseluisq/macosx-sdks/releases/download/$MACOSX_SDK_VERSION/$MACOSX_SDK_FILE \
--o /usr/local/cross-freebsd-x86_64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
--o /usr/local/cross-freebsd-aarch64/$FREEBSD_FILE https://archive.freebsd.org/old-releases/arm64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
+-o /usr/local/cross-freebsd-x86_64/$FREEBSD_FILE $FREEBSD_MIRROR/amd64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
+-o /usr/local/cross-freebsd-aarch64/$FREEBSD_FILE $FREEBSD_MIRROR/arm64/$FREEBSD_VERSION-RELEASE/$FREEBSD_FILE \
 -O https://ftpmirror.gnu.org/tar/$TAR_FILE
 
 echo "Verifying checksums"

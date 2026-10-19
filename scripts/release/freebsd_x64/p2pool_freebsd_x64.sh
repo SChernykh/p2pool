@@ -5,6 +5,7 @@ cd /p2pool
 git fetch --jobs=$(nproc)
 git checkout $2
 git submodule update --init --recursive --force --jobs $(nproc)
+git apply --verbose --ignore-whitespace --directory=external/src/grpc/third_party/protobuf patches/protobuf/freebsd.patch
 
 export TZ=UTC0
 

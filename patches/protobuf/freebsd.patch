@@ -1,0 +1,15 @@
+diff --git a/src/google/protobuf/io/zero_copy_stream_impl.cc b/src/google/protobuf/io/zero_copy_stream_impl.cc
+--- a/src/google/protobuf/io/zero_copy_stream_impl.cc
++++ b/src/google/protobuf/io/zero_copy_stream_impl.cc
+@@ -10,7 +10,11 @@
+ //  Sanjay Ghemawat, Jeff Dean, and others.
+ 
+ // We request posix_close if available. See the comment on "robust_close".
++// FreeBSD's libc++ uses isascii(), which its headers hide in POSIX-only mode.
++// Keep the default feature visibility on FreeBSD.
++#ifndef __FreeBSD__
+ #define _POSIX_C_SOURCE 202405L
++#endif
+ 
+ #ifndef _MSC_VER
+ #include <fcntl.h>
