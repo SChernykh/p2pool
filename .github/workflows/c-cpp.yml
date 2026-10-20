@@ -625,7 +625,7 @@ jobs:
         os:
           - name: freebsd
             architecture: x86-64
-            version: '13.5'
+            version: '15.1'
             host: ubuntu-latest
 
     steps:
@@ -633,6 +633,10 @@ jobs:
       uses: actions/checkout@v6
       with:
         submodules: recursive
+
+    - name: Apply patch
+      run: |
+        git apply --verbose --ignore-whitespace --directory=external/src/grpc/third_party/protobuf patches/protobuf/freebsd.patch
 
     - name: Delete unused files
       run: |
